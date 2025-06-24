@@ -49,7 +49,7 @@ class BrowseMenuController extends Controller
 
         $request->validate([
             /**
-             * @example modifiers = 1
+             * @example 1
             */
             'modifiers' => ['nullable','boolean'],
         ]);
@@ -107,7 +107,7 @@ class BrowseMenuController extends Controller
      * 
      * @queryParam course string The course name
      * 
-     * @param Request $request course = {starter, main course, salad and soup, dessert}
+     * @param Request $request course = starter
      * 
      * @example starter, main course, salad and soup, dessert
      * 
@@ -118,7 +118,7 @@ class BrowseMenuController extends Controller
         $request->validate([
             /**
              * @queryParam course string The course name
-             * @example course = starter, main course, salad and soup, dessert
+             * @example starter
             */
             'course' => ['required','string'],
         ]);
@@ -141,7 +141,7 @@ class BrowseMenuController extends Controller
     {   
         $request->validate([
             /**
-             * @example category = beverage
+             * @example beverage
             */
             'category' => ['required','string'],
         ]);
