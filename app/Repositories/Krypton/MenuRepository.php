@@ -3,18 +3,18 @@
 namespace App\Repositories\Krypton;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Exception;
+use App\Models\Krypton\Menu;
 
 class MenuRepository
 {
-
-    protected $connection = 'pos';
-
     public function getMenus()
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menus()');
+            return Menu::fromQuery('CALL get_menus()');
         } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }
@@ -22,9 +22,9 @@ class MenuRepository
     public function getMenuById(int $id)
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menu_by_id(?)', [$id]);
+            return Menu::fromQuery('CALL get_menu_by_id(?)', [$id]);
         } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }
@@ -39,10 +39,10 @@ class MenuRepository
     public function getMenusWithModifiers()
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menus_with_modifiers()');
-        } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            return Menu::fromQuery('CALL get_menus_with_modifiers()');
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
+            throw new Exception('Something Went Wrong.');
         }
     }
 
@@ -57,10 +57,10 @@ class MenuRepository
     public function getMenusByCategory($category)
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menus_by_category(?)', [$category]);
-        } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            return Menu::fromQuery('CALL get_menus_by_category(?)', [$category]);
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
+            throw new Exception('Something Went Wrong.');
         }
     }
 
@@ -79,8 +79,8 @@ class MenuRepository
     public function getAllModifierGroups()
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_all_modifier_groups()');
-        } catch (\Exception $e) {
+            return Menu::fromQuery('CALL get_all_modifier_groups()');
+        } catch (Exception $e) {
             \Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
@@ -97,9 +97,9 @@ class MenuRepository
     public function getMenuModifiers()
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menu_modifiers()');
-        } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            return Menu::fromQuery('CALL get_menu_modifiers()');
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }
@@ -116,9 +116,9 @@ class MenuRepository
     public function getMenuModifier(int $id)
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menu_modifier(?)', $id);
-        } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            return Menu::fromQuery('CALL get_menu_modifier(?)', $id);
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }
@@ -137,20 +137,20 @@ class MenuRepository
     public function getMenuModifiersByGroup(int $modifierGroupId)
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menu_modifiers_by_group(?)', [$modifierGroupId]);
-        } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            return Menu::fromQuery('CALL get_menu_modifiers_by_group(?)', [$modifierGroupId]);
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
+            throw new Exception('Something Went Wrong.');
         }
     }
 
     public function getMenusByCourse(string $course)
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_menus_by_course(?)', [$course]);
-        } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            return Menu::fromQuery('CALL get_menus_by_course(?)', [$course]);
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
+            throw new Exception('Something Went Wrong.');
         }
     }
 

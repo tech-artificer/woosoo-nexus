@@ -15,27 +15,32 @@ class MenuResource extends JsonResource
     public function toArray(Request $request): array
     {
         $placeholder = asset('images/menu-placeholder/1.jpg');
-        
-        return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'kitchen_name' => $this->kitchen_name,
-            'receipt_name' => $this->receipt_name,
-            'price' => $this->price,
-            'is_available' => $this->is_available,
-            'is_modifier' => $this->is_modifier,
-            'index' => $this->index,
-            'category' => $this->category?->name,
-            'course_type' => $this->course?->name,
-            'group' => $this->group?->name,
-            'image_url' => $this->image?->path
-                                ? Storage::disk('public')->url($this->image?->path) 
-                                : $placeholder,
-            'modifiers' => $this->whenLoaded(
-                'modifiers',  
-                MenuResource::collection($this->modifiers) ?? []
-            ),
 
+        return parent::toArray($request) + [
+            'img_url' => $placeholder
         ];
+       
+        
+        // return [
+        //     'id' => $this->id,
+        //     'name' => $this->name,
+        //     'kitchen_name' => $this->kitchen_name,
+        //     'receipt_name' => $this->receipt_name,
+        //     'price' => $this->price,
+        //     'is_available' => $this->is_available,
+        //     'is_modifier' => $this->is_modifier,
+        //     'index' => $this->index,
+        //     'category' => $this->category?->name,
+        //     'course_type' => $this->course?->name,
+        //     'group' => $this->group?->name,
+        //     'image_url' => $this->image?->path
+        //                         ? Storage::disk('public')->url($this->image?->path) 
+        //                         : $placeholder,
+        //     'modifiers' => $this->whenLoaded(
+        //         'modifiers',  
+        //         MenuResource::collection($this->modifiers) ?? []
+        //     ),
+
+        // ];
     }
 }

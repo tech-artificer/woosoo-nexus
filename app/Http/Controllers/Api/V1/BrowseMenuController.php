@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 use App\Repositories\Krypton\MenuRepository;
+use App\Http\Resources\Krypton\Menu\MenuResource;
 
 use App\Models\Krypton\Menu;
 
@@ -28,7 +29,10 @@ class BrowseMenuController extends Controller
     public function getMenus()
     {   
         // Meats, Sides, Drinks
-        return response()->json($this->menuRepository->getMenus());
+        $menus = $this->menuRepository->getMenus();
+        // $menus->fill(->get());
+        return MenuResource::collection($menus);
+        // return response()->json($this->menuRepository->getMenus());
     }
 
     
@@ -62,12 +66,13 @@ class BrowseMenuController extends Controller
                 $modifierGroup->modifiers = $this->menuRepository->getMenuModifiersByGroup($modifierGroup->id);
             }
 
-             return response()->json($modifierGroups);
+            // return response()->json($modifierGroups);
+            return MenuResource::collection($modifierGroups);
             
         }
     
-         return response()->json($this->menuRepository->getAllModifierGroups());
-      
+        // return response()->json($this->menuRepository->getAllModifierGroups());
+        return MenuResource::collection($this->menuRepository->getAllModifierGroups());
     }
 
 
@@ -82,7 +87,8 @@ class BrowseMenuController extends Controller
      */
     public function getMenuModifiers() 
     {
-        return response()->json($this->menuRepository->getMenuModifiers());
+        return MenuResource::collection($this->menuRepository->getMenuModifiers());
+        // return response()->json($this->menuRepository->getMenuModifiers());
     }
 
     /**
@@ -99,7 +105,8 @@ class BrowseMenuController extends Controller
             $menu->modifiers = Menu::getModifiers($menu->id);
         }
 
-        return response()->json($menus);
+        return MenuResource::collection($menus);
+        
     }
 
     /**
@@ -125,7 +132,7 @@ class BrowseMenuController extends Controller
 
         $menus = $this->menuRepository->getMenusByCourse($request->course);
 
-        return response()->json($menus);
+        return MenuResource::collection($menus);
     }
 
     /**
@@ -148,7 +155,7 @@ class BrowseMenuController extends Controller
 
         $menus = $this->menuRepository->getMenusByCategory($request->category);
 
-        return response()->json($menus);
+        return MenuResource::collection($menus);
     }
   
 }

@@ -15,6 +15,19 @@ class Menu extends Model
     protected $table = 'menus';
     protected $primaryKey = 'id';
 
+    protected $fillable = [
+        'id',  
+        'menu_group_id', 
+        'menu_tax_type_id',
+        'menu_category_id',
+        'menu_course_type_id',
+        'name',
+        'kitchen_name',
+        'receipt_name',
+        'price',
+        'cost'
+    ];
+
     protected $casts = [
         'menu_category_id' => 'integer',
         'menu_group_id' => 'integer',
