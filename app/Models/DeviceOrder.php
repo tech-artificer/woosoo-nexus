@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Branch;
 use App\Enums\OrderStatus;
 
@@ -19,12 +20,16 @@ class DeviceOrder extends Model
         'status',
         'items',
         'meta',
+        'data',
     ];
 
     protected $casts = [
+        'device_id' => 'integer',
         'table_id' => 'integer',
         'order_id' => 'integer',
-        'items' => 'array',
+        'order_number' => 'string',
+        'status' => OrderStatus::class,
+        'data' => 'array',
         'meta' => 'array',
     ];
 
@@ -96,7 +101,7 @@ class DeviceOrder extends Model
     }
 
 
-    public function device() : \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function device() : BelongsTo
     {
         return $this->belongsTo(Device::class);
     }
