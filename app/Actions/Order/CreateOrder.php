@@ -47,10 +47,16 @@ class CreateOrder
         // $employeeLogs = $employeeLogRepository->getEmployeeLogsForSession($session->id);
         // $employeeLatestLogs = EmployeeRepository::getLatestEmployeeLogs($session->id, );
         $terminalSession = TerminalSession::select(['id', 'terminal_session_id', 'date_time_opened', 'date_time_closed'])
-                            ->whereDate('date_time_opened', $today)
+                            ->whereNotNull('date_time_opened')
                             ->whereNull('date_time_closed')
                             ->latest('created_on')
                             ->first();
+
+        // TerminalSession::select(['id', 'terminal_session_id', 'date_time_opened', 'date_time_closed'])
+        //                     ->whereDate('date_time_opened', $today)
+        //                     ->whereNull('date_time_closed')
+        //                     ->latest('created_on')
+        //                     ->first();
        
 
 
@@ -62,11 +68,66 @@ class CreateOrder
        return [
             'session_id' => $session->id,
             'terminal' => $terminal,
-            'terminal_session' => $terminalSession,
-            'revenue' => $revenue,
+            'terminal_session' => $terminalSession->id,
+            'revenue' => $revenue->id,
             'cashier' => $cashier,
-            // 'employee_logs' => $employeeLogs,
+            'terminal_session_id' => $terminalSession->id,
+            'date_time_opened' => $terminalSession->id->date_time_opened,
+            'date_time_closed' => '',
+            'revenue_id' => '',
+            'terminal_id' => '',
+            'customer_id' => '',
+            'current_terminal_id' => '',
+            'end_terminal_id' => '',
+            'customer_id' => '',
+            'is_open' => '',
+            'is_transferred' => '',
+            'is_voided' => '',
+            'guest_count' => '',
+            'service_type_id' => '',
+            // 'is_available' => '',
+            // 'cash_tray_session_id' => '',
+            // 'server_banking_session_id' => '',
+            'start_employee_log_id' => '',
+            'current_employee_log_id' => '',
+            'close_employee_log_id' => '',
+            'server_employee_log_id' => '',
+            // 'transaction_no' => '',
+            'reference' => '',
+            'cashier_employee_id' => '',
+            'terminal_service_id' => '',
+            'is_online_order' => '',
+            // 'reprint_count'
        ];
+
+        // 'session_id' => '',
+        // 'terminal_session_id' => '',
+        // 'date_time_opened' => '',
+        // 'date_time_closed' => '',
+        // 'revenue_id' => '',
+        // 'terminal_id' => '',
+        // 'customer_id' => '',
+        // 'current_terminal_id' => '',
+        // 'end_terminal_id' => '',
+        // 'customer_id' => '',
+        // 'is_open' => '',
+        // 'is_transferred' => '',
+        // 'is_voided' => '',
+        // 'guest_count' => '',
+        // 'service_type_id' => '',
+        // // 'is_available' => '',
+        // // 'cash_tray_session_id' => '',
+        // // 'server_banking_session_id' => '',
+        // 'start_employee_log_id' => '',
+        // 'current_employee_log_id' => '',
+        // 'close_employee_log_id' => '',
+        // 'server_employee_log_id' => '',
+        // // 'transaction_no' => '',
+        // 'reference' => '',
+        // 'cashier_employee_id' => '',
+        // 'terminal_service_id' => '',
+        // 'is_online_order' => '',
+        // // 'reprint_count'
     }
 
     protected function createOrder() {}
