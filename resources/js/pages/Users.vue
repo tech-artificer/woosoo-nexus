@@ -2,24 +2,22 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import PlaceholderPattern from '../components/PlaceholderPattern.vue';
+import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
-        href: '/dashboard',
+        title: 'Users',
+        href: '/users',
     },
 ];
 
-defineProps<{
-    title?: string;
-    description?: string;
-}>()
 
+defineProps<{
+    title: string;
+    description: string;
+}>()    
 
 </script>
-
-
 
 <template>
     <Head :title="title" :description="description" />

@@ -7,16 +7,17 @@ use Illuminate\Http\Request;
 
 use Inertia\Inertia;
 
+use App\Models\Krypton\Order;
+
 class OrderController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+   
     public function index()
     {
-        return Inertia::render('admin/orders/Index', [
+        return Inertia::render('Orders', [
             'title' => 'Orders',
             'description' => 'Daily Orders',
+            // 'orders' => Order::latest('created_on')->get(),
         ]);
     }
 

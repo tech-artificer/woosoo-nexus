@@ -5,7 +5,7 @@ namespace App\Models\Krypton;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Orders extends Model
+class Order extends Model
 {
     protected $connection = 'pos';
     /**
@@ -23,6 +23,7 @@ class Orders extends Model
      * @var array
      */
     protected $fillable = [
+        'id',
         'session_id',
         'terminal_session_id',
         'date_time_opened',
@@ -59,6 +60,7 @@ class Orders extends Model
      * @var array
      */
     protected $casts = [
+        'id' => 'integer',
         'session_id' => 'integer',
         'terminal_session_id' => 'integer',
         'revenue_id' => 'integer',
@@ -104,6 +106,7 @@ class Orders extends Model
 
         static::creating(function ($model) {
             
+            // $model
             // $terminal = Terminal::posTerminal()->get();
             // $terminalSession = TerminalSession::where('terminal_id', $terminal->id)->first();
             // $terminalService = TerminalService::where('terminal_id', $terminal->id)->first();
@@ -138,7 +141,27 @@ class Orders extends Model
             // $model->is_online_order = 1; // Initially set to DEFAULT 1
             // $model->reprint_count = 0; // Initially set to DEFAULT 0
         });
+    }
 
-      
+    public function createTransactionNo($orderId, $SessionId) {
+        return Order::fromQuery('CALL create_transaction_no(?, ?)', [$orderId, $SessionId]);
+    }
+
+    public function createOrder() {
+
+        $orderDetails = $this->toArray(); 
+
+        $numberOfParameters = count($orderDetails);
+        // Create an array of '?' strings, one for each parameter.
+        $placeholdersArray = array_fill(0, $numberOfParameters, '?');
+        // Join them with a comma and space to form the placeholder string.
+        $placeholders = implode(', ', $placeholdersArray);
+        // 2. Extract Values
+        // array_values() extracts all the values from the associative array
+        // and returns them as a new numerically indexed array.
+        $params = array_values($orderDetails);
+
+        // Now, call your fromQuery method with the generated placeholders and parameters
+        return Order::fromQuery('CALL create_order(' . $placeholders . ')', $params);
     }
 }

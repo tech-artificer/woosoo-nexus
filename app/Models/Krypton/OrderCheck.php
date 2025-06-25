@@ -17,7 +17,7 @@ class OrderCheck extends Model
         'is_settled',
         'from_split',
         'total_amount',
-        'gross_amount',
+        // 'gross_amount',
         'paid_amount',
         'change',
         'subtotal_amount',
@@ -32,6 +32,42 @@ class OrderCheck extends Model
         'surcharge_vatable',
         'surcharge_vat',
     ];
+    
+    public function createOrderCheck() {
+
+        $details = $this->toArray(); 
+
+        $numberOfParameters = count($details);
+        // Create an array of '?' strings, one for each parameter.
+        $placeholdersArray = array_fill(0, $numberOfParameters, '?');
+        // Join them with a comma and space to form the placeholder string.
+        $placeholders = implode(', ', $placeholdersArray);
+        // 2. Extract Values
+        // array_values() extracts all the values from the associative array
+        // and returns them as a new numerically indexed array.
+        $params = array_values($details);
+
+        // Now, call your fromQuery method with the generated placeholders and parameters
+        return Order::fromQuery('CALL create_order_check(' . $placeholders . ')', $params);
+    }
+
+//     DiscountAmount,
+// pGrossAmount,
+// pTaxableAmount,
+// pItemDiscountAmount,
+// pCheckDiscountAmount,
+// pRegularGuestCount,
+// pExemptGuestCount,
+// pSurchargeAmount,
+// pTaxSalesAmount,
+// pTaxExemptSalesAmount,
+// pGuestCount,
+// pCompDiscount,
+// pZeroRatedSalesAmount,
+// pTaxSalesAmountDiscounted,
+// pTaxExemptSalesAmountDiscounted,
+// pSurchargeVatable,
+// pSurchargeVat
 
     protected $casts = [
         'order_id' => 'integer',

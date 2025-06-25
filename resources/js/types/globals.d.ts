@@ -24,3 +24,9 @@ declare module '@vue/runtime-core' {
         $headManager: ReturnType<typeof createHeadManager>;
     }
 }
+
+declare global {
+  interface Window {
+    axios: any // Or import Axios types if available
+  }
+}

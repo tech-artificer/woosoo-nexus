@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\{
     DeviceOrderController,
     MenuImageController,
     BrowseMenuController,
+    // TableController,
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -49,6 +50,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::resource('/orders', OrderController::class);
 
     Route::post('/devices/create-order', DeviceOrderController::class);
+
+
+    // 
+    // Route::get('/orders/table/active', [TableController::class, 'index'])->name('api.orders.table.active');
 
 });
 

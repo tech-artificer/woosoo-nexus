@@ -3,40 +3,25 @@
 namespace App\Models\Krypton;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TableOrder extends Model
+class TableLink extends Model
 {
     protected $connection = 'pos';
-    protected $table = 'table_orders';
+    protected $table = 'table_links';
 
     public $timestamps = false;
+
 
     protected $fillable = [
         'order_id',
         'table_id',
-        'parent_table_id',
-        'is_cleared',
-        'is_printed',
+        'primary_table_id',
+        'is_active',
+        'is_billing_table',
+        'link_color',
     ];
 
-    protected $casts = [
-        'is_cleared' => 'boolean',
-        'is_printed' => 'boolean',
-        'order_id' => 'integer',  
-        'table_id' => 'integer',  
-    ];
-
-    public function table() : BelongsTo
-    {
-        return $this->belongsTo(Table::class);
-    }
-
-     public function scopeActiveTableOrders($query) {
-        return $query->fromQuery('CALL get_active_table_orders()');
-    }
-
-    public function createTableOrder() {
+    public function createLinkTable() {
 
         $details = $this->toArray(); 
 
@@ -51,8 +36,7 @@ class TableOrder extends Model
         $params = array_values($details);
 
         // Now, call your fromQuery method with the generated placeholders and parameters
-        return TableOrder::fromQuery('CALL create_table_order(' . $placeholders . ')', $params);
+        return TableLink::fromQuery('CALL create_link_table(' . $placeholders . ')', $params);
     }
-
 
 }

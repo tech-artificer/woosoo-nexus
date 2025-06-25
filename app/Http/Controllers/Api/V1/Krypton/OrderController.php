@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1\Krypton;
 
-use App\Repositories\Krypton\TerminalRepository;
+use App\Models\Krypton\Order;
+use App\Models\Krypton\OrderCheck;
+use App\Models\Krypton\OrderedMenu;
+use App\Models\Krypton\TableOrder;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -14,7 +17,9 @@ class OrderController extends Controller
      */
     public function index()
     {
-        return TerminalRepository::getLatestSessionId();
+        // return response()->json(
+        //         'orders' => Order::latest('created_on')->get()); //Order::latest('created_on')->get();
+        //         'order_checks' => Order::latest('created_on')->get());
     }
 
     /**
