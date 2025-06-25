@@ -43,15 +43,16 @@ class StoreDeviceOrderRequest extends FormRequest
              /**
              * 
              * @var array {menu_id, name, quantity, price, notes, subtotal, ordered_menu_id, tax, discount}
-             * @example  [{"menu_id":46,"name":"Classic Feast","kitchen_name":"Classic Feast","receipt_name":"Classic Feast","quantity":2,"price":399.00,"original_price":399.00,"notes":"this is a note","subtotal":798.00,"ordered_menu_id":null,"tax":0.00,"discount":0.00,"index": 1},
-             * {"menu_id":49,"name":"Plain Samgyupsal","kitchen_name":"Plain Samgyupsal","receipt_name":"P1","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index":2},
-             *  {"menu_id":50,"name":"Kajun Bulmat Samgyupsal","kitchen_name":"Kajun Bulmat Samgyupsal", "receipt_name":"P2","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 3},
-             *  {"menu_id":51,"name":"Yangyeom Samgyupsal","kitchen_name":"Yangyeom Samgyupsal", "receipt_name":"P3","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 4},
-             *  {"menu_id":52,"name":"Citrus Burst Pepper Samgyupsal","kitchen_name":"Citrus Burst Pepper Samgyupsal", "receipt_name":"P4","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 5},
-             *  {"menu_id":53,"name":"Hyangcho Samgyupsal","kitchen_name":"Hyangcho Samgyupsal", "receipt_name":"P5","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 6}]
+             * @example  [{"menu_id":46, "ordered_menu_id" : null,"name":"Classic Feast","kitchen_name":"Classic Feast","receipt_name":"Classic Feast","quantity":2,"price":399.00,"original_price":399.00,"notes":"this is a note","subtotal":798.00,"ordered_menu_id":null,"tax":0.00,"discount":0.00,"index": 1},
+             * {"menu_id":49, "ordered_menu_id" : 46,"name":"Plain Samgyupsal","kitchen_name":"Plain Samgyupsal","receipt_name":"P1","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index":2},
+             *  {"menu_id":50, "ordered_menu_id" : 46,"name":"Kajun Bulmat Samgyupsal","kitchen_name":"Kajun Bulmat Samgyupsal", "receipt_name":"P2","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 3},
+             *  {"menu_id":51, "ordered_menu_id" : 46,"name":"Yangyeom Samgyupsal","kitchen_name":"Yangyeom Samgyupsal", "receipt_name":"P3","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 4},
+             *  {"menu_id":52, "ordered_menu_id" : 46,"name":"Citrus Burst Pepper Samgyupsal","kitchen_name":"Citrus Burst Pepper Samgyupsal", "receipt_name":"P4","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 5},
+             *  {"menu_id":53, "ordered_menu_id" : 46,"name":"Hyangcho Samgyupsal","kitchen_name":"Hyangcho Samgyupsal", "receipt_name":"P5","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 6}]
              */
             'items' => ['required', 'array'],
             'items.*.menu_id' => ['required', 'integer'],
+            'items.*.ordered_menu_id' => ['required', 'string'],
             'items.*.name' => ['required', 'string'],
             'items.*.receipt_name' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
