@@ -102,6 +102,8 @@ class BrowseMenuController extends Controller
         $menus = $this->menuRepository->getMenusWithModifiers();
 
         foreach($menus as $menu) {
+            $details = Menu::findOrFail($menu->id);
+            $menu->fill($details->toArray()); 
             $menu->modifiers = Menu::getModifiers($menu->id);
         }
 
