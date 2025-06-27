@@ -8,7 +8,6 @@ import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import axios from 'axios'
 
-await axios.get('/sanctum/csrf-cookie')
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

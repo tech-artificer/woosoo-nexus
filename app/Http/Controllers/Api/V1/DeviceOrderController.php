@@ -29,6 +29,6 @@ class DeviceOrderController extends Controller
 
         // $table = Table::find($tableId);
 
-        // return $table->tableOrders()->get();
+        // return $request->user();
     }
 }

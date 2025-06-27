@@ -6,6 +6,7 @@ use App\Models\Krypton\Order;
 use App\Models\Krypton\OrderCheck;
 use App\Models\Krypton\OrderedMenu;
 use App\Models\Krypton\TableOrder;
+use App\Models\Krypton\Table;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -17,9 +18,11 @@ class OrderController extends Controller
      */
     public function index()
     {
-        // return response()->json(
-        //         'orders' => Order::latest('created_on')->get()); //Order::latest('created_on')->get();
-        //         'order_checks' => Order::latest('created_on')->get());
+        return response()->json([
+                'orders' => Order::find(18739), //Order::latest('created_on')->get();
+                // 'order_checks' => Order::latest('created_on')->limit(2)->get(),
+                // 'tables' => Table::all(),
+        ]);
     }
 
     /**

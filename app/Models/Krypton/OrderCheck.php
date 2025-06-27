@@ -17,21 +17,32 @@ class OrderCheck extends Model
         'is_settled',
         'from_split',
         'total_amount',
-        // 'gross_amount',
         'paid_amount',
         'change',
         'subtotal_amount',
         'tax_amount',
+        'discount_amount',
+        // 'transaction_number',
+        'gross_amount',
         'taxable_amount',
+        'tax_exempt_amount',
         'item_discount_amount',
         'check_discount_amount',
-        'discount_amount',
         'regular_guest_count',
         'exempt_guest_count',
-        'transaction_number',
+        'surcharges_amount',
+        'tax_sales_amount',
+        'tax_exempt_sales_amount',
+        'guest_count',
+        'comp_discount',
+        'zero_rated_sales_amount',
+        'tax_sales_amount_discounted',
+        'tax_exempt_sales_amount_discounted',
         'surcharge_vatable',
-        'surcharge_vat',
+        'surcharge_vat'
     ];
+
+
     
     public function createOrderCheck() {
 
@@ -71,9 +82,9 @@ class OrderCheck extends Model
 
     protected $casts = [
         'order_id' => 'integer',
-        'date_time_opened' => 'datetime',
+        // 'date_time_opened' => 'datetime',
         'total_amount' => 'double',
-        'gross_amount' => 'double',
+        // 'gross_amount' => 'double',
         'paid_amount' => 'double',
         'change' => 'double',
         'subtotal_amount' => 'double',

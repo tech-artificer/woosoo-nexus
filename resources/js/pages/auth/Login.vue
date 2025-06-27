@@ -48,6 +48,7 @@ const submit = () => {
                         autocomplete="email"
                         v-model="form.email"
                         placeholder="email@example.com"
+                        class="border-woosoo-accent"
                     />
                     <InputError :message="form.errors.email" />
                 </div>
@@ -67,6 +68,7 @@ const submit = () => {
                         autocomplete="current-password"
                         v-model="form.password"
                         placeholder="Password"
+                        class="border-woosoo-accent"
                     />
                     <InputError :message="form.errors.password" />
                 </div>
@@ -78,16 +80,13 @@ const submit = () => {
                     </Label>
                 </div>
 
-                <Button type="submit" class="mt-4 w-full" :tabindex="4" :disabled="form.processing">
+                <Button type="submit" class="mt-4 w-full bg-woosoo-accent hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark" :tabindex="4" :disabled="form.processing">
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     Log in
                 </Button>
             </div>
 
-            <div class="text-center text-sm text-muted-foreground">
-                Don't have an account?
-                <TextLink :href="route('register')" :tabindex="5">Sign up</TextLink>
-            </div>
+            
         </form>
     </AuthBase>
 </template>

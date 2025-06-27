@@ -55,22 +55,21 @@ class CreateOrder
                             ->first();
 
         $order = new Order();
-        $orderCheck = new OrderCheck();
         $tableLink = new TableLink();
         $orderedMenu = new OrderedMenu();
         $tableOrder = new TableOrder();
         $table = Table::find($request->user()->table_id);
         
         $orderDetails = [
-            'session_id' => $session->id,
+            'session_id' =>  269, //$session->id,
             // 'terminal' => $terminal,
             // 'terminal_session' => $terminalSession,
             // 'revenue' => $revenue->id,
             // 'cashier' => $cashier,
-            'terminal_session_id' => $terminalSession->id,
+            'terminal_session_id' => 270,//$terminalSession->id,
             'date_time_opened' => $terminalSession->date_time_opened,
             'date_time_closed' => NULL,
-            'revenue_id' => $revenue->id,
+            'revenue_id' => 1, //$revenue->id,
             'terminal_id' => $terminal->id,
             'customer_id' => NULL,
             // 'current_terminal_id' => $terminalSession->terminal_id,
@@ -83,148 +82,96 @@ class CreateOrder
             // 'is_available' => 1,
             // 'cash_tray_session_id' => 1,
             // 'server_banking_session_id' => '',
-            'start_employee_log_id' => $cashier->id,
-            'current_employee_log_id' => $cashier->id,
-            'close_employee_log_id' => $cashier->id,
-            'server_employee_log_id' => $cashier->id,
+            'start_employee_log_id' => 287, //$cashier->id,
+            'current_employee_log_id' => 287, //$cashier->id,
+            'close_employee_log_id' => 287, //$cashier->id,
+            'server_employee_log_id' => 287, //$cashier->id,
             // 'transaction_no' => '',
             'reference' => '',
-            'cashier_employee_id' => $cashier->id,
-            'terminal_service_id' => $terminalService->id,
+            'cashier_employee_id' => 2, //$cashier->id,
+            'terminal_service_id' => 1, //$terminalService->id,
             'is_online_order' => 0,
             // 'reprint_count'
         ];
 
         $order->fill(($orderDetails));
         $order->createOrder();
-        $currentOrder = Order::latest('created_on')->first();
+        $currentOrder = Order::find(18739);
 
  
-        $tableLink->order_id = $currentOrder->id;
-        $tableLink->table_id = $table->id;
-        $tableLink->primary_table_id =$table->id;
-        $tableLink->link_color = 1;
-        $tableLink->createLinkTable();
+        // $tableLink->order_id = $currentOrder->id;
+        // $tableLink->table_id = $table->id;
+        // $tableLink->primary_table_id =$table->id;
+        // $tableLink->link_color = 1;
+        // $tableLink->createLinkTable();
 
         $tableOrder->order_id = $currentOrder->id;
         $tableOrder->table_id = $table->id;
         $tableOrder->parent_table_id = NULL;
         $tableOrder->createTableOrder();
+
+        $orderCheck = $this->createOrderCheck($currentOrder, $params);
         
         // $table->changeTableStatus();
 
         return [
             'order' => $order,
-            'orderCheck' => $orderCheck,
-            'tableLink' => $tableLink,
-            'orderedMenu' => $orderedMenu,
-            'tableOrder' => $tableOrder,
-            'table' => $table
+            // 'ordered_menus' => $params['items'],
+            // 'orderCheck' => $orderCheck,
+            // 'tableLink' => $tableLink,
+            // 'orderedMenu' => $orderedMenu,
+            // 'tableOrder' => $tableOrder,
+            // 'table' => $table
         ];
-        // return $order;
-        // 'session_id' => '',
-        // 'terminal_session_id' => '',
-        // 'date_time_opened' => '',
-        // 'date_time_closed' => '',
-        // 'revenue_id' => '',
-        // 'terminal_id' => '',
-        // 'customer_id' => '',
-        // 'current_terminal_id' => '',
-        // 'end_terminal_id' => '',
-        // 'customer_id' => '',
-        // 'is_open' => '',
-        // 'is_transferred' => '',
-        // 'is_voided' => '',
-        // 'guest_count' => '',
-        // 'service_type_id' => '',
-        // // 'is_available' => '',
-        // // 'cash_tray_session_id' => '',
-        // // 'server_banking_session_id' => '',
-        // 'start_employee_log_id' => '',
-        // 'current_employee_log_id' => '',
-        // 'close_employee_log_id' => '',
-        // 'server_employee_log_id' => '',
-        // // 'transaction_no' => '',
-        // 'reference' => '',
-        // 'cashier_employee_id' => '',
-        // 'terminal_service_id' => '',
-        // 'is_online_order' => '',
-        // // 'reprint_count'
-
-    //     $orderDetails = [
-    //         'session_id' => $session->id,
-    //         'terminal' => $terminal,
-    //         'terminal_session' => $terminalSession,
-    //         'revenue' => $revenue->id,
-    //         'cashier' => $cashier,
-    //         'terminal_session_id' => $terminalSession->id,
-    //         'date_time_opened' => $terminalSession->date_time_opened,
-    //         // 'date_time_closed' => '',
-    //         'revenue_id' => $revenue->id,
-    //         'terminal_id' => $terminal->id,
-    //         // 'customer_id' => '',
-    //         'current_terminal_id' => $terminalSession->terminal_id,
-    //         'end_terminal_id' => $terminalSession->terminal_id,
-    //         'is_open' => 1,
-    //         'is_transferred' => 0,
-    //         'is_voided' => '0',
-    //         'guest_count' => $params['guest_count'],
-    //         'service_type_id' => $terminalService->service_type_id,
-    //         'is_available' => 1,
-    //         'cash_tray_session_id' => 1,
-    //         // 'server_banking_session_id' => '',
-    //         'start_employee_log_id' => $cashier->id,
-    //         'current_employee_log_id' => $cashier->id,
-    //         'close_employee_log_id' => $cashier->id,
-    //         // 'server_employee_log_id' => '',
-    //         // 'transaction_no' => '',
-    //         'reference' => '',
-    //         'cashier_employee_id' => $cashier->id,
-    //         'terminal_service_id' => $terminalService->id,
-    //         // 'is_online_order' => '',
-    //         // 'reprint_count'
-    //    ];
     }
 
-    protected function createOrder() {}
-    protected function createOrderCheck(Order $order) {
+    // add transaction number table
+
+    protected function createOrder(Order $order, array $params) {
+
+    }
+    protected function createOrderCheck(Order $order, array $params) {
 
         $orderCheck = new OrderCheck();
 
-        $details = [
+        $total = $params['total_amount'];
+        $subtotal = $total;
+        $guestCount = $params['guest_count'];
 
+        $details = [
             'order_id' => $order->id,
-            'date_time_opened' => $order->date_time_opened,
+            'date_time_opened' => Carbon::parse($order->date_time_opened),
             'is_voided' => $order->is_voided,
-            'is_settled' => $order->is_settled,
-            'from_split' => $order->from_split,
-            'total_amount' => '',
-            'paid_amount' => '',
-            'change' => '',
-            'subtotal_amount' => '',
-            'tax_amount' => '',
-            'discount_amount' => '',
-            'transaction_number' => '',
-            'gross_amount' => '',
-            'taxable_amount' => '',
-            'tax_exempt_amount' => '',
-            'item_discount_amount' => '',
-            'check_discount_amount' => '',
-            'regular_guest_count' => '',
-            'exempt_guest_count' => '',
-            'surcharges_amount' => '',
-            'tax_sales_amount' => '',
-            'tax_exempt_sales_amount' => '',
+            'is_settled' => 0,
+            'from_split' => 0,
+            'total_amount' => $total,
+            'paid_amount' => 0.0,
+            'change' => 0.0,
+            'subtotal_amount' => $total,
+            'tax_amount' => 0.0,
+            'discount_amount' => 0.0,
+            'transaction_number' => 4,
+            'gross_amount' => 0.0,
+            'taxable_amount' => 0.0,
+            'tax_exempt_amount' => 0.0,
+            'item_discount_amount' => 0.0,
+            'check_discount_amount' => 0.0,
+            'regular_guest_count' => $guestCount,
+            'exempt_guest_count' => 0,
+            'surcharges_amount' => 0.0,
+            'tax_sales_amount' => 0.0,
+            'tax_exempt_sales_amount' => 0.0,
             'guest_count' => $order->guest_count,
-            'comp_discount' => '',
-            'zero_rated_sales_amount' => '',
-            'tax_sales_amount_discounted' => '',
-            'tax_exempt_sales_amount_discounted' => '',
-            'surcharge_vatable' => '',
-            'surcharge_vat' => '',
+            'comp_discount' => 0.0,
+            'zero_rated_sales_amount' => 0.0,
+            'tax_sales_amount_discounted' => 0.0,
+            'tax_exempt_sales_amount_discounted' => 0.0,
+            'surcharge_vatable' => 0.0,
+            'surcharge_vat' => 0.0,
 
         ];
-        // $orderCheck->createOrderCheck();
+
+        return $orderCheck->fill($details)->createOrderCheck();
 
     }
     protected function createOrderedMenu(Order $order) {
