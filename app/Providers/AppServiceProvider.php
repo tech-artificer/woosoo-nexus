@@ -42,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
+        Gate::define('viewPulse', function (User $user) {
+            return $user->is_admin;
+        });
+
 
     }
 }

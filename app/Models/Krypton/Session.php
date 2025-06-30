@@ -16,11 +16,15 @@ class Session extends Model
       'id' => 'integer',  
     ];
 
-    protected $sessionRepository;
+    // protected $sessionRepository;
 
-    public function __construct() {
-      $this->sessionRepository = new SessionRepository();
-      $this->id = $this->sessionRepository->getLatestSessionId();
-    }
+    // public function __construct() {
+    //   $this->sessionRepository = new SessionRepository();
+    //   $this->id = $this->sessionRepository->getLatestSessionId();
+    // }
+
+    public static function getLatestSession() {
+      return SessionRepository::getLatestSession();
+    } 
 
   }

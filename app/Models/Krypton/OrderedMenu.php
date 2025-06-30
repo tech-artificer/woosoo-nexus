@@ -92,6 +92,11 @@ class OrderedMenu extends Model
         return $this->belongsTo(Order::class, 'order_id');
     }
 
+    public function menus() : HasMany {
+        return $this->belongsTo(Menu::class, 'ordered_menu_id');
+    }
+
+
      protected static function boot() : void
     {
         parent::boot();

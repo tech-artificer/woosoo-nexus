@@ -3,15 +3,16 @@
 namespace App\Repositories\Krypton;
 
 use Illuminate\Support\Facades\DB;
+use App\Models\Krypton\Session;
 
 class SessionRepository
 {
     protected $connection = 'pos';
 
-    public function getLatestSessionId()
+    public static function getLatestSession()
     {
         try {
-            return DB::connection($this->connection)->select('CALL get_latest_session_id()');
+            return Session::fromQuery('CALL get_latest_session()');
         } catch (\Exception $e) {
             \Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');

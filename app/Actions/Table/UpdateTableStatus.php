@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Actions\Order;
+namespace App\Actions\Table;
 
 use Lorisleiva\Actions\Concerns\AsAction;
 
-class UpdateOrderStatus
+class UpdateTableStatus
 {
     use AsAction;
 

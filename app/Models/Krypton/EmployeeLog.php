@@ -11,7 +11,7 @@ class EmployeeLog extends Model
     protected $table = 'employee_logs';
     protected $primaryKey = 'id';
 
-     protected $casts = [
+    protected $casts = [
         'id' => 'integer',  
     ];
     

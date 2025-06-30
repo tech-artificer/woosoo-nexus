@@ -15,6 +15,14 @@ export interface NavItem {
     href: string;
     icon?: LucideIcon;
     isActive?: boolean;
+    hasSubItems?: boolean;
+    items?: NavSubItem[];
+}
+
+export interface NavSubItem {
+    title?: string;
+    href?: string;
+    isActive?: boolean;
 }
 
 export type AppPageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
@@ -25,14 +33,5 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
     sidebarOpen: boolean;
 };
 
-export interface User {
-    id: number;
-    name: string;
-    email: string;
-    avatar?: string;
-    email_verified_at: string | null;
-    created_at: string;
-    updated_at: string;
-}
 
 export type BreadcrumbItemType = BreadcrumbItem;

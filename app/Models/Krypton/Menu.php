@@ -2,14 +2,15 @@
 
 namespace App\Models\Krypton;
 
-use Illuminate\Database\Eloquent\Model;
+
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\MenuImage;
+use App\Repositories\Krypton\MenuRepository;
 
-class Menu extends Model
+class Menu extends MenuRepository
 {
     protected $connection = 'pos';
     protected $table = 'menus';
@@ -33,7 +34,7 @@ class Menu extends Model
         'menu_group_id' => 'integer',
         'menu_course_type_id' => 'integer',
         'menu_id' => 'integer',
-        'price' => 'float',
+        'price' => 'decimal:2',
     ];
 
     public function modifiers() : HasMany
@@ -63,31 +64,31 @@ class Menu extends Model
     }
 
     # SCOPES
-     public function scopeFilter(Builder $query, array $filters)
-    {
-        if (!empty($filters['menu_category_id'])) {
-            $query->where('menu_category_id', $filters['menu_category_id']);
-        }
+    //  public function scopeFilter(Builder $query, array $filters)
+    // {
+    //     if (!empty($filters['menu_category_id'])) {
+    //         $query->where('menu_category_id', $filters['menu_category_id']);
+    //     }
 
-        if (!empty($filters['menu_course_type_id'])) {
-            $query->where('menu_course_type_id', $filters['menu_course_type_id']);
-        }
+    //     if (!empty($filters['menu_course_type_id'])) {
+    //         $query->where('menu_course_type_id', $filters['menu_course_type_id']);
+    //     }
 
-        if (!empty($filters['menu_group_id'])) {
-            $query->where('menu_group_id', $filters['menu_group_id']);
-        }
+    //     if (!empty($filters['menu_group_id'])) {
+    //         $query->where('menu_group_id', $filters['menu_group_id']);
+    //     }
 
-        if (!empty($filters['search'])) {
-            $query->where('name', 'like', '%' . $filters['search'] . '%');
-        }
+    //     if (!empty($filters['search'])) {
+    //         $query->where('name', 'like', '%' . $filters['search'] . '%');
+    //     }
 
-        return $query;
-    }
+    //     return $query;
+    // }
 
-    public function scopeAvailable(Builder $query)
-    {
-        return $query->where('is_available', 1);
-    }
+    // public function scopeAvailable(Builder $query)
+    // {
+    //     return $query->where('is_available', 1);
+    // }
 
 
     public function scopeSetMeals($query)
@@ -104,10 +105,10 @@ class Menu extends Model
     // {
     //     return $query->where(['is_modifier' => 0]);
     // }
-     public function scopePriced($query)
-    {
-        return $query->where('price', '>', 0);
-    }
+    //  public function scopePriced($query)
+    // {
+    //     return $query->where('price', '>', 0);
+    // }
 
     public static function getModifiers(int $id) {
         

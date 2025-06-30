@@ -1,4 +1,6 @@
 import { AppPageProps } from '@/types/index';
+import Echo from 'laravel-echo'; // Import the Echo type from the laravel-echo package
+import Pusher from 'pusher-js'; // Import Pusher if you use it globally or need its type
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -29,4 +31,11 @@ declare global {
   interface Window {
     axios: any // Or import Axios types if available
   }
+}
+
+declare global {
+    interface Window {
+        Pusher: typeof Pusher, // Declare Pusher if you're assigning it to window.Pusher
+        Echo: Echo, // Declare Echo on the Window object
+    }
 }

@@ -2,27 +2,28 @@
 
 namespace App\Repositories\Krypton;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
-use App\Models\Krypton\Menu;
 
-class MenuRepository
+
+class MenuRepository extends Model
 {
-    public function getMenus()
+    public static function getMenus()
     {
         try {
-            return Menu::fromQuery('CALL get_menus()');
+            return Self::fromQuery('CALL get_menus()');
         } catch (\Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }
 
-    public function getMenuById(int $id)
+    public static function getMenuById(int $id)
     {
         try {
-            return Menu::fromQuery('CALL get_menu_by_id(?)', [$id]);
+           return Self::fromQuery('CALL get_menu_by_id(?)', [$id]);
         } catch (\Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
@@ -36,10 +37,10 @@ class MenuRepository
      * @throws \Exception If the database procedure call fails.
      *
      */
-    public function getMenusWithModifiers()
+    public static function getMenusWithModifiers()
     {
         try {
-            return Menu::fromQuery('CALL get_menus_with_modifiers()');
+            return Self::fromQuery('CALL get_menus_with_modifiers()');
         } catch (Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new Exception('Something Went Wrong.');
@@ -54,7 +55,7 @@ class MenuRepository
      * @throws \Exception If the database procedure call fails.
      */
 
-    public function getMenusByCategory($category)
+    public static function getMenusByCategory($category)
     {
         try {
             return Menu::fromQuery('CALL get_menus_by_category(?)', [$category]);

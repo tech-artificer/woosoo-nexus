@@ -8,7 +8,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans: raleway, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-header: Raleway, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: Kanit, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -59,10 +61,15 @@
 }
 
 @theme {
+
     --color-woosoo-accent: #F6B56D;
     --color-woosoo-dark-gray: #252525;
     --color-woosoo-primary-light: #FCD8BA;
     --color-woosoo-primary-dark: #B08047;
+    --color-woosoo-blue: #2563eb;
+    --color-woosoo-red: #dc2626;
+    --color-woosoo-green: #16a34a;
+    --color-woosoo-orange: #f97316;
 }
 
 /*
@@ -86,8 +93,8 @@
 @layer utilities {
     body,
     html {
-        --font-sans:
-            'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        --font-header: Raleway, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        --font-sans: Kanit, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     }
 }
 

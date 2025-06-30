@@ -4,6 +4,10 @@ namespace App\Models\Krypton;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+
+use App\Models\Krypton\OrderCheck;
+use App\Models\Krypton\OrderedMenu;
 
 class Order extends Model
 {
@@ -39,19 +43,19 @@ class Order extends Model
         'is_voided',
         'guest_count',
         'service_type_id',
-        // 'is_available',
-        // 'cash_tray_session_id',
-        // 'server_banking_session_id',
+        'is_available',
+        'cash_tray_session_id',
+        'server_banking_session_id',
         'start_employee_log_id',
         'current_employee_log_id',
         'close_employee_log_id',
         'server_employee_log_id',
-        // 'transaction_no',
+        'transaction_no',
         'reference',
         'cashier_employee_id',
         'terminal_service_id',
         'is_online_order',
-        // 'reprint_count'
+        'reprint_count'
     ];
 
     /**
@@ -74,7 +78,7 @@ class Order extends Model
         'server_employee_log_id' => 'integer',
         'transaction_no' => 'integer',
         'cashier_employee_id' => 'integer',
-        'terminal_service_id' => 'integer',
+        'terminal_service_id' => 'integer', 
     ];
 
     /**
@@ -99,52 +103,13 @@ class Order extends Model
         return $this->hasMany(OrderedMenu::class, 'order_id');
     }
 
-
-    protected static function boot() : void
+    public function orderCheck() : HasOne
     {
-        parent::boot();
-
-        static::creating(function ($model) {
-            
-            // $model
-            // $terminal = Terminal::posTerminal()->get();
-            // $terminalSession = TerminalSession::where('terminal_id', $terminal->id)->first();
-            // $terminalService = TerminalService::where('terminal_id', $terminal->id)->first();
-            // $employeeLog = EmployeeLog::today()->where('session_id', $terminalSession->id)->first();
-            // $transactionCount = Self::where('session_id', $terminalSession->id)->count();
-
-            // $model->session_id = $terminalSession->id;
-            // $model->terminal_session_id = $terminalSession->id;
-            // $model->date_time_opened = now();
-            // $model->revenue_id = $terminalService->revenue_id;
-            // $model->terminal_id = $terminal->id; // $terminalService->terminal_id;
-            // $model->is_open = 1; // 1 or 0
-            // $model->is_transferred = 0; // 1 or 0
-            // $model->is_voided = 0; // 1 or 0
-            // $model->guest_count = 1; // Default guest count
-            // $model->service_type_id = $terminalService->service_type_id;
-            // $model->start_employee_log_id = $employeeLog->id;
-            // $model->transaction_no = $transactionCount++;
-            // $model->is_available = 1;
-            // $model->date_time_closed = null;
-            // $model->end_terminal_id  = null;
-            // $model->customer_id = null;
-            // $model->reference = null;
-            // $model->cashier_employee_id = null;
-            // $model->current_terminal_id = $terminal->id;
-            // $model->current_employee_log_id = $employeeLog->id;    
-            // $model->cash_tray_session_id = null; // Initially set to DEFAULT NULL
-            // $model->server_banking_session_id = null; // Initially set to DEFAULT NULL
-            // $model->server_employee_log_id = null; // Initially set to DEFAULT NULL
-            // $model->close_employee_log_id = null; // Initially set to DEFAULT NULL
-            // $model->terminal_service_id = 1; // By Default - DINE IN only terminal_services Table
-            // $model->is_online_order = 1; // Initially set to DEFAULT 1
-            // $model->reprint_count = 0; // Initially set to DEFAULT 0
-        });
+        return $this->hasOne(OrderCheck::class, 'order_id');
     }
 
-    public function createTransactionNo($orderId, $SessionId) {
-        return Order::fromQuery('CALL create_transaction_no(?, ?)', [$orderId, $SessionId]);
+    public function getTransactionNo($sessionId) {
+        return Order::where(['session_id' => $sessionId])->count() + 1;
     }
 
     public function createOrder() {

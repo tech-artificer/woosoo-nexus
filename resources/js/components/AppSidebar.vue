@@ -1,26 +1,36 @@
 <script setup lang="ts">
-import NavFooter from '@/components/NavFooter.vue';
+// import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed, Table } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutDashboard, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed, Table } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
-        icon: LayoutGrid,
+        icon: LayoutDashboard,
     },
     {
         title: 'Orders',
         href: '/orders',
         icon: ListOrdered,
+        items: [
+            {
+                title: 'Live Orders',
+                href: '/orders/live',
+            },
+            {
+                title: 'KDS',
+                href: '/orders/kds',
+            },
+        ]
     },
     {
-        title: 'Menus',
+        title: 'Menu Management',
         href: '/menus',
         icon: UtensilsCrossed,
     },
@@ -30,31 +40,55 @@ const mainNavItems: NavItem[] = [
         icon: UserCog,
     },
     {
-        title: 'Devices',
+        title: 'Device Management',
         href: '/devices',
         icon: MonitorSmartphone,
+        items: [
+            {
+                title: 'Devices',
+                href: '/devices',
+            },
+            {
+                title: 'Assign Tables',
+                href: '/devices/assign-tables',
+            },
+        ]
     },
     {
-        title: 'Tables',
-        href: '/tables',
-        icon: Table,
+        title: 'Settings',
+        href: '/settings',
+        icon: ListOrdered,
+        items: [
+            {
+                title: 'Users',
+                href: '/users',
+            },
+            {
+                title: 'Roles & Permissions',
+                href: '/roles-permissions',
+            },
+            {
+                title: 'Terminal Session (POS)',
+                href: '/terminal-session',
+            },
+        ]
     },
 
     
 ];
 
-const footerNavItems: NavItem[] = [
-    // {
-    //     title: 'Github Repo',
-    //     href: 'https://github.com/laravel/vue-starter-kit',
-    //     icon: Folder,
-    // },
-    // {
-    //     title: 'Documentation',
-    //     href: 'https://laravel.com/docs/starter-kits#vue',
-    //     icon: BookOpen,
-    // },
-];
+// const footerNavItems: NavItem[] = [
+//     // {
+//     //     title: 'Github Repo',
+//     //     href: 'https://github.com/laravel/vue-starter-kit',
+//     //     icon: Folder,
+//     // },
+//     // {
+//     //     title: 'Documentation',
+//     //     href: 'https://laravel.com/docs/starter-kits#vue',
+//     //     icon: BookOpen,
+//     // },
+// ];
 </script>
 
 <template>
@@ -76,7 +110,7 @@ const footerNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
+            <!-- <NavFooter :items="footerNavItems" /> -->
             <NavUser />
         </SidebarFooter>
     </Sidebar>

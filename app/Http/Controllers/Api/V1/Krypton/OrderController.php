@@ -2,29 +2,25 @@
 
 namespace App\Http\Controllers\Api\V1\Krypton;
 
-use App\Models\Krypton\Order;
-use App\Models\Krypton\OrderCheck;
-use App\Models\Krypton\OrderedMenu;
-use App\Models\Krypton\TableOrder;
-use App\Models\Krypton\Table;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Repositories\Krypton\OrderRepository;
+use App\Http\Resources\OrderResource;
 
 class OrderController extends Controller
 {
+  
     /**
-     * Display a listing of the resource.
+     * Return a list of all orders with the corresponding device data.
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index()
     {
-        return response()->json([
-                'orders' => Order::find(18739), //Order::latest('created_on')->get();
-                // 'order_checks' => Order::latest('created_on')->limit(2)->get(),
-                // 'tables' => Table::all(),
-        ]);
+        $orders = OrderRepository::getAllOrdersWithDeviceData();
+        return OrderResource::collection($orders);
     }
-
     /**
      * Show the form for creating a new resource.
      */

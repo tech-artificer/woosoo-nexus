@@ -5,31 +5,37 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Branch;
+use App\Models\Krypton\Table;
 use App\Enums\OrderStatus;
+use Illuminate\Support\Str;
+
 
 class DeviceOrder extends Model
 {
     protected $table = 'device_orders';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
+        'id',
         'branch_id',
         'device_id',
         'table_id',
         'order_id',
         'order_number',
+        'terminal_session_id',
         'status',
         'items',
         'meta',
-        'data',
     ];
 
     protected $casts = [
         'device_id' => 'integer',
+        'terminal_session_id' => 'integer',
         'table_id' => 'integer',
         'order_id' => 'integer',
         'order_number' => 'string',
         'status' => OrderStatus::class,
-        'data' => 'array',
+        'items' => 'array',
         'meta' => 'array',
     ];
 
@@ -72,10 +78,7 @@ class DeviceOrder extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            if (empty($model->order_uuid)) {
-                $model->order_uuid = (string) Str::uuid();
                 $model->branch_id = Branch::first()->id;
-            }
         });
 
         static::creating(function ($model) {
@@ -94,20 +97,20 @@ class DeviceOrder extends Model
             }
             throw new \Exception('Failed to generate a unique order number after multiple attempts.');
         });
-
-        static::created(function ($model) {
-            $model->branch_id = Branch::first()->id;
-        });
     }
 
-
-    public function device() : BelongsTo
+    public function device(): BelongsTo
     {
-        return $this->belongsTo(Device::class);
+        return $this->belongsTo(Device::class, 'device_id');
     }
 
-    public function table() : BelongsTo
+    public function table(): BelongsTo
     {
-        return $this->belongsTo(Table::class);
+        return $this->belongsTo(Table::class, 'table_id');
+    }
+
+    public function order(): HasOne
+    {
+        return $this->hasOne(Order::class, 'order_id');
     }
 }

@@ -1,4 +1,5 @@
 import '../css/app.css';
+import './bootstrap';
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -6,8 +7,29 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
-import axios from 'axios'
 
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
+
+// Make Pusher globally available for Echo
+window.Pusher = Pusher;
+
+try {
+    window.Echo = new Echo({
+        broadcaster: 'reverb',
+        key: import.meta.env.VITE_REVERB_APP_KEY,
+        wsHost: import.meta.env.VITE_REVERB_HOST,
+        wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
+        wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+        forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+        disableStats: true,
+        encrypted: true, // Also important for WSS
+        enabledTransports: ['ws', 'wss'],
+    });
+    console.log('[BOOTSTRAP] Echo initialized:', window.Echo);
+} catch (error) {
+    console.log('[BOOTSTRAP] Error initializing Echo:', error);
+}
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -26,5 +48,4 @@ createInertiaApp({
 });
 
 // This will set light / dark mode on page load...
-initializeTheme();
-
+initializeTheme();  

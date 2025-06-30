@@ -5,30 +5,71 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreDeviceOrderRequest;
+use App\Services\Krypton\OrderService;
 
-use App\Actions\Order\CreateOrder;
+use App\Models\Krypton\TerminalSession;
 
-
-use App\Models\Krypton\Order;
-use App\Models\Krypton\OrderCheck;
-use App\Models\Krypton\OrderedMenu;
-use App\Models\Krypton\TableOrder;
-use App\Models\Krypton\TableLink;
-use App\Models\Krypton\Table;
+use App\Enums\OrderStatus;
+use App\Events\Order\OrderCreated;
 
 class DeviceOrderController extends Controller
 {
+
+    protected $orderService;
+
+    public function __construct(OrderService $orderService)
+    {
+        $this->orderService = $orderService;
+    }
+
     /**
-     * Handle the incoming request.
+     * Handle the incoming order request from specific device.
+     *
+     * @param  StoreDeviceOrderRequest  $request
+     * @return \Illuminate\Http\Response
      */
     public function __invoke(StoreDeviceOrderRequest $request)
     {   
-        return CreateOrder::run($request, $request->validated());
+        // Check for active terminal session
+        $terminalSession = TerminalSession::current()->latest('created_on')->first() ?? false;
 
-        // $tableId = $request->user()->table_id;
+        if( !$terminalSession ) {
+            return response()->json([
+                'message' => 'Terminal session not found'
+                ], 404);
+        }
 
-        // $table = Table::find($tableId);
+        // Proceed to create order
+        # Validate Request
+        $validated = $request->validated();
+        
+        $device = $request->user();
 
-        // return $request->user();
+        $order = $this->orderService->create($device, $terminalSession, $validated);
+        $order->load(['orderedMenus']);
+
+        $deviceOrder = $device->orders()->create([
+            'order_id' => $order->id,
+            'table_id' => $device->table_id,
+            'terminal_session_id' => $order->terminal_session_id,
+            'items' => $order->orderedMenus->toJson(),
+            'meta' => json_encode([
+                'total_amount' => $validated['total_amount'],
+                'guest_count' => $validated['guest_count'],
+                'note' => $validated['note'],
+            ]), 
+        ]);
+
+        $deviceOrder->update(['status' => OrderStatus::CONFIRMED]);
+
+        $device->table()->update(['is_locked' => 1]);
+
+        $order->load(['orderCheck', 'orderedMenus']);
+        $order->deviceOrder = $deviceOrder->load('device', 'table');
+
+        broadcast(new OrderCreated($deviceOrder));
+    
+        return $deviceOrder;
+
     }
 }

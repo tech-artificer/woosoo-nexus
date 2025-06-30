@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\{
     DeviceOrderController,
     MenuImageController,
     BrowseMenuController,
+    DeviceOrderUpdateController,
     // TableController,
 };
 
@@ -26,8 +27,10 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::post('/token/create', [AuthController::class, 'createToken']);
+
 Route::middleware('guest')->group(function () {
-    Route::post('/login', [AuthController::class, 'login'])->name('api.user.login');
+    // Route::post('/login', [AuthController::class, 'authenticate'])->name('api.user.login');
     Route::post('/devices/register', [DeviceAuthController::class, 'register'])->name('api.devices.register');
     Route::post('/devices/login', [DeviceAuthController::class, 'login'])->name('api.devices.login');
 
@@ -50,8 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::resource('/orders', OrderController::class);
 
     Route::post('/devices/create-order', DeviceOrderController::class);
-
-
+    // Route::post('/devices/order/create', DeviceOrderController::class);
+    Route::post('/devices/order/update', DeviceOrderUpdateController::class);
     // 
     // Route::get('/orders/table/active', [TableController::class, 'index'])->name('api.orders.table.active');
 
