@@ -2,18 +2,17 @@
 
 namespace App\Repositories\Krypton;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use App\Models\Krypton\Menu;
 
-
-class MenuRepository extends Model
+class MenuRepository
 {
-    public static function getMenus()
+    public function getMenus()
     {
         try {
-            return Self::fromQuery('CALL get_menus()');
+            return Menu::fromQuery('CALL get_menus()');
         } catch (\Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
@@ -23,7 +22,7 @@ class MenuRepository extends Model
     public static function getMenuById(int $id)
     {
         try {
-           return Self::fromQuery('CALL get_menu_by_id(?)', [$id]);
+           return Menu::fromQuery('CALL get_menu_by_id(?)', [$id]);
         } catch (\Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
@@ -40,7 +39,7 @@ class MenuRepository extends Model
     public static function getMenusWithModifiers()
     {
         try {
-            return Self::fromQuery('CALL get_menus_with_modifiers()');
+            return Menu::fromQuery('CALL get_menus_with_modifiers()');
         } catch (Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new Exception('Something Went Wrong.');
