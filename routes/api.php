@@ -58,5 +58,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // 
     // Route::get('/orders/table/active', [TableController::class, 'index'])->name('api.orders.table.active');
 
+    
 });
 

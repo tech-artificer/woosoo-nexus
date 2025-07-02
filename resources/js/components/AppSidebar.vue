@@ -5,27 +5,36 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutDashboard, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed, Table } from 'lucide-vue-next';
+import { Circle,LayoutDashboard, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
+        isActive: false,
+        hasSubItems: false,
         icon: LayoutDashboard,
     },
     {
         title: 'Orders',
         href: '/orders',
         icon: ListOrdered,
+         isActive: false,
+        hasSubItems: true,
         items: [
             {
                 title: 'Live Orders',
                 href: '/orders/live',
+                icon: Circle,
+                isActive: false,
             },
             {
-                title: 'KDS',
-                href: '/orders/kds',
+                title: 'Table Orders',
+                href: '/orders/table-orders',
+                icon: Circle,
+                isActive: false,
+        
             },
         ]
     },
@@ -33,24 +42,34 @@ const mainNavItems: NavItem[] = [
         title: 'Menu Management',
         href: '/menus',
         icon: UtensilsCrossed,
+        isActive: false,
+        hasSubItems: false,
     },
     {
         title: 'Users',
         href: '/users',
         icon: UserCog,
+        isActive: false,
+        hasSubItems: false,
     },
     {
         title: 'Device Management',
         href: '/devices',
         icon: MonitorSmartphone,
+        isActive: false,
+        hasSubItems: true,
         items: [
             {
                 title: 'Devices',
                 href: '/devices',
+                icon: Circle,
+                isActive: false,
             },
             {
                 title: 'Assign Tables',
                 href: '/devices/assign-tables',
+                icon: Circle,
+                isActive: false,
             },
         ]
     },
@@ -58,18 +77,26 @@ const mainNavItems: NavItem[] = [
         title: 'Settings',
         href: '/settings',
         icon: ListOrdered,
+        isActive: false,
+        hasSubItems: false,
         items: [
             {
                 title: 'Users',
                 href: '/users',
+                icon: Circle,
+                isActive: false,
             },
             {
                 title: 'Roles & Permissions',
                 href: '/roles-permissions',
+                icon: Circle,
+                isActive: false,
             },
             {
                 title: 'Terminal Session (POS)',
                 href: '/terminal-session',
+                icon: Circle,
+                isActive: false,
             },
         ]
     },

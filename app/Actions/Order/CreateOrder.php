@@ -15,56 +15,11 @@ class CreateOrder
 
     public function handle(Device $device, array $params)
     {
-
         $orderId = $this->createOrder($params);
-
         return Order::findOrFail($orderId);
-        // $transactionNo = $order->createTransactionNo($order->id, $order->session_id);
-        // $order->update('transaction_number', $transactionNo);
-
-        // $orderCheck = $this->createOrderCheck($order, $params);
-
-        // $orderedMenus = $this->createOrderedMenus($order, $params);
-        // // $deviceOrder = $device->deviceOrders()->create([
-        // //     'table_id' => $device->table_id,
-        // //     'order_id' => $order->id,
-
-
-        // // ]);
-
-        // // $orderCheck = $this->createOrderCheck($order, $params);
-        // // $orderedMenus = $this->createOrderedMenus($order, $params);
-        // return $deviceOrder;
-        // // $orderCheck = $this->createOrderCheck($order, $params);
-
-        // $deviceOrder = $device->deviceOrders()->create([
-        //     'table_id' => $device->table_id,
-        //     'items' => json_encode($params['items']),
-        //     'meta' => json_encode([
-        //         'total_amount' => $params['total_amount'],
-        //         'guest_count' => $params['guest_count'],
-        //         'note' => $params['note'],
-        //     ]),
-        // ]);
-
-
-        // $tableOrder = new TableOrder();
-        // $table = Table::find($request->user()->table_id);
-        
-        // $tableLink->order_id = $currentOrder->id;
-        // $tableLink->table_id = $table->id;
-        // $tableLink->primary_table_id =$table->id;
-        // $tableLink->link_color = 1;
-        // $tableLink->createLinkTable();
-
-        // $tableOrder->order_id = $currentOrder->id;
-        // $tableOrder->table_id = $table->id;
-        // $tableOrder->parent_table_id = NULL;
-        // $tableOrder->createTableOrder();
-        
-        // $table->changeTableStatus();
-
+ 
     }
+    
     public function createOrder(array $params) : int {
 
        $order = Order::create([

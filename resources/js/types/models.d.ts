@@ -51,6 +51,7 @@ export interface Order {
     date_time_opened: date;
     transaction_no: number;
     guest_count: number;
+    reprint_count: number;
     order_check?: OrderCheck;
     ordered_menus?: OrderedMenu[];
     device?: Device;

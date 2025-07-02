@@ -22,6 +22,7 @@ export interface NavItem {
 export interface NavSubItem {
     title?: string;
     href?: string;
+    icon?: LucideIcon;
     isActive?: boolean;
 }
 

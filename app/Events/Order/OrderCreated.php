@@ -11,6 +11,9 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
+use App\Models\DeviceOrder;
+use App\Http\Resources\OrderResource;
+
 class OrderCreated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
@@ -18,9 +21,6 @@ class OrderCreated implements ShouldBroadcastNow
     public $order;
 
     /**
-     * Create a new event instance.
-     */
- /**
      * Create a new event instance.
      */
     public function __construct(DeviceOrder $order)
@@ -43,14 +43,14 @@ class OrderCreated implements ShouldBroadcastNow
     /**
      * Get the data to broadcast for the notification.
      *
-     * @return array
+     * @return OrderResource
      */
     public function broadcastWith()
     {   
       
         // return (new OrderResource($this->order))->toArray(request());
-
-        return $this->order;
+        $order = new OrderResource($this->order);
+        return $order->toArray(request());
     }
 
     /**

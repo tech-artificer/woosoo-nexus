@@ -11,6 +11,7 @@ use App\Models\Krypton\TerminalSession;
 
 use App\Enums\OrderStatus;
 use App\Events\Order\OrderCreated;
+use App\Models\DeviceOrder;
 
 class DeviceOrderController extends Controller
 {

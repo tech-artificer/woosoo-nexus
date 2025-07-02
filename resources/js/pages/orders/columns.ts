@@ -1,7 +1,6 @@
 import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
 import { Order } from '@/types/models';
-import { OrderStatus } from '@/types/enums';
 import  OrderStatusBadge from '@/pages/orders/OrderStatusBadge.vue'
 
 export const ordercolumns: ColumnDef<Order>[] = [
@@ -14,9 +13,10 @@ export const ordercolumns: ColumnDef<Order>[] = [
     },
     {
         accessorKey: 'id',
-        header: 'Order Number',
+        header: 'Order Number | ID',
         cell: ({ row }) => {
-            return h( 'div', { class: 'capitalize' }, row.original.deviceOrder?.order_number ?? 'N/A')
+            const orderNumber = row.original.deviceOrder?.order_number ?? 'N/A';
+            return h( 'div', { class: 'capitalize' },  `${orderNumber} | ${row.original.id}`);
         },
     },
     {

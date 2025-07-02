@@ -12,9 +12,19 @@ class Session extends Model
     protected $connection = 'pos';
     protected $table = 'sessions';
 
-    protected $casts = [
-      'id' => 'integer',  
+    public $timestamps = false;
+    protected $fillable = [
+      'date_time_opened',
+      'date_time_closed',
+      'created_on',
+      'modified_on',
     ];
+
+    protected $casts = [
+      'id' => 'integer',
+      'date_time_opened' => 'datetime',
+      'date_time_closed' => 'datetime',
+  ];
 
     // protected $sessionRepository;
 

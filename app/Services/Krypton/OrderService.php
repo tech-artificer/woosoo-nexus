@@ -65,4 +65,12 @@ class OrderService
         });
     }
 
+    public function update(DeviceOrder $deviceOrder, array $attr)
+    {
+        $order = $deviceOrder->order;
+
+        // $order->status = 'closed';
+        // $order->save();
+    }
+
 }

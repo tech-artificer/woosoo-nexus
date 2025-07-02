@@ -7,21 +7,23 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-use App\Models\Order;
-use App\Http\Resources\Order\OrderResource;
 
-class OrderStatusUpdated implements ShouldBroadcastNow
+use App\Models\DeviceOrder;
+use App\Http\Resources\OrderResource;
+
+class OrderCompleted implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $order;
+
     /**
      * Create a new event instance.
      */
-    public function __construct(Order $order)
+    public function __construct(DeviceOrder $order)
     {
         $this->order = $order;
     }
@@ -34,16 +36,23 @@ class OrderStatusUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('orders'),
+              new Channel('orders'),
         ];
     }
-
+    /**
+     * Get the data to broadcast for the notification.
+     *
+     * @return OrderResource
+     */
     public function broadcastWith()
-    {
+    {   
         // return (new OrderResource($this->order))->toArray(request());
+        // $order = new OrderResource($this->order);
+        // return $order->toArray(request());
         return [
+            'id' => $this->order->id,
             'order_id' => $this->order->order_id,
-            'status' => $this->order->status,
+            'status' => $this->order->status
         ];
     }
 
@@ -54,6 +63,6 @@ class OrderStatusUpdated implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'order.updated'; // Custom event name for frontend to listen to
+        return 'order.completed'; // Custom event name for frontend to listen to
     }
 }

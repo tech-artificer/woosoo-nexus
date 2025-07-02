@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
-import { Order } from '@/types/models';
+import { DeviceOrder, Order } from '@/types/models';
 import { ordercolumns } from '@/pages/orders/columns';
 import OrderTable from '@/pages/orders/OrderTable.vue';
 import axios from 'axios';
@@ -23,12 +23,11 @@ defineProps<{
     orders: Order[];
 }>()
 
-const handleOrderEvent = (event: Order, isUpdate = false) => {
+const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
 
   console.log('Order event received:', event);
-  const order = event
 
-  // const order: Order = {
+  // const deviceOrder: Order = {
   //   id: event.id,
   // }
 }
@@ -58,11 +57,14 @@ onMounted(() => {
   }
 
   window.Echo.channel('orders')
-    .listen('.order.created', (event: Order) => {
-      console.log('Display.vue: New order created:', event)
-    })  
-    .listen('.order.updated', (event: Order) => {
-      console.log('Display.vue: order updated:', event)
+    // .listen('.order.created', (event: Order) => {
+    //   console.log('New Order Created:', event)
+    // })  
+    // .listen('.order.updated', (event: Order) => {
+    //   console.log('Order Status updated: ', event)
+    // })
+    .listen('.order.completed', (event: DeviceOrder | any) => {
+      console.log('Order Status completed: ', event.id)
     })
     .error((error: Order) => {
       console.error('Display.vue: Error connecting to Reverb channel:', error)

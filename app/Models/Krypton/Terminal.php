@@ -16,12 +16,11 @@ class Terminal extends Model
         'id' => 'integer',
     ];
 
-    public function scopePOS(Builder $query, $sessionId = 1)
+    public function scopePOS(Builder $query)
     {
         return $query->where([
             'receipt_prefix' => 'POS1',
             'type' => 'terminal',
-            'session_id' => $sessionId
         ]);
     }
 }
