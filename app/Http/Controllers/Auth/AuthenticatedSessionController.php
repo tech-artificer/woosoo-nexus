@@ -33,6 +33,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // // Flash the token to the session
+        // $user = Auth::user();
+        // $token = $user->tokens()->where('name', 'auth_token')->first(); // Retrieve the first token with the name 'auth_token'
+        // if (!$token) {
+        //     $token = $user->createToken('auth_token')->plainTextToken; // Create a new token if it doesn't exist
+        // } else {
+        //     $token = $token->plainTextToken; // Get the token string
+        // }
+        // // Store the token in the session for use in the frontend         
+        // $request->session()->flash('token', $token);
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

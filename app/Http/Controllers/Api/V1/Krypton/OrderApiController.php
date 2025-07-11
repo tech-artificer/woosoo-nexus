@@ -1,20 +1,27 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\Http\Controllers\Api\V1\Krypton;
+
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Repositories\Krypton\OrderRepository;
+use App\Http\Resources\OrderResource;
+use App\Models\Krypton\Order;
 
-class BranchController extends Controller
+class OrderApiController extends Controller
 {
+  
     /**
-     * Display a listing of the resource.
+     * Return a list of all orders with the corresponding device data.
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index()
     {
-        //
+        // $orders = OrderRepository::getAllOrdersWithDeviceData();
+        return OrderResource::collection(Order::latest('created_on')->limit(2)->get());
     }
-
     /**
      * Show the form for creating a new resource.
      */

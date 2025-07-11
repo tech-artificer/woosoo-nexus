@@ -12,8 +12,4 @@ class EmployeeHistory extends Model
     
     public $timestamps = false;
 
-    protected $casts = [
-        'id' => 'integer',  
-    ];
-
 }

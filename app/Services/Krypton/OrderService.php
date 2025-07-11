@@ -4,73 +4,98 @@ namespace App\Services\Krypton;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-// Krypton Models
-use App\Models\Krypton\Order;
-use App\Models\Krypton\OrderCheck;
-use App\Models\Krypton\OrderedMenu;
-use App\Models\Krypton\TableOrder;
-use App\Models\Krypton\TableLink;
-use App\Models\Krypton\Table;
 
-use App\Models\Krypton\Session;
-use App\Models\Krypton\Employee;
-use App\Models\Krypton\Revenue;
-use App\Models\Krypton\Terminal;
-use App\Models\Krypton\TerminalSession;
-use App\Models\Krypton\TerminalService;
-// App Models
+use App\Models\Krypton\{
+    Order,
+    Menu,
+    Session,
+    Tax,
+    EmployeeLog,
+    Revenue,
+    Terminal,
+    TerminalSession,
+    TerminalService,
+    CashTraySession,
+};
+
 use App\Models\Device;
 use App\Models\DeviceOrder;
-// Actions
-use App\Actions\Order\CreateOrder;
-use App\Actions\Order\CreateOrderedMenu;
-use App\Actions\Order\CreateTableOrder;
-use App\Actions\Order\CreateOrderCheck;
+use App\Actions\Order\{
+    CreateOrder,
+    CreateOrderCheck,
+    CreateTableOrder,
+    CreateOrderedMenu
+};
 
+use App\Repositories\Krypton\MenuRepository;
+use App\Enums\OrderStatus;
 
 class OrderService
 {
-
-    public function create(Device $device, TerminalSession $terminalSession, array $attr)
+    public function processOrder(Device $device, array $attributes)
     {
-        $terminalService = TerminalService::where('terminal_id', $terminalSession->terminal_id)->first();
-        $employee = Employee::with(['position'])->whereLike('first_name', 'ailene')->first(); 
-        $revenue = Revenue::findOrFail($terminalService->revenue_id);
 
-        $attr['session_id'] = $terminalSession->session_id;
-        $attr['terminal_session_id'] = $terminalSession->id;
-        $attr['terminal_id'] = $terminalSession->terminal_id;
-        $attr['terminal_service_id'] = $terminalSession->terminal_service_id;
-        $attr['revenue_id'] = $terminalService->revenue_id;
-        $attr['service_type_id'] = $terminalService->service_type_id;
-        $attr['start_employee_log_id'] = $employee->id;
-        $attr['current_employee_log_id'] = $employee->id;
-        $attr['close_employee_log_id'] = $employee->id;
-        $attr['server_employee_log_id'] = $employee->id;
-        $attr['cashier_employee_id'] = $employee->id;
-        $attr['subtotal'] = $attr['total_amount'];
+        $defaults = $this->fetchDefaults();
+        $attributes = array_merge($defaults, $attributes);
+      
+        return DB::transaction(function () use ($attributes, $device) {
 
-        return DB::transaction(function () use ($device, $revenue, $employee, $attr) {
+            $order = CreateOrder::run($attributes);
 
-            $order = CreateOrder::run($device, $attr);
-            $transactionNo = $order->getTransactionNo($order->session_id);
-            $order->transaction_no = $transactionNo;
-            $order->save();
-
-            $orderCheck = CreateOrderCheck::run($order, $attr);
-            CreateOrderedMenu::run($order, $orderCheck, $revenue, $employee, $attr['items']);
-            CreateTableOrder::run($device, $order);
+            if (!$order) {
+                return false;
+            }
             
+            $order->update([
+                'end_terminal_id' => $order->terminal_id, 
+                'cash_tray_session_id' => $attributes['cash_tray_session_id'],
+                'cashier_employee_id' => $attributes['cashier_employee_id'],
+            ]); 
+
+            $attributes['order_id'] = $order->id;
+            $order->orderCheck = CreateOrderCheck::run($attributes);
+            $attributes['order_check_id'] = $order->orderCheck->id;
+            $order->tableOrder = CreateTableOrder::run($attributes);
+            $order->orderedMenus = CreateOrderedMenu::run($attributes);
+
+            $device->orders()->create([
+                'order_id' => $order->id,
+                'table_id' => $device->table_id,
+                'terminal_session_id' => $order->terminal_session_id,
+                'status' => OrderStatus::CONFIRMED,
+                'items' => [],
+                'meta' => [],
+            ]);
+
             return $order;
         });
     }
 
-    public function update(DeviceOrder $deviceOrder, array $attr)
+    protected function fetchDefaults(): array
     {
-        $order = $deviceOrder->order;
+        $session = Session::getLatestSession()->first();
+        $terminalSession = TerminalSession::where(['session_id' => $session->id])->first();
+        $terminalService = TerminalService::first();
+        $terminal = Terminal::where('id', $terminalService->terminal_id)->first();
+        $revenue = Revenue::where('id', $terminalService->revenue_id)->first();
+        $employeeLogs = EmployeeLog::getEmployeeLogsForSession($session->id)->first();
+        $cashTraySession = CashTraySession::where('session_id', $session->id)->first();
 
-        // $order->status = 'closed';
-        // $order->save();
+        return [
+            'session_id' => $session->id ?? null,
+            'terminal_session_id' => $terminalSession->id ?? null,
+            'revenue_id' => $revenue->id ?? null,
+            'terminal_id' => $terminal->id ?? null,
+            'service_type_id' => $terminalService->service_type_id ?? null,
+            'start_employee_log_id' =>  $employeeLogs->id,
+            'current_employee_log_id' => $employeeLogs->id,
+            'close_employee_log_id' =>  $employeeLogs->id,
+            'server_employee_log_id' => null,
+            'cashier_employee_id' => 2,
+            'employee_log_id' => $employeeLogs->id ?? null,
+            'terminal_service_id' => $terminalService->id ?? null,
+            'tax_set_id' => $revenue->tax_set_id ?? null,
+            'cash_tray_session_id' => $cashTraySession->id ?? null
+        ];
     }
-
 }

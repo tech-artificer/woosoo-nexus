@@ -2,39 +2,37 @@
 
 namespace App\Models\Krypton;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\MenuImage;
-use App\Repositories\Krypton\MenuRepository;
+use Illuminate\Support\Number;
 
 class Menu extends Model
 {
+    use HasFactory;
+
     protected $connection = 'pos';
     protected $table = 'menus';
     protected $primaryKey = 'id';
-
-    protected $fillable = [
-        'id',  
-        'menu_group_id', 
-        'menu_tax_type_id',
-        'menu_category_id',
-        'menu_course_type_id',
-        'name',
-        'kitchen_name',
-        'receipt_name',
-        'price',
-        'cost'
-    ];
+    protected $guarded = [];
+    public $timestamps = false;
 
     protected $casts = [
-        'menu_category_id' => 'integer',
-        'menu_group_id' => 'integer',
-        'menu_course_type_id' => 'integer',
-        'menu_id' => 'integer',
-        'price' => 'decimal:2',
+        'is_taxable' => 'boolean',
+        'is_available' => 'boolean',
+        'is_modifier' => 'boolean',
+        'is_discountable' => 'boolean',
+        'is_locked' => 'boolean',
+        'is_modifier_only' => 'boolean',
+    ];
+
+    protected $hidden = [
+        'created_on',
+        'modified_on',
     ];
 
     public function modifiers() : HasMany
@@ -60,7 +58,30 @@ class Menu extends Model
 
     public function image() : HasOne
     {
-        return $this->hasOne(MenuImage::class, 'menu_id', 'id');
+        return $this->hasOne(MenuImage::class, 'menu_id');
+    }
+
+    public function orderedMenus() : HasMany
+    {
+        return $this->hasMany(OrderedMenu::class, 'menu_id');
+    }
+
+    public function tax() : BelongsTo
+    {
+        return $this->belongsTo(Tax::class, 'menu_tax_type_id');
+    }
+
+    public function taxComputation($quantity) {
+
+        if ( !$this->is_taxable || $quantity == 0 || !$this->tax ) {
+            return 0;
+        }
+
+        $percentage = $this->tax->percentage ?? 0;
+        $decimals = (int)$this->tax->rounding ?? 0;
+        $taxAmount = ($this->price * $quantity) * ($percentage / 100);
+
+        return Number::format($taxAmount, $decimals);
     }
 
     # SCOPES
@@ -91,10 +112,10 @@ class Menu extends Model
     // }
 
 
-    public function scopeSetMeals($query)
-    {
-        return $query->where('menu_category_id', 1);
-    }
+    // public function scopeSetMeals($query)
+    // {
+    //     return $query->where('menu_category_id', 1);
+    // }
 
     // public function scopeSetModifiers($query)
     // {

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class MenuImageController extends Controller
+class BranchApiController extends Controller
 {
     /**
      * Display a listing of the resource.

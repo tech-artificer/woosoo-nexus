@@ -13,9 +13,7 @@ class MenuCourse extends Model
     protected $table = 'menu_course_types';
     protected $primaryKey = 'id';
 
-    protected $casts = [
-        'id' => 'integer',
-    ];
+
 
     public function menus() : HasMany
     {

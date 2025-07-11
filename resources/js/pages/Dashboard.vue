@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, defineProps } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
@@ -11,12 +12,17 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-defineProps<{
+const props = defineProps<{
     title?: string;
     description?: string;
-}>()
+    
+}>();
 
 
+onMounted(() => {
+    // This is where you can use the token if needed
+
+});
 </script>
 
 

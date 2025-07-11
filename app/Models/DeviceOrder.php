@@ -29,10 +29,6 @@ class DeviceOrder extends Model
     ];
 
     protected $casts = [
-        'device_id' => 'integer',
-        'terminal_session_id' => 'integer',
-        'table_id' => 'integer',
-        'order_id' => 'integer',
         'order_number' => 'string',
         'status' => OrderStatus::class,
         'items' => 'array',

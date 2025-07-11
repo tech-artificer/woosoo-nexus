@@ -39,13 +39,24 @@ const loginApi = async () => {
     }
 };
 
+
 const submit = () => {
-    form.post(route('login'), {
-        onFinish: async () => {
-            await loginApi();
-            form.reset('password');
-        }
-    });
+
+    // Call the login API
+    // loginApi().then(() => {
+        // After successful login, redirect to the dashboard
+        form.post(route('login'), {
+            onFinish: async () => {
+                form.reset('password');
+            }
+        });
+    // }).catch((error) => {
+    //     // Handle error (e.g., show a notification)
+    //     console.error('Login failed:', error);
+    // });
+
+   
+
 
 };
 </script>

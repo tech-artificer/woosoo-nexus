@@ -31,9 +31,5 @@ class OrderCheckUpdate implements ShouldQueue
     {
         // $terminalSession = TerminalSession::current()->latest('created_on')->first() ?? false;
         // $logs = UpdateLogs::whereDate('updated_at', Carbon::today())->get();
-        
-
-        
-
     }
 }

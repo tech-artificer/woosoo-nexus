@@ -28,14 +28,15 @@ class Device extends Model
         'last_seen_at',
     ];
 
-    // protected $casts = [
-    //     ''
-    // ];
-
      protected $hidden = [
         'created_at',
         'updated_at',
         'deleted_at',
+    ];
+
+    protected $casts = [
+      'table_id' => 'integer',
+      'is_active' => 'boolean',
     ];
 
     /**

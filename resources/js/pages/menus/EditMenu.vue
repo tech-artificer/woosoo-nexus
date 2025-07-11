@@ -2,7 +2,14 @@
 import { onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Pencil } from 'lucide-vue-next';
-import { toast } from 'vue-sonner'
+// import { toast } from 'vue-sonner'
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import {
   Dialog,
@@ -16,9 +23,7 @@ import {
 } from '@/components/ui/dialog'
 
 onMounted(() => {
-     toast('Event has been created', {
-        description: 'Sunday, December 03, 2023 at 9:00 AM',
-      })
+   
 })
 
 </script>
@@ -26,8 +31,19 @@ onMounted(() => {
 <template>
     <Dialog>
     <DialogTrigger as-child>
-      <Button variant="outline">
-        <Pencil />
+    <Button variant="outline" class="cursor-pointer">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+            
+                <Pencil />
+              
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Edit</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </Button>
     </DialogTrigger>
     <DialogContent class="sm:max-w-md">

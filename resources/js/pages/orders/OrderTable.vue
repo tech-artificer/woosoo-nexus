@@ -66,6 +66,12 @@ const table = useVueTable({
       </span>
     </div>
 
+    <div v-if="table.getRowModel().rows?.length" class="p-4 rounded-md">
+      <div class="flex items-center justify-end py-4 space-x-2">
+        <OrderTablePagination :table="table" />
+      </div>
+    </div>
+
     <div class="p-4 rounded-md">
       <Table>
         <TableHeader>
@@ -89,7 +95,7 @@ const table = useVueTable({
               </TableCell>
             </TableRow>
           </template>
-          <template v-else>``
+          <template v-else>
             <TableRow>
               <TableCell :colspan="columns.length" class="h-24 text-center">
                 No results.
@@ -100,10 +106,10 @@ const table = useVueTable({
       </Table>
     </div>
 
-    <div>
-    <div class="flex items-center justify-end py-4 space-x-2">
-      <OrderTablePagination :table="table" />
+    <div v-if="table.getRowModel().rows?.length" class="p-4 rounded-md">
+      <div class="flex items-center justify-end py-4 space-x-2">
+        <OrderTablePagination :table="table" />
+      </div>
     </div>
-  </div>
   </div>
 </template>

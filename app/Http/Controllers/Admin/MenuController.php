@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Krypton\Menu\MenuResource;
+use App\Http\Resources\MenuResource;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Krypton\Menu;
@@ -12,11 +12,8 @@ class MenuController extends Controller
 {
     public function index() 
     {
-        $menus = Menu::with(['category', 'course', 'group', 'image'])->get()->toArray();
+        $menus = Menu::orderBy('name')->get();
 
-        // echo '<pre>'
-        //     . print_r(MenuResource::collection($menus), true)
-        //     . '</pre>';
         return Inertia::render('Menus', [
             'title' => 'Menus',
             'description' => 'List of Menus',

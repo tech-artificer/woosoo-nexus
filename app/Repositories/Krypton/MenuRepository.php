@@ -144,7 +144,7 @@ class MenuRepository
         }
     }
 
-    public function getMenusByCourse(string $course)
+    public function getMenusByCourse($course)
     {
         try {
             return Menu::fromQuery('CALL get_menus_by_course(?)', [$course]);

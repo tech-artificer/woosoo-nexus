@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 use App\Repositories\Krypton\MenuRepository;
-use App\Http\Resources\Krypton\Menu\MenuResource;
-
+use App\Http\Resources\MenuResource;
+use App\Http\Resources\MenuModifierResource;
 use App\Models\Krypton\Menu;
 
-class BrowseMenuController extends Controller
+class BrowseMenuApiController extends Controller
 {   
 
     protected $menuRepository;
@@ -28,11 +28,8 @@ class BrowseMenuController extends Controller
      */
     public function getMenus()
     {   
-        // Meats, Sides, Drinks
         $menus = $this->menuRepository->getMenus();
-        // $menus->fill(->get());
         return MenuResource::collection($menus);
-        // return response()->json($this->menuRepository->getMenus());
     }
 
     
@@ -50,7 +47,6 @@ class BrowseMenuController extends Controller
      */
     public function getAllModifierGroups(Request $request)
     {   
-
         $request->validate([
             /**
              * @example 1
@@ -58,23 +54,20 @@ class BrowseMenuController extends Controller
             'modifiers' => ['nullable','boolean'],
         ]);
 
+        $modifierGroupIds = [];
+
         if ( $request->has('modifiers') && $request->modifiers == true ) {
 
-            $modifierGroups = $this->menuRepository->getAllModifierGroups();
+            $modifierGroupIds = $this->menuRepository->getAllModifierGroups()->pluck('id');
+            $menus = Menu::whereIn('id', $modifierGroupIds)->get();
 
-            foreach($modifierGroups as $modifierGroup) {
-                $modifierGroup->modifiers = $this->menuRepository->getMenuModifiersByGroup($modifierGroup->id);
+            foreach($menus as $menu) {
+                $menu->modifiers = $this->menuRepository->getMenuModifiersByGroup($menu->id);
             }
-
-            // return response()->json($modifierGroups);
-            return MenuResource::collection($modifierGroups);
             
         }
-    
-        // return response()->json($this->menuRepository->getAllModifierGroups());
-        return MenuResource::collection($this->menuRepository->getAllModifierGroups());
+        return MenuResource::collection($menus->load('modifiers'));
     }
-
 
    
     /**
@@ -87,8 +80,9 @@ class BrowseMenuController extends Controller
      */
     public function getMenuModifiers() 
     {
-        return MenuResource::collection($this->menuRepository->getMenuModifiers());
-        // return response()->json($this->menuRepository->getMenuModifiers());
+        $menuModifierIds = $this->menuRepository->getMenuModifiers()->pluck('id');
+        $menus = Menu::whereIn('id', $menuModifierIds)->get();
+        return MenuModifierResource::collection($menus);
     }
 
     /**
@@ -106,9 +100,7 @@ class BrowseMenuController extends Controller
             $menu->fill($details->toArray()); 
             $menu->modifiers = Menu::getModifiers($menu->id);
         }
-
         return MenuResource::collection($menus);
-        
     }
 
     /**
@@ -131,8 +123,9 @@ class BrowseMenuController extends Controller
             */
             'course' => ['required','string'],
         ]);
-
-        $menus = $this->menuRepository->getMenusByCourse($request->course);
+        
+        $menusByCourse = $this->menuRepository->getMenusByCourse($request->course)->pluck('id') ?? [];
+        $menus = Menu::whereIn('id', $menusByCourse)->get();
 
         return MenuResource::collection($menus);
     }
@@ -155,7 +148,8 @@ class BrowseMenuController extends Controller
             'category' => ['required','string'],
         ]);
 
-        $menus = $this->menuRepository->getMenusByCategory($request->category);
+        $menusByCategory = $this->menuRepository->getMenusByCategory($request->category)->pluck('id') ?? [];
+        $menus = Menu::whereIn('id', $menusByCategory)->get();
 
         return MenuResource::collection($menus);
     }

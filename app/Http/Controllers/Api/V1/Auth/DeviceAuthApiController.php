@@ -11,7 +11,7 @@ use App\Http\Resources\DeviceResource;
 use App\Http\Requests\DeviceRegisterRequest;
 use App\Models\DeviceRegistrationCode;
 
-class DeviceAuthController extends Controller
+class DeviceAuthApiController extends Controller
 {
     
     /**
@@ -26,7 +26,7 @@ class DeviceAuthController extends Controller
     public function register(DeviceRegisterRequest $request)
     {
         $validated = $request->validated();
-        
+        $validated['ip_address'] = $request->ip(); // Capture the device's IP address
         $device = RegisterDevice::run($validated);
         
         // Create token with device info

@@ -10,8 +10,10 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-use App\Models\Order;
-use App\Http\Resources\Order\OrderResource;
+
+use App\Models\DeviceOrder;
+use App\Http\Resources\OrderResource;
+
 
 class OrderStatusUpdated implements ShouldBroadcastNow
 {
@@ -21,7 +23,7 @@ class OrderStatusUpdated implements ShouldBroadcastNow
     /**
      * Create a new event instance.
      */
-    public function __construct(Order $order)
+    public function __construct(DeviceOrder $order)
     {
         $this->order = $order;
     }
@@ -33,17 +35,16 @@ class OrderStatusUpdated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
-            new Channel('orders'),
+        return [ 
+            new Channel("device.{$this->deviceOrder->device_id}"),
         ];
     }
 
     public function broadcastWith()
     {
-        // return (new OrderResource($this->order))->toArray(request());
         return [
-            'order_id' => $this->order->order_id,
-            'status' => $this->order->status,
+            'order_id' => $this->deviceOrder->order_id,
+            'status' => $this->deviceOrder->status,
         ];
     }
 

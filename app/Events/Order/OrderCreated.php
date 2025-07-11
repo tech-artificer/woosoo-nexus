@@ -12,7 +12,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 use App\Models\DeviceOrder;
-use App\Http\Resources\OrderResource;
+// use App\Http\Resources\OrderResource;
 
 class OrderCreated implements ShouldBroadcastNow
 {
@@ -35,8 +35,10 @@ class OrderCreated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
+
+        // return new PrivateChannel('device.' . $this->order->device_id);
         return [ 
-            new Channel('orders'),
+            new Channel("device.{$this->deviceOrder->device_id}"),
         ];
     }
 
@@ -49,8 +51,12 @@ class OrderCreated implements ShouldBroadcastNow
     {   
       
         // return (new OrderResource($this->order))->toArray(request());
-        $order = new OrderResource($this->order);
-        return $order->toArray(request());
+        // $order = new OrderResource($this->order);
+        // return $order->toArray(request());
+        return [
+            'order_id' => $this->deviceOrder->order_id,
+            'status' => $this->deviceOrder->status,
+        ];
     }
 
     /**

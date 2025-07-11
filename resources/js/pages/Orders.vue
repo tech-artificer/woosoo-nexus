@@ -6,7 +6,7 @@ import { Head } from '@inertiajs/vue3';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { DeviceOrder, Order } from '@/types/models';
 import { ordercolumns } from '@/pages/orders/columns';
-import OrderTable from '@/pages/orders/OrderTable.vue';
+import AppTable from '@/components/datatable/AppTable.vue';
 import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -32,24 +32,24 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   // }
 }
 
-const apiOrders = ref([]);
+// const apiOrders = ref([]);
 
-const fetchOrders = async () => {
-    try {
-        // Axios automatically includes session cookies and the X-CSRF-TOKEN header
-        // because of the global configuration in bootstrap.js
-        const response = await axios.get('/api/orders');
-      console.log(response.data);
+// const fetchOrders = async () => {
+//     try {
+// //         // Axios automatically includes session cookies and the X-CSRF-TOKEN header
+// //         // because of the global configuration in bootstrap.js
+//         const response = await axios.get('/api/orders');
+//       console.log(response.data);
 
-    } catch (error) {
-        apiOrders.value = [];
-    }
-};
+//     } catch (error) {
+//         apiOrders.value = [];
+//     }
+// };
 
 // Echo event listeners
 onMounted(() => {
 
-  fetchOrders();
+  // fetchOrders();
   
   if (!window.Echo) {
     console.error('Display.vue: window.Echo is not available.')
@@ -84,12 +84,12 @@ onUnmounted(() => {
     <Head :title="title" :description="description" />
     
     <AppLayout :breadcrumbs="breadcrumbs">
-        <!-- <pre>
+        <pre>
             {{ orders }}
-        </pre> -->
+        </pre>
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <div class="relative min-h-[100vh] flex-1 rounded-xl border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                <OrderTable :orders="orders" :columns="ordercolumns" />
+                <!-- <AppTable :rows="orders" :columns="ordercolumns" /> -->
             </div>
         </div>
     </AppLayout>

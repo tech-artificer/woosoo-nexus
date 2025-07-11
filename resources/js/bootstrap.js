@@ -6,9 +6,8 @@ window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 window.axios.defaults.withCredentials = true; // Important for cross-domain/port development
-
-// --- Load and set Authorization token if it exists ---
-const authToken = localStorage.getItem('auth_token');
+// // --- Load and set Authorization token if it exists ---
+let authToken = localStorage.getItem('auth_token');
 if (authToken) {
     window.axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
 }

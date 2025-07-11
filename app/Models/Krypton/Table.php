@@ -2,51 +2,29 @@
 
 namespace App\Models\Krypton;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Enums\TableStatus; // Assuming you have an enum for table statuses
 
 class Table extends Model
 {
+    use HasFactory;
+
     protected $connection = 'pos';
     protected $table = 'tables';
     protected $primaryKey = 'id';
-
     public $timestamps = false;
 
-    protected $hidden = [
-        'created_on', 
-        'modified_on',
-        'order_created_in',
-        'position_x',
-        'position_y',
-        'z_index',
-        'rotation',
-        'merchant_id',
-        'employee_name',
-
+    protected $casts = [
+        'is_available' => 'boolean',
+        'is_locked' => 'boolean',
+        'status' => TableStatus::class, // Assuming you have an enum for table statuses
     ];
 
+    // Relationships
     public function tableOrders() : HasMany
     {
-        return $this->hasMany(TableOrder::class);
+        return $this->hasMany(TableOrder::class,'table_id');
     }
-
-    // public function orders() : HasMany
-    // {
-    //     return $this->hasMany(TableOrder::class);
-    // }
-
-    public function device() : HasOne {
-        return $this->hasOne(Device::class, 'device_id');
-    }
-
-    public function group() : BelongsTo {
-        return $this->belongsTo(TableGroup::class, 'table_group_id');
-    }
-
-     public function type() : BelongsTo {
-        return $this->belongsTo(TableType::class, 'table_type_id');
-    }
-  
 }

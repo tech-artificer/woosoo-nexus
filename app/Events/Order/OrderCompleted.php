@@ -35,8 +35,8 @@ class OrderCompleted implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
-              new Channel('orders'),
+        return [ 
+            new Channel("device.{$this->deviceOrder->device_id}"),
         ];
     }
     /**
@@ -46,13 +46,9 @@ class OrderCompleted implements ShouldBroadcastNow
      */
     public function broadcastWith()
     {   
-        // return (new OrderResource($this->order))->toArray(request());
-        // $order = new OrderResource($this->order);
-        // return $order->toArray(request());
         return [
-            'id' => $this->order->id,
-            'order_id' => $this->order->order_id,
-            'status' => $this->order->status
+            'order_id' => $this->deviceOrder->order_id,
+            'status' => $this->deviceOrder->status,
         ];
     }
 

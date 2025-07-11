@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException; // Import for validation errors
 
-class AuthController extends Controller
+class AuthApiController extends Controller
 {
     /**
      * Authenticate a user
@@ -40,15 +40,24 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Create a new token for the authenticated user
+     * 
+     * @unauthenticated
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function createToken(Request $request)
     {
+
         $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
             'device_name' => ['required', 'string'], // A name for the device/client (e.g., 'web browser', 'mobile app')
         ]);
 
-        // Attempt to authenticate the user
+        // // Attempt to authenticate the user
         if (! Auth::attempt($request->only('email', 'password'))) {
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')],
@@ -59,11 +68,15 @@ class AuthController extends Controller
 
         // Create a new token for the authenticated user
         // The token name helps you identify where the token was issued.
+
+        if(  $user->tokens()->where('name', 'auth_token')->exists()) {
+            $user->tokens()->where('name', 'auth_token')->delete();
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'token' => $token,
-            'user' => $user->only('id', 'name', 'email'), // Return user details if needed
         ]);
     }
 

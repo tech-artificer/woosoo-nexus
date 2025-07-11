@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Http\Resources\DeviceResource;
 
-class DeviceController extends Controller
+class DeviceApiController extends Controller
 {
 
   

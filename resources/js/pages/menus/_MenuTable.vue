@@ -4,7 +4,7 @@ import { ColumnDef, ColumnFiltersState,
   ExpandedState,
   SortingState,
   VisibilityState, } from '@tanstack/vue-table'
-import MenuTablePagination from '@/pages/menus/MenuTablePagination.vue'
+// import MenuTablePagination from '@/pages/menus/_MenuTablePagination.vue'
 import { Menu } from '@/types/models'
 
 import {
@@ -30,8 +30,8 @@ import {
 import { valueUpdater } from '@/lib/utils'
 
 const props = defineProps<{
-  columns: ColumnDef<Menu, any>[]
-  menus: Menu[];
+  columns: ColumnDef<any>[]
+  data: Object[];
 }>()
 
 const sorting = ref<SortingState>([])
@@ -41,7 +41,7 @@ const rowSelection = ref({})
 const expanded = ref<ExpandedState>({})
 
 const table = useVueTable({
-  get data() { return props.menus },
+  get data() { return props.data },
   get columns() { return props.columns },
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),

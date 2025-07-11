@@ -27,65 +27,57 @@ class StoreDeviceOrderRequest extends FormRequest
              * @var integer
              * @example 2            
              */
-            'guest_count' => ['required', 'integer'],
-             /**
+            'guest_count' => ['required', 'integer', 'min:1'],
+            /**
              * 
              * @var integer
-             * @example Test
+             * @example 36
              */
-            'note' => ['nullable', 'string'],
-             /**
+            'table_id' => ['required', 'integer'],
+            /**
              * 
-             * @var integer
-             * @example 798.00    
+             * @var float
+             * @example 988
              */
-            'total_amount' => ['required', 'numeric'],
-             /**
+            'subtotal' => ['required', 'numeric', 'min:0'],
+            /**
              * 
-             * @var array {menu_id, name, quantity, price, notes, subtotal, ordered_menu_id, tax, discount}
-             * @example  [{"menu_id":46, "ordered_menu_id" : null,"name":"Classic Feast","kitchen_name":"Classic Feast","receipt_name":"Classic Feast","quantity":2,"price":399.00,"original_price":399.00,"notes":"this is a note","subtotal":798.00,"ordered_menu_id":null,"tax":0.00,"discount":0.00,"index": 1},
-             * {"menu_id":49, "ordered_menu_id" : 46,"name":"Plain Samgyupsal","kitchen_name":"Plain Samgyupsal","receipt_name":"P1","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index":2},
-             *  {"menu_id":50, "ordered_menu_id" : 46,"name":"Kajun Bulmat Samgyupsal","kitchen_name":"Kajun Bulmat Samgyupsal", "receipt_name":"P2","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 3},
-             *  {"menu_id":51, "ordered_menu_id" : 46,"name":"Yangyeom Samgyupsal","kitchen_name":"Yangyeom Samgyupsal", "receipt_name":"P3","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 4},
-             *  {"menu_id":52, "ordered_menu_id" : 46,"name":"Citrus Burst Pepper Samgyupsal","kitchen_name":"Citrus Burst Pepper Samgyupsal", "receipt_name":"P4","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 5},
-             *  {"menu_id":53, "ordered_menu_id" : 46,"name":"Hyangcho Samgyupsal","kitchen_name":"Hyangcho Samgyupsal", "receipt_name":"P5","quantity":2,"price":0.00,"original_price":0.00,"notes":"this is a note","subtotal":0.00,"ordered_menu_id":46,"tax":0.00,"discount":0.00,"index": 6}]
+             * @var float
+             * @example 118.56
+             */
+            'tax' => ['required', 'numeric', 'min:0'],
+            /**
+             * 
+             * @var float
+             * @example 967.80
+             */
+            /**
+             * 
+             * @var float
+             * @example 0.00
+             */
+            'discount' => ['required', 'numeric', 'min:0'],
+            /**
+             * 
+             * @var float
+             * @example 1106.56
+             */
+            'total' => ['required', 'numeric', 'min:0'],
+            /**
+             * 
+             * @var array {menu_id, name, quantity, price, note, subtotal, ordered_menu_id, tax, discount}
+             * @example  [{"menu_id":46,"name":"Classic Feast","quantity":2,"price":399,"note":"this is a note","subtotal":898.00,"tax":107.76,"discount":0.00},
+             * {"menu_id":96,"name":"Coke Zero","quantity":2,"price":45,"note":"this is a note","subtotal":90.00,"tax":10.80,"discount":0.00}]
              */
             'items' => ['required', 'array'],
             'items.*.menu_id' => ['required', 'integer'],
-            'items.*.ordered_menu_id' => ['required', 'string'],
             'items.*.name' => ['required', 'string'],
-            'items.*.receipt_name' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.price' => ['required', 'numeric'],
+            'items.*.price' => ['required', 'numeric', 'min:0'],
             'items.*.note' => ['nullable', 'string'],
-            'items.*.subtotal' => ['required', 'numeric'],
-            'items.*.ordered_menu_id' => ['nullable', 'integer'],
-            'items.*.tax' => ['nullable', 'numeric'],
-            'items.*.discount' => ['nullable', 'numeric'],
-
-        // return [
-        //     'total_amount' => ['nullable', 'numeric'],
-        //     'note' => ['nullable', 'string'],
-        //     'guest_count' => ['nullable', 'integer','min:1'],
-        //     'items' => ['nullable', 'array'],
-        //     'items.*.menu_id' => ['nullable', 'integer'],
-        //     'items.*.quantity' => ['nullable', 'integer', 'min:1'],
-        //     'items.*.price' => ['nullable', 'numeric'],
-        //     'items.*.note' => ['nullable', 'string'],
-        //     'items.*.subtotal' => ['nullable', 'numeric'],
-        //     'items.*.ordered_menu_id' => ['nullable', 'integer'],
-        //     'items.*.tax' => ['nullable', 'numeric'],
-        //     'items.*.discount' => ['nullable', 'numeric'],
-        //     // 'order' => ['required', 'integer'],
-        //     // 'menu_id' => ['required', 'integer', 'exists:menus,id'],
-        //     // 'menu_item_id' => ['required', 'integer', 'exists:menu_items,id'],
-        //     // 'menu_item_modifiers' => ['required', 'array', 'exists:menu_item_modifiers,id'],
-        //     // 'menu_item_modifiers.*' => ['required', 'integer', 'exists:menu_item_modifiers,id'],
-        //     // 'quantity' => ['required', 'integer'],
-        //     // 'price' => ['required', 'numeric'],
-        //     // 'is_done' => ['required', 'boolean'],
-        //     // 'is_cancelled' => ['required', 'boolean'],  
-        //     // 'is_ready' => ['required', 'boolean'],
+            'items.*.subtotal' => ['required', 'numeric', 'min:0'],
+            'items.*.tax' => ['required', 'numeric', 'min:0'],
+            'items.*.discount' => ['required', 'numeric', 'min:0'],
         ];
     }
 }

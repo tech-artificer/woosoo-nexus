@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 use App\Models\Krypton\TableOrder;
 
-class TableController extends Controller
+class TableApiController extends Controller
 {
     public function index()
     {   

@@ -12,11 +12,6 @@ class EmployeePosition extends Model
     protected $table = 'employee_positions';
     protected $primaryKey = 'id';
 
-
-    protected $casts = [
-        'id' => 'integer',  
-    ];
-
     public function employee() : HasOne
     {
         return $this->hasOne(Employee::class, 'id', 'employee_id');

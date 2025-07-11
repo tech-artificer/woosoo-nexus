@@ -2,25 +2,19 @@
 
 namespace App\Http\Controllers\Api\V1\Krypton;
 
-
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Repositories\Krypton\OrderRepository;
-use App\Http\Resources\OrderResource;
 
-class OrderController extends Controller
+class MenuApiController extends Controller
 {
-  
     /**
-     * Return a list of all orders with the corresponding device data.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Display a listing of the resource.
      */
     public function index()
     {
-        $orders = OrderRepository::getAllOrdersWithDeviceData();
-        return OrderResource::collection($orders);
+        
     }
+
     /**
      * Show the form for creating a new resource.
      */

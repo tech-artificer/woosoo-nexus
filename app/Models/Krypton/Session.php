@@ -4,15 +4,14 @@ namespace App\Models\Krypton;
 
 use Illuminate\Database\Eloquent\Model;
 
-use App\Repositories\Krypton\SessionRepository;
-
 
 class Session extends Model
 {   
     protected $connection = 'pos';
     protected $table = 'sessions';
-
+    protected $primaryKey = 'id';
     public $timestamps = false;
+
     protected $fillable = [
       'date_time_opened',
       'date_time_closed',
@@ -20,21 +19,22 @@ class Session extends Model
       'modified_on',
     ];
 
-    protected $casts = [
-      'id' => 'integer',
-      'date_time_opened' => 'datetime',
-      'date_time_closed' => 'datetime',
-  ];
-
-    // protected $sessionRepository;
-
-    // public function __construct() {
-    //   $this->sessionRepository = new SessionRepository();
-    //   $this->id = $this->sessionRepository->getLatestSessionId();
-    // }
-
+    /**
+     * Get the latest session.
+     *
+     * @return string
+     */
     public static function getLatestSession() {
-      return SessionRepository::getLatestSession();
+      return Self::fromQuery('CALL get_latest_session()');
+    } 
+
+    /**
+     * Get the latest session ID.
+     * 
+     * @return string
+     */
+    public static function getLatestSessionId() {
+      return Self::fromQuery('CALL get_latest_session_id()');
     } 
 
   }

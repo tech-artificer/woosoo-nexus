@@ -10,6 +10,7 @@ use App\Models\Krypton\Table;
 
 use App\Models\DeviceOrder;
 use App\Models\Krypton\TerminalSession;
+use App\Models\Krypton\Session;
 
 class OrderRepository
 {
@@ -21,7 +22,14 @@ class OrderRepository
 
     public static function getAllOrdersWithDeviceData() : Collection
     {
-        $terminalSession = TerminalSession::current()->latest('created_on')->first() ?? false;
+        $session = Session::getLatestSessionId()->first();
+        $terminalSession = TerminalSession::where(['session_id' => (string)$session->id])->first();
+
+        if(  empty($terminalSession) ) {
+            return response()->json([
+                'message' => 'No active terminal session found for the current session.'
+            ], 400);
+        }
 
         if( !$terminalSession ) return collect([]);
 
@@ -33,7 +41,7 @@ class OrderRepository
                 'transaction_no', 'terminal_service_id','reprint_count',
         ])
         ->where(['terminal_session_id' => $terminalSession->id])
-        ->with(['orderCheck', 'orderedMenus'])
+        ->with(['orderChecks', 'orderedMenus'])
         ->latest('created_on')
         ->get();
 
@@ -60,7 +68,5 @@ class OrderRepository
 
         return $mergedOrders;
     }
-
-    
     
 }

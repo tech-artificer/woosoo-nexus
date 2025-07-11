@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ['prefix' => 'api', 'middleware' => ['api', 'auth:sanctum']],
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->web(
+            append: [
+               \Illuminate\Http\Middleware\HandleCors::class,
+            ]
+        );
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [

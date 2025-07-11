@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import  { Table } from '@tanstack/vue-table'
-import  { Menu } from '@/types/models'
+// import  { Menu } from '@/types/models'
 import { ChevronLeft, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button'
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 
 interface DataTablePaginationProps {
-  table: Table<Menu>
+  table: Table<Object>
 }
 defineProps<DataTablePaginationProps>()
 </script>

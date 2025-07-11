@@ -13,14 +13,34 @@ class CreateTableOrder
 {
     use AsAction;
 
-    public function handle(Device $device, Order $order) : void
+    public function handle(array $attr)
     {
-        TableOrder::create([
-            'order_id' => $order->id,
-            'table_id' => $device->table_id,
-            'parent_table_id' => null,
-            'is_cleared' => 0,
-            'is_printed' => 0, 
-        ]);
+        return $this->createTableOrder($attr);
+    }
+
+    protected function createTableOrder(array $attr = []) 
+    {
+        try {
+            $params = [
+                $attr['order_id'], // Order ID
+                $attr['table_id'],
+                $attr['parent_table_id'] ?? null // Parent Table ID, can be null
+            ];
+
+            $placeholdersArray = array_fill(0, count($params), '?');
+            $placeholders = implode(', ', $placeholdersArray);
+
+            TableOrder::fromQuery('CALL create_table_order(' . $placeholders . ')', $params)->first();
+
+            $tableOrder = TableOrder::where('order_id', $attr['order_id'])
+                ->where('table_id', $attr['table_id'])
+                ->first();
+
+            return $tableOrder;
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
     }
 }

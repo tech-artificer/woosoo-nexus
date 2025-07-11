@@ -40,10 +40,30 @@ export interface Menu {
     kitchen_name: string;
     receipt_name: string;
     price: number;
-    group: MenuGroup;
-    category: MenuTaxType;
-    course: MenuCourseType;
+    group: string;
+    category: string;
+    course: string;
     img_url: string;
+    cost: number;
+    description: string;
+    index: number;
+    is_taxable: boolean;
+    is_available: boolean;
+    is_modifier: boolean;
+    is_discountable: boolean;
+    tare_weight: number;
+    scale_unit: string;
+    measurement_unit: string;
+    is_locked: boolean;
+    quantity: number;
+    in_stock: number;
+    is_modifier_only: boolean;
+    container_id: number | null;
+    quantity_option: string;
+    units: null;
+    serving_count: number;
+    best_seller_candidate: number;
+    guest_count: number;
 }
 
 export interface Order {
