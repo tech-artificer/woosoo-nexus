@@ -36,7 +36,7 @@ class OrderCompleted implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [ 
-            new Channel("device.{$this->deviceOrder->device_id}"),
+            new Channel("Device.{$this->deviceOrder->device_id}"),
         ];
     }
     /**

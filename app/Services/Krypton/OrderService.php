@@ -28,6 +28,7 @@ use App\Actions\Order\{
 };
 
 use App\Repositories\Krypton\MenuRepository;
+use App\Repositories\Krypton\OrderRepository;
 use App\Enums\OrderStatus;
 
 class OrderService
@@ -100,5 +101,28 @@ class OrderService
             'tax_set_id' => $revenue->tax_set_id ?? null,
             'cash_tray_session_id' => $cashTraySession->id ?? null
         ];
+    }
+
+    /**
+     * Returns all open orders with their associated tables.
+     *
+     * @return Collection
+     */
+    public function checkIfTableIsOpen($tableId = null)
+    {
+        // $isOpen = false;
+        // $tableOrder = null;
+
+        // if( $tableId ){
+        //     $tableOrder = OrderRepository::getOpenOrdersByTable($tableId);
+        // }else{
+        //     $tableOrder = OrderRepository::getOpenOrdersWithTables();
+        // }
+
+        // if( $tableOrder && $tableOrder->is_open == true) {
+        //     $isOpen = true;
+        // }
+
+        // return $isOpen;
     }
 }

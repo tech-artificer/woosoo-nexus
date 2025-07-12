@@ -17,10 +17,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-defineProps<{
+const props = defineProps<{
     title?: string;
     description?: string;
-    orders: Order[];
+    orders: Object[];
+    // deviceOrders: DeviceOrder[];
 }>()
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
@@ -47,21 +48,22 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
 
 // Echo event listeners
 onMounted(() => {
-
+  console.log('Display.vue mounted. Joining "orders" channel.');
+  console.log(window.Echo.channel('Device3'));
   // fetchOrders();
   
   if (!window.Echo) {
     console.error('Display.vue: window.Echo is not available.')
-    return
+    return;
   }
 
-  window.Echo.channel('orders')
-    // .listen('.order.created', (event: Order) => {
-    //   console.log('New Order Created:', event)
-    // })  
-    // .listen('.order.updated', (event: Order) => {
-    //   console.log('Order Status updated: ', event)
-    // })
+  window.Echo.channel('Device3')
+    .listen('.order.created', (event: Order) => {
+      console.log('New Order Created:', event)
+    })  
+    .listen('.order.updated', (event: Order) => {
+      console.log('Order Status updated: ', event)
+    })
     .listen('.order.completed', (event: DeviceOrder | any) => {
       console.log('Order Status completed: ', event.id)
     })
@@ -84,6 +86,9 @@ onUnmounted(() => {
     
     <AppLayout :breadcrumbs="breadcrumbs">
       <div class="p-6">
+         <pre>
+            {{ orders }}
+        </pre>
       <Tabs default-value="orders" class="w-[400px]">
         <TabsList>
           <TabsTrigger value="orders">
@@ -101,9 +106,6 @@ onUnmounted(() => {
         </TabsContent>
       </Tabs>
       </div>
-        <pre>
-            <!-- {{ orders }} -->
-        </pre>
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <div class="relative min-h-[100vh] flex-1 rounded-xl border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
                 <!-- <AppTable :rows="orders" :columns="ordercolumns" /> -->

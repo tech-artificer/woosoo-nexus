@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StoreDeviceOrderRequest;
 use App\Services\Krypton\OrderService;
 use App\Http\Resources\DeviceOrderResource;
-// use App\Events\Order\OrderCreated;
+use App\Events\Order\OrderCreated;
 use App\Models\DeviceOrder;
 
 class DeviceOrderApiController extends Controller
@@ -28,27 +28,35 @@ class DeviceOrderApiController extends Controller
     public function __invoke(StoreDeviceOrderRequest $request)
     {   
         $validatedData = $request->validated();
+
+        $errors = [];
         $device = $request->user();
-        
-        if ($device->table_id !== $validatedData['table_id']) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Device is not assigned to any table.'
-            ], 400);
+
+        if( $device->table_id ) {
+            // Check if table is already open
+            // if(  !$this->orderService->checkIfTableIsOpen($device->table_id) ) {
+               
+                $order = $this->orderService->processOrder($device, $validatedData);
+
+                if ( $order ) {
+
+                    $deviceOrder = DeviceOrder::where('order_id', $order->id)->first();
+                    broadcast(new OrderCreated($deviceOrder));
+
+                    return new DeviceOrderResource($deviceOrder);
+                }
+            // }
+            // $error = 'Table is already open';
+        }else{
+            $error= 'Device is not assigned to any table.';
         }
+     
+        return response()->json([
+            'message' => 'Failed to create order.',
+            'errors' => $error,
+        ], 500);
 
-        $order = $this->orderService->processOrder($device, $validatedData);
-
-        if ( !$order ) {
-            return response()->json([
-                'message' => 'Failed to create order.'
-            ], 500);
-        }
-
-        $deviceOrder = DeviceOrder::where('order_id', $order->id)->first();
-        broadcast(new OrderCreated($deviceOrder));
-
-        return new DeviceOrderResource($deviceOrder);
+       
     }
 }
 

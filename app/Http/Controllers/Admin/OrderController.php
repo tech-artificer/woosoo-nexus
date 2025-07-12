@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 
 use Inertia\Inertia;
 
-use App\Repositories\Krypton\OrderRepository;
-use App\Http\Resources\OrderResource;
+// use App\Repositories\Krypton\OrderRepository;
+// use App\Http\Resources\OrderResource;
 
-use App\Models\Krypton\Order;
+// use App\Models\Krypton\Order;
 // use App\Models\Krypton\Table;
 
-// use App\Models\DeviceOrder;
+use App\Models\DeviceOrder;
 // use App\Models\Krypton\TerminalSession;
 
 use Carbon\Carbon;
@@ -28,12 +28,13 @@ class OrderController extends Controller
     public function index()
     {
         // $orders = OrderRepository::getAllOrdersWithDeviceData();
-        $orders = Order::with(['tableOrders','orderChecks', 'orderedMenus'])->whereDate('created_on', Carbon::yesterday())->get();
+        // $orders = Order::with(['tableOrders','orderChecks', 'orderedMenus'])->whereDate('created_on', Carbon::yesterday())->get();
+        $orders = DeviceOrder::with(['device'])->whereDate('created_at', Carbon::today())->get();
 
         return Inertia::render('Orders', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    
-            'orders' => OrderResource::collection($orders),
+            'orders' => $orders
         ]);
     }
 

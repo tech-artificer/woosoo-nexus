@@ -38,7 +38,7 @@ class OrderCreated implements ShouldBroadcastNow
 
         // return new PrivateChannel('device.' . $this->order->device_id);
         return [ 
-            new Channel("device.{$this->deviceOrder->device_id}"),
+            new Channel("Device.{$this->order->device_id}"),
         ];
     }
 
@@ -54,8 +54,8 @@ class OrderCreated implements ShouldBroadcastNow
         // $order = new OrderResource($this->order);
         // return $order->toArray(request());
         return [
-            'order_id' => $this->deviceOrder->order_id,
-            'status' => $this->deviceOrder->status,
+            'order_id' => $this->order->order_id,
+            'status' => $this->order->status,
         ];
     }
 

@@ -77,6 +77,11 @@ class Order extends Model
         return $this->hasMany(TableOrder::class, 'order_id');
     }
 
+     public function tableLinks() : HasMany
+    {
+        return $this->hasMany(TableLink::class, 'order_id');
+    }
+
     public function orderChecks() : HasMany
     {
         return $this->hasMany(OrderCheck::class, 'order_id');

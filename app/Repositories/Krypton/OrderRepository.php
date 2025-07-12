@@ -68,5 +68,57 @@ class OrderRepository
 
         return $mergedOrders;
     }
+
+    public static function getOpenOrdersWithTables()
+    {
+        return Order::select('orders.*', DB::raw("
+                IF(table_links.primary_table_id IS NULL, table_orders.table_id, table_links.table_id) AS table_id,
+                table_links.primary_table_id AS parent_table_id
+            "))
+            ->join('table_orders', 'orders.id', '=', 'table_orders.order_id')
+            ->leftJoin('table_links', function ($join) {
+                $join->on('table_links.order_id', '=', 'table_orders.order_id')
+                    ->where('table_links.is_active', 1)
+                    ->where(function ($query) {
+                        $query->whereNull('table_links.primary_table_id')
+                              ->whereColumn('table_links.table_id', 'table_orders.table_id')
+                              ->orWhereColumn('table_links.primary_table_id', 'table_orders.table_id');
+                    });
+            })
+            ->join('tables', 'table_orders.table_id', '=', 'tables.id')
+            ->where('orders.is_open', 1)
+            ->orderBy('orders.id')
+            ->orderByRaw('IFNULL(table_links.primary_table_id, 0) ASC')
+            ->orderBy('table_links.table_id')
+            ->get();
+    }
+
+    public static function getOpenOrdersByTable(int $tableId)
+    {
+        return Order::select('orders.*', DB::raw("
+                IF(table_links.primary_table_id IS NULL, table_orders.table_id, table_links.table_id) AS table_id,
+                table_links.primary_table_id AS parent_table_id
+            "))
+            ->join('table_orders', 'orders.id', '=', 'table_orders.order_id')
+            ->leftJoin('table_links', function ($join) {
+                $join->on('table_links.order_id', '=', 'table_orders.order_id')
+                    ->where('table_links.is_active', 1)
+                    ->where(function ($query) {
+                        $query->whereNull('table_links.primary_table_id')
+                              ->whereColumn('table_links.table_id', 'table_orders.table_id')
+                              ->orWhereColumn('table_links.primary_table_id', 'table_orders.table_id');
+                    });
+            })
+            ->where('orders.is_open', 1)
+            ->whereRaw('IFNULL(table_links.table_id, table_orders.table_id) = ?', [$tableId])
+            ->orderBy('orders.id')
+            ->orderByRaw('IFNULL(table_links.primary_table_id, 0) ASC')
+            ->orderBy('table_links.table_id')
+            ->get();
+    }
+
+    public static function getTableOrdersById(int $orderId) {
+        
+    }
     
 }

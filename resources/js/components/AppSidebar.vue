@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { Circle,LayoutDashboard, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed, LogIn, Terminal, LockOpen } from 'lucide-vue-next';
+import { Circle,LayoutDashboard, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed, Fingerprint, Terminal, LockOpen, EllipsisVertical } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import type { LucideIcon } from 'lucide-vue-next';
 import { usePage } from '@inertiajs/vue3'
@@ -28,13 +28,13 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Live Orders',
                 href: '/orders/live',
-                icon: Circle,
+                icon: EllipsisVertical,
                 isActive: false,
             },
             {
                 title: 'Table Orders',
                 href: '/orders/table-orders',
-                icon: Circle,
+                icon: EllipsisVertical,
                 isActive: false,
         
             },
@@ -59,21 +59,15 @@ const mainNavItems: NavItem[] = [
         href: '/devices',
         icon: MonitorSmartphone,
         isActive: false,
-        hasSubItems: true,
-        items: [
-            {
-                title: 'Devices',
-                href: '/devices',
-                icon: Circle,
-                isActive: false,
-            },
-            {
-                title: 'Assign Tables',
-                href: '/devices/assign-tables',
-                icon: Circle,
-                isActive: false,
-            },
-        ]
+        hasSubItems: false,
+        // items: [
+        //     {
+        //         title: 'Devices',
+        //         href: '/devices',
+        //         icon: EllipsisVertical,
+        //         isActive: false,
+        //     },
+        // ]
     },
     {
         title: 'Settings',
@@ -85,19 +79,19 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Users',
                 href: '/users',
-                icon: Circle,
+                icon: EllipsisVertical,
                 isActive: false,
             },
             {
                 title: 'Roles & Permissions',
                 href: '/roles-permissions',
-                icon: Circle,
+                icon: EllipsisVertical,
                 isActive: false,
             },
             {
                 title: 'Terminal Session (POS)',
                 href: '/terminal-session',
-                icon: Circle,
+                icon: EllipsisVertical,
                 isActive: false,
             },
         ]
@@ -141,7 +135,7 @@ const footerActiveSessions: ActiveSession[] = [
     {
         id: employeeLogs?.id,
         title: 'Logs #',
-        icon: LogIn,
+        icon: Fingerprint,
     },
     
 ];

@@ -47,26 +47,27 @@ class BrowseMenuApiController extends Controller
      */
     public function getAllModifierGroups(Request $request)
     {   
-        $request->validate([
-            /**
-             * @example 1
-            */
-            'modifiers' => ['nullable','boolean'],
-        ]);
+        // $request->validate([
+        //     /**
+        //      * @example 1
+        //     */
+        //     'modifiers' => ['nullable','boolean'],
+        // ]);
 
-        $modifierGroupIds = [];
+        // $modifierGroupIds = [];
+        // $menus = null;
 
-        if ( $request->has('modifiers') && $request->modifiers == true ) {
+        // if ( $request->has('modifiers') && $request->modifiers == true ) {
 
-            $modifierGroupIds = $this->menuRepository->getAllModifierGroups()->pluck('id');
-            $menus = Menu::whereIn('id', $modifierGroupIds)->get();
+        //     $modifierGroupIds = $this->menuRepository->getAllModifierGroups()->pluck('id');
+        //     $menus = Menu::whereIn('id', $modifierGroupIds)->get();
 
-            foreach($menus as $menu) {
-                $menu->modifiers = $this->menuRepository->getMenuModifiersByGroup($menu->id);
-            }
+        //     foreach($menus as $menu) {
+        //         $menu->modifiers = $this->menuRepository->getMenuModifiersByGroup($menu->id);
+        //     }
             
-        }
-        return MenuResource::collection($menus->load('modifiers'));
+        // }
+        // return MenuResource::collection($menus) ?? [];
     }
 
    
