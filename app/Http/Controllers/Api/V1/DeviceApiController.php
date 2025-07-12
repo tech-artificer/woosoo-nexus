@@ -31,4 +31,8 @@ class DeviceApiController extends Controller
     {
         return new DeviceResource($device);
     }
+
+    public function heartbeat(Request $request) {
+        
+    }
 }

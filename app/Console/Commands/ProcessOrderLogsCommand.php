@@ -30,7 +30,8 @@ class ProcessOrderLogsCommand extends Command
      */
     public function handle() : void
     {
-        // run php artisan schedule:work
+        // 1. php artisan pos:setup-payment-trigger
+        // 2. php artisan schedule:work
         try {
             $this->info(' ProcessOrderLogs job: starting.. .');
             dispatch(new \App\Jobs\ProcessOrderLogs());

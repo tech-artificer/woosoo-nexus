@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+// import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { DeviceOrder, Order } from '@/types/models';
-import { ordercolumns } from '@/pages/orders/columns';
-import AppTable from '@/components/datatable/AppTable.vue';
-import axios from 'axios';
+// import { ordercolumns } from '@/pages/orders/columns';
+// import AppTable from '@/components/datatable/AppTable.vue';
+// import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -16,7 +17,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-
 defineProps<{
     title?: string;
     description?: string;
@@ -24,7 +24,6 @@ defineProps<{
 }>()
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-
   console.log('Order event received:', event);
 
   // const deviceOrder: Order = {
@@ -84,8 +83,26 @@ onUnmounted(() => {
     <Head :title="title" :description="description" />
     
     <AppLayout :breadcrumbs="breadcrumbs">
+      <div class="p-6">
+      <Tabs default-value="orders" class="w-[400px]">
+        <TabsList>
+          <TabsTrigger value="orders">
+            Orders
+          </TabsTrigger>
+          <TabsTrigger value="table_orders">
+            Table Orders
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="orders" class="p-3">
+          Make changes to your account here.
+        </TabsContent>
+        <TabsContent value="table_orders" class="p-4">
+          Change your password here.
+        </TabsContent>
+      </Tabs>
+      </div>
         <pre>
-            {{ orders }}
+            <!-- {{ orders }} -->
         </pre>
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <div class="relative min-h-[100vh] flex-1 rounded-xl border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
@@ -94,3 +111,4 @@ onUnmounted(() => {
         </div>
     </AppLayout>
 </template>
+

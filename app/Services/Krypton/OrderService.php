@@ -63,8 +63,11 @@ class OrderService
                 'table_id' => $device->table_id,
                 'terminal_session_id' => $order->terminal_session_id,
                 'status' => OrderStatus::CONFIRMED,
-                'items' => [],
-                'meta' => [],
+                'items' => $order->orderedMenus->toJson(),
+                'meta' => [
+                    'checks' => $order->orderCheck->toJson(),
+                    'table_order' => $order->tableOrder->toJson(),
+                ],
             ]);
 
             return $order;

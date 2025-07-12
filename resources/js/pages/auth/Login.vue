@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
-import axios from 'axios'; // Import axios here for API calls
-import { router } from '@inertiajs/vue3';
+// import axios from 'axios'; // Import axios here for API calls
+// import { router } from '@inertiajs/vue3';
 
 defineProps<{
     status?: string;
@@ -22,41 +22,30 @@ const form = useForm({
     remember: false,
 });
 
-const loginApi = async () => {
-    try {
-        const response = await axios.post('/api/token/create', {
-            email: form.email,
-            password: form.password,
-        });
+// const loginApi = async () => {
+//     try {
+//         const response = await axios.post('/api/token/create', {
+//             email: form.email,
+//             password: form.password,
+//         });
 
-        const token = response.data.token;
-        // Store the token securely (e.g., localStorage)
-        localStorage.setItem('auth_token', token);
-        // Set the default Authorization header for all future Axios requests
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } catch (error) {
+//         const token = response.data.token;
+//         // Store the token securely (e.g., localStorage)
+//         localStorage.setItem('auth_token', token);
+//         // Set the default Authorization header for all future Axios requests
+//         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+//     } catch (error) {
     
-    }
-};
-
+//     }
+// };
 
 const submit = () => {
-
-    // Call the login API
-    // loginApi().then(() => {
-        // After successful login, redirect to the dashboard
-        form.post(route('login'), {
-            onFinish: async () => {
-                form.reset('password');
-            }
-        });
-    // }).catch((error) => {
-    //     // Handle error (e.g., show a notification)
-    //     console.error('Login failed:', error);
-    // });
-
    
-
+    form.post(route('login'), {
+        onFinish: async () => {
+            form.reset('password');
+        }
+    });
 
 };
 </script>

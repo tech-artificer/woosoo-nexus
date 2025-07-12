@@ -155,4 +155,17 @@ class MenuRepository
     }
 
 
+     public function getMenuDiscountsById($menuId)
+    {
+        try {
+            return Menu::fromQuery('CALL get_menu_discounts_by_id(?)', [$menuId]);
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
+            throw new Exception('Something Went Wrong.');
+        }
+    }
+
+
+
+
 }

@@ -93,13 +93,19 @@ class BrowseMenuApiController extends Controller
      */
     public function getMenusWithModifiers() 
     {   
+
         $menus = $this->menuRepository->getMenusWithModifiers();
+     
+        if( $menus ) {
+            $menus = Menu::whereIn('id', [46, 47, 48])->with('modifiers')->get();
+        }
 
         foreach($menus as $menu) {
             $details = Menu::findOrFail($menu->id);
             $menu->fill($details->toArray()); 
             $menu->modifiers = Menu::getModifiers($menu->id);
         }
+      
         return MenuResource::collection($menus);
     }
 

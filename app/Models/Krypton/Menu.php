@@ -143,6 +143,6 @@ class Menu extends Model
             ],
         ];
 
-        return Self::whereIn('receipt_name', $codes[$id])->get();
+        return Menu::whereIn('receipt_name', $codes[$id])->where('index', true)->get();
     }
 }

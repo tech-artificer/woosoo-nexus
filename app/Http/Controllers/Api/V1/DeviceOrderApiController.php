@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreDeviceOrderRequest;
 use App\Services\Krypton\OrderService;
-use App\Http\Resources\OrderResource;
-use App\Events\Order\OrderCreated;
+use App\Http\Resources\DeviceOrderResource;
+// use App\Events\Order\OrderCreated;
 use App\Models\DeviceOrder;
 
 class DeviceOrderApiController extends Controller
@@ -28,7 +28,6 @@ class DeviceOrderApiController extends Controller
     public function __invoke(StoreDeviceOrderRequest $request)
     {   
         $validatedData = $request->validated();
-
         $device = $request->user();
         
         if ($device->table_id !== $validatedData['table_id']) {
@@ -46,10 +45,10 @@ class DeviceOrderApiController extends Controller
             ], 500);
         }
 
-        // $deviceOrder = DeviceOrder::where('order_id', $order->id)->first();
-        // broadcast(new OrderCreated($deviceOrder));
-        // return $order;
-        return $order;
+        $deviceOrder = DeviceOrder::where('order_id', $order->id)->first();
+        broadcast(new OrderCreated($deviceOrder));
+
+        return new DeviceOrderResource($deviceOrder);
     }
 }
 
