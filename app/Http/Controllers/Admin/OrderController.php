@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Services\KryptonContextService;
 
 use Inertia\Inertia;
 
 // use App\Repositories\Krypton\OrderRepository;
 // use App\Http\Resources\OrderResource;
 
-// use App\Models\Krypton\Order;
+use App\Models\Krypton\Order;
 // use App\Models\Krypton\Table;
 
 use App\Models\DeviceOrder;
@@ -27,9 +28,13 @@ class OrderController extends Controller
      */
     public function index()
     {
+        // $context = $kryptonContextService->getCurrentSessions();
         // $orders = OrderRepository::getAllOrdersWithDeviceData();
         // $orders = Order::with(['tableOrders','orderChecks', 'orderedMenus'])->whereDate('created_on', Carbon::yesterday())->get();
-        $orders = DeviceOrder::with(['device'])->whereDate('created_at', Carbon::today())->get();
+
+        $orders = DeviceOrder::with(['device'])
+                // ->where('terminal_session_id', )
+                ->get();
 
         return Inertia::render('Orders', [
             'title' => 'Orders',

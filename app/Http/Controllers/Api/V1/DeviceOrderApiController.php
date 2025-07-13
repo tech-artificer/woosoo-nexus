@@ -41,7 +41,8 @@ class DeviceOrderApiController extends Controller
                 if ( $order ) {
 
                     $deviceOrder = DeviceOrder::where('order_id', $order->id)->first();
-                    broadcast(new OrderCreated($deviceOrder));
+                    OrderCreated::dispatch($deviceOrder);
+                    // broadcast(new OrderCreated($deviceOrder));
 
                     return new DeviceOrderResource($deviceOrder);
                 }

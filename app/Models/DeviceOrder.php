@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Branch;
 use App\Models\Krypton\Table;
+use App\Models\Krypton\Order;
 use App\Enums\OrderStatus;
-use Illuminate\Support\Str;
-
+use Illuminate\Support\Str; 
 
 class DeviceOrder extends Model
 {

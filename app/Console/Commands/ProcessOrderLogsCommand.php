@@ -34,10 +34,10 @@ class ProcessOrderLogsCommand extends Command
         // 2. php artisan schedule:work
         try {
             $this->info(' ProcessOrderLogs job: starting.. .');
-            dispatch(new \App\Jobs\ProcessOrderLogs());
-            \Log::info('🕵️ Dispatched ProcessOrderLogs job at: ' . now());
+            dispatch(new ProcessOrderLogs());
+            Log::info('🕵️ Dispatched ProcessOrderLogs job at: ' . now());
         } catch (\Throwable $e) {
-            \Log::error('❌ orders:process-logs failed: ' . $e->getMessage());
+            Log::error('❌ orders:process-logs failed: ' . $e->getMessage());
             $this->error('Command failed: ' . $e->getMessage());
         }
     }

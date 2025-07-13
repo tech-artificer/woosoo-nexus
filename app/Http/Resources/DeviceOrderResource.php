@@ -14,6 +14,12 @@ class DeviceOrderResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id' => $this->id,
+            'order_number' => $this->order_number,
+            'device' => new DeviceResource($this->device),
+            // 'order' => new OrderResource($this->order),
+            'status' => $this->status,
+        ];
     }
 }

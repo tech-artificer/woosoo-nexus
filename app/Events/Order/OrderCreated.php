@@ -18,14 +18,14 @@ class OrderCreated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $order;
+    public $deviceOrder;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(DeviceOrder $order)
+    public function __construct(DeviceOrder $deviceOrder)
     {
-        $this->order = $order;
+        $this->deviceOrder = $deviceOrder;
     }
 
     /**
@@ -35,17 +35,16 @@ class OrderCreated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-
         // return new PrivateChannel('device.' . $this->order->device_id);
-        return [ 
-            new Channel("Device.{$this->order->device_id}"),
+        return [
+            new Channel('orders'),
+            // new PrivateChannel('user.'. $this->deviceOrder->device_id),
         ];
     }
 
     /**
      * Get the data to broadcast for the notification.
      *
-     * @return OrderResource
      */
     public function broadcastWith()
     {   
@@ -54,8 +53,10 @@ class OrderCreated implements ShouldBroadcastNow
         // $order = new OrderResource($this->order);
         // return $order->toArray(request());
         return [
-            'order_id' => $this->order->order_id,
-            'status' => $this->order->status,
+            'id' => $this->deviceOrder->id,
+            'order_number' => $this->deviceOrder->order_number,
+            'device_id' => $this->deviceOrder->device_id,
+            'status' => $this->deviceOrder->status
         ];
     }
 

@@ -68,4 +68,17 @@ class Device extends Model
     {
         return $this->belongsTo(Table::class, 'table_id');
     }
+
+     public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+
+    # SCOPES
+
+    public function scopeActive(Builder $query) 
+    {
+        return $query->where('is_active', true);
+    } 
 }

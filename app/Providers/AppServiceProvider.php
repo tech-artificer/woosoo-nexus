@@ -28,8 +28,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(KryptonContextService::class, function () {
-        return new KryptonContextService();
-    });
+            return new KryptonContextService();
+        });
     }
 
     /**

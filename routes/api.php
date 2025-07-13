@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\{
     MenuImageApiController,
     BrowseMenuApiController,
     DeviceOrderUpdateApiController,
+    OrderUpdateLogController,
     // TableApiController,
 };
 
@@ -59,6 +60,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // 
     // Route::get('/orders/table/active', [TableApiController::class, 'index'])->name('api.orders.table.active');
     Route::resource('/terminal-sessions', TerminalSessionApiController::class);
+
+    Route::get('/after-payment', [OrderUpdateLogController::class, 'index'])->name('api.order.update.log');
     
 });
 

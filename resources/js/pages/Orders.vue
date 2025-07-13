@@ -46,10 +46,12 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
 //     }
 // };
 
+
 // Echo event listeners
 onMounted(() => {
   console.log('Display.vue mounted. Joining "orders" channel.');
-  console.log(window.Echo.channel('Device3'));
+  console.log(window.Echo.channel('orders'));
+   console.log(window.Echo.channel('orders'));
   // fetchOrders();
   
   if (!window.Echo) {
@@ -57,24 +59,40 @@ onMounted(() => {
     return;
   }
 
-  window.Echo.channel('Device3')
-    .listen('.order.created', (event: Order) => {
+  window.Echo.channel('orders')
+    .listen('.order.created', (event: any) => {
       console.log('New Order Created:', event)
     })  
-    .listen('.order.updated', (event: Order) => {
-      console.log('Order Status updated: ', event)
-    })
-    .listen('.order.completed', (event: DeviceOrder | any) => {
+    // .listen('.order.updated', (event: Order) => {
+    //   console.log('Order Status updated: ', event)
+    // })
+    .listen('.order.completed', (event: any) => {
       console.log('Order Status completed: ', event.id)
     })
     .error((error: Order) => {
       console.error('Display.vue: Error connecting to Reverb channel:', error)
     })
+
+    // window.Echo.channel('Device2')
+    // .listen('.order.created', (event: Order) => {
+    //   console.log('New Order Created:', event)
+    // })  
+    // // .listen('.order.updated', (event: Order) => {
+    // //   console.log('Order Status updated: ', event)
+    // // })
+    // .listen('.order.completed', (event: DeviceOrder | any) => {
+    //   console.log('Order Status completed: ', event.id)
+    // })
+    // .error((error: Order) => {
+    //   console.error('Display.vue: Error connecting to Reverb channel:', error)
+    // })
 })
+
+
 
 onUnmounted(() => {
   if (window.Echo) {
-    console.log('Display.vue unmounted. Leaving "orders" channel.')
+    console.log('Display.vue unmounted. Leaving channel.')
     window.Echo.leave('orders')
   }
 })
