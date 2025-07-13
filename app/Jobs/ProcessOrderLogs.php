@@ -10,7 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 
 use App\Models\OrderUpdateLog;
 use App\Models\DeviceOrder;
-use App\Enums\OrderStatus;
+use App\Enums\OrderStatus ;
 use App\Events\Order\OrderCompleted;
 
 class ProcessOrderLogs implements ShouldQueue
@@ -37,15 +37,21 @@ class ProcessOrderLogs implements ShouldQueue
                 }
 
                 if( $log->is_open == false ) {
-                    $deviceOrder->status = OrderStatus::COMPLETED;
+                    if(  $deviceOrder->status == OrderStatus::CONFIRMED ) {
+                        $deviceOrder->status = OrderStatus::COMPLETED;
+                        $log->is_processed = true;
+                    }
+                  
                     $deviceOrder->save();
+                    $log->save();
 
-                    broadcast(new OrderCompleted($deviceOrder))->toOthers();
+                    broadcast(new OrderCompleted($deviceOrder));
 
-                    $log->update([
-                        'is_processed' => true,
-                        // 'deleted_at' => now(),
-                    ]);
+                    // $log->update([
+                    //     'is_processed' => true,
+                    //     // 'deleted_at' => now(),
+                    // ]);
+                    // $log->save();
                 }
 
                 Log::info("Processed & broadcasted Order ID {$log->order_id}");

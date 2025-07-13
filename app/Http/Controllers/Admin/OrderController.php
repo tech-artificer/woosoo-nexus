@@ -26,7 +26,7 @@ class OrderController extends Controller
      *
      * @return \Inertia\Response
      */
-    public function index()
+    public function index(Request $request)
     {
         // $context = $kryptonContextService->getCurrentSessions();
         // $orders = OrderRepository::getAllOrdersWithDeviceData();
@@ -39,7 +39,8 @@ class OrderController extends Controller
         return Inertia::render('Orders', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    
-            'orders' => $orders
+            'orders' => $orders,
+            'user' => auth()->user(),
         ]);
     }
 

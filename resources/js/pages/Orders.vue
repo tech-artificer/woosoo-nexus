@@ -20,12 +20,25 @@ const breadcrumbs: BreadcrumbItem[] = [
 const props = defineProps<{
     title?: string;
     description?: string;
+    user: any;
     orders: Object[];
     // deviceOrders: DeviceOrder[];
 }>()
 
-const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-  console.log('Order event received:', event);
+const channelId = props.user.id;
+
+const handleOrderEvent = (event: any, isUpdate = false) => {
+ 
+  if(isUpdate) {
+    if( event.status === 'completed') {
+      console.log('completed');
+    }else{
+      console.log('confirmed');
+    }
+    // console.log('Order updated:', event);
+  }else{
+    // console.log('Order created:', event);
+  }
 
   // const deviceOrder: Order = {
   //   id: event.id,
@@ -46,47 +59,32 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
 //     }
 // };
 
-
 // Echo event listeners
 onMounted(() => {
   console.log('Display.vue mounted. Joining "orders" channel.');
-  console.log(window.Echo.channel('orders'));
-   console.log(window.Echo.channel('orders'));
-  // fetchOrders();
   
   if (!window.Echo) {
     console.error('Display.vue: window.Echo is not available.')
     return;
   }
 
-  window.Echo.channel('orders')
-    .listen('.order.created', (event: any) => {
-      console.log('New Order Created:', event)
-    })  
-    // .listen('.order.updated', (event: Order) => {
-    //   console.log('Order Status updated: ', event)
-    // })
-    .listen('.order.completed', (event: any) => {
-      console.log('Order Status completed: ', event.id)
+
+  if (props.user.is_admin) {
+    window.Echo.private('orders.admin')
+      .listen('.order.created', handleOrderEvent)
+      .listen('.order.completed',handleOrderEvent)
+      .error((error: Order) => {
+        console.error('Display.vue: Error connecting to Reverb channel:', error)
     })
+  }
+
+  window.Echo.private(`orders.${channelId}`)
+    .listen('.order.created', handleOrderEvent)
+    .listen('.order.completed',handleOrderEvent)
     .error((error: Order) => {
       console.error('Display.vue: Error connecting to Reverb channel:', error)
     })
-
-    // window.Echo.channel('Device2')
-    // .listen('.order.created', (event: Order) => {
-    //   console.log('New Order Created:', event)
-    // })  
-    // // .listen('.order.updated', (event: Order) => {
-    // //   console.log('Order Status updated: ', event)
-    // // })
-    // .listen('.order.completed', (event: DeviceOrder | any) => {
-    //   console.log('Order Status completed: ', event.id)
-    // })
-    // .error((error: Order) => {
-    //   console.error('Display.vue: Error connecting to Reverb channel:', error)
-    // })
-})
+});
 
 
 
@@ -104,9 +102,7 @@ onUnmounted(() => {
     
     <AppLayout :breadcrumbs="breadcrumbs">
       <div class="p-6">
-         <pre>
-            {{ orders }}
-        </pre>
+      
       <Tabs default-value="orders" class="w-[400px]">
         <TabsList>
           <TabsTrigger value="orders">

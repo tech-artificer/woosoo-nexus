@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Scheduling\Attributes\AsScheduled;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-
+use App\Enums\OrderStatus;
 use App\Jobs\ProcessOrderLogs;
 
 

@@ -11,21 +11,20 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
+use App\Enums\OrderStatus;
 use App\Models\DeviceOrder;
-use App\Http\Resources\OrderResource;
-
 class OrderCompleted implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $order;
+    public $deviceOrder;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(DeviceOrder $order)
+    public function __construct(DeviceOrder $deviceOrder)
     {
-        $this->order = $order;
+        $this->deviceOrder = $deviceOrder;
     }
 
     /**
@@ -35,8 +34,9 @@ class OrderCompleted implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [ 
-            new Channel("Device.{$this->deviceOrder->device_id}"),
+        return [
+             new PrivateChannel('orders.' . $this->deviceOrder->device_id),
+             new PrivateChannel('orders.admin'),
         ];
     }
     /**
@@ -47,8 +47,10 @@ class OrderCompleted implements ShouldBroadcastNow
     public function broadcastWith()
     {   
         return [
-            'order_id' => $this->deviceOrder->order_id,
-            'status' => $this->deviceOrder->status,
+            'id' => $this->deviceOrder->id,
+            'order_number' => $this->deviceOrder->order_number,
+            'device_id' => $this->deviceOrder->device_id,
+            'status' => $this->deviceOrder->status
         ];
     }
 

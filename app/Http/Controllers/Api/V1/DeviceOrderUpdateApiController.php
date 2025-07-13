@@ -12,6 +12,7 @@ use App\Events\Order\OrderStatusUpdated;
 use App\Services\Krypton\OrderService;
 use App\Models\DeviceOrder;
 
+
 class DeviceOrderUpdateApiController extends Controller
 {
 

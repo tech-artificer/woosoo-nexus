@@ -13,7 +13,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 
 use App\Models\DeviceOrder;
 use App\Http\Resources\OrderResource;
-
+use App\Enums\OrderStatus;
 
 class OrderStatusUpdated implements ShouldBroadcastNow
 {

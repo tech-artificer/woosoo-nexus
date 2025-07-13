@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+use App\Enums\OrderStatus;
 class OrderUpdateLog extends Model
 {
     protected $table = 'order_update_logs';

@@ -12,18 +12,23 @@ use App\Broadcasting\OrderChannel;
 //     return $user->is_admin || $user->tables()->where('id', $tableId)->exists();
 // });
 
-// Broadcast::channel('devices.{device_id}', function ($user, int $deviceId) {
+// Broadcast::channel('orders', function ($user, int $deviceId) {
 //     // Give access if user is admin OR associated with the table
 //     // return $user->is_admin || 
 //     return $user->is_admin ;
 // });
 
-// Broadcast::channel('devices.{device_id}', function ($device, int $deviceId) {
+// Broadcast::channel('orders', function ($device, int $deviceId) {
 //     // Give access if user is admin OR associated with the table
 //     // return $user->is_admin || 
 //     return $device->id === $deviceId;
 // });
 
-Broadcast::channel('orders', OrderChannel::class);
+Broadcast::channel('orders.{deviceId}', OrderChannel::class);
+Broadcast::channel('orders.admin', function (User $user) {
+    return $user->is_admin;
+});
 
-
+// Broadcast::channel('channel', function () {
+//     // ...
+// }, ['guards' => ['device', 'admin']]);
