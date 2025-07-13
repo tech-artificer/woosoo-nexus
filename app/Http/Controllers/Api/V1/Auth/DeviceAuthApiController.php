@@ -67,14 +67,14 @@ class DeviceAuthApiController extends Controller
          // Create token with device info
         $token = $device->createToken(
             name: 'device-auth',
-            abilities: [
-                'order:create', 
-                'order:view', 
-                'order:edit', 
-                'order:delete', 
-                'service_request:create',
-                'menu:view',
-            ],
+            // abilities: [
+            //     'order:create', 
+            //     'order:view', 
+            //     'order:edit', 
+            //     'order:delete', 
+            //     'service_request:create',
+            //     'menu:view',
+            // ],
             expiresAt: now()->addDays(7)
         )->plainTextToken;
         
