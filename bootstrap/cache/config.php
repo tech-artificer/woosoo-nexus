@@ -289,6 +289,9 @@
     array (
       0 => 'http://localhost:3000',
       1 => 'http://woosoo-nexus.test',
+      2 => 'http://127.0.0.1',
+      3 => 'http://localhost',
+      4 => 'http://127.0.0.1:8000',
     ),
     'allowed_origins_patterns' => 
     array (
@@ -1038,7 +1041,7 @@
   ),
   'session' => 
   array (
-    'driver' => 'database',
+    'driver' => 'cookie',
     'lifetime' => 120,
     'expire_on_close' => false,
     'encrypt' => false,
@@ -1054,7 +1057,7 @@
     'cookie' => 'woosoo_session',
     'path' => '/',
     'domain' => NULL,
-    'secure' => NULL,
+    'secure' => false,
     'http_only' => true,
     'same_site' => 'lax',
     'partitioned' => false,
