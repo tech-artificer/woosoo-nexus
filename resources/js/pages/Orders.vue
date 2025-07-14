@@ -72,13 +72,14 @@ onMounted(() => {
   if (props.user.is_admin) {
     window.Echo.private('orders.admin')
       .listen('.order.created', handleOrderEvent)
-      .listen('.order.completed',handleOrderEvent)
+      .listen('.order.completed', handleOrderEvent)
       .error((error: Order) => {
         console.error('Display.vue: Error connecting to Reverb channel:', error)
     })
   }
 
-  window.Echo.private(`orders.${channelId}`)
+  // window.Echo.private(`orders.${channelId}`)
+  window.Echo.private(`orders.1`)
     .listen('.order.created', handleOrderEvent)
     .listen('.order.completed',handleOrderEvent)
     .error((error: Order) => {

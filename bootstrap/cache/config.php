@@ -968,12 +968,11 @@
   array (
     'stateful' => 
     array (
-      0 => 'localhost:3000',
-      1 => 'woosoo-nexus.test',
+      0 => '',
     ),
     'guard' => 
     array (
-      0 => 'api',
+      0 => 'web',
     ),
     'expiration' => NULL,
     'token_prefix' => '',
