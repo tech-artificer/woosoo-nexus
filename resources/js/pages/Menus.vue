@@ -5,7 +5,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 // import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { Menu } from '@/types/models';
-import { menucolumns } from '@/pages/menus/columns';
+import { menucolumns } from '@/pages/menu/menu-columns';
 // import MenuTable from '@/pages/menus/MenuTable.vue';
 import AppTable from '@/components/datatable/AppTable.vue';
 

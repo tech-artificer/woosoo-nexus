@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Krypton\Table;
@@ -69,10 +70,11 @@ class Device extends Model
         return $this->belongsTo(Table::class, 'table_id');
     }
 
-     public function branch(): BelongsTo
+    public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'branch_id');
     }
+
 
 
     # SCOPES

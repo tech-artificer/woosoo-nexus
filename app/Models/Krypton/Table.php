@@ -22,6 +22,18 @@ class Table extends Model
         'status' => TableStatus::class, // Assuming you have an enum for table statuses
     ];
 
+    protected $hidden = [
+        'position_x',
+        'position_y',
+        'z_index',
+        'rotation',
+        'merchant_id',
+        'employee_name',
+        'order_created_in',
+        'created_on',
+        'modified_on',
+    ];
+
     // Relationships
     public function tableOrders() : HasMany
     {

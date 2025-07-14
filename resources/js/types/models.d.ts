@@ -11,15 +11,22 @@ export interface User {
     updated_at: string;
 }
 
+export interface Branch {
+    id: number;
+    name: string;
+}
+
 export interface Device {
     id: number;
     table_id: number;
     name: string;
     ip_address?: string;
     port?: number;
+    branch?: Branch;
     table?: Table;
-
 }
+
+
 export interface DeviceOrder {
     id: number;
     device_id: number;

@@ -1,8 +1,8 @@
 import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
 import { Menu } from '@/types/models';
-import MenuDisplayName from '@/pages/menus/DisplayMenuName.vue';
-import EditMenu from '@/pages/menus/EditMenu.vue';
+import MenuDisplayName from '@/pages/menu/DisplayMenuName.vue';
+import EditMenu from '@/pages/menu/EditMenu.vue';
 import AppIconExp from '@/components/AppIconExp.vue';
 
 export const menucolumns: ColumnDef<Menu>[] = [

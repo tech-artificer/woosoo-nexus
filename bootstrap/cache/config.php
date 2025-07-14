@@ -7,7 +7,7 @@
     'name' => 'Woosoo',
     'env' => 'local',
     'debug' => true,
-    'url' => '',
+    'url' => 'http://nexus-app.test',
     'frontend_url' => 'http://localhost:3000',
     'asset_url' => NULL,
     'timezone' => 'Asia/Manila',
@@ -453,7 +453,7 @@
       array (
         'driver' => 'local',
         'root' => 'C:\\laragon\\www\\nexus-app\\storage\\app/public',
-        'url' => '/storage',
+        'url' => 'http://nexus-app.test/storage',
         'visibility' => 'public',
         'throw' => false,
         'report' => false,
@@ -619,7 +619,7 @@
         'username' => NULL,
         'password' => NULL,
         'timeout' => NULL,
-        'local_domain' => NULL,
+        'local_domain' => 'nexus-app.test',
       ),
       'ses' => 
       array (
