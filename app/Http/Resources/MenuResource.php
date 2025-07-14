@@ -59,7 +59,8 @@ class MenuResource extends JsonResource
             'img_url' => $placeholder,
             'tax' => $this->whenLoaded('tax', new TaxResource($this->tax)) ?? null,
             'tax_amount' => $this->taxComputation($this->guest_count),
-            'modifiers' => $this->whenLoaded('modifiers', MenuModifierResource::collection($this->modifiers)) ?? null,
+            // 'modifiers' => $this->whenLoaded('modifiers', MenuModifierResource::collection($this->modifiers)) ?? null,
+            'modifiers' => MenuModifierResource::collection($this->modifiers)
         ];
     }
 }

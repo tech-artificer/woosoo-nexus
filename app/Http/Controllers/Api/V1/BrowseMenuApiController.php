@@ -54,10 +54,9 @@ class BrowseMenuApiController extends Controller
             'modifiers' => ['nullable', 'boolean'],
         ]);
 
-
         $allModifierGroups = $this->menuRepository->getAllModifierGroups() ?? [];
         $menus = collect($allModifierGroups)->unique('id')->values() ?? [];
-        
+      
         if ( $request->has('modifiers') && $request->modifiers == true ) {
             foreach($menus as $menu) {
                 $menu->load('modifiers');
