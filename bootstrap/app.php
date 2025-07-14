@@ -20,17 +20,17 @@ return Application::configure(basePath: dirname(__DIR__))
     //     ['prefix' => 'api', 'middleware' => ['api', 'auth:sanctum']],
     // )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->append(\App\Http\Middleware\CorsMiddleware::class);
 
-        $middleware->api(prepend: [
-            \App\Http\Middleware\CorsMiddleware::class, // Add it here if you want it only for API routes
-        ]);
-
-        $middleware->web(
+        $middleware->api(
             append: [
-               \Illuminate\Http\Middleware\HandleCors::class,
+                \Illuminate\Http\Middleware\HandleCors::class,
             ]
         );
+        // $middleware->web(
+        //     append: [
+        //        \Illuminate\Http\Middleware\HandleCors::class,
+        //     ]
+        // );
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [

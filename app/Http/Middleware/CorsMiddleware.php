@@ -19,7 +19,7 @@ class CorsMiddleware
         // For local development, you might use your frontend's URL or even '*' (NOT recommended for production).
         $allowedOrigins = [
             'http://localhost:3000', // Example: your frontend running on port 3000
-            'http://127.0.0.1:8000', // Example: another local dev server
+            'https://woosoo-nexus.test',
         ];
 
         // Or, for extreme temporary local dev, allow all (DANGER: NEVER IN PRODUCTION)

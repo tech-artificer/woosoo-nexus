@@ -287,7 +287,8 @@
     ),
     'allowed_origins' => 
     array (
-      0 => '*',
+      0 => 'http://localhost:3000',
+      1 => 'http://woosoo-nexus.test',
     ),
     'allowed_origins_patterns' => 
     array (
@@ -391,7 +392,7 @@
         'driver' => 'mysql',
         'host' => '127.0.0.1',
         'port' => '3306',
-        'database' => 'krypton',
+        'database' => 'krypton_woosoo',
         'username' => 'root',
         'password' => '',
         'charset' => 'utf8mb4',
@@ -964,11 +965,12 @@
   array (
     'stateful' => 
     array (
-      0 => '',
+      0 => 'localhost:3000',
+      1 => 'woosoo-nexus.test',
     ),
     'guard' => 
     array (
-      0 => 'web',
+      0 => 'api',
     ),
     'expiration' => NULL,
     'token_prefix' => '',

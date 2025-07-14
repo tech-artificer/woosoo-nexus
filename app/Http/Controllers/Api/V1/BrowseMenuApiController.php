@@ -88,6 +88,8 @@ class BrowseMenuApiController extends Controller
      * 
      * @return \Illuminate\Http\JsonResponse
      * 
+     * 
+     * 
      */
     public function getMenusWithModifiers() 
     {   
