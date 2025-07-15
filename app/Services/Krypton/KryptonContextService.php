@@ -5,11 +5,20 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Krypton\TerminalSession;
 use App\Models\Krypton\EmployeeLog;
 use App\Models\Krypton\Session;
+use App\Models\Krypton\Terminal;
+use App\Models\Krypton\CashTraySession;
+use App\Models\Krypton\TerminalService;
+use App\Models\Krypton\Revenue;
+
 class KryptonContextService
 {
-    public function getCurrentSessions(): array
+    public $currentSessions = [];
+    public $data = [];
+
+    public function __construct()
     {
-        // Example query logic, update to fit actual schema
+        $terminal = Terminal::where(['id' => 1 ])->first();
+
         $session = Session::query()
             ->whereNull('date_time_closed')
             ->orderByDesc('id')
@@ -24,11 +33,60 @@ class KryptonContextService
             ->whereNull('date_time_out')
             ->orderByDesc('id')
             ->first();
+        
+        $cashTraySession = CashTraySession::query()
+            ->where('session_id', $session->id)
+            ->orderByDesc('id')
+            ->first();
+        
+        $terminalService = TerminalService::where('terminal_id', $terminal->id)->first();
+        
+        $revenue = Revenue::where(['id' => $terminalService->revenue_id, 'is_active' => true])->first();
 
-        return [
+        $priceLevelId = $revenue->price_level_id;
+        $taxSetId = $revenue->tax_set_id;
+        $serviceTypeId = $terminalService->service_type_id;
+        $revenueId = $terminalService->revenue_id;
+        $terminalId = $terminal->id;
+        $sessionId = $session->id;
+        $terminalSessionId = $terminalSession->id;
+        $employeeLogId = $employeeLog->id;
+        $cashTraySessionId = $cashTraySession->id;
+        $terminalServiceId = $terminalService->id;
+        $employeeId = $employeeLog->employee_id;
+
+        $this->currentSessions = [
+            'terminal' => $terminal,
             'session' => $session,
             'terminalSession' => $terminalSession,
             'employeeLog' => $employeeLog,
+            'cashTraySession' => $cashTraySession,
+            'terminalService' => $terminalService,
         ];
+
+        $this->data = [
+            'price_level_id' => $priceLevelId,
+            'taxt_set_id' => $taxSetId,
+            'service_type_id' => $serviceTypeId,
+            'revenue_id' => $revenueId,
+            'terminal_id' => $terminalId,
+            'session_id' => $sessionId,
+            'terminal_session_id' => $terminalSessionId,
+            'employee_log_id' => $employeeLogId,
+            'cash_tray_session_id' => $cashTraySessionId,
+            'terminal_service_id' => $terminalServiceId,
+            'employee_id' => $employeeId,
+            'cashier_employee_id' => $employeeId
+        ];
+    }
+
+    public function getCurrentSessions(): array
+    {   
+        return $this->currentSessions;
+    }
+
+    public function getData(): array
+    {
+        return $this->data;
     }
 }

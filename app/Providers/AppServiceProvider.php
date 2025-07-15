@@ -35,19 +35,12 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(KryptonContextService $posSessionService): void
+    public function boot(KryptonContextService $contextService): void
     {
 
         JsonResource::withoutWrapping();
 
-        Inertia::share($posSessionService->getCurrentSessions());
-
-        // Inertia::share([
-        //     // Example: Categories
-        //     'session' => fn () => Session::orderBy('created_on', 'Desc')->first(),
-        //     'terminalSession' => fn () => TerminalSession::orderBy('created_on', 'Desc')->first(),
-        //     'employeeLogs' => fn () => EmployeeLog::orderBy('created_on', 'Desc')->first()
-        // ]);
+        Inertia::share($contextService->getCurrentSessions());
 
         Scramble::configure()
         ->routes(function (Route $route) {
