@@ -24,16 +24,20 @@ use App\Http\Controllers\Api\V1\Krypton\{
     OrderApiController,
     TerminalSessionApiController,
 };
-
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
-
 Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
+
+Route::get('/check', function (Request $request) {
+    return response()->json([
+        'user' => auth()->user(),
+        'request' => $request
+    ]);
+})->middleware('auth:device');
+
+Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
 
 Route::middleware('guest')->group(function () {
     // Route::post('/login', [AuthApiController::class, 'authenticate'])->name('api.user.login');
-    Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
+    
     Route::post('/devices/login', [DeviceAuthApiController::class, 'login'])->name('api.devices.login');
 
     Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');

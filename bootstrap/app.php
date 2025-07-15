@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Middleware\HandleAppearance;
+use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,17 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ['prefix' => 'api', 'middleware' => ['api', 'auth:sanctum']],
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->append(\App\Http\Middleware\CorsMiddleware::class);
-
-        $middleware->api(prepend: [
-            \App\Http\Middleware\CorsMiddleware::class, // Add it here if you want it only for API routes
-        ]);
-
-        $middleware->web(
-            append: [
-               \Illuminate\Http\Middleware\HandleCors::class,
-            ]
-        );
+        $middleware->prepend([ForceJsonResponse::class,HandleCors::class]);
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
@@ -39,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->statefulApi();
+        // $middleware->statefulApi();
     })
     
     ->withExceptions(function (Exceptions $exceptions) {

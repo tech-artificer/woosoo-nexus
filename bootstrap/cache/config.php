@@ -7,7 +7,7 @@
     'name' => 'Woosoo',
     'env' => 'local',
     'debug' => true,
-    'url' => 'http://nexus-app.test',
+    'url' => 'http://localhost:8000',
     'frontend_url' => 'http://localhost:3000',
     'asset_url' => NULL,
     'timezone' => 'Asia/Manila',
@@ -112,6 +112,11 @@
       'web' => 
       array (
         'driver' => 'session',
+        'provider' => 'users',
+      ),
+      'api' => 
+      array (
+        'driver' => 'sanctum',
         'provider' => 'users',
       ),
       'device' => 
@@ -227,8 +232,8 @@
       'file' => 
       array (
         'driver' => 'file',
-        'path' => 'C:\\laragon\\www\\nexus-app\\storage\\framework/cache/data',
-        'lock_path' => 'C:\\laragon\\www\\nexus-app\\storage\\framework/cache/data',
+        'path' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\framework/cache/data',
+        'lock_path' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\framework/cache/data',
       ),
       'memcached' => 
       array (
@@ -288,10 +293,6 @@
     'allowed_origins' => 
     array (
       0 => 'http://localhost:3000',
-      1 => 'http://woosoo-nexus.test',
-      2 => 'http://127.0.0.1',
-      3 => 'http://localhost',
-      4 => 'http://127.0.0.1:8000',
     ),
     'allowed_origins_patterns' => 
     array (
@@ -326,11 +327,11 @@
       array (
         'driver' => 'mysql',
         'url' => NULL,
-        'host' => '127.0.0.1',
+        'host' => '192.168.100.85',
         'port' => '3306',
         'database' => 'woosoo_api',
-        'username' => 'root',
-        'password' => '',
+        'username' => 'user',
+        'password' => 'user',
         'unix_socket' => '',
         'charset' => 'utf8mb4',
         'collation' => 'utf8mb4_unicode_ci',
@@ -346,11 +347,11 @@
       array (
         'driver' => 'mariadb',
         'url' => NULL,
-        'host' => '127.0.0.1',
+        'host' => '192.168.100.85',
         'port' => '3306',
         'database' => 'woosoo_api',
-        'username' => 'root',
-        'password' => '',
+        'username' => 'user',
+        'password' => 'user',
         'unix_socket' => '',
         'charset' => 'utf8mb4',
         'collation' => 'utf8mb4_unicode_ci',
@@ -366,11 +367,11 @@
       array (
         'driver' => 'pgsql',
         'url' => NULL,
-        'host' => '127.0.0.1',
+        'host' => '192.168.100.85',
         'port' => '3306',
         'database' => 'woosoo_api',
-        'username' => 'root',
-        'password' => '',
+        'username' => 'user',
+        'password' => 'user',
         'charset' => 'utf8',
         'prefix' => '',
         'prefix_indexes' => true,
@@ -381,11 +382,11 @@
       array (
         'driver' => 'sqlsrv',
         'url' => NULL,
-        'host' => '127.0.0.1',
+        'host' => '192.168.100.85',
         'port' => '3306',
         'database' => 'woosoo_api',
-        'username' => 'root',
-        'password' => '',
+        'username' => 'user',
+        'password' => 'user',
         'charset' => 'utf8',
         'prefix' => '',
         'prefix_indexes' => true,
@@ -393,11 +394,11 @@
       'pos' => 
       array (
         'driver' => 'mysql',
-        'host' => '127.0.0.1',
+        'host' => '192.168.100.85',
         'port' => '3306',
         'database' => 'krypton_woosoo',
-        'username' => 'root',
-        'password' => '',
+        'username' => 'user',
+        'password' => 'user',
         'charset' => 'utf8mb4',
         'collation' => 'utf8mb4_unicode_ci',
         'prefix' => '',
@@ -448,7 +449,7 @@
       'local' => 
       array (
         'driver' => 'local',
-        'root' => 'C:\\laragon\\www\\nexus-app\\storage\\app/private',
+        'root' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\app/private',
         'serve' => true,
         'throw' => false,
         'report' => false,
@@ -456,8 +457,8 @@
       'public' => 
       array (
         'driver' => 'local',
-        'root' => 'C:\\laragon\\www\\nexus-app\\storage\\app/public',
-        'url' => 'http://nexus-app.test/storage',
+        'root' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\app/public',
+        'url' => 'http://localhost:8000/storage',
         'visibility' => 'public',
         'throw' => false,
         'report' => false,
@@ -478,7 +479,7 @@
     ),
     'links' => 
     array (
-      'C:\\laragon\\www\\nexus-app\\public\\storage' => 'C:\\laragon\\www\\nexus-app\\storage\\app/public',
+      'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\public\\storage' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\app/public',
     ),
   ),
   'inertia' => 
@@ -493,7 +494,7 @@
       'ensure_pages_exist' => true,
       'page_paths' => 
       array (
-        0 => 'C:\\laragon\\www\\nexus-app\\resources\\js/pages',
+        0 => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\resources\\js/pages',
       ),
       'page_extensions' => 
       array (
@@ -532,14 +533,14 @@
       'single' => 
       array (
         'driver' => 'single',
-        'path' => 'C:\\laragon\\www\\nexus-app\\storage\\logs/laravel.log',
+        'path' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\logs/laravel.log',
         'level' => 'debug',
         'replace_placeholders' => true,
       ),
       'daily' => 
       array (
         'driver' => 'daily',
-        'path' => 'C:\\laragon\\www\\nexus-app\\storage\\logs/laravel.log',
+        'path' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\logs/laravel.log',
         'level' => 'debug',
         'days' => 14,
         'replace_placeholders' => true,
@@ -604,7 +605,7 @@
       ),
       'emergency' => 
       array (
-        'path' => 'C:\\laragon\\www\\nexus-app\\storage\\logs/laravel.log',
+        'path' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\logs/laravel.log',
       ),
     ),
   ),
@@ -623,7 +624,7 @@
         'username' => NULL,
         'password' => NULL,
         'timeout' => NULL,
-        'local_domain' => 'nexus-app.test',
+        'local_domain' => 'localhost',
       ),
       'ses' => 
       array (
@@ -680,7 +681,7 @@
       'theme' => 'default',
       'paths' => 
       array (
-        0 => 'C:\\laragon\\www\\nexus-app\\resources\\views/vendor/mail',
+        0 => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\resources\\views/vendor/mail',
       ),
     ),
   ),
@@ -768,7 +769,7 @@
       ),
       'Laravel\\Pulse\\Recorders\\Servers' => 
       array (
-        'server_name' => 'Chrono',
+        'server_name' => 'DESKTOP-VQJRR8K',
         'directories' => 
         array (
           0 => '/',
@@ -841,7 +842,7 @@
   ),
   'queue' => 
   array (
-    'default' => 'sync',
+    'default' => 'database',
     'connections' => 
     array (
       'sync' => 
@@ -968,7 +969,8 @@
   array (
     'stateful' => 
     array (
-      0 => '',
+      0 => 'localhost:3000',
+      1 => '127.0.0.1:3000',
     ),
     'guard' => 
     array (
@@ -978,9 +980,6 @@
     'token_prefix' => '',
     'middleware' => 
     array (
-      'authenticate_session' => 'Laravel\\Sanctum\\Http\\Middleware\\AuthenticateSession',
-      'encrypt_cookies' => 'Illuminate\\Cookie\\Middleware\\EncryptCookies',
-      'validate_csrf_token' => 'Illuminate\\Foundation\\Http\\Middleware\\ValidateCsrfToken',
     ),
   ),
   'scramble' => 
@@ -1044,7 +1043,7 @@
     'lifetime' => 120,
     'expire_on_close' => false,
     'encrypt' => false,
-    'files' => 'C:\\laragon\\www\\nexus-app\\storage\\framework/sessions',
+    'files' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\framework/sessions',
     'connection' => NULL,
     'table' => 'sessions',
     'store' => NULL,
@@ -1055,7 +1054,7 @@
     ),
     'cookie' => 'woosoo_session',
     'path' => '/',
-    'domain' => NULL,
+    'domain' => 'localhost',
     'secure' => false,
     'http_only' => true,
     'same_site' => 'lax',
@@ -1087,14 +1086,14 @@
   array (
     'paths' => 
     array (
-      0 => 'C:\\laragon\\www\\nexus-app\\resources\\views',
+      0 => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\resources\\views',
     ),
-    'compiled' => 'C:\\laragon\\www\\nexus-app\\storage\\framework\\views',
+    'compiled' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\framework\\views',
   ),
   'livewire' => 
   array (
     'class_namespace' => 'App\\Livewire',
-    'view_path' => 'C:\\laragon\\www\\nexus-app\\resources\\views/livewire',
+    'view_path' => 'C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\resources\\views/livewire',
     'layout' => 'components.layouts.app',
     'lazy_placeholder' => NULL,
     'temporary_file_upload' => 
