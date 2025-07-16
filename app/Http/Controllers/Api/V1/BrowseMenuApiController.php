@@ -93,7 +93,6 @@ class BrowseMenuApiController extends Controller
      */
     public function getMenusWithModifiers() 
     {   
-
         $menus = $this->menuRepository->getMenusWithModifiers();
      
         if( $menus ) {

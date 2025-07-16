@@ -143,6 +143,6 @@ class Menu extends Model
             ],
         ];
 
-        return Menu::whereIn('receipt_name', $codes[$id])->get();
+        return Menu::whereIn('receipt_name', $codes[$id])->where('is_modifier_only', false)->get();
     }
 }

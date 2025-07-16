@@ -24,7 +24,7 @@ use App\Http\Controllers\Api\V1\Krypton\{
     OrderApiController,
     TerminalSessionApiController,
 };
-Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
+// Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 
 Route::get('/check', function (Request $request) {
     return response()->json([
@@ -33,12 +33,13 @@ Route::get('/check', function (Request $request) {
     ]);
 })->middleware('auth:device');
 
-Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
+
 
 Route::middleware('guest')->group(function () {
     // Route::post('/login', [AuthApiController::class, 'authenticate'])->name('api.user.login');
     
     Route::post('/devices/login', [DeviceAuthApiController::class, 'login'])->name('api.devices.login');
+    Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
 
     Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
     Route::get('/menus/with-modifiers', [BrowseMenuApiController::class, 'getMenusWithModifiers'])->name('api.menus.with.modifiers');
@@ -49,7 +50,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:device')->group(function () {
 
     // Route::resource('/menus', MenuApiController::class);
     Route::resource('/devices', DeviceApiController::class);

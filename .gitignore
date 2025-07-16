@@ -26,3 +26,5 @@ Dockerfile
 docker-compose.env
 docker-compose.yml
 docker/
+/bootstrap/cache/*.php
+!bootstrap/cache/.gitignore

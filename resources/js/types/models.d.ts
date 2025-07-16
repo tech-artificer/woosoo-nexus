@@ -20,6 +20,7 @@ export interface Device {
     id: number;
     table_id: number;
     name: string;
+    is_active: boolean;
     ip_address?: string;
     port?: number;
     branch?: Branch;

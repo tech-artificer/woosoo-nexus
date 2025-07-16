@@ -72,7 +72,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::vFrFdXoPeQMDYlZs',
+            '_route' => 'generated::IIkesIP7GLkPw5Qt',
           ),
           1 => NULL,
           2 => 
@@ -92,7 +92,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::DSvrX9Xnq5tYIUPc',
+            '_route' => 'generated::1feuLDwVUIDiUpH8',
           ),
           1 => NULL,
           2 => 
@@ -125,58 +125,19 @@ app('router')->setCompiledRoutes(
           6 => NULL,
         ),
       ),
-      '/api/token/create' => 
-      array (
-        0 => 
-        array (
-          0 => 
-          array (
-            '_route' => 'api.user.token.create',
-          ),
-          1 => NULL,
-          2 => 
-          array (
-            'GET' => 0,
-            'HEAD' => 1,
-          ),
-          3 => NULL,
-          4 => false,
-          5 => false,
-          6 => NULL,
-        ),
-      ),
       '/api/check' => 
       array (
         0 => 
         array (
           0 => 
           array (
-            '_route' => 'generated::Nj29EY5yWVnLxtsv',
+            '_route' => 'generated::VHOYvfBsIhuook6m',
           ),
           1 => NULL,
           2 => 
           array (
             'GET' => 0,
             'HEAD' => 1,
-          ),
-          3 => NULL,
-          4 => false,
-          5 => false,
-          6 => NULL,
-        ),
-      ),
-      '/api/devices/register' => 
-      array (
-        0 => 
-        array (
-          0 => 
-          array (
-            '_route' => 'api.devices.register',
-          ),
-          1 => NULL,
-          2 => 
-          array (
-            'POST' => 0,
           ),
           3 => NULL,
           4 => false,
@@ -191,6 +152,25 @@ app('router')->setCompiledRoutes(
           0 => 
           array (
             '_route' => 'api.devices.login',
+          ),
+          1 => NULL,
+          2 => 
+          array (
+            'POST' => 0,
+          ),
+          3 => NULL,
+          4 => false,
+          5 => false,
+          6 => NULL,
+        ),
+      ),
+      '/api/devices/register' => 
+      array (
+        0 => 
+        array (
+          0 => 
+          array (
+            '_route' => 'api.devices.register',
           ),
           1 => NULL,
           2 => 
@@ -441,7 +421,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::19xp1zAsHrkuxUx0',
+            '_route' => 'generated::42uCiEwMb32nIXEM',
           ),
           1 => NULL,
           2 => 
@@ -536,7 +516,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::hjK2yh7nUvGfZASk',
+            '_route' => 'generated::3ghsBLsspGeOaLly',
           ),
           1 => NULL,
           2 => 
@@ -736,7 +716,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::GI6uCsgqlB0sdhmO',
+            '_route' => 'generated::QHF3xIb1lJ2lJS7c',
           ),
           1 => NULL,
           2 => 
@@ -886,7 +866,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::w7Hfm9L2Aa3cqC3A',
+            '_route' => 'generated::Q0UFE7NTziNXmOG2',
           ),
           1 => NULL,
           2 => 
@@ -922,7 +902,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::mhOnro5ZNnR9C17B',
+            '_route' => 'generated::12loAkvq4bxK6log',
           ),
           1 => NULL,
           2 => 
@@ -1052,7 +1032,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::sITd6JOFVZuRWbA8',
+            '_route' => 'generated::LrXcuPtuTqRlEV5M',
           ),
           1 => NULL,
           2 => 
@@ -1090,7 +1070,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::exeNkgfTltPfPqzC',
+            '_route' => 'generated::0tooUFGIl4jhafsl',
           ),
           1 => NULL,
           2 => 
@@ -1111,7 +1091,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::jogkNWEqrykhP6cw',
+            '_route' => 'generated::mCOOXNgIr8CyNzxB',
           ),
           1 => NULL,
           2 => 
@@ -1355,7 +1335,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::ImT988zx32AjfQcS',
+            '_route' => 'generated::7ayaGtvibboZF5Fg',
           ),
           1 => 
           array (
@@ -1672,7 +1652,7 @@ app('router')->setCompiledRoutes(
         ),
         'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:0:{}s:8:"function";s:158:"function (\\Laravel\\Pulse\\Pulse $pulse, \\Illuminate\\View\\Factory $view) {
                         return $view->make(\'pulse::dashboard\');
-                    }";s:5:"scope";s:34:"Laravel\\Pulse\\PulseServiceProvider";s:4:"this";N;s:4:"self";s:32:"000000000000088e0000000000000000";}}',
+                    }";s:5:"scope";s:34:"Laravel\\Pulse\\PulseServiceProvider";s:4:"this";N;s:4:"self";s:32:"0000000000000d090000000000000000";}}',
         'namespace' => NULL,
         'prefix' => 'pulse',
         'where' => 
@@ -1762,7 +1742,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::vFrFdXoPeQMDYlZs' => 
+    'generated::IIkesIP7GLkPw5Qt' => 
     array (
       'methods' => 
       array (
@@ -1774,7 +1754,7 @@ app('router')->setCompiledRoutes(
       array (
         'uses' => 'Livewire\\Mechanisms\\FrontendAssets\\FrontendAssets@returnJavaScriptAsFile',
         'controller' => 'Livewire\\Mechanisms\\FrontendAssets\\FrontendAssets@returnJavaScriptAsFile',
-        'as' => 'generated::vFrFdXoPeQMDYlZs',
+        'as' => 'generated::IIkesIP7GLkPw5Qt',
       ),
       'fallback' => false,
       'defaults' => 
@@ -1790,7 +1770,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::DSvrX9Xnq5tYIUPc' => 
+    'generated::1feuLDwVUIDiUpH8' => 
     array (
       'methods' => 
       array (
@@ -1802,7 +1782,7 @@ app('router')->setCompiledRoutes(
       array (
         'uses' => 'Livewire\\Mechanisms\\FrontendAssets\\FrontendAssets@maps',
         'controller' => 'Livewire\\Mechanisms\\FrontendAssets\\FrontendAssets@maps',
-        'as' => 'generated::DSvrX9Xnq5tYIUPc',
+        'as' => 'generated::1feuLDwVUIDiUpH8',
       ),
       'fallback' => false,
       'defaults' => 
@@ -1873,44 +1853,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'api.user.token.create' => 
-    array (
-      'methods' => 
-      array (
-        0 => 'GET',
-        1 => 'HEAD',
-      ),
-      'uri' => 'api/token/create',
-      'action' => 
-      array (
-        'middleware' => 
-        array (
-          0 => 'api',
-        ),
-        'uses' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\AuthApiController@createToken',
-        'controller' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\AuthApiController@createToken',
-        'namespace' => NULL,
-        'prefix' => 'api',
-        'where' => 
-        array (
-        ),
-        'as' => 'api.user.token.create',
-      ),
-      'fallback' => false,
-      'defaults' => 
-      array (
-      ),
-      'wheres' => 
-      array (
-      ),
-      'bindingFields' => 
-      array (
-      ),
-      'lockSeconds' => NULL,
-      'waitSeconds' => NULL,
-      'withTrashed' => false,
-    ),
-    'generated::Nj29EY5yWVnLxtsv' => 
+    'generated::VHOYvfBsIhuook6m' => 
     array (
       'methods' => 
       array (
@@ -1930,49 +1873,13 @@ app('router')->setCompiledRoutes(
         \'user\' => \\auth()->user(),
         \'request\' => $request
     ]);
-}";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009840000000000000000";}}',
+}";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"0000000000000e090000000000000000";}}',
         'namespace' => NULL,
         'prefix' => 'api',
         'where' => 
         array (
         ),
-        'as' => 'generated::Nj29EY5yWVnLxtsv',
-      ),
-      'fallback' => false,
-      'defaults' => 
-      array (
-      ),
-      'wheres' => 
-      array (
-      ),
-      'bindingFields' => 
-      array (
-      ),
-      'lockSeconds' => NULL,
-      'waitSeconds' => NULL,
-      'withTrashed' => false,
-    ),
-    'api.devices.register' => 
-    array (
-      'methods' => 
-      array (
-        0 => 'POST',
-      ),
-      'uri' => 'api/devices/register',
-      'action' => 
-      array (
-        'middleware' => 
-        array (
-          0 => 'api',
-        ),
-        'uses' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@register',
-        'controller' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@register',
-        'namespace' => NULL,
-        'prefix' => 'api',
-        'where' => 
-        array (
-        ),
-        'as' => 'api.devices.register',
+        'as' => 'generated::VHOYvfBsIhuook6m',
       ),
       'fallback' => false,
       'defaults' => 
@@ -2010,6 +1917,43 @@ app('router')->setCompiledRoutes(
         array (
         ),
         'as' => 'api.devices.login',
+      ),
+      'fallback' => false,
+      'defaults' => 
+      array (
+      ),
+      'wheres' => 
+      array (
+      ),
+      'bindingFields' => 
+      array (
+      ),
+      'lockSeconds' => NULL,
+      'waitSeconds' => NULL,
+      'withTrashed' => false,
+    ),
+    'api.devices.register' => 
+    array (
+      'methods' => 
+      array (
+        0 => 'POST',
+      ),
+      'uri' => 'api/devices/register',
+      'action' => 
+      array (
+        'middleware' => 
+        array (
+          0 => 'api',
+          1 => 'guest',
+        ),
+        'uses' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@register',
+        'controller' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@register',
+        'namespace' => NULL,
+        'prefix' => 'api',
+        'where' => 
+        array (
+        ),
+        'as' => 'api.devices.register',
       ),
       'fallback' => false,
       'defaults' => 
@@ -2304,7 +2248,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'devices.index',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceApiController@index',
@@ -2342,7 +2286,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'devices.create',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceApiController@create',
@@ -2379,7 +2323,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'devices.store',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceApiController@store',
@@ -2417,7 +2361,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'devices.show',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceApiController@show',
@@ -2455,7 +2399,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'devices.edit',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceApiController@edit',
@@ -2493,7 +2437,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'devices.update',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceApiController@update',
@@ -2530,7 +2474,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'devices.destroy',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceApiController@destroy',
@@ -2567,7 +2511,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@refresh',
         'controller' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@refresh',
@@ -2604,7 +2548,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@logout',
         'controller' => 'App\\Http\\Controllers\\Api\\V1\\Auth\\DeviceAuthApiController@logout',
@@ -2642,7 +2586,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'orders.index',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\OrderApiController@index',
@@ -2680,7 +2624,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'orders.create',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\OrderApiController@create',
@@ -2717,7 +2661,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'orders.store',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\OrderApiController@store',
@@ -2755,7 +2699,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'orders.show',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\OrderApiController@show',
@@ -2793,7 +2737,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'orders.edit',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\OrderApiController@edit',
@@ -2831,7 +2775,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'orders.update',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\OrderApiController@update',
@@ -2868,7 +2812,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'orders.destroy',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\OrderApiController@destroy',
@@ -2893,7 +2837,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::ImT988zx32AjfQcS' => 
+    'generated::7ayaGtvibboZF5Fg' => 
     array (
       'methods' => 
       array (
@@ -2905,7 +2849,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceOrderApiController@__invoke',
         'controller' => 'App\\Http\\Controllers\\Api\\V1\\DeviceOrderApiController',
@@ -2914,7 +2858,7 @@ app('router')->setCompiledRoutes(
         'where' => 
         array (
         ),
-        'as' => 'generated::ImT988zx32AjfQcS',
+        'as' => 'generated::7ayaGtvibboZF5Fg',
       ),
       'fallback' => false,
       'defaults' => 
@@ -2930,7 +2874,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::19xp1zAsHrkuxUx0' => 
+    'generated::42uCiEwMb32nIXEM' => 
     array (
       'methods' => 
       array (
@@ -2942,7 +2886,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\DeviceOrderUpdateApiController@__invoke',
         'controller' => 'App\\Http\\Controllers\\Api\\V1\\DeviceOrderUpdateApiController',
@@ -2951,7 +2895,7 @@ app('router')->setCompiledRoutes(
         'where' => 
         array (
         ),
-        'as' => 'generated::19xp1zAsHrkuxUx0',
+        'as' => 'generated::42uCiEwMb32nIXEM',
       ),
       'fallback' => false,
       'defaults' => 
@@ -2980,7 +2924,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'terminal-sessions.index',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\TerminalSessionApiController@index',
@@ -3018,7 +2962,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'terminal-sessions.create',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\TerminalSessionApiController@create',
@@ -3055,7 +2999,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'terminal-sessions.store',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\TerminalSessionApiController@store',
@@ -3093,7 +3037,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'terminal-sessions.show',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\TerminalSessionApiController@show',
@@ -3131,7 +3075,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'terminal-sessions.edit',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\TerminalSessionApiController@edit',
@@ -3169,7 +3113,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'terminal-sessions.update',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\TerminalSessionApiController@update',
@@ -3206,7 +3150,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'as' => 'terminal-sessions.destroy',
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\Krypton\\TerminalSessionApiController@destroy',
@@ -3244,7 +3188,7 @@ app('router')->setCompiledRoutes(
         'middleware' => 
         array (
           0 => 'api',
-          1 => 'auth:sanctum',
+          1 => 'auth:device',
         ),
         'uses' => 'App\\Http\\Controllers\\Api\\V1\\OrderUpdateLogController@index',
         'controller' => 'App\\Http\\Controllers\\Api\\V1\\OrderUpdateLogController@index',
@@ -3269,7 +3213,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::hjK2yh7nUvGfZASk' => 
+    'generated::3ghsBLsspGeOaLly' => 
     array (
       'methods' => 
       array (
@@ -3279,7 +3223,7 @@ app('router')->setCompiledRoutes(
       'uri' => 'up',
       'action' => 
       array (
-        'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:0:{}s:8:"function";s:862:"function () {
+        'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:0:{}s:8:"function";s:832:"function () {
                     $exception = null;
 
                     try {
@@ -3294,11 +3238,11 @@ app('router')->setCompiledRoutes(
                         $exception = $e->getMessage();
                     }
 
-                    return response(\\Illuminate\\Support\\Facades\\View::file(\'C:\\\\Users\\\\Pc1\\\\OneDrive\\\\Desktop\\\\laragon\\\\www\\\\woosoo-nexus\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Foundation\\\\Configuration\'.\'/../resources/health-up.blade.php\', [
+                    return response(\\Illuminate\\Support\\Facades\\View::file(\'C:\\\\laragon_old\\\\www\\\\nexus-app\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Foundation\\\\Configuration\'.\'/../resources/health-up.blade.php\', [
                         \'exception\' => $exception,
                     ]), status: $exception ? 500 : 200);
-                }";s:5:"scope";s:54:"Illuminate\\Foundation\\Configuration\\ApplicationBuilder";s:4:"this";N;s:4:"self";s:32:"000000000000096c0000000000000000";}}',
-        'as' => 'generated::hjK2yh7nUvGfZASk',
+                }";s:5:"scope";s:54:"Illuminate\\Foundation\\Configuration\\ApplicationBuilder";s:4:"this";N;s:4:"self";s:32:"0000000000000dd70000000000000000";}}',
+        'as' => 'generated::3ghsBLsspGeOaLly',
       ),
       'fallback' => false,
       'defaults' => 
@@ -3694,7 +3638,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::GI6uCsgqlB0sdhmO' => 
+    'generated::QHF3xIb1lJ2lJS7c' => 
     array (
       'methods' => 
       array (
@@ -3721,7 +3665,7 @@ app('router')->setCompiledRoutes(
         'where' => 
         array (
         ),
-        'as' => 'generated::GI6uCsgqlB0sdhmO',
+        'as' => 'generated::QHF3xIb1lJ2lJS7c',
       ),
       'fallback' => false,
       'defaults' => 
@@ -3943,7 +3887,7 @@ app('router')->setCompiledRoutes(
         ),
         'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:0:{}s:8:"function";s:83:"function () {
         return \\Inertia\\Inertia::render(\'settings/Appearance\');
-    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"0000000000000d7d0000000000000000";}}',
+    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"0000000000000e430000000000000000";}}',
         'namespace' => NULL,
         'prefix' => '',
         'where' => 
@@ -4003,7 +3947,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::w7Hfm9L2Aa3cqC3A' => 
+    'generated::Q0UFE7NTziNXmOG2' => 
     array (
       'methods' => 
       array (
@@ -4024,7 +3968,7 @@ app('router')->setCompiledRoutes(
         'where' => 
         array (
         ),
-        'as' => 'generated::w7Hfm9L2Aa3cqC3A',
+        'as' => 'generated::Q0UFE7NTziNXmOG2',
       ),
       'fallback' => false,
       'defaults' => 
@@ -4078,7 +4022,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::mhOnro5ZNnR9C17B' => 
+    'generated::12loAkvq4bxK6log' => 
     array (
       'methods' => 
       array (
@@ -4099,7 +4043,7 @@ app('router')->setCompiledRoutes(
         'where' => 
         array (
         ),
-        'as' => 'generated::mhOnro5ZNnR9C17B',
+        'as' => 'generated::12loAkvq4bxK6log',
       ),
       'fallback' => false,
       'defaults' => 
@@ -4419,7 +4363,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::sITd6JOFVZuRWbA8' => 
+    'generated::LrXcuPtuTqRlEV5M' => 
     array (
       'methods' => 
       array (
@@ -4440,7 +4384,7 @@ app('router')->setCompiledRoutes(
         'where' => 
         array (
         ),
-        'as' => 'generated::sITd6JOFVZuRWbA8',
+        'as' => 'generated::LrXcuPtuTqRlEV5M',
       ),
       'fallback' => false,
       'defaults' => 
@@ -4493,7 +4437,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::exeNkgfTltPfPqzC' => 
+    'generated::0tooUFGIl4jhafsl' => 
     array (
       'methods' => 
       array (
@@ -4519,7 +4463,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 'Illuminate\\Foundation\\Http\\Middleware\\VerifyCsrfToken',
         ),
-        'as' => 'generated::exeNkgfTltPfPqzC',
+        'as' => 'generated::0tooUFGIl4jhafsl',
       ),
       'fallback' => false,
       'defaults' => 
@@ -4535,7 +4479,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::jogkNWEqrykhP6cw' => 
+    'generated::mCOOXNgIr8CyNzxB' => 
     array (
       'methods' => 
       array (
@@ -4562,7 +4506,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 'Illuminate\\Foundation\\Http\\Middleware\\VerifyCsrfToken',
         ),
-        'as' => 'generated::jogkNWEqrykhP6cw',
+        'as' => 'generated::mCOOXNgIr8CyNzxB',
       ),
       'fallback' => false,
       'defaults' => 
@@ -4588,13 +4532,13 @@ app('router')->setCompiledRoutes(
       'uri' => 'storage/{path}',
       'action' => 
       array (
-        'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:3:{s:4:"disk";s:5:"local";s:6:"config";a:5:{s:6:"driver";s:5:"local";s:4:"root";s:74:"C:\\Users\\Pc1\\OneDrive\\Desktop\\laragon\\www\\woosoo-nexus\\storage\\app/private";s:5:"serve";b:1;s:5:"throw";b:0;s:6:"report";b:0;}s:12:"isProduction";b:0;}s:8:"function";s:323:"function (\\Illuminate\\Http\\Request $request, string $path) use ($disk, $config, $isProduction) {
+        'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:3:{s:4:"disk";s:5:"local";s:6:"config";a:5:{s:6:"driver";s:5:"local";s:4:"root";s:48:"C:\\laragon_old\\www\\nexus-app\\storage\\app/private";s:5:"serve";b:1;s:5:"throw";b:0;s:6:"report";b:0;}s:12:"isProduction";b:0;}s:8:"function";s:323:"function (\\Illuminate\\Http\\Request $request, string $path) use ($disk, $config, $isProduction) {
                     return (new \\Illuminate\\Filesystem\\ServeFile(
                         $disk,
                         $config,
                         $isProduction
                     ))($request, $path);
-                }";s:5:"scope";s:47:"Illuminate\\Filesystem\\FilesystemServiceProvider";s:4:"this";N;s:4:"self";s:32:"0000000000000da10000000000000000";}}',
+                }";s:5:"scope";s:47:"Illuminate\\Filesystem\\FilesystemServiceProvider";s:4:"this";N;s:4:"self";s:32:"0000000000000e670000000000000000";}}',
         'as' => 'storage.local',
       ),
       'fallback' => false,
@@ -4629,7 +4573,7 @@ app('router')->setCompiledRoutes(
                         \'spec\' => $generator($config),
                         \'config\' => $config,
                     ]);
-                }";s:5:"scope";s:38:"Dedoc\\Scramble\\ScrambleServiceProvider";s:4:"this";N;s:4:"self";s:32:"0000000000000da30000000000000000";}}',
+                }";s:5:"scope";s:38:"Dedoc\\Scramble\\ScrambleServiceProvider";s:4:"this";N;s:4:"self";s:32:"0000000000000e690000000000000000";}}',
         'as' => 'scramble.docs.ui',
         'middleware' => 
         array (
@@ -4664,7 +4608,7 @@ app('router')->setCompiledRoutes(
                     $config = \\Dedoc\\Scramble\\Scramble::getGeneratorConfig($api);
 
                     return response()->json($generator($config), options: JSON_PRETTY_PRINT);
-                }";s:5:"scope";s:38:"Dedoc\\Scramble\\ScrambleServiceProvider";s:4:"this";N;s:4:"self";s:32:"0000000000000da50000000000000000";}}',
+                }";s:5:"scope";s:38:"Dedoc\\Scramble\\ScrambleServiceProvider";s:4:"this";N;s:4:"self";s:32:"0000000000000e6b0000000000000000";}}',
         'as' => 'scramble.docs.document',
         'middleware' => 
         array (
