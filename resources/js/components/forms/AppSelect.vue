@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const props = defineProps<{ items: Table[] }>()
+defineProps<{ items: Table[] }>()
 
 </script>
 

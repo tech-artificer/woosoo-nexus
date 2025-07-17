@@ -49,7 +49,7 @@ const submit = () => {
     preserveState: true,
 
     onSuccess: () => {
-      toast.success('✅ Device updated!')
+      toast.success('Device updated successfully!')
       showDialog.value = false
     },
 
