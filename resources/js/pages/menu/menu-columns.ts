@@ -2,10 +2,10 @@ import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
 import { Menu } from '@/types/models';
 import MenuDisplayName from '@/pages/menu/DisplayMenuName.vue';
-import EditMenu from '@/pages/menu/EditMenu.vue';
+import MenuEditDialog from '@/pages/menu/Edit.vue';
 import AppIconExp from '@/components/AppIconExp.vue';
 
-export const menucolumns: ColumnDef<Menu>[] = [
+export const getMenuColumns = (): ColumnDef<Menu>[] => [
     {
         accessorKey: 'name',
         header: 'Name',
@@ -42,13 +42,18 @@ export const menucolumns: ColumnDef<Menu>[] = [
         header: 'Featured Image',
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => h('div', { class: '' }, row.getValue('img_url')),
-    },{
+    },
+     {
         accessorKey: 'id',
-        header: 'Actions',
+        header: '',
         cell: ({ row }) => {
-            return h( EditMenu, { menu: row.original })
+          const menu = row.original
+          return h(MenuEditDialog, {
+            menu
+          })
         },
-    }
+      }
+   
   
   
 ]

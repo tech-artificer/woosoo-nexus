@@ -1,11 +1,12 @@
 import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
-import { Device } from '@/types/models';
-import DeviceUnassignedBadge from '@/pages/device/DeviceUnassignedBadge.vue';
-import DeviceEdit from '@/pages/device/DeviceEdit.vue';
-import { Circle } from 'lucide-vue-next';
+import { Device, Table } from '@/types/models';
+import DeviceUnassignedBadge from '@/pages/device/UnassignedBadge.vue';
+import ActiveBadge from '@/pages/device/ActiveBadge.vue';
+import DeviceEditDialog from '@/pages/device/Edit.vue';
+import { Minus, Check } from 'lucide-vue-next';
 
-export const deviceColumns: ColumnDef<Device>[] = [
+export const getDeviceColumns = (unassignedTables: Table[]): ColumnDef<Device>[] => [
   {
     accessorKey: 'name',
     header: 'Device',
@@ -20,23 +21,41 @@ export const deviceColumns: ColumnDef<Device>[] = [
     },
   },
   {
-    accessorKey: '',
-    header: 'Assigned Table',
-    cell: ({ row }) => h(DeviceUnassignedBadge, { row: row.original }),
+    accessorKey: 'table_id',
+    header: () => h('div', { class: 'text-center' }, 'Table'),
+    cell: ({ row }) => h(DeviceUnassignedBadge, { row: row.original, class: 'text-center' }),
+  },
+  {
+    accessorKey: 'ip_address',
+    header: 'IP',
+    cell: ({ row }) => h('div', { class: 'capitalize' }, row.getValue('ip_address')),   
+  },
+  {
+    accessorKey: 'last_ip_address',
+    header: 'Last IP',
+    cell: ({ row }) => h('div', { class: 'capitalize' }, row.getValue('last_ip_address')),   
+  },
+  {
+    accessorKey: 'last_seen_at',
+    header: 'Last Seen At',
+    cell: ({ row }) => h('div', { class: 'capitalize' }, row.getValue('last_seen_at')),   
   },
   {
     accessorKey: 'is_active',
-    header: 'Status',
+    header: () => h('div', { class: 'text-center w-15' }, 'Active'),
     cell: ({ row }) => {
-        const isActive = row.original.is_active;
-        return h(Circle, { class: isActive ? 'text-woosoo-green' : 'text-red-500' })
+        return h(ActiveBadge, { row: row.original, class: 'text-center w-15' })
     } 
   },
   {
     accessorKey: 'id',
-    header: 'Actions',
+    header: '',
     cell: ({ row }) => {
-        return h( DeviceEdit, { device: row.original })
+      const device = row.original
+      return h(DeviceEditDialog, {
+        device,
+        unassignedTables,
+      })
     },
-    }
+  }
 ];

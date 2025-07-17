@@ -2,6 +2,7 @@
 import { computed, defineProps } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Device } from '@/types/models'
+import { X } from 'lucide-vue-next'
 
 const props = defineProps<{ row: Device }>();
 
@@ -13,6 +14,7 @@ const hasTable = computed(() => {
 </script>
 
 <template>
-    <Badge v-if="!hasTable" class="">Unassigned</Badge>
-    <span v-else variant="">{{ hasTable }}</span>
+    <!-- <Badge v-if="!hasTable" variant="destructive"><SquareX /></Badge> -->
+    <div v-if="!hasTable"><X class="text-woosoo-red" />sds</div>
+    <div v-else class="">{{ hasTable }}</div>
 </template>

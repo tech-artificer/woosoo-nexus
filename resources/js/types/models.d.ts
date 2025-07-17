@@ -16,9 +16,19 @@ export interface Branch {
     name: string;
 }
 
+export interface Table {
+    id: number;
+    name: string,
+    status: string;
+    is_available: boolean;
+    is_locked: boolean;
+}
+
+
 export interface Device {
     id: number;
     table_id: number;
+    branch_id: number;
     name: string;
     is_active: boolean;
     ip_address?: string;
@@ -26,7 +36,6 @@ export interface Device {
     branch?: Branch;
     table?: Table;
 }
-
 
 export interface DeviceOrder {
     id: number;
@@ -102,13 +111,6 @@ export interface OrderCheck {
     subtotal_amount: number;
     transaction_number: number;
     guest_count: number;
-}
-export interface Table {
-    id: number;
-    name: string,
-    status: string;
-    is_available: boolean;
-    is_locked: boolean;
 }
 
     

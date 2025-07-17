@@ -5,6 +5,7 @@ namespace App\Models\Krypton;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Enums\TableStatus; // Assuming you have an enum for table statuses
 
 class Table extends Model
@@ -38,5 +39,11 @@ class Table extends Model
     public function tableOrders() : HasMany
     {
         return $this->hasMany(TableOrder::class,'table_id');
+    }
+
+    // Optional: relationship (if needed)
+    public function device()
+    {
+        return $this->hasOne(Device::class, 'table_id', 'id');
     }
 }

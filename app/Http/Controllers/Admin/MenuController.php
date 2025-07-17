@@ -29,4 +29,17 @@ class MenuController extends Controller
             'menu' => new MenuResource($menu),
         ]);
     }
+
+    public function uploadImage(Request $request, Menu $menu) 
+    {
+        $validated = $request->validate([
+            'image' => ['required', 'image'],
+        ]);
+
+        return Inertia::render('menus/EditMenu', [
+            'title' => 'Menu',
+            'description' => 'Menu',
+            'menu' => new MenuResource($menu),
+        ]);
+    }
 }
