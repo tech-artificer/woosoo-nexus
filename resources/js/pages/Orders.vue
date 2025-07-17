@@ -5,7 +5,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 // import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
-import { DeviceOrder, Order } from '@/types/models';
+import { Order } from '@/types/models';
 // import { ordercolumns } from '@/pages/orders/columns';
 // import AppTable from '@/components/datatable/AppTable.vue';
 // import axios from 'axios';
@@ -25,7 +25,7 @@ const props = defineProps<{
     // deviceOrders: DeviceOrder[];
 }>()
 
-const channelId = props.user.id;
+// const channelId = props.user.id;
 
 const handleOrderEvent = (event: any, isUpdate = false) => {
  

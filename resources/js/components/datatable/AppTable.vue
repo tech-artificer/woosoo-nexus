@@ -33,11 +33,11 @@ const props = defineProps<{
   rows: Object[];
 }>()
 
-const sorting = ref<SortingState>([])
+// const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
-const columnVisibility = ref<VisibilityState>({})
-const rowSelection = ref({})
-const expanded = ref<ExpandedState>({})
+// const columnVisibility = ref<VisibilityState>({})
+// const rowSelection = ref({})
+// const expanded = ref<ExpandedState>({})
 
 const table = useVueTable({
   get data() { return props.rows },

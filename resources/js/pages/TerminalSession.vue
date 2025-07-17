@@ -46,11 +46,11 @@ const tabItems = [
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <Tabs  class="w-full" orientation="horizontal">
                 <TabsList>
-                    <TabsTrigger v-for="item in tabItems" :value="item.value">
+                    <TabsTrigger v-for="item in tabItems" :value="item.value" :key="item.key">
                         {{ item.key }}
                     </TabsTrigger>
                 </TabsList>
-                <TabsContent v-for="item in tabItems" :value="item.value" class="p-2" >
+                <TabsContent v-for="item in tabItems" :value="item.value" :key="item.key" class="p-2">
                    {{ item.content }}
                 </TabsContent>
               
