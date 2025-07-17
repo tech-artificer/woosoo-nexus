@@ -28,3 +28,4 @@ docker-compose.yml
 docker/
 /bootstrap/cache/*.php
 !bootstrap/cache/.gitignore
+!/bootstrap/cache/
