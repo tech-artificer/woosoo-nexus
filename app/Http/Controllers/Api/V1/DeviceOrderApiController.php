@@ -27,10 +27,13 @@ class DeviceOrderApiController extends Controller
      */
     public function __invoke(StoreDeviceOrderRequest $request)
     {   
+
         $validatedData = $request->validated();
 
         $errors = [];
         $device = $request->user();
+
+
 
         if( $device->table_id ) {
             // Check if table is already open
@@ -56,8 +59,7 @@ class DeviceOrderApiController extends Controller
             'message' => 'Failed to create order.',
             'errors' => $error,
         ], 500);
-
-       
     }
+
 }
 

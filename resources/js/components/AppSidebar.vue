@@ -31,13 +31,13 @@ const mainNavItems: NavItem[] = [
                 icon: EllipsisVertical,
                 isActive: false,
             },
-            {
-                title: 'Table Orders',
-                href: '/orders/table-orders',
-                icon: EllipsisVertical,
-                isActive: false,
+            // {
+            //     title: 'Table Orders',
+            //     href: '/orders/table-orders',
+            //     icon: EllipsisVertical,
+            //     isActive: false,
         
-            },
+            // },
         ]
     },
     {

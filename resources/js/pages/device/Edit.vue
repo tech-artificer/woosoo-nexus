@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
-import { Pencil } from 'lucide-vue-next'
+import { Pencil, Link } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { Select } from '@/components/forms'
 
@@ -66,7 +66,27 @@ const submit = () => {
       <Tooltip>
         <TooltipTrigger as-child>
           <DialogTrigger as-child>
-            <Button variant="ghost" class="cursor-pointer" @click="openDialog">
+       
+              <Button v-if="form.table_id != null" variant="ghost" class="cursor-pointer"  disabled>
+                <Link />
+              </Button>
+           
+              <Button v-else variant="ghost" class="cursor-pointer" @click="openDialog">
+                <Link :class="{'opacity-50 pointer-events-none cursor-none': form.table_id != null}"/>
+              </Button>
+        
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Assign Table</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+    <TooltipProvider :delay-duration="100">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <DialogTrigger as-child>
+            <Button variant="ghost" class="cursor-pointer ml-2" disabled >
               <Pencil />
             </Button>
           </DialogTrigger>

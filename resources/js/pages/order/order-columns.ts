@@ -1,9 +1,9 @@
 import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
 import { Order } from '@/types/models';
-import  OrderStatusBadge from '@/pages/orders/OrderStatusBadge.vue'
+import  OrderStatusBadge from '@/pages/order/OrderStatusBadge.vue'
 
-export const ordercolumns: ColumnDef<Order>[] = [
+export const getOrderColumns = (): ColumnDef<Order>[] => [
     {
         accessorKey: 'date_time_opened',  
         header: 'Date',
@@ -28,7 +28,7 @@ export const ordercolumns: ColumnDef<Order>[] = [
     },
     {
         accessorKey: 'id',
-        header: 'Assigned Table',
+        header: 'Table',
         cell: ({ row }) => {
             return h( 'div', { class: 'capitalize' }, row.original.table?.name ?? 'N/A')
         },
@@ -46,11 +46,10 @@ export const ordercolumns: ColumnDef<Order>[] = [
         header: 'Total',
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
-           
             return h(
                 'div',
                 { class: 'capitalize flex items-center' }, // Added 'items-center' for alignment
-                '₱ ' +  row.original.order_check?.total_amount
+                '₱ ' +  row.original.orderCheck?.total_amount
             );  
         },
     },

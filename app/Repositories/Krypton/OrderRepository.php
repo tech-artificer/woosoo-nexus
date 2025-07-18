@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 
 use App\Models\Krypton\Order;
+use App\Models\Krypton\OrderCheck;
+use App\Models\Krypton\OrderedMenu;
 use App\Models\Krypton\Table;
 
 use App\Models\DeviceOrder;
@@ -20,10 +22,10 @@ class OrderRepository
      * @return Collection
      */
 
-    public static function getAllOrdersWithDeviceData() : Collection
+    public static function getAllOrdersWithDeviceData($currentSessions) : Collection
     {
-        $session = Session::getLatestSessionId()->first();
-        $terminalSession = TerminalSession::where(['session_id' => (string)$session->id])->first();
+        $session = $currentSessions['session'];
+        $terminalSession =  $currentSessions['terminalSession'];
 
         if(  empty($terminalSession) ) {
             return response()->json([
@@ -41,7 +43,6 @@ class OrderRepository
                 'transaction_no', 'terminal_service_id','reprint_count',
         ])
         ->where(['terminal_session_id' => $terminalSession->id])
-        ->with(['orderChecks', 'orderedMenus'])
         ->latest('created_on')
         ->get();
 
@@ -59,6 +60,8 @@ class OrderRepository
             $order->deviceOrder = $data ?? null;
             $order->device = $data->device ?? null;
             $order->table = $data->table ?? null;
+            $order->orderCheck = OrderCheck::where('order_id', $order->id)->first();
+            $order->orderedMenus = OrderedMenu::where('order_id', $order->id)->first();
 
             unset($order->deviceOrder->device);
             unset($order->deviceOrder->table);
@@ -115,10 +118,6 @@ class OrderRepository
             ->orderByRaw('IFNULL(table_links.primary_table_id, 0) ASC')
             ->orderBy('table_links.table_id')
             ->get();
-    }
-
-    public static function getTableOrdersById(int $orderId) {
-        
     }
     
 }

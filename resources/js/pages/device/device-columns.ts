@@ -22,8 +22,8 @@ export const getDeviceColumns = (unassignedTables: Table[]): ColumnDef<Device>[]
   },
   {
     accessorKey: 'table_id',
-    header: () => h('div', { class: 'text-center' }, 'Table'),
-    cell: ({ row }) => h(DeviceUnassignedBadge, { row: row.original, class: 'text-center' }),
+    header: () => h('div', { }, 'Table'),
+    cell: ({ row }) => h(DeviceUnassignedBadge, { row: row.original }),
   },
   {
     accessorKey: 'ip_address',

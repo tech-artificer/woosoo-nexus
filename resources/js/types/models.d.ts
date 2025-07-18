@@ -89,8 +89,8 @@ export interface Order {
     transaction_no: number;
     guest_count: number;
     reprint_count: number;
-    order_check?: OrderCheck;
-    ordered_menus?: OrderedMenu[];
+    orderCheck?: OrderCheck;
+    orderedMenus?: OrderedMenu[];
     device?: Device;
     deviceOrder?: DeviceOrder;
     table?: Table;
@@ -99,6 +99,7 @@ export interface OrderedMenu {
     menu_id: number;
     quantity: number;
     price_level_id: number;
+    menu?: Menu;
 }
 export interface OrderCheck {
     order_id: number;

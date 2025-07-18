@@ -2,12 +2,12 @@
 import { computed, defineProps } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Device } from '@/types/models'
-import { X } from 'lucide-vue-next'
+import { MonitorOff} from 'lucide-vue-next'
 
 const props = defineProps<{ row: Device }>();
 
 const device = props.row;
-
+console.log(device);
 const hasTable = computed(() => {
     return device.table && device.table.name ? device.table.name : null;
 });
@@ -15,6 +15,6 @@ const hasTable = computed(() => {
 
 <template>
     <!-- <Badge v-if="!hasTable" variant="destructive"><SquareX /></Badge> -->
-    <div v-if="!hasTable"><X class="text-woosoo-red" />sds</div>
+    <div v-if="!hasTable" class="text-woosoo-red"><MonitorOff /></div>
     <div v-else class="">{{ hasTable }}</div>
 </template>
