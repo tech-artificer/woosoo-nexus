@@ -5,6 +5,7 @@ namespace App\Models\Krypton;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\DB;
 
 class Terminal extends Model
 {
@@ -12,16 +13,10 @@ class Terminal extends Model
     protected $table = 'terminals';
     protected $primaryKey = 'id';
 
-    protected $casts = [
-        'id' => 'integer',
-    ];
+    public $timestamps = false;
 
-    public function scopePOS(Builder $query, $sessionId = 1)
+    public function employeeLogs()
     {
-        return $query->where([
-            'receipt_prefix' => 'POS1',
-            'type' => 'terminal',
-            'session_id' => $sessionId
-        ]);
+        return $this->hasMany(EmployeeLog::class, 'terminal_id');
     }
 }

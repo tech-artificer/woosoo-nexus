@@ -3,165 +3,93 @@
 namespace App\Models\Krypton;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Order extends Model
 {
+    use HasFactory;
+   
     protected $connection = 'pos';
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'orders';
-
     protected $primaryKey = 'id';
+    protected $guarded = [];
+    public $timestamps = false;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
-    protected $fillable = [
-        'id',
-        'session_id',
-        'terminal_session_id',
+    protected $casts = [
+        'is_open' => 'boolean',
+        'is_transferred' => 'boolean',
+        'is_voided' => 'boolean',
+        'is_available' => 'boolean',
+        'is_online_order' => 'boolean',
+    ];
+
+    protected $dates = [
         'date_time_opened',
         'date_time_closed',
-        'revenue_id',
-        'terminal_id',
-        'customer_id',
-        'current_terminal_id',
-        'end_terminal_id',
-        'customer_id',
-        'is_open',
-        'is_transferred',
-        'is_voided',
-        'guest_count',
-        'service_type_id',
-        // 'is_available',
-        // 'cash_tray_session_id',
-        // 'server_banking_session_id',
-        'start_employee_log_id',
-        'current_employee_log_id',
-        'close_employee_log_id',
-        'server_employee_log_id',
-        // 'transaction_no',
-        'reference',
-        'cashier_employee_id',
-        'terminal_service_id',
-        'is_online_order',
-        // 'reprint_count'
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'id' => 'integer',
-        'session_id' => 'integer',
-        'terminal_session_id' => 'integer',
-        'revenue_id' => 'integer',
-        'terminal_id' => 'integer',
-        'service_type_id' => 'integer',
-        'cash_tray_session_id' => 'integer',
-        'server_banking_session_id' => 'integer',
-        'start_employee_log_id' => 'integer',
-        'current_employee_log_id' => 'integer',
-        'close_employee_log_id' => 'integer',
-        'server_employee_log_id' => 'integer',
-        'transaction_no' => 'integer',
-        'cashier_employee_id' => 'integer',
-        'terminal_service_id' => 'integer',
-    ];
+    // protected $fillable = [
+    //     'session_id', 
+    //     'terminal_session_id', 
+    //     'date_time_opened', 
+    //     'date_time_closed',
+    //     'revenue_id', 
+    //     'terminal_id', 
+    //     'current_terminal_id',
+    //     'customer_id',
+    //     'is_open',
+    //     'is_transferred',
+    //     'is_voided',
+    //     'guest_count',
+    //     'service_type_id',
+    //     'start_employee_log_id',
+    //     'current_employee_log_id',
+    //     'close_employee_log_id',
+    //     'server_employee_log_id',
+    //     'transaction_no',
+    //     'reference',
+    //     'cashier_employee_id',
+    //     'terminal_service_id',
+    //     'is_online_order',
+    // ];
 
-    /**
-     * The attributes that should be hidden for arrays.
-     *
-     * @var array
-     */
-    protected $hidden = [
-        'created_on',
-        'modified_on'
-    ];
+    // public function employeeLogs() : BelongsTo
+    // {
+    //     return $this->belongsTo(EmployeeLog::class, 'start_employee_log_id', 'id')
+    //                 ->with(['current', 'close', 'server']);
+    // }
 
-    /**
-     * Indicates if the model should be timestamped.
-     *
-     * @var bool
-     */
-    public $timestamps = false;
+    public function revenue() : BelongsTo
+    {
+        return $this->belongsTo(Revenue::class, 'revenue_id');
+    }
+
+    public function terminal() : BelongsTo
+    {
+        return $this->belongsTo(Terminal::class, 'terminal_id');
+    }
+
+
+    public function tableOrders() : HasMany
+    {
+        return $this->hasMany(TableOrder::class, 'order_id');
+    }
+
+     public function tableLinks() : HasMany
+    {
+        return $this->hasMany(TableLink::class, 'order_id');
+    }
+
+    public function orderCheck() : HasOne
+    {
+        return $this->hasOne(OrderCheck::class, 'order_id');
+    }
 
     public function orderedMenus() : HasMany
     {
         return $this->hasMany(OrderedMenu::class, 'order_id');
-    }
-
-
-    protected static function boot() : void
-    {
-        parent::boot();
-
-        static::creating(function ($model) {
-            
-            // $model
-            // $terminal = Terminal::posTerminal()->get();
-            // $terminalSession = TerminalSession::where('terminal_id', $terminal->id)->first();
-            // $terminalService = TerminalService::where('terminal_id', $terminal->id)->first();
-            // $employeeLog = EmployeeLog::today()->where('session_id', $terminalSession->id)->first();
-            // $transactionCount = Self::where('session_id', $terminalSession->id)->count();
-
-            // $model->session_id = $terminalSession->id;
-            // $model->terminal_session_id = $terminalSession->id;
-            // $model->date_time_opened = now();
-            // $model->revenue_id = $terminalService->revenue_id;
-            // $model->terminal_id = $terminal->id; // $terminalService->terminal_id;
-            // $model->is_open = 1; // 1 or 0
-            // $model->is_transferred = 0; // 1 or 0
-            // $model->is_voided = 0; // 1 or 0
-            // $model->guest_count = 1; // Default guest count
-            // $model->service_type_id = $terminalService->service_type_id;
-            // $model->start_employee_log_id = $employeeLog->id;
-            // $model->transaction_no = $transactionCount++;
-            // $model->is_available = 1;
-            // $model->date_time_closed = null;
-            // $model->end_terminal_id  = null;
-            // $model->customer_id = null;
-            // $model->reference = null;
-            // $model->cashier_employee_id = null;
-            // $model->current_terminal_id = $terminal->id;
-            // $model->current_employee_log_id = $employeeLog->id;    
-            // $model->cash_tray_session_id = null; // Initially set to DEFAULT NULL
-            // $model->server_banking_session_id = null; // Initially set to DEFAULT NULL
-            // $model->server_employee_log_id = null; // Initially set to DEFAULT NULL
-            // $model->close_employee_log_id = null; // Initially set to DEFAULT NULL
-            // $model->terminal_service_id = 1; // By Default - DINE IN only terminal_services Table
-            // $model->is_online_order = 1; // Initially set to DEFAULT 1
-            // $model->reprint_count = 0; // Initially set to DEFAULT 0
-        });
-    }
-
-    public function createTransactionNo($orderId, $SessionId) {
-        return Order::fromQuery('CALL create_transaction_no(?, ?)', [$orderId, $SessionId]);
-    }
-
-    public function createOrder() {
-
-        $orderDetails = $this->toArray(); 
-
-        $numberOfParameters = count($orderDetails);
-        // Create an array of '?' strings, one for each parameter.
-        $placeholdersArray = array_fill(0, $numberOfParameters, '?');
-        // Join them with a comma and space to form the placeholder string.
-        $placeholders = implode(', ', $placeholdersArray);
-        // 2. Extract Values
-        // array_values() extracts all the values from the associative array
-        // and returns them as a new numerically indexed array.
-        $params = array_values($orderDetails);
-
-        // Now, call your fromQuery method with the generated placeholders and parameters
-        return Order::fromQuery('CALL create_order(' . $placeholders . ')', $params);
     }
 }

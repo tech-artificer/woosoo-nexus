@@ -19,10 +19,10 @@ class MenuRepository
         }
     }
 
-    public function getMenuById(int $id)
+    public static function getMenuById(int $id)
     {
         try {
-            return Menu::fromQuery('CALL get_menu_by_id(?)', [$id]);
+           return Menu::fromQuery('CALL get_menu_by_id(?)', [$id]);
         } catch (\Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
@@ -36,7 +36,7 @@ class MenuRepository
      * @throws \Exception If the database procedure call fails.
      *
      */
-    public function getMenusWithModifiers()
+    public static function getMenusWithModifiers()
     {
         try {
             return Menu::fromQuery('CALL get_menus_with_modifiers()');
@@ -54,7 +54,7 @@ class MenuRepository
      * @throws \Exception If the database procedure call fails.
      */
 
-    public function getMenusByCategory($category)
+    public static function getMenusByCategory($category)
     {
         try {
             return Menu::fromQuery('CALL get_menus_by_category(?)', [$category]);
@@ -144,7 +144,7 @@ class MenuRepository
         }
     }
 
-    public function getMenusByCourse(string $course)
+    public function getMenusByCourse($course)
     {
         try {
             return Menu::fromQuery('CALL get_menus_by_course(?)', [$course]);
@@ -153,6 +153,19 @@ class MenuRepository
             throw new Exception('Something Went Wrong.');
         }
     }
+
+
+     public function getMenuDiscountsById($menuId)
+    {
+        try {
+            return Menu::fromQuery('CALL get_menu_discounts_by_id(?)', [$menuId]);
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
+            throw new Exception('Something Went Wrong.');
+        }
+    }
+
+
 
 
 }

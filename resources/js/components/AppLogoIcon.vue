@@ -14,7 +14,7 @@ defineProps<Props>();
 
 <template>
 
-    <img src="/images/logos/Woosoo Logo Final_Artboard 4a.png" class="w-50" />
+    <img src="/images/Woosoo Profile Photo-02.png" />
     <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" :class="className" v-bind="$attrs">
         <path
             fill="currentColor"

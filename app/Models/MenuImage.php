@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Krypton\Menu;
 
 class MenuImage extends Model
 {
@@ -11,5 +13,10 @@ class MenuImage extends Model
         static::deleting(function ($image) {
             Storage::disk('public')->delete($image->path);
         });
+    }
+
+    public function menu() : BelongsTo
+    {
+        return $this->belongsTo(Menu::class, 'menu_id');
     }
 }

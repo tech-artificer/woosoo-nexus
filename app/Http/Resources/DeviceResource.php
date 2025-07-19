@@ -19,7 +19,7 @@ class DeviceResource extends JsonResource
             'device_uuid' => $this->device_uuid,
             'branch' => $this->branch,
             'name' => $this->name,
-            'table' => $this->table
+            'table' => $this->whenLoaded('table', fn () => $this->table->name) ?? $this->table_id,
         ];
     }
 }

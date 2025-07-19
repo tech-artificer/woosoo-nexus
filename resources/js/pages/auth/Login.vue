@@ -8,8 +8,13 @@ import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import { Link } from '@inertiajs/vue3';
+// import axios from 'axios'; // Import axios here for API calls
+// import { router } from '@inertiajs/vue3';
 
 defineProps<{
+    title?: string;
     status?: string;
     canResetPassword: boolean;
 }>();
@@ -20,73 +25,110 @@ const form = useForm({
     remember: false,
 });
 
+// const loginApi = async () => {
+//     try {
+//         const response = await axios.post('/api/token/create', {
+//             email: form.email,
+//             password: form.password,
+//         });
+
+//         const token = response.data.token;
+//         // Store the token securely (e.g., localStorage)
+//         localStorage.setItem('auth_token', token);
+//         // Set the default Authorization header for all future Axios requests
+//         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+//     } catch (error) {
+
+//     }
+// };
+
 const submit = () => {
+
     form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onFinish: async () => {
+            form.reset('password');
+        }
     });
+
 };
 </script>
 
 <template>
     <AuthBase title="Log in to your account" description="Enter your email and password below to log in">
-        <Head title="Log in" />
+        <div class="grid min-h-svh lg:grid-cols-2">
+            <div class="flex flex-col gap-4 p-4">
+                <div class="flex justify-start gap-2">
+                    
+                    <Head title="Log in" />
 
-        <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
-            {{ status }}
-        </div>
+                        <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
+                            {{ status }}
+                        </div> 
 
-        <form @submit.prevent="submit" class="flex flex-col gap-6">
-            <div class="grid gap-6">
-                <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
-                    <Input
-                        id="email"
-                        type="email"
-                        required
-                        autofocus
-                        :tabindex="1"
-                        autocomplete="email"
-                        v-model="form.email"
-                        placeholder="email@example.com"
-                        class="border-woosoo-accent"
-                    />
-                    <InputError :message="form.errors.email" />
-                </div>
-
-                <div class="grid gap-2">
-                    <div class="flex items-center justify-between">
-                        <Label for="password">Password</Label>
-                        <TextLink v-if="canResetPassword" :href="route('password.request')" class="text-sm" :tabindex="5">
-                            Forgot password?
-                        </TextLink>
+                    <div class="flex flex-col items-center gap-4">
+                        <Link :href="route('home')" class="flex flex-col items-center gap-2 font-medium">
+                            <div class="mb-1 flex h-40 w-40 items-center justify-center rounded-md">
+                                <AppLogoIcon class="size-40 fill-current text-[var(--foreground)] dark:text-white" />
+                            </div>
+                            <span class="sr-only">{{ title }}</span>
+                        </Link>
+                      
                     </div>
-                    <Input
-                        id="password"
-                        type="password"
-                        required
-                        :tabindex="2"
-                        autocomplete="current-password"
-                        v-model="form.password"
-                        placeholder="Password"
-                        class="border-woosoo-accent"
-                    />
-                    <InputError :message="form.errors.password" />
                 </div>
+                <div class="flex flex-1 justify-center">
+                    <div class="w-full max-w-xs">
+                        <div class="flex flex-col items-center gap-4 mb-6">
+                              <div class="text-center align-middle">
+                                <h2 class="text-xl font-medium">Login to your account</h2>
+                                <p class="text-center text-sm text-muted-foreground">Enter your email and password below to login</p>
+                            </div>
+                        </div>
+                        <form @submit.prevent="submit" class="flex flex-col gap-6">
+                            <div class="grid gap-6">
+                                <div class="grid gap-2">
+                                    <Label for="email">Email address</Label>
+                                    <Input id="email" type="email" required autofocus :tabindex="1" autocomplete="email"
+                                        v-model="form.email" placeholder="email@example.com"
+                                        class="border-woosoo-accent" />
+                                    <InputError :message="form.errors.email" />
+                                </div>
 
-                <div class="flex items-center justify-between">
-                    <Label for="remember" class="flex items-center space-x-3">
-                        <Checkbox id="remember" v-model="form.remember" :tabindex="3" />
-                        <span>Remember me</span>
-                    </Label>
+                                <div class="grid gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <Label for="password">Password</Label>
+                                        <TextLink v-if="canResetPassword" :href="route('password.request')"
+                                            class="text-sm" :tabindex="5">
+                                            Forgot password?
+                                        </TextLink>
+                                    </div>
+                                    <Input id="password" type="password" required :tabindex="2"
+                                        autocomplete="current-password" v-model="form.password" placeholder="Password"
+                                        class="border-woosoo-accent" />
+                                    <InputError :message="form.errors.password" />
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <Label for="remember" class="flex items-center space-x-3">
+                                        <Checkbox id="remember" v-model="form.remember" :tabindex="3" />
+                                        <span>Remember me</span>
+                                    </Label>
+                                </div>
+
+                                <Button type="submit"
+                                    class="mt-4 w-full bg-woosoo-accent hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark cursor-pointer"
+                                    :tabindex="4" :disabled="form.processing">
+                                    <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
+                                    Log in
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-
-                <Button type="submit" class="mt-4 w-full bg-woosoo-accent hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark" :tabindex="4" :disabled="form.processing">
-                    <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                    Log in
-                </Button>
             </div>
-
-            
-        </form>
+            <div class="relative hidden bg-muted lg:block bg-woosoo-dark-gray">
+                <img src="images/Woosoo Cover Photo_Artboard 1.png" alt="Image"
+                    class="object-contain h-full w-full bg-woosoo-dark-gray">
+            </div>
+        </div>
     </AuthBase>
 </template>

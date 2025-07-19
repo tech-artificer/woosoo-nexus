@@ -15,6 +15,10 @@ class Branch extends Model
         'location',
     ];
 
+    protected $hidden = [
+        'branch_uuid',
+    ];
+
     /**
      * Called when the model is being instantiated.
      * It is used to set the UUID automatically when creating a new device.

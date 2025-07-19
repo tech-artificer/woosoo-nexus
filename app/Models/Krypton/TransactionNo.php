@@ -8,5 +8,5 @@ class TransactionNo extends Model
 {
     protected $connection = 'pos';
     protected $table = 'transaction_no';
-    protected $primaryKey = 'id';
+    public $timestamps = false;
 }

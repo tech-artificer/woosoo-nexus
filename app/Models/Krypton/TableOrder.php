@@ -9,50 +9,24 @@ class TableOrder extends Model
 {
     protected $connection = 'pos';
     protected $table = 'table_orders';
-
+    protected $primaryKey = 'id';
     public $timestamps = false;
 
     protected $fillable = [
         'order_id',
         'table_id',
-        'parent_table_id',
-        'is_cleared',
-        'is_printed',
     ];
 
-    protected $casts = [
-        'is_cleared' => 'boolean',
-        'is_printed' => 'boolean',
-        'order_id' => 'integer',  
-        'table_id' => 'integer',  
-    ];
+    public function order() : BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'order_id');
+    }
 
     public function table() : BelongsTo
     {
-        return $this->belongsTo(Table::class);
+        return $this->belongsTo(Table::class, 'table_id');
     }
-
-     public function scopeActiveTableOrders($query) {
-        return $query->fromQuery('CALL get_active_table_orders()');
-    }
-
-    public function createTableOrder() {
-
-        $details = $this->toArray(); 
-
-        $numberOfParameters = count($details);
-        // Create an array of '?' strings, one for each parameter.
-        $placeholdersArray = array_fill(0, $numberOfParameters, '?');
-        // Join them with a comma and space to form the placeholder string.
-        $placeholders = implode(', ', $placeholdersArray);
-        // 2. Extract Values
-        // array_values() extracts all the values from the associative array
-        // and returns them as a new numerically indexed array.
-        $params = array_values($details);
-
-        // Now, call your fromQuery method with the generated placeholders and parameters
-        return TableOrder::fromQuery('CALL create_table_order(' . $placeholders . ')', $params);
-    }
+    
 
 
 }

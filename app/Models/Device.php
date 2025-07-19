@@ -5,14 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Krypton\Table;
 
 class Device extends Model
 {
     use HasApiTokens;
 
     protected $table = 'devices';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
+        'id',
         'device_uuid',
         'branch_id',
         'name',
@@ -21,6 +27,17 @@ class Device extends Model
         'app_version',
         'last_ip_address',
         'last_seen_at',
+    ];
+
+     protected $hidden = [
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
+    protected $casts = [
+      'table_id' => 'integer',
+      'is_active' => 'boolean',
     ];
 
     /**
@@ -43,8 +60,27 @@ class Device extends Model
         });
     }
 
-    public function orders() : \Illuminate\Database\Eloquent\Relations\HasMany
+    public function orders(): HasMany
     {
-        return $this->hasMany(DeviceOrder::class);
+        return $this->hasMany(DeviceOrder::class, 'device_id');
     }
+
+    public function table(): BelongsTo
+    {
+        return $this->belongsTo(Table::class, 'table_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+
+
+    # SCOPES
+
+    public function scopeActive(Builder $query) 
+    {
+        return $query->where('is_active', true);
+    } 
 }
