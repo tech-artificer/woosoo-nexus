@@ -22,7 +22,7 @@ use App\Http\Controllers\Api\V1\Auth\{
 use App\Http\Controllers\Api\V1\Krypton\{
     MenuApiController,
     OrderApiController,
-    TerminalSessionApiController,
+    // TerminalSessionApiController,
 };
 // Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 
@@ -64,7 +64,7 @@ Route::middleware('auth:device')->group(function () {
     Route::post('/devices/order/update', DeviceOrderUpdateApiController::class);
     // 
     // Route::get('/orders/table/active', [TableApiController::class, 'index'])->name('api.orders.table.active');
-    Route::resource('/terminal-sessions', TerminalSessionApiController::class);
+    // Route::resource('/terminal-sessions', TerminalSessionApiController::class);
 
     Route::get('/after-payment', [OrderUpdateLogController::class, 'index'])->name('api.order.update.log');
     

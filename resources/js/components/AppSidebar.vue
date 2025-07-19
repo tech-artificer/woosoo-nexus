@@ -101,8 +101,11 @@ const mainNavItems: NavItem[] = [
 ];
 
 const page = usePage();
+const terminal = page.props.terminal as { id?: any } || {};
 const session = page.props.session as { id?: any } || {};
 const terminalSession = page.props.terminalSession as { id?: any } || {};
+// const terminalSession = page.props.terminalSession as { id?: any } || {};
+const cashTraySession = page.props.cashTraySession as { id?: any } || {};
 const employeeLogs = page.props.employeeLog as { id?: any } || {};
 
 interface ActiveSession {
@@ -123,6 +126,11 @@ const footerActiveSessions: ActiveSession[] = [
     //     icon: Circle,
     // },
     {
+        id: terminal?.id,
+        title: 'Terminal #',
+        icon: LockOpen,
+    },
+    {
         id: session?.id,
         title: 'Session #',
         icon: LockOpen,
@@ -134,7 +142,12 @@ const footerActiveSessions: ActiveSession[] = [
     },
     {
         id: employeeLogs?.id,
-        title: 'Logs #',
+        title: 'Log #',
+        icon: Fingerprint,
+    },
+    {
+        id: cashTraySession?.id,
+        title: 'Cash Tray Session #',
         icon: Fingerprint,
     },
     

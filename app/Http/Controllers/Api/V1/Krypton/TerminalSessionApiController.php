@@ -22,44 +22,44 @@ class TerminalSessionApiController extends Controller
      */
     public function index()
     {
-        $session = Session::getLatestSession()->first();
+        // $session = Session::getLatestSession()->first();
 
-        if (!$session) {
-            return response()->json(['message' => 'No active session found'], 404);
-        }
+        // if (!$session) {
+        //     return response()->json(['message' => 'No active session found'], 404);
+        // }
 
-        // Check if the session is already closed
-        if ($session->date_time_closed !== null) {
-            return response()->json(['message' => 'Session already closed'], 400);
-        }
+        // // Check if the session is already closed
+        // if ($session->date_time_closed !== null) {
+        //     return response()->json(['message' => 'Session already closed'], 400);
+        // }
 
-        // Check if there's an open cash tray session
-        $cashTraySession = CashTraySession::where('session_id', $session->id)
-            ->where('is_open', true)
-            ->exists();
+        // // Check if there's an open cash tray session
+        // $cashTraySession = CashTraySession::where('session_id', $session->id)
+        //     ->where('is_open', true)
+        //     ->exists();
 
-        if ($cashTraySession) {
-            return response()->json(['message' => 'Cash tray session already open'], 400);
-        }
+        // if ($cashTraySession) {
+        //     return response()->json(['message' => 'Cash tray session already open'], 400);
+        // }
 
-        // Check terminal session
-        $terminalSession = TerminalSession::select([
-                'id',
-                'date_time_opened',
-                'terminal_id',
-                'session_id',
-                'terminal_session_id'
-            ])
-            ->where('session_id', $session->id)
-            ->first();
+        // // Check terminal session
+        // $terminalSession = TerminalSession::select([
+        //         'id',
+        //         'date_time_opened',
+        //         'terminal_id',
+        //         'session_id',
+        //         'terminal_session_id'
+        //     ])
+        //     ->where('session_id', $session->id)
+        //     ->first();
 
-        if (!$terminalSession) {
-            return response()->json(['message' => 'No terminal session found'], 404);
-        }
+        // if (!$terminalSession) {
+        //     return response()->json(['message' => 'No terminal session found'], 404);
+        // }
 
-        if ($terminalSession->date_time_closed !== null) {
-            return response()->json(['message' => 'Terminal session already closed'], 400);
-        }
+        // if ($terminalSession->date_time_closed !== null) {
+        //     return response()->json(['message' => 'Terminal session already closed'], 400);
+        // }
 
             
         
@@ -71,18 +71,18 @@ class TerminalSessionApiController extends Controller
         // $employeeLogs2 = EmployeeLog::getEmployeeLog($employeeLogsForSession[1]->id) ?? null;
         // $tableOrders = TableOrder::fromQuery('CALL get_active_table_orders()');
 
-        return response()->json([
-            'session' => $session,
-            'terminalSession' => $terminalSession,
-            // 'terminalService' => $terminalService,
-            // 'terminal' => $terminal,
-            // 'revenue' => $revenue,
-            'cashTraySession' => $cashTraySession,
-            // 'employeeLogsForSession' => $employeeLogsForSession,
-            // 'employeeLogs' => $employeeLogs,
-            // 'employeeLogs1' => $employeeLogs2,
-            // 'tableOrders' => $tableOrders,
-        ]);
+        // return response()->json([
+        //     // 'session' => $session,
+        //     'terminalSession' => $terminalSession,
+        //     // 'terminalService' => $terminalService,
+        //     // 'terminal' => $terminal,
+        //     // 'revenue' => $revenue,
+        //     'cashTraySession' => $cashTraySession,
+        //     // 'employeeLogsForSession' => $employeeLogsForSession,
+        //     // 'employeeLogs' => $employeeLogs,
+        //     // 'employeeLogs1' => $employeeLogs2,
+        //     // 'tableOrders' => $tableOrders,
+        // ]);
 
     }
 

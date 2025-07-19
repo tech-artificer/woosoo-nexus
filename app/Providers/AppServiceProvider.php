@@ -16,6 +16,10 @@ use Inertia\Inertia;
 use App\Models\Krypton\TerminalSession;
 use App\Models\Krypton\EmployeeLog;
 use App\Models\Krypton\Session;
+use App\Models\Krypton\Terminal;
+use App\Models\Krypton\CashTraySession;
+use App\Models\Krypton\TerminalService;
+use App\Models\Krypton\Revenue;
 use Illuminate\Support\Facades\View;
 
 use App\Services\Krypton\KryptonContextService;
