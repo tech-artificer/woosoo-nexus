@@ -4,7 +4,7 @@ import { ColumnDef, ColumnFiltersState,
   ExpandedState,
   SortingState,
   VisibilityState, } from '@tanstack/vue-table'
-import OrderTablePagination from '@/pages/orders/OrderTablePagination.vue'
+import OrderTablePagination from '@/pages/order/OrderTablePagination.vue'
 import { Order } from '@/types/models'
 
 import {
