@@ -67,7 +67,7 @@ return [
             'host' => env('DB_POS_HOST', '127.0.0.1'),
             // 'host' => env('DB_POS_HOST', 'localhost'),
             'port' => env('DB_POS_PORT', '3306'),
-            'database' => env('DB_POS_DATABASE', 'krypton'),
+            'database' => env('DB_POS_DATABASE', 'krypton_woosoo'),
             'username' => env('DB_POS_USERNAME', 'root'),
             'password' => env('DB_POS_PASSWORD', ''),
             'charset' => 'utf8mb4',
