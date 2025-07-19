@@ -29,3 +29,4 @@ docker/
 /bootstrap/cache/*.php
 !bootstrap/cache/.gitignore
 !/bootstrap/cache/
+/bootstrap/cache/*
