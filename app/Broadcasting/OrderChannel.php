@@ -25,11 +25,11 @@ class OrderChannel
             // $user = $request->user();
 
             \Log::info('Join check', [
-                'user_id' => $user->id,
-                'device_id' => $deviceId,
+                'user_id' => (int) $user->id,
+                'device_id' => (int)$deviceId,
                 'is_admin' => $user->is_admin,
             ]);
 
-            return true;// (int) $user->id === (int) $deviceId || $user->is_admin;
+            return (int) $user->id === (int) $deviceId || $user->is_admin;
         }
 }

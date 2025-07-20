@@ -42,7 +42,7 @@ const page = usePage();
                 
                 <SidebarGroupLabel
                     as-child
-                    class="group/label text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    class="group/label text-sm text-sidebar-foreground hover:bg-woosoo-accent hover:text-woosoo-dark-gray active:bg-woosoo-accent active:text-woosoo-dark-gray focus:bg-woosoo-accent focus:text-woosoo-dark-gray"
                     :is-active=" page.url.match(item.href) ? true : false" 
                     :key="item.title"
                 >  
@@ -55,9 +55,9 @@ const page = usePage();
                 <CollapsibleContent class="py-2 group-data-[collapsible=icon]:hidden">
                     <SidebarGroupContent>
                     <SidebarMenu>
-                        <SidebarMenuItem v-for="childItem in item.items" :key="childItem.title">
+                        <SidebarMenuItem v-for="childItem in item.items" :key="childItem.title" class="hover:bg-woosoo-accent hover:text-woosoo-dark-gray active:bg-woosoo-accent active:text-woosoo-dark-gray focus:bg-woosoo-accent focus:text-woosoo-dark-gray">
                         <SidebarMenuButton as-child :is-active="childItem.href === page.url" :tooltip="childItem.title">
-                            <Link :is-active="childItem.href === page.url" :href="childItem.href ?? '#'" isclass="hover:bg-woosoo-accent hover:text-woosoo-dark-gray">
+                            <Link :is-active="childItem.href === page.url" :href="childItem.href ?? '#'" isclass="hover:bg-woosoo-accent hover:text-woosoo-dark-gray active:bg-woosoo-accent active:text-woosoo-dark-gray focus:bg-woosoo-accent focus:text-woosoo-dark-gray">
                                 <component :is="childItem.icon"/>
                                 <span>{{ childItem.title }}</span>
                             </Link>

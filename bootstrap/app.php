@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(
         __DIR__.'/../routes/channels.php',
-        ['prefix' => 'api', 'middleware' => ['api', 'auth:sanctum']],
+        ['prefix' => 'api', 'middleware' => ['auth:device']],
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend([ForceJsonResponse::class,HandleCors::class]);

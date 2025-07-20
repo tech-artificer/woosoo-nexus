@@ -34,7 +34,6 @@ class DeviceOrderApiController extends Controller
         $device = $request->user();
 
 
-
         if( $device->table_id ) {
             // Check if table is already open
             // if(  !$this->orderService->checkIfTableIsOpen($device->table_id) ) {

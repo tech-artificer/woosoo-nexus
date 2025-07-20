@@ -14,11 +14,20 @@ return [
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
     */
-      'paths' => ['api/*', 'sanctum/csrf-cookie'],
+      'paths' => ['api/*', 'sanctum/csrf-cookie', 'broadcasting/auth'],
     'allowed_methods' => ['*'],
     'allowed_origins' => [
+        'http://192.168.100.85:3000', // your dev server
         'http://localhost:3000',
-        'http://192.168.100.85',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:8000',
+        'http://localhost:8000',
+        'http://127.0.0.1:8080',
+        'http://localhost:8080',
+        'http://127.0.0.1:8001',
+        'http://localhost:8001',
+        'woosoo-nexus.local', 'localhost'
+        // ',
     ],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],

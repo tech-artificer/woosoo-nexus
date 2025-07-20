@@ -14,6 +14,10 @@ import Pusher from 'pusher-js';
 // Make Pusher globally available for Echo
 window.Pusher = Pusher;
 
+window.config = {
+    baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
+};
+
 try {
     window.Echo = new Echo({
         broadcaster: 'reverb',
@@ -26,7 +30,7 @@ try {
         encrypted: true, // Also important for WSS
         enabledTransports: ['ws', 'wss'],
     });
-    console.log('[BOOTSTRAP] Echo initialized:', window.Echo);
+    
 } catch (error) {
     console.log('[BOOTSTRAP] Error initializing Echo:', error);
 }
