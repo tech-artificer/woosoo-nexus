@@ -63,8 +63,8 @@ class OrderRepository
             $order->orderCheck = OrderCheck::where('order_id', $order->id)->first();
             $order->orderedMenus = OrderedMenu::where('order_id', $order->id)->first();
 
-            unset($order->deviceOrder->device);
-            unset($order->deviceOrder->table);
+            // unset($order->deviceOrder->device);
+            // unset($order->deviceOrder->table);
 
             return $order;
         });

@@ -92,4 +92,26 @@ class Order extends Model
     {
         return $this->hasMany(OrderedMenu::class, 'order_id');
     }
+
+    // public function createOrderCashTray($params) {
+
+    //     $placeholdersArray = array_fill(0, count($params), '?');
+    //     $placeholders = implode(', ', $placeholdersArray);
+    //     // return $placeholders;
+    //     $orderCashTray = Order::fromQuery('CALL wt_create_order(' . $placeholders . ')', $params);
+
+    //     return $orderCashTray;
+    // }
+
+    // public function createTableOrder($params) {
+
+    //     $placeholdersArray = array_fill(0, count($params), '?');
+    //     $placeholders = implode(', ', $placeholdersArray);
+
+    //     Order::fromQuery('CALL create_table_order(' . $placeholders . ')', $params);
+
+
+    // }
+
+
 }

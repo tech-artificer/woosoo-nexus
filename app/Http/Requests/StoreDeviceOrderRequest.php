@@ -28,12 +28,12 @@ class StoreDeviceOrderRequest extends FormRequest
              * @example 2            
              */
             'guest_count' => ['required', 'integer', 'min:1'],
-            /**
-             * 
-             * @var integer
-             * @example 36
-             */
-            'table_id' => ['required', 'integer'],
+            // /**
+            //  * 
+            //  * @var integer
+            //  * @example 36
+            //  */
+            // 'table_id' => ['required', 'integer'],
             /**
              * 
              * @var float

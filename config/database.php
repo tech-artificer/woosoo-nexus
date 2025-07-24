@@ -45,9 +45,10 @@ return [
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
+            // 'host' => env('DB_HOST', '127.0.0.1'),
+            'host' => env('DB_HOST', 'localhost'),
             'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'laravel'),
+            'database' => env('DB_DATABASE', 'woosoo_api'),
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
@@ -64,8 +65,8 @@ return [
 
         'pos' => [
             'driver' => 'mysql',
-            'host' => env('DB_POS_HOST', '127.0.0.1'),
-            // 'host' => env('DB_POS_HOST', 'localhost'),
+            // 'host' => env('DB_POS_HOST', '127.0.0.1'),
+            'host' => env('DB_POS_HOST', 'localhost'),
             'port' => env('DB_POS_PORT', '3306'),
             'database' => env('DB_POS_DATABASE', 'krypton_woosoo'),
             'username' => env('DB_POS_USERNAME', 'root'),

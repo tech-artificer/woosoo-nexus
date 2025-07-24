@@ -26,11 +26,16 @@ use App\Http\Controllers\Api\V1\Krypton\{
 };
 // Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 
+// Route::options('{any}', function () {
+//     return response()->json(['status' => 'ok']);
+// })->where('any', '.*');
+
 Route::get('/check', function (Request $request) {
     return response()->json([
         'user' => auth()->user(),
         'request' => $request
     ]);
+    
 })->middleware('auth:device');
 
 

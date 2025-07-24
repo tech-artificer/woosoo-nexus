@@ -2,7 +2,6 @@
 
 namespace App\Services\Krypton;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use App\Models\Krypton\{
     Order,
@@ -24,10 +23,12 @@ use App\Actions\Order\{
     CreateTableOrder,
     CreateOrderedMenu
 };
+
+use App\Enums\OrderStatus;
 use App\Repositories\Krypton\MenuRepository;
 use App\Repositories\Krypton\OrderRepository;
-use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
+use App\Events\Order\OrderCreated;
 
 class OrderService
 {
@@ -41,13 +42,15 @@ class OrderService
     public function processOrder(Device $device, array $attributes)
     {
         // Fetch default values and merge them with provided attributes
-        $defaults = $this->fetchDefaults();
+        $defaults = $this->getDefaultAttributes();
         $attributes = array_merge($defaults, $attributes);
       
         return DB::transaction(function () use ($attributes, $device) {
             // Create a new order using the provided attributes
             $order = CreateOrder::run($attributes);
-
+            // $attributes['order_id'] = $order->id;
+            
+            return $order;
             if (!$order) {
                 return false;
             }
@@ -59,27 +62,27 @@ class OrderService
                 'cashier_employee_id' => $attributes['cashier_employee_id'],
             ]);
 
-            // Set additional order details
-            $attributes['order_id'] = $order->id;
-            $order->orderCheck = CreateOrderCheck::run($attributes);
-            $attributes['order_check_id'] = $order->orderCheck->id;
-            $order->tableOrder = CreateTableOrder::run($attributes);
-            $order->orderedMenus = CreateOrderedMenu::run($attributes);
 
+            $tableOrder = CreateTableOrder::run($attributes);
+
+            // Set additional order details
+            $orderCheck = CreateOrderCheck::run($attributes);
+            $attributes['order_check_id'] = $order->orderCheck->id;
+            $orderedMenus = CreateOrderedMenu::run($attributes);
             // Create a new device order and associate it with the device
-            $device->orders()->create([
+            $deviceOrder = $device->orders()->create([
                 'order_id' => $order->id,
                 'table_id' => $device->table_id,
                 'terminal_session_id' => $order->terminal_session_id,
                 'status' => OrderStatus::CONFIRMED,
-                'items' => $order->orderedMenus->toJson(),
+                'items' => [],
                 'meta' => [
-                    'checks' => $order->orderCheck->toJson(),
-                    'table_order' => $order->tableOrder->toJson(),
                 ],
             ]);
 
-            return $order;
+            broadcast(new OrderCreated($deviceOrder));
+
+            return $deviceOrder;
         });
     }
 
@@ -88,7 +91,7 @@ class OrderService
      *
      * @return array
      */
-    protected function fetchDefaults(): array
+    protected function getDefaultAttributes(): array
     {   
         $contextService = new KryptonContextService();
         $defaults = $contextService->getData();
@@ -98,6 +101,9 @@ class OrderService
             'current_employee_log_id' => $defaults['employee_log_id'],
             'close_employee_log_id' =>   $defaults['employee_log_id'],
             'server_employee_log_id' => null,
+            'is_online_order' => false,
+            'reference' => '',
+
         ];        
         
         return array_merge($defaults, $params); 

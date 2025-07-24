@@ -36,21 +36,37 @@ class CreateOrder extends OrderRepository
             $serviceTypeId = $attr['service_type_id'] ?? 1; // e.g., 1 for Dine-In
             $startEmployeeLogId = $attr['start_employee_log_id']; // $attr['start_employee_log_id']; // From logged-in user or default
             $currentEmployeeLogId = $attr['current_employee_log_id']; //$attr['current_employee_log_id'];
-            $closeEmployeeLogId = null; // //$attr['close_employee_log_id'] ?? null;
-            $serverEmployeeLogId = null; //$attr['server_employee_log_id'] ?? $startEmployeeLogId;
-            $reference = $attr['reference'] ?? ''; // Can be null
+            $closeEmployeeLogId = $attr['close_employee_log_id']; // //$attr['close_employee_log_id'] ?? null;
+            $serverEmployeeLogId = $attr['server_employee_log_id']; //$attr['server_employee_log_id'] ?? $startEmployeeLogId;
+            $reference = $attr['reference'] ?? null; // Can be null
             $cashierEmployeeId = $attr['cashier_employee_id'] ?? 2;
             $terminalServiceId = $attr['terminal_service_id'];
-            $isOnlineOrder = false; // Default to false, can be set based on request
+            $isOnlineOrder = $attr['is_online_order']; // Default to false, can be set based on request
 
             $params = [
-                $sessionId, $terminalSessionId, $dateTimeOpened, $dateTimeClosed,
-                $revenueId, $terminalId, $customerId, $isOpen, $isTransferred,
-                $isVoided, $guestCount, $serviceTypeId, $startEmployeeLogId,
-                $currentEmployeeLogId, $closeEmployeeLogId, $serverEmployeeLogId,
-                $reference, $cashierEmployeeId, $terminalServiceId, $isOnlineOrder
+                $sessionId, 
+                $terminalSessionId, 
+                $dateTimeOpened, 
+                $dateTimeClosed, 
+                $revenueId, 
+                $terminalId,
+                $customerId, 
+                $isOpen, 
+                $isTransferred,
+                $isVoided, 
+                $guestCount, 
+                $serviceTypeId,
+                $startEmployeeLogId,
+                $currentEmployeeLogId, 
+                $closeEmployeeLogId, 
+                $serverEmployeeLogId,
+                $reference, 
+                $cashierEmployeeId, 
+                $terminalServiceId, 
+                $isOnlineOrder
             ];
 
+    
             $placeholdersArray = array_fill(0, count($params), '?');
             $placeholders = implode(', ', $placeholdersArray);
 
@@ -60,9 +76,6 @@ class CreateOrder extends OrderRepository
             if (empty($order)) {
                 throw new \Exception("Failed to create new order.");
             }
-
-            // $newOrder = (array) $order;
-            // $orderId = $newOrder['id']; // Get the ID of the new order
             // Return success or proceed to next steps
             return $order;
 

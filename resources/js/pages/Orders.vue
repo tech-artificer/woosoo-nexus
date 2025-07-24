@@ -72,7 +72,7 @@ onMounted(() => {
       });
   }
 
-  window.Echo.private(`orders.1`)
+  window.Echo.channel(`orders`)
     .listen('.order.created', (e: any) => handleOrderEvent(e, false))
     .listen('.order.completed', (e: any) => handleOrderEvent(e, true))
     .error((error: any) => {

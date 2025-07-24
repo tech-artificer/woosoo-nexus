@@ -13,6 +13,10 @@ use App\Http\Controllers\Admin\{
     TerminalSessionController,
 };
 
+// Route::post('/csrf-check', function () {
+//     return response()->json(['message' => 'CSRF token is valid!']);
+// })->middleware('web');
+
 // Route::get('/', function () {
 //     redirect()->route('dashboard');
 // })->name('home');

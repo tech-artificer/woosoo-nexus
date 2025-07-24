@@ -44,7 +44,7 @@ const form = useForm({
 
 const submit = () => {
 
-    form.post(route('login'), {
+    form.post(route('/login'), {
         onFinish: async () => {
             form.reset('password');
         }

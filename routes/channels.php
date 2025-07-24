@@ -27,13 +27,17 @@ use Illuminate\Http\Request;
 
 // Broadcast::channel('private-orders.{deviceId}', OrderChannel::class);
 
-Broadcast::channel('orders.{deviceId}', function (User $user, int $deviceId) {
-    return (int)$user->id === (int)$deviceId || $user->is_admin;
+// Broadcast::channel('orders', function (User $user, int $deviceId) {
+//     return true;//(int)$user->id === (int)$deviceId || $user->is_admin;
+// });
+
+Broadcast::channel('orders', function () {
+    return true;
 });
 
-// Broadcast::channel('private-orders.admin', function (User $user) {  
-//     return $user->is_admin;
-// });
+Broadcast::channel('orders.admin', function (User $user, int $deviceId) {  
+    return $user->is_admin;
+});
 
 // Broadcast::channel('channel', function () {
 //     // ...

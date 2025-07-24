@@ -55,7 +55,7 @@ const page = usePage();
                 <CollapsibleContent class="py-2 group-data-[collapsible=icon]:hidden">
                     <SidebarGroupContent>
                     <SidebarMenu>
-                        <SidebarMenuItem v-for="childItem in item.items" :key="childItem.title" class="hover:bg-woosoo-accent hover:text-woosoo-dark-gray active:bg-woosoo-accent active:text-woosoo-dark-gray focus:bg-woosoo-accent focus:text-woosoo-dark-gray">
+                        <SidebarMenuItem v-for="childItem in item.items" :key="childItem.title" class="hover:bg-woosoo-accent rounded-2xl hover:text-woosoo-dark-gray active:bg-woosoo-accent active:text-woosoo-dark-gray focus:bg-woosoo-accent focus:text-woosoo-dark-gray">
                         <SidebarMenuButton as-child :is-active="childItem.href === page.url" :tooltip="childItem.title">
                             <Link :is-active="childItem.href === page.url" :href="childItem.href ?? '#'" isclass="hover:bg-woosoo-accent hover:text-woosoo-dark-gray active:bg-woosoo-accent active:text-woosoo-dark-gray focus:bg-woosoo-accent focus:text-woosoo-dark-gray">
                                 <component :is="childItem.icon"/>

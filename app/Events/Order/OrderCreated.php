@@ -33,33 +33,42 @@ class OrderCreated implements ShouldBroadcastNow
      *
      * @return array<int, \Illuminate\Broadcasting\Channel>
      */
-    public function broadcastOn()
+    public function broadcastOn() : array
     {
         // return new PrivateChannel('device.' . $this->order->device_id);
         // Broadcast to all admins via a dedicated channel
 
-        return //[
-             new PrivateChannel('orders.' . $this->deviceOrder->device_id);
-            // new PrivateChannel('orders.admin'),
-        //];
+        return [
+            new Channel('orders'),
+            //  new PrivateChannel('orders.' . $this->deviceOrder->device_id);
+            new PrivateChannel('orders.admin'),
+        ];
     }
 
     /**
      * Get the data to broadcast for the notification.
      *
      */
-    public function broadcastWith()
+    public function broadcastWith() : array
     {   
-      
+        return [
+            'order' => $this->deviceOrder->only([
+                'id', 
+                'order_id', 
+                'order_number', 
+                'device_id', 
+                'status'
+            ])
+        ];
         // return (new OrderResource($this->order))->toArray(request());
         // $order = new OrderResource($this->order);
         // return $order->toArray(request());
-        return [
-            'id' => $this->deviceOrder->id,
-            'order_number' => $this->deviceOrder->order_number,
-            'device_id' => $this->deviceOrder->device_id,
-            'status' => $this->deviceOrder->status
-        ];
+        // return [
+        //     'id' => $this->deviceOrder->id,
+        //     'order_number' => $this->deviceOrder->order_number,
+        //     'device_id' => $this->deviceOrder->device_id,
+        //     'status' => $this->deviceOrder->status
+        // ];
     }
 
     /**
@@ -69,6 +78,6 @@ class OrderCreated implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'order.created'; // Custom event name for frontend to listen to
+        return 'order.created'; 
     }
 }
