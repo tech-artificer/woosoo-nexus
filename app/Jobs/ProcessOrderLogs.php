@@ -28,6 +28,7 @@ class ProcessOrderLogs implements ShouldQueue
             ->get();
 
         Log::info("Processed & broadcasted Order ID {$logs}");
+        
         foreach ($logs as $log) {
             try {
                 $deviceOrder = $log->deviceOrder;
@@ -43,15 +44,9 @@ class ProcessOrderLogs implements ShouldQueue
                     }
                   
                     $deviceOrder->save();
-                    $log->save();
+                    $log->delete();
 
                     broadcast(new OrderCompleted($deviceOrder));
-
-                    // $log->update([
-                    //     'is_processed' => true,
-                    //     // 'deleted_at' => now(),
-                    // ]);
-                    // $log->save();
                 }
 
                 Log::info("Processed & broadcasted Order ID {$log->order_id}");

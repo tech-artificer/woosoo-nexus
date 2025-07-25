@@ -14,20 +14,21 @@ use Illuminate\Support\Str;
 class DeviceOrder extends Model
 {
     protected $table = 'device_orders';
+    protected $guarded = [];
     protected $primaryKey = 'id';
 
-    protected $fillable = [
-        'id',
-        'branch_id',
-        'device_id',
-        'table_id',
-        'order_id',
-        'order_number',
-        'terminal_session_id',
-        'status',
-        'items',
-        'meta',
-    ];
+    // protected $fillable = [
+    //     'id',
+    //     'branch_id',
+    //     'device_id',
+    //     'table_id',
+    //     'order_id',
+    //     'order_number',
+    //     'terminal_session_id',
+    //     'status',
+    //     'items',
+    //     'meta',
+    // ];
 
     protected $hidden = [
         'deleted_at',

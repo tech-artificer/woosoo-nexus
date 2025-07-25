@@ -56,7 +56,7 @@ watch(reactiveOrders, (val) => {``
 });
 
 onMounted(() => {
-  console.log('Display.vue mounted. Joining "orders" channel.');
+  console.log('Display.vue mounted. Joining "admin.orders" channel.');
 
   if (!window.Echo) {
     console.error('Display.vue: window.Echo is not available.');
@@ -64,11 +64,11 @@ onMounted(() => {
   }
 
   if (props.user.is_admin) {
-    window.Echo.private('orders.admin')
+    window.Echo.private('admin.orders')
       .listen('.order.created', (e: DeviceOrder) => handleOrderEvent(e, false))
       .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
       .error((error: DeviceOrder) => {
-        console.error('Error connecting to orders.admin channel:', error);
+        console.error('Error connecting to admin.orders channel:', error);
       });
   }
 //   console.log('Orders:', props.user);
@@ -83,7 +83,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (window.Echo) {
     console.log('Display.vue unmounted. Leaving channels.');
-    window.Echo.leave('orders.admin');
+    window.Echo.leave('admin.orders');
   }
 });
 </script>
@@ -94,11 +94,9 @@ onUnmounted(() => {
 
   <AppLayout :breadcrumbs="breadcrumbs">
  <div class="p-6">  
-        <!-- <pre>
-    {{ orders }}
-    </pre>  -->
+ 
 
-   <AppTable :rows="reactiveOrders" :columns="columns" />
+   <AppTable :rows="reactiveOrders" :columns="columns" :filter="false" />
        <!-- <Tabs default-value="orders" class="w-full">
         <TabsList>
           <TabsTrigger value="orders">Orders</TabsTrigger>

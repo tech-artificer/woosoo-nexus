@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Enums\TableStatus; // Assuming you have an enum for table statuses
 use App\Models\Device;
+use App\Services\Krypton\KryptonContextService;
+
 
 class Table extends Model
 {
@@ -47,5 +49,15 @@ class Table extends Model
     public function device() : HasOne
     {
         return $this->hasOne(Device::class, 'id');
+    }
+
+    public function checkTableStatus()
+    {
+        $contextService = new KryptonContextService();
+        $currentSessions = $contextService->getCurrentSessions();
+        $session = $currentSessions['session'];
+
+
+        return Table::fromQuery('CALL check_table_status(?,?)', [$this->id, $session->id]);
     }
 }

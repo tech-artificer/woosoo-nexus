@@ -23,6 +23,7 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         accessorKey: 'id',  
         header: 'Device',
         cell: ({ row }) => {
+            console.log(row.original);
             return h( 'div', { class: 'capitalize' }, row.original.device?.name ?? 'N/A')
         },          
     },

@@ -78,12 +78,12 @@ const table = useVueTable({
     <div class="flex items-center justify-start gap-2">
 
     <div class="relative w-full max-w-sm items-center">
-      <Input class="pl-10" placeholder="Filter names..."
+      <!-- <Input class="pl-10" placeholder="Filter..."
         :model-value="table.getColumn('name')?.getFilterValue() as string"
         @update:model-value=" table.getColumn('name')?.setFilterValue($event)" />
       <span class="absolute start-0 inset-y-0 flex items-center justify-center px-2">
         <Search class="size-6 text-muted-foreground" />
-      </span>
+      </span> -->
 
     </div>
 

@@ -47,8 +47,7 @@ class OrderController extends Controller
         // }
 
         $orders = DeviceOrder::with(['device', 'order', 'table', 'order'])->whereIn('status', [OrderStatus::CONFIRMED] )->get(); 
-
-
+        
         return Inertia::render('Orders', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    

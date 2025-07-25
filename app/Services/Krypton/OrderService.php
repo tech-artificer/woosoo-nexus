@@ -48,9 +48,9 @@ class OrderService
         return DB::transaction(function () use ($attributes, $device) {
             // Create a new order using the provided attributes
             $order = CreateOrder::run($attributes);
-            // $attributes['order_id'] = $order->id;
-            
-            return $order;
+            $attributes['order_id'] = $order->id;
+            $attributes['table_id'] = $device->table_id;
+        
             if (!$order) {
                 return false;
             }
@@ -75,13 +75,14 @@ class OrderService
                 'table_id' => $device->table_id,
                 'terminal_session_id' => $order->terminal_session_id,
                 'status' => OrderStatus::CONFIRMED,
-                'items' => [],
+                'items' => $orderedMenus->toArray(),
                 'meta' => [
+                    'order_check' => $orderCheck,
+                    'table_order' => $tableOrder,
                 ],
             ]);
 
             broadcast(new OrderCreated($deviceOrder));
-
             return $deviceOrder;
         });
     }

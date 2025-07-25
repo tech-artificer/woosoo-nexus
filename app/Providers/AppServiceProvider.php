@@ -23,6 +23,8 @@ use App\Models\Krypton\Revenue;
 use Illuminate\Support\Facades\View;
 
 use App\Services\Krypton\KryptonContextService;
+use App\Models\OrderUpdateLog;
+use App\Observers\OrderUpdateLogObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -62,6 +64,8 @@ class AppServiceProvider extends ServiceProvider
             return $user->is_admin;
         });
 
+
+        OrderUpdateLog::observe(OrderUpdateLogObserver::class);
 
     }
 }

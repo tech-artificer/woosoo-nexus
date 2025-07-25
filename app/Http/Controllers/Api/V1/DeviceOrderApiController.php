@@ -8,6 +8,7 @@ use App\Http\Requests\StoreDeviceOrderRequest;
 use App\Services\Krypton\OrderService;
 use App\Http\Resources\DeviceOrderResource;
 use App\Models\DeviceOrder;
+use App\Events\Order\OrderCreated;
 
 class DeviceOrderApiController extends Controller
 {
@@ -35,20 +36,20 @@ class DeviceOrderApiController extends Controller
       
         if( $device->table_id ) {
         
-            $order= $this->orderService->processOrder($device, $validatedData);
+           $deviceOrder = $this->orderService->processOrder($device, $validatedData);
             
         
-            if ( $order ) {
+            // if ( $order ) {
             //     $deviceOrder = DeviceOrder::where('order_id', $order->id)->first();
             //     // OrderCreated::dispatch($deviceOrder);
-            //     // broadcast(new OrderCreated($deviceOrder));
-                return response()->json([
-                    'message' => 'Order created successfully.',
-                    'order' => $order
-                ]);
+                // broadcast(new OrderCreated($deviceOrder));
+                // return response()->json([
+                //     'message' => 'Order created successfully.',
+                //     'order' => $order
+                // ]);
 
-            //     return new DeviceOrderResource($deviceOrder);
-            }
+                return new DeviceOrderResource($deviceOrder);
+            // }
 
         }else{
             $errors = 'Device is not assigned to any table.';

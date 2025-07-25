@@ -12,8 +12,8 @@ class OrderUpdateLog extends Model
     protected $primaryKey = 'id';
 
     protected $dispatchesEvents = [
-        'created' => \App\Events\OrderUpdateLogCreated::class,
-        'updated' => \App\Events\OrderUpdateLogUpdated::class
+        // 'created' => \App\Events\OrderUpdateLogCreated::class,
+        // 'updated' => \App\Events\OrderUpdateLogUpdated::class
     ];
 
     public function deviceOrder() : HasOne

@@ -16,9 +16,11 @@ class DeviceOrderResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'order_id' => $this->order_id,
             'order_number' => $this->order_number,
             'device' => new DeviceResource($this->device),
-            // 'order' => new OrderResource($this->order),
+            'order' => $this->order,
+            'table' => $this->table->checkTableStatus(),
             'status' => $this->status,
         ];
     }
