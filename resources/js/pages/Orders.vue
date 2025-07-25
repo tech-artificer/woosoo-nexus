@@ -28,13 +28,21 @@ const props = defineProps<{
 const reactiveOrders = ref<DeviceOrder[]>([...props.orders]);
 
 // 🧠 Find and update an order by ID
+// function updateOrder(order: DeviceOrder) {
+//   const index = reactiveOrders.value.findIndex(o => o.id === order.id);
+//   if (index !== -1) {
+//     reactiveOrders.value[index] = { ...reactiveOrders.value[index], ...order };
+//   }
+
+//   console.log(reactiveOrders.value);
+// }
+
 function updateOrder(order: DeviceOrder) {
   const index = reactiveOrders.value.findIndex(o => o.id === order.id);
   if (index !== -1) {
     reactiveOrders.value[index] = { ...reactiveOrders.value[index], ...order };
+    reactiveOrders.value = [...reactiveOrders.value]; // This triggers the watcher
   }
-
-  console.log(reactiveOrders.value);
 }
 
 // 🧩 Handle new or updated orders
@@ -70,6 +78,13 @@ onMounted(() => {
       .error((error: DeviceOrder) => {
         console.error('Error connecting to admin.orders channel:', error);
       });
+    
+    window.Echo.channel('orders.19591')
+      .listen('.order.created', (e: DeviceOrder) => handleOrderEvent(e, false))
+      .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
+      .error((error: DeviceOrder) => {
+        console.error('Error connecting to admin.orders channel:', error);
+      });
   }
 //   console.log('Orders:', props.user);
 //   window.Echo.channel(`orders`)
@@ -93,24 +108,8 @@ onUnmounted(() => {
   <Head :title="title" :description="description" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
- <div class="p-6">  
- 
-
-   <AppTable :rows="reactiveOrders" :columns="columns" :filter="false" />
-       <!-- <Tabs default-value="orders" class="w-full">
-        <TabsList>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="table_orders">Table Orders</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="orders" class="flex h-full flex-1 flex-col gap-4 rounded-xl">
-         
-        </TabsContent>
-
-        <TabsContent value="table_orders" class="p-4">
-          Change your password here.
-        </TabsContent>
-      </Tabs> -->
+    <div class="p-6">  
+      <AppTable :rows="reactiveOrders" :columns="columns" :filter="false" />
     </div>
   </AppLayout>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TData, TValue">
-import { ref, defineProps } from 'vue'
+import { ref, defineProps, watch  } from 'vue'
 import {
   ColumnDef, ColumnFiltersState,
   ExpandedState,
@@ -44,6 +44,13 @@ const props = defineProps<{
   columns: ColumnDef<Object | any>[]
   rows: Object[];
 }>()
+
+watch(() => props.rows, (newRows) => {
+  table.setOptions((prev) => ({
+    ...prev,
+    data: newRows,
+  }));
+}, { deep: true });
 
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])

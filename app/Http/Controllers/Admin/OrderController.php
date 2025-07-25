@@ -46,7 +46,7 @@ class OrderController extends Controller
         //     // $order->order->ordered_menus;
         // }
 
-        $orders = DeviceOrder::with(['device', 'order', 'table', 'order'])->whereIn('status', [OrderStatus::CONFIRMED] )->get(); 
+        $orders = DeviceOrder::with(['device', 'order', 'table', 'order'])->get(); 
         
         return Inertia::render('Orders', [
             'title' => 'Orders',

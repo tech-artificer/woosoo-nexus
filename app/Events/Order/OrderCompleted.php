@@ -35,7 +35,7 @@ class OrderCompleted implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('orders.' . $this->deviceOrder->devicorder_id),
+            new Channel('orders.' . $this->deviceOrder->order_id),
             //  new PrivateChannel('orders.' . $this->deviceOrder->device_id);
             new PrivateChannel('admin.orders'),
         ];
