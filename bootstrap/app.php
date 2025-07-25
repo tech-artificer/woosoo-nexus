@@ -18,10 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
-    // ->withBroadcasting(
-    //     __DIR__.'/../routes/channels.php',
-    //     ['prefix' => 'api', 'middleware' => ['api']],
-    // )
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        ['prefix' => 'api', 'middleware' => ['auth']],
+    )
     ->withMiddleware(function (Middleware $middleware) {
         // ✅ Global middleware (runs on all routes)
         $middleware->prepend([
@@ -30,7 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(append: [
             ForceJsonResponse::class,
-            // SubstituteBindings::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

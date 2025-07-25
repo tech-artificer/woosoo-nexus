@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Branch;
 use App\Models\Krypton\Table;
 use App\Models\Krypton\Order;
@@ -28,11 +29,18 @@ class DeviceOrder extends Model
         'meta',
     ];
 
+    protected $hidden = [
+        'deleted_at',
+        // 'created_at',
+        'updated_at'
+    ];
+
     protected $casts = [
         'order_number' => 'string',
         'status' => OrderStatus::class,
         'items' => 'array',
         'meta' => 'array',
+        // 'created_at' => 'string ',
     ];
 
     /**
@@ -107,6 +115,6 @@ class DeviceOrder extends Model
 
     public function order(): HasOne
     {
-        return $this->hasOne(Order::class, 'order_id');
+        return $this->hasOne(Order::class, 'id', 'order_id');
     }
 }

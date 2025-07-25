@@ -67,7 +67,7 @@ class Device extends Model
 
     public function table(): BelongsTo
     {
-        return $this->belongsTo(Table::class, 'table_id');
+        return $this->belongsTo(Table::class, 'table_id', 'id');
     }
 
     public function branch(): BelongsTo

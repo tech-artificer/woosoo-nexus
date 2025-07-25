@@ -34,3 +34,10 @@ export function getNextOrderStatus(currentStatus: OrderStatus): OrderStatus | nu
 
   return statusFlow[currentStatus] || null;
 }
+
+export enum TableStatus {
+    OPEN= 'OPEN',
+    AVAILABLE = 'AVAILABLE',
+    LOCKED = 'LOCKED',
+    DIRTY = 'DIRTY',
+}

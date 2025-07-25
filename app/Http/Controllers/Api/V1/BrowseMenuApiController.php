@@ -158,5 +158,29 @@ class BrowseMenuApiController extends Controller
 
         return MenuResource::collection($menus);
     }
+
+    /**
+     * Get all menus for the given group.
+     *
+     * @param Request $request group = Sides
+     * 
+     * @example group = Sides
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getMenusByGroup(Request $request) 
+    {   
+        $request->validate([
+            /**
+             * @example Sides
+            */
+            'group' => ['required','string'],
+        ]);
+
+        $menusByGroup = $this->menuRepository->getMenusByGroup($request->group)->pluck('id') ?? [];
+        $menus = Menu::whereIn('id', $menusByGroup)->get();
+
+        return MenuResource::collection($menus);
+    }
   
 }

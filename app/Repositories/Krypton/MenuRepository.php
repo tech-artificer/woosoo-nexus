@@ -155,6 +155,17 @@ class MenuRepository
     }
 
 
+    public function getMenusByGroup($group)
+    {
+        try {
+            return Menu::fromQuery('CALL get_menus_by_group(?)', [$group]);
+        } catch (Exception $e) {
+            Log::error('Procedure call failed: ' . $e->getMessage());
+            throw new Exception('Something Went Wrong.');
+        }
+    }
+
+
      public function getMenuDiscountsById($menuId)
     {
         try {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps } from 'vue';
+import { defineProps, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
@@ -18,18 +18,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const columns = getMenuColumns();
 
-defineProps<{
+const props = defineProps<{
     title?: string;
     description?: string;
-    menus: Menu[];
-}>()
+    menus: Object[];
 
+}>()
 
 </script>
 
 <template>
     <Head :title="title" :description="description" />
-
+    
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <div class="relative min-h-[100vh] flex-1 rounded-xl border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">

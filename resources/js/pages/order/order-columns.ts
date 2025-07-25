@@ -1,21 +1,21 @@
 import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
-import { Order } from '@/types/models';
+import { DeviceOrder } from '@/types/models';
 import  OrderStatusBadge from '@/pages/order/OrderStatusBadge.vue'
 
-export const getOrderColumns = (): ColumnDef<Order>[] => [
+export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
     {
-        accessorKey: 'date_time_opened',  
+        accessorKey: 'id',  
         header: 'Date',
         cell: ({ row }) => {
-            return h( 'div', { class: 'capitalize' }, row.getValue('date_time_opened'))
+            return h( 'div', { class: 'capitalize' }, row.original.order?.date_time_opened ?? 'N/A')
         },          
     },
     {
         accessorKey: 'id',
         header: 'Order Number | ID',
         cell: ({ row }) => {
-            const orderNumber = row.original.deviceOrder?.order_number ?? 'N/A';
+            const orderNumber = row.original.order_number ?? 'N/A';
             return h( 'div', { class: 'capitalize' },  `${orderNumber} | ${row.original.id}`);
         },
     },
@@ -37,7 +37,7 @@ export const getOrderColumns = (): ColumnDef<Order>[] => [
         accessorKey: 'guest_count',
         header: 'Guest',
         cell: ({ row }) => {
-            return h( 'div', { class: 'capitalize' }, row.getValue('guest_count'))
+            return h( 'div', { class: 'capitalize' }, row.original.order?.guest_count ?? 'N/A')
         },
     },
    {
@@ -49,7 +49,7 @@ export const getOrderColumns = (): ColumnDef<Order>[] => [
             return h(
                 'div',
                 { class: 'capitalize flex items-center' }, // Added 'items-center' for alignment
-                '₱ ' +  row.original.orderCheck?.total_amount
+                '₱ ' + 0.00
             );  
         },
     },
@@ -57,7 +57,7 @@ export const getOrderColumns = (): ColumnDef<Order>[] => [
         accessorKey: 'id',
         header: 'Status',
         cell: ({ row }) => {
-            let status = row.original.deviceOrder?.status
+            let status = row.original.status
            
             return h(OrderStatusBadge, { status: status })
         },

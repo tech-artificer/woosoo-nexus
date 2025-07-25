@@ -39,7 +39,7 @@ class OrderCreated implements ShouldBroadcastNow
         // Broadcast to all admins via a dedicated channel
 
         return [
-            new Channel('orders'),
+            new Channel('orders.' . $this->deviceOrder->order_id),
             //  new PrivateChannel('orders.' . $this->deviceOrder->device_id);
             new PrivateChannel('orders.admin'),
         ];

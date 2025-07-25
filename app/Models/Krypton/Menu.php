@@ -28,6 +28,10 @@ class Menu extends Model
         'is_discountable' => 'boolean',
         'is_locked' => 'boolean',
         'is_modifier_only' => 'boolean',
+        'menu_category_id' => 'integer',
+        'menu_group_id' => 'integer',
+        'menu_tax_type_id' => 'integer',
+        'menu_course_type_id' => 'integer',
     ];
 
     protected $hidden = [
@@ -56,7 +60,7 @@ class Menu extends Model
         return $this->belongsTo(MenuCourse::class, 'menu_course_type_id', 'id');
     }
 
-    public function image() : HasOne
+    public function image(): HasOne
     {
         return $this->hasOne(MenuImage::class, 'menu_id');
     }
@@ -82,6 +86,15 @@ class Menu extends Model
         $taxAmount = ($this->price * $quantity) * ($percentage / 100);
 
         return Number::format($taxAmount, $decimals);
+    }
+
+    public function getImageUrlAttribute()
+    {
+        if ($this->image && $this->image->path) {
+            return $this->image->path;
+        }
+
+        return asset('images/menu-placeholder/1.jpg');
     }
 
     # SCOPES

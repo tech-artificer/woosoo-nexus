@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\{
     BrowseMenuApiController,
     DeviceOrderUpdateApiController,
     OrderUpdateLogController,
+    ServiceMonitorController,
     // TableApiController,
 };
 
@@ -24,7 +25,7 @@ use App\Http\Controllers\Api\V1\Krypton\{
     OrderApiController,
     // TerminalSessionApiController,
 };
-// Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
+Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 
 // Route::options('{any}', function () {
 //     return response()->json(['status' => 'ok']);
@@ -52,6 +53,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/menus/modifiers', [BrowseMenuApiController::class, 'getMenuModifiers'])->name('api.menus.modifiers');
     Route::get('/menus/modifier-groups/{id}/modifiers', [BrowseMenuApiController::class, 'getMenuModifiersByGroup'])->name('api.menus.modifiers.by.group');
     Route::get('/menus/course', [BrowseMenuApiController::class, 'getMenusByCourse'])->name('api.menus.by.course');
+    Route::get('/menus/group', [BrowseMenuApiController::class, 'getMenusByGroup'])->name('api.menus.by.group');
     Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
 });
 
@@ -73,5 +75,11 @@ Route::middleware('auth:device')->group(function () {
 
     Route::get('/after-payment', [OrderUpdateLogController::class, 'index'])->name('api.order.update.log');
     
+});
+
+
+Route::middleware('api')->group(function () {
+    Route::get('/service-status', [ServiceMonitorController::class, 'status']);
+    Route::post('/run-service', [ServiceMonitorController::class, 'run']);
 });
 

@@ -22,6 +22,18 @@ export interface Table {
     status: string;
     is_available: boolean;
     is_locked: boolean;
+    device: Device;
+    tableOrder: TableOrder;
+}
+
+export interface TableOrder {
+    id: number;
+    table_id: number;
+    order_id: number;
+    is_cleared: boolean;
+    is_printed: boolean;
+    table?: Table;
+    order?: Order;
 }
 
 
@@ -39,6 +51,7 @@ export interface Device {
 
 export interface DeviceOrder {
     id: number;
+    name: string;
     device_id: number;
     order_id: number;
     order_number: string;
@@ -75,11 +88,6 @@ export interface Menu {
     quantity: number;
     in_stock: number;
     is_modifier_only: boolean;
-    container_id: number | null;
-    quantity_option: string;
-    units: null;
-    serving_count: number;
-    best_seller_candidate: number;
     guest_count: number;
 }
 

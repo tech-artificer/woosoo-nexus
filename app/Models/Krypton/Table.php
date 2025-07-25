@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Enums\TableStatus; // Assuming you have an enum for table statuses
+use App\Models\Device;
 
 class Table extends Model
 {
@@ -15,6 +16,7 @@ class Table extends Model
     protected $connection = 'pos';
     protected $table = 'tables';
     protected $primaryKey = 'id';
+    protected $guarded = [];
     public $timestamps = false;
 
     protected $casts = [
@@ -42,8 +44,8 @@ class Table extends Model
     }
 
     // Optional: relationship (if needed)
-    public function device()
+    public function device() : HasOne
     {
-        return $this->hasOne(Device::class, 'table_id', 'id');
+        return $this->hasOne(Device::class, 'id');
     }
 }

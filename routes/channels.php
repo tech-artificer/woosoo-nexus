@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Broadcast;
 use App\Broadcasting\OrderChannel;
 use Illuminate\Http\Request;
 // use Illuminate\Support\Facades\Auth;
-// use App\Models\User;
+use App\Models\User;
 // use App\Models\Table;
 // use App\Models\Device;
 // use App\Models\DeviceOrder;
@@ -25,19 +25,21 @@ use Illuminate\Http\Request;
 //     return $device->id === $deviceId;
 // });
 
-// Broadcast::channel('private-orders.{deviceId}', OrderChannel::class);
-
-// Broadcast::channel('orders', function (User $user, int $deviceId) {
-//     return true;//(int)$user->id === (int)$deviceId || $user->is_admin;
-// });
-
-Broadcast::channel('orders', function () {
+Broadcast::channel('orders.{orderId}', function (User $user, int $orderId) {
     return true;
 });
 
-Broadcast::channel('orders.admin', function (User $user, int $deviceId) {  
+Broadcast::channel('private-orders.admin', function (User $user, int $orderId) {
     return $user->is_admin;
 });
+
+// Broadcast::channel('orders', function (User $user, int $deviceId) {
+//     return true;
+// });
+
+// Broadcast::channel('private-orders.admin', function (User $user, int $deviceId) {  
+//     return $user->is_admin;
+// });
 
 // Broadcast::channel('channel', function () {
 //     // ...

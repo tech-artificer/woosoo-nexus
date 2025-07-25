@@ -11,6 +11,11 @@ class OrderUpdateLog extends Model
     protected $table = 'order_update_logs';
     protected $primaryKey = 'id';
 
+    protected $dispatchesEvents = [
+        'created' => \App\Events\OrderUpdateLogCreated::class,
+        'updated' => \App\Events\OrderUpdateLogUpdated::class
+    ];
+
     public function deviceOrder() : HasOne
     {
         return $this->hasOne(DeviceOrder::class, 'order_id', 'order_id');

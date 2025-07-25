@@ -7,13 +7,12 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
-
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
-
 // Make Pusher globally available for Echo
 window.Pusher = Pusher;
 
+const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content'); // Get the CSRF token
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };
@@ -21,10 +20,12 @@ window.config = {
 try {
     window.Echo = new Echo({
         broadcaster: 'reverb',
+        cluster: 'mt1',
+        authEndpoint: '/broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,
-        wsHost: import.meta.env.VITE_REVERB_HOST,
-        wsPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
-        wssPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
+        wsHost: '127.0.0.1', //import.meta.env.VITE_REVERB_HOST,
+        wsPort: 6001, //import.meta.env.VITE_REVERB_PORT ?? 8080,
+        // wssPort: import.meta.env.VITE_REVERB_PORT ?? 8080,
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
         disableStats: true,
         encrypted: true, // Also important for WSS

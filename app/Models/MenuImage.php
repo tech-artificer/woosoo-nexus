@@ -8,6 +8,11 @@ use App\Models\Krypton\Menu;
 
 class MenuImage extends Model
 {
+    protected $table = 'menu_images';
+    protected $primaryKey = 'id';
+
+    protected $fillable = ['path', 'menu_id'];
+
     protected static function booted()
     {
         static::deleting(function ($image) {

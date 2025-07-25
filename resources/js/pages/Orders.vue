@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Order } from '@/types/models';
+import { DeviceOrder } from '@/types/models';
 import { getOrderColumns } from '@/pages/order/order-columns';
 import AppTable from '@/components/datatable/AppTable.vue';
 
@@ -21,14 +21,14 @@ const props = defineProps<{
   title?: string;
   description?: string;
   user: any;
-  orders: Order[]; // You can refine this to Order[] if needed
+  orders: DeviceOrder[]; // You can refine this to Order[] if needed
 }>()
 
 // 🔁 Make the orders reactive so we can push to it later
-const reactiveOrders = ref<Order[]>([...props.orders]);
+const reactiveOrders = ref<DeviceOrder[]>([...props.orders]);
 
 // 🧠 Find and update an order by ID
-function updateOrder(order: Order) {
+function updateOrder(order: DeviceOrder) {
   const index = reactiveOrders.value.findIndex(o => o.id === order.id);
   if (index !== -1) {
     reactiveOrders.value[index] = { ...reactiveOrders.value[index], ...order };
@@ -38,7 +38,7 @@ function updateOrder(order: Order) {
 }
 
 // 🧩 Handle new or updated orders
-const handleOrderEvent = (event: any, isUpdate = false) => {
+const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   if (isUpdate) {
     updateOrder(event);
     console.log('Order updated:', event);
@@ -51,7 +51,7 @@ const handleOrderEvent = (event: any, isUpdate = false) => {
   }
 };
 
-watch(reactiveOrders, (val) => {
+watch(reactiveOrders, (val) => {``
   console.log('Orders changed!', val);
 });
 
@@ -65,26 +65,25 @@ onMounted(() => {
 
   if (props.user.is_admin) {
     window.Echo.private('orders.admin')
-      .listen('.order.created', (e: any) => handleOrderEvent(e, false))
-      .listen('.order.completed', (e: any) => handleOrderEvent(e, true))
-      .error((error: any) => {
+      .listen('.order.created', (e: DeviceOrder) => handleOrderEvent(e, false))
+      .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
+      .error((error: DeviceOrder) => {
         console.error('Error connecting to orders.admin channel:', error);
       });
   }
-
-  window.Echo.channel(`orders`)
-    .listen('.order.created', (e: any) => handleOrderEvent(e, false))
-    .listen('.order.completed', (e: any) => handleOrderEvent(e, true))
-    .error((error: any) => {
-      console.error('Error connecting to orders.1 channel:', error);
-    });
+//   console.log('Orders:', props.user);
+//   window.Echo.channel(`orders`)
+//     .listen('.order.created', (e: any) => handleOrderEvent(e, false))
+//     .listen('.order.completed', (e: any) => handleOrderEvent(e, true))
+//     .error((error: any) => {
+//       console.error('Error connecting to orders.1 channel:', error);
+//     });
 });
 
 onUnmounted(() => {
   if (window.Echo) {
     console.log('Display.vue unmounted. Leaving channels.');
     window.Echo.leave('orders.admin');
-    window.Echo.leave('orders.1');
   }
 });
 </script>
@@ -94,22 +93,26 @@ onUnmounted(() => {
   <Head :title="title" :description="description" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="p-6">  
-       <Tabs default-value="orders" class="w-full">
+ <div class="p-6">  
+        <!-- <pre>
+    {{ orders }}
+    </pre>  -->
+
+   <AppTable :rows="reactiveOrders" :columns="columns" />
+       <!-- <Tabs default-value="orders" class="w-full">
         <TabsList>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="table_orders">Table Orders</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders" class="flex h-full flex-1 flex-col gap-4 rounded-xl">
-          <!-- 🔁 Use the reactive orders -->
-          <AppTable :rows="reactiveOrders" :columns="columns" />
+         
         </TabsContent>
 
         <TabsContent value="table_orders" class="p-4">
           Change your password here.
         </TabsContent>
-      </Tabs>
+      </Tabs> -->
     </div>
   </AppLayout>
 </template>

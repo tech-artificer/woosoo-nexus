@@ -16,6 +16,7 @@ use App\Models\Krypton\OrderCheck;
 // use App\Models\Krypton\Table;
 
 use App\Models\DeviceOrder;
+use App\Enums\OrderStatus;
 // use App\Models\Krypton\TerminalSession;
 
 use Carbon\Carbon;
@@ -29,10 +30,10 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $context = new KryptonContextService();
-        $currentSessions = $context->getCurrentSessions();
+        // $context = new KryptonContextService();
+        // $currentSessions = $context->getCurrentSessions();
 
-        $orders = OrderRepository::getAllOrdersWithDeviceData($currentSessions);
+        // $orders = OrderRepository::getAllOrdersWithDeviceData($currentSessions);
         // $orders = Order::with(['tableOrders','orderChecks', 'orderedMenus'])->whereDate('created_on', Carbon::yesterday())->get();
 
         // $orders = DeviceOrder::select('order_id', 'order_number', 'device_id', 'table_id')->with(['device'])
@@ -44,6 +45,9 @@ class OrderController extends Controller
         //     // $order->order_checks;
         //     // $order->order->ordered_menus;
         // }
+
+        $orders = DeviceOrder::with(['device', 'order', 'table', 'order'])->whereIn('status', [OrderStatus::CONFIRMED] )->get(); 
+
 
         return Inertia::render('Orders', [
             'title' => 'Orders',
