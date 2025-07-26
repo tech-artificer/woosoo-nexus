@@ -59,6 +59,7 @@ export interface DeviceOrder {
     device?: Device;
     order?: Order;
     table?: Table;
+    meta: any;
 }
 export interface Menu {
     id: number;

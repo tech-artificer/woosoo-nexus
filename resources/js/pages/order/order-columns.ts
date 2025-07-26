@@ -23,7 +23,6 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         accessorKey: 'id',  
         header: 'Device',
         cell: ({ row }) => {
-            console.log(row.original);
             return h( 'div', { class: 'capitalize' }, row.original.device?.name ?? 'N/A')
         },          
     },
@@ -47,10 +46,11 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         header: 'Total',
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
+            const total = row.original.meta.order_check.total_amount;
             return h(
                 'div',
                 { class: 'capitalize flex items-center' }, // Added 'items-center' for alignment
-                '₱ ' + 0.00
+                '₱ ' + total
             );  
         },
     },

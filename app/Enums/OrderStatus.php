@@ -28,7 +28,7 @@ enum OrderStatus : string
         //     self::SERVED => in_array($newStatus, [self::COMPLETED ,self::SERVED, self::CANCELLED]),
         // };
         return match ($this) {
-            self::PENDING => in_array($newStatus, [self::CONFIRMED, self::VOIDED]),
+            self::PENDING => in_array($newStatus, [self::CONFIRMED, self::VOIDED, self::COMPLETED]),
             self::CONFIRMED => in_array($newStatus, [self::COMPLETED, self::VOIDED]),
             self::COMPLETED => in_array($newStatus, [self::ARCHIVED]),
             self::IN_PROGRESS => in_array($newStatus, [self::READY, self::CANCELLED]),
