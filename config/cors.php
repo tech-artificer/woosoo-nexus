@@ -14,10 +14,10 @@ return [
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
     */
-      'paths' => ['api/*', 'sanctum/csrf-cookie', 'broadcasting/auth'],
-    'allowed_methods' => ['http://192.168.100.85', 'http://192.168.100.85:3000'],
+      'paths' => ['api/*', 'broadcasting/auth', 'sanctum/csrf-cookie'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'OPTIONS'],
     'allowed_origins' => [
-      '*'
+      '*',
     ],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
