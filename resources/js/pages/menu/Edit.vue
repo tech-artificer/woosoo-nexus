@@ -32,7 +32,7 @@ const props = defineProps<{
 }>();
 
 // Toast for notifications
-const toast = useToast();
+// const toast = useToast();
 
 // Dialog state
 const showDialog = ref(false);
@@ -44,7 +44,7 @@ const previewImage = ref<string | null>(props.menu.img_url);
 const localMenu = ref([props.menu]);
 
 // Initialize the composable for the 'menu' model
-const { form, startEditing, cancelEditing, updateItem } = useUpdateModel(
+const { form, startEditing, cancelEditing } = useUpdateModel(
   'menu',
   'menu',
   localMenu
@@ -70,30 +70,22 @@ function onFileChange(e: Event) {
 
 // Submit the image upload
 function submit() {
-  console.log(form);
+ 
   router.post(route('menu.upload.image', props.menu.id), {
-    _method: 'put',
     forceFormData: true, // <-- THIS is the secret ingredient
     image: form.image,
-    // onSuccess: () => { 
-    //   toast.success('✅ Menu image updated!');
-    //   showDialog.value = false;
-    // },
-    // onError: (errors) => { 
-    //   console.error('❌ Validation error', errors);
-    //   toast.error('❌ Failed to update image');
-    //   // Revert optimistic update
-    //   localMenu.value[0].img_url = props.menu.img_url;
-    // },
   });
   // console.log(form.image);
   // updateItem(props.menu.id, {
+
+
   //   method: 'post', // Use POST for image upload
   //   onSuccessCallback: () => {
   //     toast.success('✅ Menu image updated!');
   //     showDialog.value = false;
   //   },
   //   onErrorCallback: (errors: any) => {
+  //     console.log(form);
   //     console.error('❌ Validation error', errors);
   //     toast.error('❌ Failed to update image');
   //     // Revert optimistic update
@@ -151,6 +143,7 @@ onMounted(() => {
             type="file"
             accept="image/*"
             @change="onFileChange"
+            @input="form.image = $event.target.files[0]"
    
           />
           <InputError :message="form.errors.image" />

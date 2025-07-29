@@ -18,7 +18,7 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
+  // DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -44,7 +44,7 @@ const openDialog = () => {
 }
 
 const submit = () => {
-  form.put(`/devices/${props.device.id}/assign-table`, {
+  form.post(`/devices/${props.device.id}/assign-table`, {
     preserveScroll: true,
     preserveState: true,
 

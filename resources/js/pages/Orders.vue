@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, reactive, computed  } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed  } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DeviceOrder } from '@/types/models';
 import { getOrderColumns } from '@/pages/order/order-columns';
 import AppTable from '@/components/datatable/AppTable.vue';
@@ -26,7 +26,7 @@ const props = defineProps<{
 
 // 🔁 Make the orders reactive so we can push to it later
 const reactiveOrders = ref<DeviceOrder[]>([...props.orders]);
-const ordersMap = reactive<Record<number, DeviceOrder>>({});
+const ordersMap = reactiveOrders.value
 // 🧠 Find and update an order by ID
 // function updateOrder(order: DeviceOrder) {
 //   const index = reactiveOrders.value.findIndex(o => o.id === order.id);
@@ -61,7 +61,7 @@ const ordersMap = reactive<Record<number, DeviceOrder>>({});
 //   }
 // };
 
-watch(reactiveOrders, (val) => {``
+watch(reactiveOrders, (val) => {
   console.log('Orders changed!', val);
 });
 
@@ -125,7 +125,7 @@ onUnmounted(() => {
 
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-6">  
-      <AppTable :rows="reactiveOrders" :columns="columns" :filter="false" />
+      <AppTable :rows="ordersList" :columns="columns" :filter="false" />
     </div>
   </AppLayout>
 </template>

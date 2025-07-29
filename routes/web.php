@@ -9,7 +9,7 @@ use App\Http\Controllers\Admin\{
     MenuController,
     UserController,
     TableController,
-    DeviceController,
+    Device\DeviceController,
     TerminalSessionController,
 };
 
@@ -17,9 +17,9 @@ use App\Http\Controllers\Admin\{
 //     return response()->json(['message' => 'CSRF token is valid!']);
 // })->middleware('web');
 
-// Route::get('/', function () {
-//     redirect()->route('dashboard');
-// })->name('home');
+Route::get('/', function () {
+    redirect()->route('login');
+});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('home');
@@ -29,8 +29,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/menus', [MenuController::class, 'index'])->name('menus');
     // Route::get('/menus/{menu}/edit', [MenuController::class, 'edit'])->name('menu.edit');
-    Route::put('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.
-    image');
+    Route::post('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
 
     Route::get('/users', [UserController::class, 'index'])->name('users');
     Route::get('/tables', [TableController::class, 'index'])->name('tables');

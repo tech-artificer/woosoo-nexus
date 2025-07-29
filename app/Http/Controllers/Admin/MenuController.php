@@ -87,6 +87,7 @@ class MenuController extends Controller
             );
         }
 
+        return back();
         // return redirect()->route('menus')->with(['success' => true]);
 
         // return response()->json([

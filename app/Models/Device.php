@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Krypton\Table;
 
 class Device extends Model
@@ -73,6 +74,11 @@ class Device extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'branch_id');
+    }
+
+    public function registrationCode(): HasOne
+    {
+        return $this->hasOne(DeviceRegistrationCode::class);
     }
 
 

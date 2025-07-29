@@ -37,7 +37,6 @@ class DeviceOrderApiController extends Controller
         if( $device->table_id ) {
         
            $deviceOrder = $this->orderService->processOrder($device, $validatedData);
-            
         
             // if ( $order ) {
             //     $deviceOrder = DeviceOrder::where('order_id', $order->id)->first();
@@ -48,14 +47,18 @@ class DeviceOrderApiController extends Controller
                 //     'order' => $order
                 // ]);
 
-                return new DeviceOrderResource($deviceOrder);
+                return response()->json([
+                    'success' => true,
+                    'order' => new DeviceOrderResource($deviceOrder)
+                ], 201); 
+                    
             // }
-
         }else{
             $errors = 'Device is not assigned to any table.';
         }
      
         return response()->json([
+            'success' => false,
             'message' => 'Failed to create order.',
             'errors' => $errors,
         ], 500);

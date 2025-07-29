@@ -12,7 +12,7 @@ import Pusher from 'pusher-js';
 // Make Pusher globally available for Echo
 window.Pusher = Pusher;
 
-const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content'); // Get the CSRF token
+// const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content'); // Get the CSRF token
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };
@@ -23,10 +23,10 @@ try {
         // cluster: 'mt1',
         // authEndpoint: '/broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,
-        wsHost: 'ws://192.168.100.85:6001',
-        wssHost: 'wss://192.168.100.85:6001',
-        wsPort: 6001, //import.meta.env.VITE_REVERB_PORT ?? 8080,
-        wssPort: 6001, //import.meta.env.VITE_REVERB_PORT ?? 8080,
+        wsHost: import.meta.env.VITE_REVERB_HOST,
+        wssHost: import.meta.env.VITE_REVERB_HOST,
+        wsPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
+        wssPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
         disableStats: true,
         encrypted: true, // Also important for WSS

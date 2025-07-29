@@ -66,7 +66,7 @@ class KryptonContextService
 
         $this->data = [
             'price_level_id' => $priceLevelId,
-            'taxt_set_id' => $taxSetId,
+            'tax_set_id' => $taxSetId,
             'service_type_id' => $serviceTypeId,
             'revenue_id' => $revenueId,
             'terminal_id' => $terminalId,

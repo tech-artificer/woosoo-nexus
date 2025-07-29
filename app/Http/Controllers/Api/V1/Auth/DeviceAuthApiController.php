@@ -51,7 +51,7 @@ class DeviceAuthApiController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login(Request $request)
+    public function authenticate(Request $request)
     {
         $validated = $request->validate([
            'device_uuid' => ['required', 'exists:devices,device_uuid'],
@@ -105,14 +105,14 @@ class DeviceAuthApiController extends Controller
           // Create token with device info
         $newToken = $device->createToken(
             name: 'device-auth',
-            abilities: [
-                'order:create', 
-                'order:view', 
-                'order:edit', 
-                'order:delete', 
-                'service_request:create',
-                'menu:view',
-            ],
+            // abilities: [
+            //     'order:create', 
+            //     'order:view', 
+            //     'order:edit', 
+            //     'order:delete', 
+            //     'service_request:create',
+            //     'menu:view',
+            // ],
             expiresAt: now()->addDays(7)
         )->plainTextToken;
         

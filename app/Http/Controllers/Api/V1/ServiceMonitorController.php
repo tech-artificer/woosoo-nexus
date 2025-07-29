@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 class ServiceMonitorController extends Controller
 {
@@ -11,8 +12,8 @@ class ServiceMonitorController extends Controller
     {
         return response()->json([
             'reverb' => $this->isProcessRunning('reverb'),
-            'deviceCodes' => 'idle', // This could be a DB flag or config
-            'paymentTrigger' => 'running', // Could also be dynamic
+            'deviceCodes' => 'Completed', // This could be a DB flag or config
+            'paymentTrigger' => 'Completed', // Could also be dynamic
             'scheduler' => $this->isProcessRunning('schedule:work'),
         ]);
     }
@@ -21,9 +22,9 @@ class ServiceMonitorController extends Controller
     {
         $service = $request->service;
         $commands = [
-            'reverb' => 'app:reverb-start',
-            'deviceCodes' => 'devices:generate-codes',
-            'paymentTrigger' => 'pos:setup-payment-trigger',
+            'reverb' => 'app:start-reverb',
+            // 'deviceCodes' => 'devices:generate-codes',
+            // 'paymentTrigger' => 'pos:setup-payment-trigger',
             'scheduler' => 'schedule:work',
         ];
 

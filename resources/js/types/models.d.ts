@@ -123,4 +123,13 @@ export interface OrderCheck {
     guest_count: number;
 }
 
+export interface DeviceRegistrationCode {
+    id: number;
+    code: number;
+    device: Device;
+    used_by_device_id: number;
+}
+
+
+
     

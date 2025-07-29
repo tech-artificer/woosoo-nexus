@@ -15,14 +15,14 @@ class TaxResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            // 'id' => $this->id,
             'name' => $this->name,
-            'taxt_set_id' => $this->taxt_set_id,
-            'tax_type_id' => $this->tax_type_id,
-            'is_inclusive' => $this->is_inclusive,
+            // 'tax_set_id' => $this->tax_set_id,
+            // 'tax_type_id' => $this->tax_type_id,
+            // 'is_inclusive' => $this->is_inclusive,
             'percentage' => $this->percentage,
             'rounding' => $this->rounding,
-            'is_available' => $this->is_available,
+            // 'is_available' => $this->is_available,
         ];
     }
 }

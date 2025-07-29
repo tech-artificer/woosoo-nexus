@@ -29,9 +29,9 @@ class BrowseMenuApiController extends Controller
     public function getMenus()
     {   
         $menus = $this->menuRepository->getMenus();
+
         return MenuResource::collection($menus);
     }
-
     
     /**
      * Get all modifier groups
@@ -88,24 +88,18 @@ class BrowseMenuApiController extends Controller
      * 
      * @return \Illuminate\Http\JsonResponse
      * 
-     * 
+     * @example P1, P2, P3, P4, P5
      * 
      */
     public function getMenusWithModifiers() 
     {   
         $menus = $this->menuRepository->getMenusWithModifiers();
      
-        if( $menus ) {
-            $menus = Menu::whereIn('id', [46, 47, 48])->with('modifiers')->get();
-        }
-
-        foreach($menus as $menu) {
-            $details = Menu::findOrFail($menu->id);
-            $menu->fill($details->toArray()); 
-            $menu->modifiers = Menu::getModifiers($menu->id);
+        if( $menus->isEmpty() ) {
+            $menus = Menu::with('modifiers')->whereIn('id', [46, 47, 48])->get();
         }
       
-        return MenuResource::collection($menus);
+        return MenuResource::collection($menus->load('modifiers'));
     }
 
     /**

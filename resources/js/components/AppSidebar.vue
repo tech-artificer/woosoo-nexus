@@ -62,11 +62,11 @@ const mainNavItems: NavItem[] = [
         hasSubItems: false,
     },
     {
-        title: 'Settings',
-        href: '/settings',
+        title: 'Configuration',
+        href: '/configuration',
         icon: ListOrdered,
         isActive: false,
-        hasSubItems: false,
+        hasSubItems: true,
         items: [
             {
                 title: 'Users',
@@ -93,7 +93,7 @@ const mainNavItems: NavItem[] = [
 ];
 
 const page = usePage();
-const terminal = page.props.terminal as { id?: any } || {};
+// const terminal = page.props.terminal as { id?: any } || {};
 const session = page.props.session as { id?: any } || {};
 const terminalSession = page.props.terminalSession as { id?: any } || {};
 // const terminalSession = page.props.terminalSession as { id?: any } || {};
@@ -117,11 +117,11 @@ const footerActiveSessions: ActiveSession[] = [
     //     href: 'https://laravel.com/docs/starter-kits#vue',
     //     icon: Circle,
     // },
-    {
-        id: terminal?.id,
-        title: 'Terminal #',
-        icon: LockOpen,
-    },
+    // {
+    //     id: terminal?.id,
+    //     title: 'Terminal #',
+    //     icon: LockOpen,
+    // },
     {
         id: session?.id,
         title: 'Session #',

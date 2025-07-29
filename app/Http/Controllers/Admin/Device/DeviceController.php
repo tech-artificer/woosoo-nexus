@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Device;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Device;
 use App\Models\Krypton\Table;
+use App\Models\DeviceRegistrationCode;
+
 
 
 class DeviceController extends Controller
@@ -19,12 +21,15 @@ class DeviceController extends Controller
         // Fetch tables from 3rd-party DB that are NOT assigned
         $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
         $devices = Device::active()->with('table', 'branch')->get(); 
+        $registrationCodes = DeviceRegistrationCode::with(['device'])->get();
+
         
         return Inertia::render('Devices', [
             'title' => 'Device',
             'description' => 'List of Registered Devices',
             'devices' => $devices,
-            'unassignedTables' => $unassignedTables
+            'unassignedTables' => $unassignedTables,
+            'registrationCodes' => $registrationCodes
         ]);
     }
 

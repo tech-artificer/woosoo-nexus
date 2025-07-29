@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DeviceRegistrationCode extends Model
 {
@@ -13,4 +14,8 @@ class DeviceRegistrationCode extends Model
         'used_at',
         'used_by_device_id',
     ];
+
+    public function device() : BelongsTo {
+        return $this->belongsTo(Device::class);
+    }
 }
