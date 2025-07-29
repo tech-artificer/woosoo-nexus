@@ -16,8 +16,17 @@ use Illuminate\Database\Eloquent\Builder;
 
 class MenuBundleController extends Controller
 {
+    
     /**
-     * Handle the incoming request.
+     * Get All Menu Selections
+     *
+     * This endpoint will return a list of all menu items available for selection.
+     *
+     * @see \App\Repositories\Krypton\MenuRepository::getMenusWithModifiers()
+     *
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
      */
     public function __invoke(Request $request)
     {   
