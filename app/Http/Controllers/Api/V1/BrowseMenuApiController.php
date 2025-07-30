@@ -29,8 +29,8 @@ class BrowseMenuApiController extends Controller
     public function getMenus()
     {   
         $menus = $this->menuRepository->getMenus();
-
-        return MenuResource::collection($menus);
+        // return MenuResource::collection($menus);
+        return new MenuResource($menus[0]->load(['image']));
     }
     
     /**
@@ -91,13 +91,28 @@ class BrowseMenuApiController extends Controller
      * @example P1, P2, P3, P4, P5
      * 
      */
-    public function getMenusWithModifiers() 
+    public function getMenusWithModifiers(Request $request) 
     {   
+        $request->validate([
+            /**
+             * @example 1
+            */
+            'menu_id' => ['nullable', 'integer'],
+        ]);
+
         $menus = $this->menuRepository->getMenusWithModifiers();
-     
+
+        if( $request->has('menu_id') ) {
+            
+            $menu = Menu::with('modifiers')->where('id', $request->menu_id)->first();
+            return new MenuResource($menu->load('modifiers'));
+
+        }
+
         if( $menus->isEmpty() ) {
             $menus = Menu::with('modifiers')->whereIn('id', [46, 47, 48])->get();
         }
+       
       
         return MenuResource::collection($menus->load('modifiers'));
     }

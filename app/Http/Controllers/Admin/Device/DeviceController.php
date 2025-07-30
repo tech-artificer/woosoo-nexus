@@ -48,9 +48,19 @@ class DeviceController extends Controller
 
     public function assignTable(Request $request, Device $device)
     {
+        $request->validate([
+            'table_id' => ['required'],
+        ]);
+
+        $table = Table::find($request->table_id);
+
+        if( !$table ) {
+            return back()->with(['error' => 'Table not found']);
+        }
+
         $device->table_id = $request->table_id;
         $device->save();
 
-        return back(); // Don't redirect to 'devices' to avoid full reload
+        return to_route('devices')->with(['success' => 'Device assigned successfully']);
     }
 }

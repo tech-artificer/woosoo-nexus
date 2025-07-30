@@ -5,8 +5,8 @@ import {
     SidebarMenu, 
     SidebarMenuButton, 
     SidebarMenuItem ,
-    SidebarMenuSub,
-    SidebarMenuSubItem,
+    // SidebarMenuSub,
+    // SidebarMenuSubItem,
     SidebarGroupContent
 } from '@/components/ui/sidebar';
 
@@ -18,7 +18,7 @@ import {
 
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { ChevronRight, Circle } from 'lucide-vue-next';
+import { ChevronRight } from 'lucide-vue-next';
 
 defineProps<{
     items: NavItem[];

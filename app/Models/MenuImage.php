@@ -13,6 +13,11 @@ class MenuImage extends Model
 
     protected $fillable = ['path', 'menu_id'];
 
+    protected $casts = [
+        'id' => 'integer',
+        'menu_id' => 'integer',
+    ];
+
     protected static function booted()
     {
         static::deleting(function ($image) {

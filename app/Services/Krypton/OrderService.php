@@ -14,6 +14,7 @@ use App\Models\Krypton\{
     TerminalSession,
     TerminalService,
     CashTraySession,
+    Table,
 };
 use App\Models\Device;
 use App\Models\DeviceOrder;
@@ -54,7 +55,6 @@ class OrderService
             if (!$order) {
                 return false;
             }
-
             // Update the order with terminal and cashier details
             $order->update([
                 'end_terminal_id' => $order->terminal_id, 
@@ -62,9 +62,10 @@ class OrderService
                 'cashier_employee_id' => $attributes['cashier_employee_id'],
             ]);
 
-
             $tableOrder = CreateTableOrder::run($attributes);
-
+            $table = Table::where('id', $device->table_id)->update([
+                'is_available' => false
+            ]);
             // Set additional order details
             $orderCheck = CreateOrderCheck::run($attributes);
             $attributes['order_check_id'] = $order->orderCheck->id;

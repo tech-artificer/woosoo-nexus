@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps } from 'vue';
+import { defineProps, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
@@ -8,6 +8,7 @@ import { Menu } from '@/types/models';
 import { getMenuColumns } from '@/pages/menu/menu-columns';
 // import MenuTable from '@/pages/menus/MenuTable.vue';
 import AppTable from '@/components/datatable/AppTable.vue';
+// import { useToast } from '@/composables/useToast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -18,12 +19,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const columns = getMenuColumns();
 
-defineProps<{
+const props = defineProps<{
     title?: string;
     description?: string;
     menus: Menu[];
-
 }>()
+
+
 
 </script>
 

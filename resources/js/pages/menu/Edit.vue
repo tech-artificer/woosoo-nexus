@@ -1,15 +1,14 @@
 <!-- resources/js/Pages/Menus/EditMenu.vue -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/composables/useToast';
-import { useUpdateModel } from '@/composables/useUpdateModel';
 import { Menu } from '@/types/models';
+import { toast } from 'vue-sonner'
 import {
   Tooltip,
   TooltipContent,
@@ -31,69 +30,68 @@ const props = defineProps<{
   menu: Menu;
 }>();
 
-// Toast for notifications
-// const toast = useToast();
-
-// Dialog state
-const showDialog = ref(false);
-
-// Image preview
-const previewImage = ref<string | null>(props.menu.img_url);
-
-// Reactive menu data (single item for this component)
-const localMenu = ref([props.menu]);
-
-// Initialize the composable for the 'menu' model
-const { form, startEditing, cancelEditing } = useUpdateModel(
-  'menu',
-  'menu',
-  localMenu
-);
-
+const showDialog = ref(false); // Dialog state
+const previewImage = ref<string | null>(props.menu.img_url); // Image preview
+const localMenu = ref([props.menu]); // Reactive menu data (single item for this component)
+const form = useForm({
+  image: null,
+});
 // Open dialog and start editingS
 const openDialog = () => {
   showDialog.value = true;
-  startEditing(props.menu, { image: null }); // Initialize form with image field
 };
-
 // Handle file selection and preview
 function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement;
-  if (input.files?.length) {
-    const file = input.files[0];
-    form.image = file; // Set file in the form
+  const input = e.target as HTMLInputElement | null;
+  if (!input || !input.files?.length) {
+    return;
+  }
+  const file = input.files[0];
+  try {
+    // form.image = file; // Set file in the form
     previewImage.value = URL.createObjectURL(file); // Update preview
     // Optimistic update for img_url
     localMenu.value[0].img_url = previewImage.value;
+  } catch (error: any) {
+    console.error('Error while handling file change', error);
   }
 }
-
 // Submit the image upload
 function submit() {
- 
-  router.post(route('menu.upload.image', props.menu.id), {
+  form.post(route('menu.upload.image', { id: props.menu.id }), {
     forceFormData: true, // <-- THIS is the secret ingredient
-    image: form.image,
+    preserveScroll: true,
+    preserveState: true,
+    onSuccess: () => {
+
+      // console.log('✅ Image uploaded successfully');
+      toast('Image Uploaded:', {
+        description: 'The previous image has been replaced with your new upload.',
+        action: {
+            label: 'Ok',
+            variant: 'success',
+            onClick: () => console.log('Ok'),
+        },
+        duration: 5000,
+        position: 'top-right',
+      });
+      showDialog.value = false;
+    },
+    onError: (errors: any) => {
+      toast('Event has been created', {
+        description: 'Sunday, December 03, 2023 at 9:00 AM',
+        action: {
+          label: 'Undo',
+          onClick: () => console.log('Undo'),
+        },
+        duration: 5000,
+        position: 'top-right',
+      });
+      localMenu.value[0].img_url = props.menu.img_url;
+    },
   });
-  // console.log(form.image);
-  // updateItem(props.menu.id, {
 
-
-  //   method: 'post', // Use POST for image upload
-  //   onSuccessCallback: () => {
-  //     toast.success('✅ Menu image updated!');
-  //     showDialog.value = false;
-  //   },
-  //   onErrorCallback: (errors: any) => {
-  //     console.log(form);
-  //     console.error('❌ Validation error', errors);
-  //     toast.error('❌ Failed to update image');
-  //     // Revert optimistic update
-  //     localMenu.value[0].img_url = props.menu.img_url;
-  //   },
-  // });
 }
-
 // Clean up preview URL on unmount
 onMounted(() => {
   return () => {
@@ -102,6 +100,7 @@ onMounted(() => {
     }
   };
 });
+
 </script>
 <template>
   <Dialog v-model:open="showDialog">
@@ -134,32 +133,27 @@ onMounted(() => {
           Upload or replace the featured image for this menu item.
         </DialogDescription>
       </DialogHeader>
-      <form @submit.prevent="submit" class="space-y-4">
+      <form @submit.prevent="submit" method="put" class="space-y-4">
         <!-- File Input -->
         <div class="grid gap-2">
           <Label for="image" class="text-woosoo-dark-gray">Featured Image</Label>
-          <Input
-            id="image"
-            type="file"
-            accept="image/*"
-            @change="onFileChange"
-            @input="form.image = $event.target.files[0]"
-   
-          />
+          <Input id="image" type="file" :v-model="form.image" accept="image/*" @change="onFileChange"
+            @input="form.image = $event.target.files[0]" />
+          <progress v-if="form.progress" :value="form.progress.percentage" max="100">
+            {{ form.progress.percentage }}%
+          </progress>
           <InputError :message="form.errors.image" />
         </div>
 
         <div class="flex items-center justify-between gap-2 flex-row-reverse mt-5">
-          <Button
-            type="submit"
+          <Button type="submit"
             class="hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark bg-woosoo-accent cursor-pointer text-gray-100 w-50"
-            :disabled="form.processing"
-          >
+            :disabled="form.processing">
             Save Changes
           </Button>
 
           <DialogClose as-child>
-            <Button type="button" variant="secondary" class="cursor-pointer w-50" @click="cancelEditing">
+            <Button type="button" variant="secondary" class="cursor-pointer w-50">
               Close
             </Button>
           </DialogClose>

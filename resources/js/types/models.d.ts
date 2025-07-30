@@ -75,6 +75,7 @@ export interface Menu {
     category: string;
     course: string;
     img_url: string;
+    img_path: string;
     cost: number;
     description: string;
     index: number;

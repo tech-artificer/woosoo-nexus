@@ -22,7 +22,8 @@ class MenuController extends Controller
                 'id' => $menu->id,
                 'name' => $menu->name,
                 'img_url' => $menu->image_url,
-                'image' => MenuImage::where('menu_id', $menu->id)->first(), 
+                // 'img_path' => $menu->image_url,
+                // 'image' => MenuImage::where('menu_id', $menu->id)->first(), 
                 'group' => $menu->group->name ?? null,
                 'category' => $menu->category->name ?? null,
                 'course' => $menu->course->name ?? null,
@@ -51,23 +52,21 @@ class MenuController extends Controller
         ]);
     }
 
-    public function edit(Menu $menu) 
-    {
-        return Inertia::render('menus/EditMenu', [
-            'title' => 'Menu',
-            'description' => 'Menu',
-            'menu' => new MenuResource($menu),
-        ]);
-    }
+    // public function edit(Menu $menu) 
+    // {
+    //     return Inertia::render('menus/Edit', [
+    //         'title' => 'Menu',
+    //         'description' => 'Menu',
+    //         'menu' => new MenuResource($menu),
+    //     ]);
+    // }
 
     public function uploadImage(Request $request, Menu $menu) 
     {
-       
         $validated = $request->validate([
-            'image' => ['required', 'image'],
+            'image' => ['required'],
         ]);
-        
-       
+
         if ($request->hasFile('image')) {
             // Delete old image
             $oldPath = optional($menu->image)->path;
@@ -87,7 +86,7 @@ class MenuController extends Controller
             );
         }
 
-        return back();
+        return back()->with(['success' => true]);
         // return redirect()->route('menus')->with(['success' => true]);
 
         // return response()->json([

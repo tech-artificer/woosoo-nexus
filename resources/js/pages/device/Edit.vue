@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
-import { Pencil, Link } from 'lucide-vue-next'
+import { Pencil, Link, Trash } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { Select } from '@/components/forms'
 
@@ -49,7 +49,16 @@ const submit = () => {
     preserveState: true,
 
     onSuccess: () => {
-      toast.success('Device updated successfully!')
+      toast('Table Assigned:', {
+        description: 'The table has been assigned to the device.',
+        action: {
+            label: 'Ok',
+            variant: 'success',
+            onClick: () => console.log('Ok'),
+        },
+        duration: 5000,
+        position: 'top-right',
+      });
       showDialog.value = false
     },
 
@@ -58,6 +67,11 @@ const submit = () => {
     },
   })
 }
+
+
+onMounted(() => {
+  console.log(props.device)
+});
 </script>
 
 <template>
@@ -66,15 +80,15 @@ const submit = () => {
       <Tooltip>
         <TooltipTrigger as-child>
           <DialogTrigger as-child>
-       
-              <Button v-if="form.table_id != null" variant="ghost" class="cursor-pointer"  disabled>
-                <Link />
-              </Button>
-           
-              <Button v-else variant="ghost" class="cursor-pointer" @click="openDialog">
-                <Link :class="{'opacity-50 pointer-events-none cursor-none': form.table_id != null}"/>
-              </Button>
-        
+
+            <Button v-if="form.table_id" variant="ghost" class="cursor-pointer p-0" disabled>
+              <Link  />
+            </Button>
+
+            <Button v-else variant="ghost" class="cursor-pointer p-0" @click="openDialog">
+              <Link :class="{ 'pointer-events-none cursor-none': form.table_id != null }" />
+            </Button>
+
           </DialogTrigger>
         </TooltipTrigger>
         <TooltipContent>
@@ -86,8 +100,23 @@ const submit = () => {
       <Tooltip>
         <TooltipTrigger as-child>
           <DialogTrigger as-child>
-            <Button variant="ghost" class="cursor-pointer ml-2" disabled >
+            <Button variant="ghost" class="cursor-pointer p-0" disabled>
               <Pencil />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Click to View/Modify</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+
+    <TooltipProvider :delay-duration="100">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <DialogTrigger as-child>
+            <Button variant="ghost" class="cursor-pointer p-0" disabled>
+              <Trash />
             </Button>
           </DialogTrigger>
         </TooltipTrigger>
@@ -113,11 +142,9 @@ const submit = () => {
         </div>
 
         <div class="flex items-center justify-between gap-2 flex-row-reverse mt-2">
-          <Button
-            type="submit"
+          <Button type="submit"
             class="hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark bg-woosoo-accent cursor-pointer text-gray-100 w-50"
-            :disabled="form.processing"
-          >
+            :disabled="form.processing">
             Save Changes
           </Button>
 

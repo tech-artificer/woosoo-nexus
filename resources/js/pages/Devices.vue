@@ -16,7 +16,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-
 const props = defineProps<{
     title?: string;
     description?: string;
@@ -46,22 +45,22 @@ onMounted(() => {
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
               <!-- {{ route().current() }} -->
             <div class="relative min-h-[100vh] flex-1 rounded-xl border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                <Tabs default-value="assigned">
+                <!-- <Tabs default-value="assigned">
                     <TabsList>
                         <TabsTrigger value="assigned">Assigned</TabsTrigger>
                         <TabsTrigger value="unassigned">Unassigned</TabsTrigger>
                         <TabsTrigger value="codes">Codes</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="assigned">
+                    <TabsContent value="assigned"> -->
                         <AppTable :rows="devices" :columns="columns.devices"  />
+                    <!-- </TabsContent> -->
+                    <!-- <TabsContent value="unassigned">
+                        <AppTable :rows="unassignedTables" :columns="columns.devices"  />
                     </TabsContent>
-                    <TabsContent value="unassigned">
-                        <!-- <AppTable :rows="unassignedTables" :columns="columns.device"  /> -->
-                    </TabsContent>
-                   <TabsContent value="codes">
-                        <AppTable :rows="registrationCodes" :columns="columns.codes"  />
-                    </TabsContent>
-                </Tabs>
+                   <TabsContent value="codes"> -->
+                        <!-- <AppTable :rows="registrationCodes" :columns="columns.codes"  /> -->
+                    <!-- </TabsContent> -->
+                <!-- </Tabs>  -->
             </div>
         </div>
     </AppLayout>

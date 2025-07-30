@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\MenuImage;
 use Illuminate\Support\Number;
+use Illuminate\Support\Facades\Storage;
 
 class Menu extends Model
 {
@@ -59,10 +60,16 @@ class Menu extends Model
         return $this->belongsTo(MenuCourse::class, 'menu_course_type_id', 'id');
     }
 
+    public function menuImage(): HasOne
+    {
+        return $this->hasOne(MenuImage::class, 'menu_id');
+    }
+
     public function image(): HasOne
     {
         return $this->hasOne(MenuImage::class, 'menu_id');
     }
+
 
     public function orderedMenus() : HasMany
     {
@@ -89,8 +96,10 @@ class Menu extends Model
 
     public function getImageUrlAttribute()
     {
-        if ($this->image && $this->image->path) {
-            return $this->image->path;
+        $imgPath = MenuImage::where('menu_id', $this->id)->first()->path ?? null;
+
+        if ($imgPath) {
+            return Storage::disk('public')->url($imgPath);
         }
 
         return asset('images/menu-placeholder/1.jpg');

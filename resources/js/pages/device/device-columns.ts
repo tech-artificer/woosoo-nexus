@@ -10,14 +10,14 @@ export const getDeviceColumns = (unassignedTables: Table[]): ColumnDef<Device>[]
   {
     accessorKey: 'name',
     header: 'Device',
-    cell: ({ row }) => h('div', { class: 'capitalize' }, row.getValue('name')),
+    cell: ({ row }) => h('div', { class: 'capitalize w-25' }, row.getValue('name')),
   },
   {
     accessorKey: '',
     header: 'Branch',
     cell: ({ row }) => {
       const branchName = row.original.branch?.name;
-      return h('div', { class: 'capitalize' }, branchName);
+      return h('div', { class: 'capitalize w-25' }, branchName);
     },
   },
   {
@@ -42,7 +42,7 @@ export const getDeviceColumns = (unassignedTables: Table[]): ColumnDef<Device>[]
   },
   {
     accessorKey: 'is_active',
-    header: () => h('div', { class: 'text-center w-15' }, 'Active'),
+    header: () => h('div', { class: 'text-center w-15' }, 'Status'),
     cell: ({ row }) => {
         return h(ActiveBadge, { row: row.original, class: 'text-center w-15' })
     } 
@@ -52,7 +52,7 @@ export const getDeviceColumns = (unassignedTables: Table[]): ColumnDef<Device>[]
     header: '',
     cell: ({ row }) => {
       const device = row.original
-      return h(DeviceEditDialog, {
+      return h(DeviceEditDialog, { class : 'justify-end w-15',
         device,
         unassignedTables,
       })

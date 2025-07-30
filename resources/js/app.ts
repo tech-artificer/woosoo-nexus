@@ -12,6 +12,15 @@ import Pusher from 'pusher-js';
 // Make Pusher globally available for Echo
 window.Pusher = Pusher;
 
+if( 'performance' in window ) {
+    console.log('This browser supports performance.now()');
+    console.log(window.performance.now());
+    window.performance.now();
+}else{
+    console.log('This browser does not support performance.now()');
+}
+
+
 // const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content'); // Get the CSRF token
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',

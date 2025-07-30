@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
-import { Toaster, toast } from 'vue-sonner'
-
-import { watch } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { Toaster } from '@/components/ui/sonner'
+import 'vue-sonner/style.css' 
+// import { watch } from 'vue';
+// import { usePage } from '@inertiajs/vue3';
 
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 //     };
 // }
 
-const page = usePage();
+// const page = usePage();
 
 
 withDefaults(defineProps<Props>(), {
@@ -26,11 +26,11 @@ withDefaults(defineProps<Props>(), {
 });
 
 // 🟢 Watch for Flash Messages (Typed + Reactive)
-watch(() => page.props.flash, (message) => {
-    if (message) {
-        toast.success(message, { duration: 3000 });
-    }
-});
+// watch(() => page.props.flash, (message) => {
+//     if (message) {
+//         toast.success(message, { duration: 3000 });
+//     }
+// });
 
 </script>
 
