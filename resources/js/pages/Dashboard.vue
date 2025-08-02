@@ -18,6 +18,7 @@ const terminalSession = page.props.terminalSession as { id?: any } || {};
 // const terminalSession = page.props.terminalSession as { id?: any } || {};
 const cashTraySession = page.props.cashTraySession as { id?: any } || {};
 const employeeLogs = page.props.employeeLog as { id?: any } || {};
+const flag = page.props.flag as boolean || false;
 
 interface ActiveSession {
   id?: any;
@@ -58,38 +59,39 @@ const activeSessions: ActiveSession[] = [
         id: session?.id,
         title: 'Session #',
         icon: LockOpen,
-        is_active: true
+        is_active: flag == true
     },
     {
         id: terminalSession?.id,
         title: 'Terminal Session #',
         icon: Terminal,
-        is_active: true
+        is_active: flag == true
     },
     {
         id: employeeLogs?.id,
         title: 'Log #',
         icon: Fingerprint,
-        is_active: true
+        is_active: flag == true
     },
     {
         id: cashTraySession?.id,
         title: 'Cash Tray Session #',
         icon: Fingerprint,
-        is_active: false
+        is_active: flag == true
     },
     
 ];
 
 const services = ref([
     { key: 'reverb', name: 'Reverb', description: 'Broadcast server', status: 'checking', loading: false },
-    { key: 'deviceCodes', name: 'Device Codes', description: 'Generates device codes', status: 'checking', loading: false },
-    { key: 'paymentTrigger', name: 'Payment Trigger', description: 'Order payment logs', status: 'checking', loading: false },
+    // { key: 'deviceCodes', name: 'Device Codes', description: 'Generates device codes', status: 'checking', loading: false },
+    // { key: 'paymentTrigger', name: 'Payment Trigger', description: 'Order payment logs', status: 'checking', loading: false },
     { key: 'scheduler', name: 'Scheduled Jobs', description: 'Background tasks', status: 'checking', loading: false }
 ]);
 
 const fetchStatuses = async () => {
   const { data } = await axios.get('/api/service-status');
+  console.log(data);
   services.value.forEach(service => {
     service.status = data[service.key] || 'unknown';
   });

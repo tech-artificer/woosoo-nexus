@@ -30,23 +30,12 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        // $context = new KryptonContextService();
-        // $currentSessions = $context->getCurrentSessions();
-
-        // $orders = OrderRepository::getAllOrdersWithDeviceData($currentSessions);
-        // $orders = Order::with(['tableOrders','orderChecks', 'orderedMenus'])->whereDate('created_on', Carbon::yesterday())->get();
-
-        // $orders = DeviceOrder::select('order_id', 'order_number', 'device_id', 'table_id')->with(['device'])
-        //         ->where('terminal_session_id', $terminalSession->id)
-        //         ->get();
-
-        // foreach ($orders as $order) {
-        //     $order->orderChecks = OrderCheck::where('order_id', $order->id)->get();
-        //     // $order->order_checks;
-        //     // $order->order->ordered_menus;
-        // }
-
-        $orders = DeviceOrder::with(['device', 'order', 'table', 'order'])->get(); 
+        $orders = DeviceOrder::with(['device', 'order', 'table', 'order'])
+                    // ->whereDate('created_at', Carbon::today())
+                    // ->where('status', OrderStatus::CONFIRMED)
+                    ->orderBy('table_id', 'asc')
+                    ->orderBy('created_at', 'desc')
+                    ->get();
         
         return Inertia::render('Orders', [
             'title' => 'Orders',

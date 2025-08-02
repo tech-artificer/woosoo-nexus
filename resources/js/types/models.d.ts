@@ -50,6 +50,7 @@ export interface Device {
 }
 
 export interface DeviceOrder {
+    items: OrderedMenu[];
     id: number;
     name: string;
     device_id: number;

@@ -39,6 +39,7 @@ class ServiceMonitorController extends Controller
     private function isProcessRunning($keyword)
     {
         $output = shell_exec("ps aux | grep '{$keyword}' | grep -v grep");
-        return $output ? 'running' : 'stopped';
+        return $output;
+        // return $output ? 'running' : 'stopped';
     }
 }

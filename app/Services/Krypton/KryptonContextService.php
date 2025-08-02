@@ -9,20 +9,34 @@ use App\Models\Krypton\Terminal;
 use App\Models\Krypton\CashTraySession;
 use App\Models\Krypton\TerminalService;
 use App\Models\Krypton\Revenue;
+use Carbon\Carbon;
 
 class KryptonContextService
-{
+{  
     public $currentSessions = [];
     public $data = [];
 
     public function __construct()
     {
+        $today = Carbon::now();
+        $flag = true;
+
+
         $terminal = Terminal::where(['id' => 1 ])->first();
 
         $session = Session::query()
             ->whereNull('date_time_closed')
+            ->whereDate('date_time_opened', '=', $today)
             ->orderByDesc('id')
             ->first();
+
+        if( !$session ) {
+            $flag = false;
+            $session = Session::query()
+                ->whereNull('date_time_closed')
+                ->orderByDesc('id')
+                ->first();
+        }
 
         $terminalSession = TerminalSession::query()
             ->whereNull('date_time_closed')
@@ -62,6 +76,7 @@ class KryptonContextService
             'employeeLog' => $employeeLog,
             'cashTraySession' => $cashTraySession,
             'terminalService' => $terminalService,
+            'sessionFlag' => $flag,
         ];
 
         $this->data = [

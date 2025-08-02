@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Table } from '@tanstack/vue-table'
-import { Order } from '@/types/models'
 import { ChevronLeft, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button'
 import {
@@ -10,9 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import  { DeviceOrder } from '@/types/models';
 
 interface DataTablePaginationProps {
-  table: Table<Order>
+  table: Table<DeviceOrder | any>
 }
 defineProps<DataTablePaginationProps>()
 </script>
@@ -20,10 +20,10 @@ defineProps<DataTablePaginationProps>()
 <template>
   <div class="flex items-center justify-between px-2">
 
-    <!-- <div class="flex-1 text-sm text-muted-foreground">
+    <div class="flex-1 text-sm text-muted-foreground">
       {{ table.getFilteredSelectedRowModel().rows.length }} of
       {{ table.getFilteredRowModel().rows.length }} row(s) selected.
-    </div> -->
+    </div>
     <div class="flex items-center space-x-6 lg:space-x-8">
       <div class="flex items-center space-x-2">
         <p class="text-sm font-medium">

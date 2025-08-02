@@ -6,7 +6,7 @@ import { Head } from '@inertiajs/vue3';
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DeviceOrder } from '@/types/models';
 import { getOrderColumns } from '@/pages/order/order-columns';
-import AppTable from '@/components/datatable/AppTable.vue';
+import AppTable from '@/pages/order/OrderTable.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -81,7 +81,7 @@ const addOrder = (order: DeviceOrder) => {
 };
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-  console.log(event); 
+  // console.log(event); 
   if (isUpdate) {
     updateOrder(event);
   } else {
@@ -107,8 +107,6 @@ onMounted(() => {
       .error((error: DeviceOrder) => {
         console.error('Error connecting to admin.orders channel:', error);
       });
-    
-    
   }
 });
 
@@ -124,7 +122,9 @@ onUnmounted(() => {
   <Head :title="title" :description="description" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="p-6">  
+    <!-- <pre>{{ ordersList }}</pre> -->
+
+    <div class="p-6">
       <AppTable :rows="ordersList" :columns="columns" :filter="false" />
     </div>
   </AppLayout>

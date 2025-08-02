@@ -48,15 +48,22 @@ return Application::configure(basePath: dirname(__DIR__))
     
     ->withExceptions(function (Exceptions $exceptions) {
        $exceptions->render(function (QueryException $exception, Request $request) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error Occurred.',
-            ]);
-            // if ($exception->errorInfo[1] == 1062) {
-            //     return response()->json([
-            //         'message' => 'Duplicate Entry Detected.',
-            //     ], 409);
-            // }
+
+            if( $request->is('api/*') ) {
+
+                if ($exception->errorInfo[1] == 1062) {
+                    return response()->json([
+                        'message' => 'Duplicate Entry Detected.',
+                    ], 409);
+                }
+
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Error Occurred.',
+                ]);
+            }
+           
+           
 
             // // Not a duplicate entry? Let Laravel handle it.
             // throw $exception;
