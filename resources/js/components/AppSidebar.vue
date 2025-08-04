@@ -31,6 +31,12 @@ const mainNavItems: NavItem[] = [
                 icon: EllipsisVertical,
                 isActive: false,
             },
+            {
+                title: 'Order History',
+                href: '/orders/history',
+                icon: EllipsisVertical,
+                isActive: false,
+            },
         ]
     },
     {

@@ -24,6 +24,7 @@ class KryptonContextService
 
         $terminal = Terminal::where(['id' => 1 ])->first();
 
+        $sessionId = Session::fromQuery('CALL get_latest_session_id()')->first();
         $session = Session::query()
             ->whereNull('date_time_closed')
             ->whereDate('date_time_opened', '=', $today)
@@ -48,11 +49,11 @@ class KryptonContextService
             ->orderByDesc('id')
             ->first();
         
-        $cashTraySession = CashTraySession::query()
-            ->where('session_id', $session->id)
-            ->orderByDesc('id')
-            ->first();
-        
+        $cashTraySession = CashTraySession::where('session_id', $session->id)->first();
+            // ->where('session_id', $sessionId)
+            // ->orderByDesc('id')
+            // ->first();
+          
         $terminalService = TerminalService::where('terminal_id', $terminal->id)->first();
         
         $revenue = Revenue::where(['id' => $terminalService->revenue_id, 'is_active' => true])->first();

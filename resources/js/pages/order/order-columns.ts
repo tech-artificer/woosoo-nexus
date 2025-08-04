@@ -39,7 +39,7 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         header: 'Package',
         cell: ({ row }) => {
             const setMeal = row.original.items[0]?.receipt_name;
-            console.log(JSON.stringify(row.original.items[0].receipt_name));
+            // console.log(JSON.stringify(row.original.items[0].receipt_name));
             return h( 'div', { class: 'capitalize' },  `${setMeal} `); //| ${row.original.id}
         },
     },

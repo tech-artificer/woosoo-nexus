@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed  } from 'vue';
+// watch, computed  ref,
+import { onMounted, onUnmounted, } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DeviceOrder } from '@/types/models';
 import { getOrderColumns } from '@/pages/order/order-columns';
@@ -24,9 +25,21 @@ const props = defineProps<{
   orders: DeviceOrder[]; // You can refine this to Order[] if needed
 }>()
 
+const form = useForm({
+ 
+});
+
+const fetchData = (url: string) => {
+  form.get(url, { 
+        preserveState: true,
+        replace: true, // Replace history entry
+  });
+}
+
+
 // 🔁 Make the orders reactive so we can push to it later
-const reactiveOrders = ref<DeviceOrder[]>([...props.orders]);
-const ordersMap = reactiveOrders.value
+// const reactiveOrders = ref<DeviceOrder[]>([...props.orders]);
+// const ordersMap = reactiveOrders.value
 // 🧠 Find and update an order by ID
 // function updateOrder(order: DeviceOrder) {
 //   const index = reactiveOrders.value.findIndex(o => o.id === order.id);
@@ -61,36 +74,50 @@ const ordersMap = reactiveOrders.value
 //   }
 // };
 
-watch(reactiveOrders, (val) => {
-  console.log('Orders changed!', val);
-});
+// watch(reactiveOrders, (val) => {
+//   console.log('Orders changed!', val);
+// });
 
-const updateOrder = (order: DeviceOrder) => {
-  if (ordersMap[order.id]) {
-    Object.assign(ordersMap[order.id], order);
-    console.log('Order updated:', order);
-  }
-};
+// const updateOrder = (order: DeviceOrder) => {
 
-// Add new order — does NOT trigger deep watchers on existing data
-const addOrder = (order: DeviceOrder) => {
-  if (!ordersMap[order.id]) {
-    ordersMap[order.id] = order;
-    console.log('New order added:', order);
-  }
-};
+//    console.log(order)
+
+//   if (ordersMap[order.id]) {
+//     Object.assign(ordersMap[order.id], order);
+//     console.log('Order updated:', order);
+//   }
+// };
+
+// // Add new order — does NOT trigger deep watchers on existing data
+// const addOrder = (order: DeviceOrder) => {
+//   if (!ordersMap[order.id]) {
+//     ordersMap[order.id] = order;
+//     console.log('New order added:', order);
+//   }
+// };
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-  // console.log(event); 
-  if (isUpdate) {
-    updateOrder(event);
-  } else {
-    addOrder(event);
+
+  if( isUpdate ) {
+
+
   }
+    
+    fetchData(route('orders.live'));
+    // addOrder(event);
+
+ 
+  // console.log(isUpdate);
+  // console.log(event); 
+  // if (isUpdate) {
+  //   updateOrder(event);
+  // } else {
+  //   addOrder(event);
+  // }
 };
 
 // Computed array version if needed for rendering
-const ordersList = computed(() => Object.values(ordersMap));
+// const ordersList = computed(() => Object.values(ordersMap));
 
 onMounted(() => {
   console.log('Display.vue mounted. Joining "admin.orders" channel.');
@@ -104,6 +131,7 @@ onMounted(() => {
     window.Echo.private('admin.orders')
       .listen('.order.created', (e: DeviceOrder) => handleOrderEvent(e, false))
       .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
+      .listen('.order.voided', (e: DeviceOrder) => handleOrderEvent(e, true))
       .error((error: DeviceOrder) => {
         console.error('Error connecting to admin.orders channel:', error);
       });
@@ -125,7 +153,7 @@ onUnmounted(() => {
     <!-- <pre>{{ ordersList }}</pre> -->
 
     <div class="p-6">
-      <AppTable :rows="ordersList" :columns="columns" :filter="false" />
+      <AppTable :rows="orders" :columns="columns" :filter="false" />
     </div>
   </AppLayout>
 </template>

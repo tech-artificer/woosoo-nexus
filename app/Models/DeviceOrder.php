@@ -10,6 +10,7 @@ use App\Models\Krypton\Table;
 use App\Models\Krypton\Order;
 use App\Enums\OrderStatus;
 use Illuminate\Support\Str; 
+use Illuminate\Database\Eloquent\Builder;
 
 class DeviceOrder extends Model
 {
@@ -117,5 +118,13 @@ class DeviceOrder extends Model
     public function order(): HasOne
     {
         return $this->hasOne(Order::class, 'id', 'order_id');
+    }
+
+
+
+    public function scopeActiveOrder(Builder $query) {
+        
+        return $query->where('status', OrderStatus::CONFIRMED);
+
     }
 }

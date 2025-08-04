@@ -35,6 +35,7 @@ class OrderController extends Controller
                     // ->where('status', OrderStatus::CONFIRMED)
                     ->orderBy('table_id', 'asc')
                     ->orderBy('created_at', 'desc')
+                    ->activeOrder()
                     ->get();
         
         return Inertia::render('Orders', [

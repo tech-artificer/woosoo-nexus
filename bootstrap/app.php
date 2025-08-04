@@ -11,6 +11,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+// use App\Http\Middleware\CheckSessionIsOpened;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(append: [
             ForceJsonResponse::class,
+            // CheckSessionIsOpened::class,
             SubstituteBindings::class,
         ]);
 
@@ -57,10 +59,10 @@ return Application::configure(basePath: dirname(__DIR__))
                     ], 409);
                 }
 
-                 return response()->json([
-                    'success' => false,
-                    'message' => 'Error Occurred.',
-                ]);
+                //  return response()->json([
+                //     'success' => false,
+                //     'message' => 'Error Occurred.',
+                // ]);
             }
            
            

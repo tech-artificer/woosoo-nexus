@@ -17,18 +17,18 @@ import {
   getFilteredRowModel,
 } from '@tanstack/vue-table'
 
-import { Search } from 'lucide-vue-next'
-import { Input } from '@/components/ui/input'
+// import { Search } from 'lucide-vue-next'
+// import { Input } from '@/components/ui/input'
 
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+// import {
+//   Select,
+//   SelectContent,
+//   SelectGroup,
+//   SelectItem,
+//   SelectLabel,
+//   SelectTrigger,
+//   SelectValue,
+// } from '@/components/ui/select'
 
 import {
   Table,
@@ -77,25 +77,27 @@ const table = useVueTable({
   }
 })
 
+console.log(table)
+
 </script>
 
 <template>
 
   <div class="flex flex-col gap-4">
 
-    <div class="flex items-center justify-start gap-2">
+    <!-- <div class="flex items-center justify-start gap-2"> -->
 
-    <div class="relative w-full max-w-sm items-center">
+    <!-- <div class="relative w-full max-w-sm items-center">
       <Input class="pl-10" placeholder="Filter..." 
-        :model-value="table.getColumn('device')?.getFilterValue() as string"
-        @update:model-value=" table.getColumn('device')?.setFilterValue($event)" />
+        :model-value="table.getColumn('id')?.getFilterValue() as string"
+        @update:model-value=" table.getColumn('id')?.setFilterValue($event)" />
       <span class="absolute start-0 inset-y-0 flex items-center justify-center px-2">
         <Search class="size-6 text-muted-foreground" />
       </span> 
 
-    </div>
+    </div> -->
 
-    <div class="relative w-full max-w-sm items-center">
+    <!-- <div class="relative w-full max-w-sm items-center">
       
       <Select>
         <SelectTrigger>
@@ -124,9 +126,9 @@ const table = useVueTable({
         </SelectContent>
       </Select>
 
-    </div>
+    </div> -->
 
-    </div>
+    <!-- </div> -->
 
 
 
@@ -143,7 +145,7 @@ const table = useVueTable({
         <TableBody>
           <template v-if="table.getRowModel().rows?.length">
             <TableRow v-for="row in table.getRowModel().rows" :key="row.id"
-              :data-state="row.getIsSelected() ? 'selected' : undefined">
+              :data-state="row.getIsSelected() ? ' selected ' : undefined">
               <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                 <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
               </TableCell>
@@ -161,7 +163,7 @@ const table = useVueTable({
     </div>
 
     <div>
-      <div class="flex items-center justify-end py-4 space-x-2">
+      <div class="flex items-center justify-center">
         <AppTablePagination :table="table" />
       </div>
     </div>

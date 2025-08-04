@@ -18,7 +18,7 @@ const terminalSession = page.props.terminalSession as { id?: any } || {};
 // const terminalSession = page.props.terminalSession as { id?: any } || {};
 const cashTraySession = page.props.cashTraySession as { id?: any } || {};
 const employeeLogs = page.props.employeeLog as { id?: any } || {};
-const flag = page.props.flag as boolean || false;
+const flag = page.props.sessionFlag as boolean || false;
 
 interface ActiveSession {
   id?: any;
@@ -91,7 +91,7 @@ const services = ref([
 
 const fetchStatuses = async () => {
   const { data } = await axios.get('/api/service-status');
-  console.log(data);
+//   console.log(data);
   services.value.forEach(service => {
     service.status = data[service.key] || 'unknown';
   });
@@ -124,37 +124,8 @@ onMounted(() => {
     <Head :title="props.title" :description="props.description" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-            <!-- <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-           
-                <div class="relative p-4">
-                    <h2 class="text-lg font-semibold">Service Workers</h2>
-                    <ol class="flex flex-col gap-3 text-sm leading-normal mt-2 w-full">
-                        <li>Start Reverb 
-                            <code class="block">app:reverb-start</code>
-                        </li>
-                        <li>
-                            Generate Device Codes 
-                            <code class="block">devices:generate-codes</code>
-                        </li>
-                        <li>
-                            Setup Payment Trigger 
-                            <small class="block">Creates a log table and trigger to capture order updates</small>
-                            <code class="block">pos:setup-payment-trigger</code>
-                        </li>
-                        <li>
-                            Run Scheduled Jobs
-                            <code class="block">schedule:work</code>
-                        </li>
-                    </ol>
-                </div>
-           
-               <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      
-                    </div>
-                </div> 
-            </div> -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
                 <Card v-for="activeSession in activeSessions" :key="activeSession.id" class="w-full">
                     <CardContent class="flex items-center justify-between">
