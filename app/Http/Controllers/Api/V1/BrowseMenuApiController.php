@@ -26,11 +26,23 @@ class BrowseMenuApiController extends Controller
      * @return array
      * 
      */
-    public function getMenus()
+    public function getMenus(Request $request)
     {   
+        $request->validate([
+            /**
+             * @example 1
+            */
+            'menu_id' => ['nullable', 'integer'],
+        ]);
+
+        if(  $request->has('menu_id') ) {
+            $menu = Menu::with(['modifiers', 'image'])->where('id', $request->menu_id)->first();
+            return new MenuResource($menu);
+        }
+
         $menus = $this->menuRepository->getMenus();
-        // return MenuResource::collection($menus);
-        return new MenuResource($menus[0]->load(['image']));
+        
+        return MenuResource::collection($menus->load(['modifiers','image'])) ?? [];
     }
     
     /**
@@ -55,11 +67,11 @@ class BrowseMenuApiController extends Controller
         ]);
 
         $allModifierGroups = $this->menuRepository->getAllModifierGroups() ?? [];
-        $menus = collect($allModifierGroups)->unique('id')->values() ?? [];
+        $menus = collect($allModifierGroups->load(['image']))->unique('id')->values() ?? [];
       
         if ( $request->has('modifiers') && $request->modifiers == true ) {
             foreach($menus as $menu) {
-                $menu->load('modifiers');
+                $menu->load(['image']);
                 $menu->modifiers = $this->menuRepository->getMenuModifiersByGroup($menu->id);
             }
         }
@@ -79,7 +91,7 @@ class BrowseMenuApiController extends Controller
     public function getMenuModifiers() 
     {
         $menuModifierIds = $this->menuRepository->getMenuModifiers()->pluck('id');
-        $menus = Menu::whereIn('id', $menuModifierIds)->get();
+        $menus = Menu::with(['image'])->whereIn('id', $menuModifierIds)->get();
         return MenuModifierResource::collection($menus);
     }
 
@@ -104,17 +116,24 @@ class BrowseMenuApiController extends Controller
 
         if( $request->has('menu_id') ) {
             
-            $menu = Menu::with('modifiers')->where('id', $request->menu_id)->first();
-            return new MenuResource($menu->load('modifiers'));
-
+            $menu = Menu::with(['modifiers', 'image'])->where('id', $request->menu_id)->first();
+            return new MenuResource($menu);
         }
 
         if( $menus->isEmpty() ) {
-            $menus = Menu::with('modifiers')->whereIn('id', [46, 47, 48])->get();
+            $menus = Menu::with(['modifiers', 'image'])->whereIn('id', [46, 47, 48])->get();
+        }else{
+
+            $menusWithModifiers = Menu::with(['modifiers', 'image'])->whereIn('id', $menus->pluck('id'))->get();
+
+            foreach($menusWithModifiers as $menu) {
+                $menu->modifiers = $menu->getModifiers($menu->id);
+            }
+
+            return MenuResource::collection($menusWithModifiers);
         }
-       
-      
-        return MenuResource::collection($menus->load('modifiers'));
+
+        return MenuResource::collection($menus);
     }
 
     /**
@@ -139,7 +158,7 @@ class BrowseMenuApiController extends Controller
         ]);
         
         $menusByCourse = $this->menuRepository->getMenusByCourse($request->course)->pluck('id') ?? [];
-        $menus = Menu::whereIn('id', $menusByCourse)->get();
+        $menus = Menu::with(['image'])->whereIn('id', $menusByCourse)->get();
 
         return MenuResource::collection($menus);
     }
@@ -163,7 +182,7 @@ class BrowseMenuApiController extends Controller
         ]);
 
         $menusByCategory = $this->menuRepository->getMenusByCategory($request->category)->pluck('id') ?? [];
-        $menus = Menu::whereIn('id', $menusByCategory)->get();
+        $menus = Menu::with(['image'])->whereIn('id', $menusByCategory)->get();
 
         return MenuResource::collection($menus);
     }
@@ -187,7 +206,7 @@ class BrowseMenuApiController extends Controller
         ]);
 
         $menusByGroup = $this->menuRepository->getMenusByGroup($request->group)->pluck('id') ?? [];
-        $menus = Menu::whereIn('id', $menusByGroup)->get();
+        $menus = Menu::with(['image'])->whereIn('id', $menusByGroup)->get();
 
         return MenuResource::collection($menus);
     }

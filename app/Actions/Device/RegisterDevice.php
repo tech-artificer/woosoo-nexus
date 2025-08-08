@@ -19,7 +19,8 @@ class RegisterDevice
         $device = Device::create([
             'name' => $data['name'],
             'table_id' => $data['table_id'] ?? null,
-            'last_ip_address' => $data['last_ip_address'] ?? null,
+            'ip_address' => $data['ip_address'] ?? null,
+            'last_ip_address' => $data['ip_address'] ?? null,
         ]);
 
         $code->update([

@@ -117,7 +117,7 @@ class Menu extends Model
             ],
         ];
 
-        return Menu::whereIn('receipt_name', $codes[$id])->where('is_modifier_only', true)->get();
+        return Menu::with(['image'])->whereIn('receipt_name', $codes[$id])->where('is_modifier_only', true)->get();
     }
 
     public function getComputedModifiersAttribute()
@@ -136,10 +136,21 @@ class Menu extends Model
             ],
         ];
 
-        return Menu::whereIn('receipt_name', $codes[$this->id])
+        return Menu::with(['image'])->whereIn('receipt_name', $codes[$this->id])
             ->whereHas('group', function ($query) {
                 $query->where('name', 'Meat Order');
             })
             ->get();
+    }
+
+    public function loadModifiers() {
+    
+        $modifiers = $this->getComputedModifiersAttribute();
+
+        if( $modifiers->isEmpty() ) {
+            $modifiers = $this->modifiers;
+        }
+
+        return $modifiers ?? [];
     }
 }

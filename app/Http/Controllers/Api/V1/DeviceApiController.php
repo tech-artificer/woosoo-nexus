@@ -29,7 +29,7 @@ class DeviceApiController extends Controller
      */
     public function show(Device $device)
     {
-        return new DeviceResource($device);
+        return new DeviceResource($device->load(['table']));
     }
 
     public function heartbeat(Request $request) {

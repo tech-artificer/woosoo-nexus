@@ -34,7 +34,8 @@ class MenuModifierResource extends JsonResource
             // 'quantity' => $this->quantity,
             'is_modifier' => $this->is_modifier,
             'is_modifier_only' => $this->is_modifier_only,
-            'img_url' => $placeholder,
+            'img_url' => $this->image_url ?? $this->image->path ?? $placeholder,
+            // 'img_path' => $this->image_url,
         ];
     }
 }

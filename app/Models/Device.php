@@ -26,6 +26,7 @@ class Device extends Model
         'table_id',
         'is_active',
         'app_version',
+        'ip_address',
         'last_ip_address',
         'last_seen_at',
     ];

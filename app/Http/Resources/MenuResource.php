@@ -29,7 +29,7 @@ class MenuResource extends JsonResource
             'kitchen_name' => $this->kitchen_name,
             'receipt_name' => $this->receipt_name,
             'price' => $this->price,
-            // 'cost' => $this->cost,
+            'cost' => $this->cost,
             // 'description' => $this->description,
             'index' => $this->index,
             'is_taxable' => $this->is_taxable,
@@ -56,14 +56,15 @@ class MenuResource extends JsonResource
             // 'best_seller_candidate' => $this->best_seller_candidate,
             // 'calories' => $this->calories,
             // 'guest_count' => $this->guest_count,
-            'img_url' => $this->image->path ?? $placeholder,
+            'img_url' => $this->image_url ?? $this->image->path ?? $placeholder,
             // 'image' => $this->image?->path,
             // 'images' => $this->menuImage,
-            'img_path' => $this->image_url,
+            // 'img_path' => $this->image_url,
             // 'tax' => $this->whenLoaded('tax', new TaxResource($this->tax)) ?? null,
             'tax_amount' => $this->taxComputation($this->guest_count),
+            'modifiers' => $this->whenLoaded('modifiers', MenuModifierResource::collection($this->loadModifiers())),
             // 'modifiers' => $this->whenLoaded('modifiers', MenuModifierResource::collection($this->modifiers)) ?? null,
-            'modifiers' => MenuModifierResource::collection($this->getComputedModifiersAttribute()),
+            // 'modifiers' => MenuModifierResource::collection($this->getComputedModifiersAttribute()),
         ];
     }
 }
