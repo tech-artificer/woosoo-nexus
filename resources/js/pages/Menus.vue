@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, onMounted } from 'vue';
+import { defineProps } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
@@ -19,7 +19,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const columns = getMenuColumns();
 
-const props = defineProps<{
+defineProps<{
     title?: string;
     description?: string;
     menus: Menu[];

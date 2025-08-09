@@ -29,25 +29,10 @@ use App\Http\Controllers\Api\V1\Krypton\{
 };
 Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 
-// Route::options('{any}', function () {
-//     return response()->json(['status' => 'ok']);
-// })->where('any', '.*');
-
-// Route::get('/check', function (Request $request) {
-//     return response()->json([
-//         'user' => auth()->user(),
-//         'request' => $request
-//     ]);
-    
-// })->middleware('auth:device');
-
-
-
+Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
 
 Route::middleware(['api'])->group(function () {
-    // Route::post('/login', [AuthApiController::class, 'authenticate'])->name('api.user.login');
-    
-    Route::post('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+
     Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
 
     Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');

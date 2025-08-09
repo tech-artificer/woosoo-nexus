@@ -53,13 +53,23 @@ class DeviceAuthApiController extends Controller
      */
     public function authenticate(Request $request)
     {
-        $validated = $request->validate([
-           'device_uuid' => ['required', 'exists:devices,device_uuid'],
-        ]);
+        // $validated = $request->validate([
+        //    'device_uuid' => ['nullable'],
+        //    'ip_address' => ['nullable', 'string', 'max:255'],
+        // ]);
 
-        $device = Device::where('device_uuid', $validated['device_uuid'])->first();
+        $ip = $request->ip();
+       
+        $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
 
-        $device->update(['last_active_at' => now()]);
+        if(  !$device ) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Device not found'
+            ], 404);
+        }
+
+        $device->update(['last_seen_at' => now()]);
 
         // Revoke all existing tokens (optional)
         $device->tokens()->delete();
@@ -79,12 +89,11 @@ class DeviceAuthApiController extends Controller
         )->plainTextToken;
         
         return response()->json([
+            'success' => true,
             'token' => $token,
             'device' => $device,
             'expires_at' => now()->addDays(7)->toDateTimeString()
         ]);
-
-
     }
 
 

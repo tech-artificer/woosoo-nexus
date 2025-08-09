@@ -167,7 +167,7 @@ const footerActiveSessions: ActiveSession[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :items="mainNavItems" class="font-light" />
         </SidebarContent>
         <SidebarFooter>
             <NavFooter :items="footerActiveSessions" />

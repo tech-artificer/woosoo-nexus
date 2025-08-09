@@ -34,14 +34,8 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
         header: 'Available',
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
-            return h( AppIconExp, { class: 'text-green-500 center', isTrue: row.original.is_available });
+            return h( AppIconExp, { class: 'text-green-500', isTrue: row.original.is_available });
         },
-    },{
-       // Use an accessor function to extract the nested value for sorting/filtering
-        accessorKey: 'img_url',
-        header: 'Featured Image',
-        // The cell function now just receives the extracted value from accessorFn
-        cell: ({ row }) => h('div', { class: '' }, row.getValue('img_url')),
     },
      {
         accessorKey: 'id',
@@ -52,7 +46,14 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
             menu
           })
         },
-      }
+    },
+    // ,{
+    //    // Use an accessor function to extract the nested value for sorting/filtering
+    //     accessorKey: 'img_url',
+    //     header: 'Featured Image',
+    //     // The cell function now just receives the extracted value from accessorFn
+    //     cell: ({ row }) => h('div', { class: '' }, row.getValue('img_url')),
+    // }
    
   
   
