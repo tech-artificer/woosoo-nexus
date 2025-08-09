@@ -27,6 +27,16 @@ class DeviceAuthApiController extends Controller
     {
         $validated = $request->validated();
         $validated['ip_address'] = $request->ip(); // Capture the device's IP address
+
+        $device = Device::where(['ip_address' => $validated['ip_address']])->first();
+
+        if( $device ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Device already registered'
+            ]);
+        }
+
         $device = RegisterDevice::run($validated);
         
         // Create token with device info
@@ -36,6 +46,7 @@ class DeviceAuthApiController extends Controller
         )->plainTextToken;
         
         return response()->json([
+            'success' => true,
             'token' => $token,
             'device' => $device,
             'expires_at' => now()->addDays(7)->toDateTimeString()
@@ -58,6 +69,8 @@ class DeviceAuthApiController extends Controller
         //    'ip_address' => ['nullable', 'string', 'max:255'],
         // ]);
 
+
+        return $request->header('user-agent'); 
         $ip = $request->ip();
        
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
