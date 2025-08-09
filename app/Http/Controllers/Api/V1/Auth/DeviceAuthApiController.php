@@ -69,8 +69,6 @@ class DeviceAuthApiController extends Controller
         //    'ip_address' => ['nullable', 'string', 'max:255'],
         // ]);
 
-
-        return $request->header('user-agent'); 
         $ip = $request->ip();
        
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
