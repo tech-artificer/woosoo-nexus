@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Number;
 
 class MenuModifierResource extends JsonResource
 {
@@ -23,6 +24,8 @@ class MenuModifierResource extends JsonResource
             'category' => $this->category->name ?? null,
             'kitchen_name' => $this->kitchen_name,
             'receipt_name' => $this->receipt_name,
+            'price' => Number::format($this->price ?? 0, 2),
+            'cost' => Number::format($this->cost ?? 0, 2),
             // 'description' => $this->description,
             // 'is_taxable' => $this->is_taxable,
             'is_available' => $this->is_available,

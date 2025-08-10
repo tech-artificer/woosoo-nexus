@@ -28,10 +28,9 @@ class CreateOrderedMenu
             $item['employee_log_id'] = $attr['employee_log_id']; // Default to current user or 1
 
             $orderedMenus[] = $this->createOrderedMenu($item);
-            break;
         }
 
-        return collect($orderedMenus);
+        return $orderedMenus;
     }
 
     protected function createOrderedMenu(array $item = []) 

@@ -61,9 +61,8 @@ function submit() {
   form.post(route('menu.upload.image', { id: props.menu.id }), {
     forceFormData: true, // <-- THIS is the secret ingredient
     preserveScroll: true,
-    preserveState: true,
+    // preserveState: true,
     onSuccess: () => {
-
       // console.log('✅ Image uploaded successfully');
       toast('Image Uploaded:', {
         description: 'The previous image has been replaced with your new upload.',
@@ -77,13 +76,13 @@ function submit() {
       });
       showDialog.value = false;
     },
-    onError: (errors: any) => {
-      toast('Event has been created', {
-        description: 'Sunday, December 03, 2023 at 9:00 AM',
-        action: {
-          label: 'Undo',
-          onClick: () => console.log('Undo'),
-        },
+    onError: () => {
+      toast('An Error Occured', {
+        description: 'Something Went Wrong!',
+        // action: {
+        //   label: 'Undo',
+        //   onClick: () => console.log('Undo'),
+        // },
         duration: 5000,
         position: 'top-right',
       });

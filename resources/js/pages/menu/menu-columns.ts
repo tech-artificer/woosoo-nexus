@@ -12,39 +12,39 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
         cell: ({ row }) => {
             return h(MenuDisplayName, { menu: row.original });
         },
-    },  {
+    }, {
         accessorKey: 'category',
         header: 'Category',
         cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.category ?? ''),
-    },  {
+    }, {
         accessorKey: 'group',
         header: 'Group',
         cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.group ?? ''),
-    },{
+    }, {
         accessorKey: 'course',
         header: 'Course',
         cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.course ?? ''),
-    },{
+    }, {
         accessorKey: 'price',
         header: 'Price',
         cell: ({ row }) => h('div', { class: '' }, row.getValue('price')),
-    },{
-       // Use an accessor function to extract the nested value for sorting/filtering
+    }, {
+        // Use an accessor function to extract the nested value for sorting/filtering
         accessorKey: '',
         header: 'Available',
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
-            return h( AppIconExp, { class: 'text-green-500', isTrue: row.original.is_available });
+            return h(AppIconExp, { class: 'text-green-500', isTrue: row.original.is_available });
         },
     },
-     {
+    {
         accessorKey: 'id',
         header: '',
         cell: ({ row }) => {
-          const menu = row.original
-          return h(MenuEditDialog, {
-            menu
-          })
+            const menu = row.original
+            return h(MenuEditDialog, {
+                menu
+            })
         },
     },
     // ,{
@@ -54,7 +54,7 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
     //     // The cell function now just receives the extracted value from accessorFn
     //     cell: ({ row }) => h('div', { class: '' }, row.getValue('img_url')),
     // }
-   
-  
-  
+
+
+
 ]

@@ -45,8 +45,9 @@ const openDialog = () => {
 
 const submit = () => {
   form.post(`/devices/${props.device.id}/assign-table`, {
+    forceFormData: true, // <-- THIS is the secret ingredient
     preserveScroll: true,
-    preserveState: true,
+    // preserveState: true,
 
     onSuccess: () => {
       toast('Table Assigned:', {

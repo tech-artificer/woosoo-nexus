@@ -10,8 +10,6 @@ use App\Models\Device;
 use App\Models\Krypton\Table;
 use App\Models\DeviceRegistrationCode;
 
-
-
 class DeviceController extends Controller
 {
     public function index()

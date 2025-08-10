@@ -2,11 +2,11 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Device, Table } from '@/types/models';
 import { getDeviceColumns, getDeviceRegistrationCodeColumns } from '@/pages/device/device-columns';
 import AppTable from '@/components/datatable/AppTable.vue';
-import { onMounted } from 'vue';
+import { onMounted, reactive, watch } from 'vue';
 // import RegistrationCodes from './device/RegistrationCodes.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -24,14 +24,18 @@ const props = defineProps<{
     registrationCodes: any[];
 }>()
 
-// const columns = getDeviceColumns(props.unassignedTables);
-const columns = {
+const columns = reactive({
     devices: getDeviceColumns(props.unassignedTables),
     codes: getDeviceRegistrationCodeColumns()
-}
+});
+
+// Watch for changes in props.unassignedTables
+watch(() => props.unassignedTables, (newVal) => {
+    columns.devices = getDeviceColumns(newVal);
+});
+
 onMounted(() => {
     console.log('props', props.devices);
-    // console.log('props', props.unassignedTables);
 });
 
 
@@ -43,7 +47,7 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
 
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-              <!-- {{ route().current() }} -->
+           
             <div class="relative min-h-[100vh] flex-1 rounded-xl border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
                 <!-- <Tabs default-value="assigned">
                     <TabsList>
@@ -52,7 +56,7 @@ onMounted(() => {
                         <TabsTrigger value="codes">Codes</TabsTrigger>
                     </TabsList>
                     <TabsContent value="assigned"> -->
-                        <AppTable :rows="devices" :columns="columns.devices"  />
+                        <AppTable :rows="props.devices" :columns="columns.devices"  />
                     <!-- </TabsContent> -->
                     <!-- <TabsContent value="unassigned">
                         <AppTable :rows="unassignedTables" :columns="columns.devices"  />

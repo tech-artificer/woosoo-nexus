@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Branch;
 use App\Models\Krypton\Table;
 use App\Models\Krypton\Order;
 use App\Enums\OrderStatus;
 use Illuminate\Support\Str; 
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\ServiceRequest;
 
 class DeviceOrder extends Model
 {
@@ -120,7 +122,10 @@ class DeviceOrder extends Model
         return $this->hasOne(Order::class, 'id', 'order_id');
     }
 
-
+    public function serviceRequests(): HasMany
+    {
+        return $this->hasMany(ServiceRequest::class, 'device_order_id');
+    }
 
     public function scopeActiveOrder(Builder $query) {
         

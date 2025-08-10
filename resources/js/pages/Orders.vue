@@ -4,8 +4,7 @@ import { onMounted, onUnmounted, } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { DeviceOrder } from '@/types/models';
+import { DeviceOrder, ServiceRequest } from '@/types/models';
 import { getOrderColumns } from '@/pages/order/order-columns';
 import AppTable from '@/pages/order/OrderTable.vue';
 
@@ -26,102 +25,21 @@ const props = defineProps<{
 }>()
 
 const form = useForm({
- 
+
 });
 
 const fetchData = (url: string) => {
-  form.get(url, { 
-        preserveState: true,
-        replace: true, // Replace history entry
+  form.get(url, {
+    preserveState: true,
+    replace: true, // Replace history entry
   });
 }
 
-
-// 🔁 Make the orders reactive so we can push to it later
-// const reactiveOrders = ref<DeviceOrder[]>([...props.orders]);
-// const ordersMap = reactiveOrders.value
-// 🧠 Find and update an order by ID
-// function updateOrder(order: DeviceOrder) {
-//   const index = reactiveOrders.value.findIndex(o => o.id === order.id);
-//   if (index !== -1) {
-//     reactiveOrders.value[index] = { ...reactiveOrders.value[index], ...order };
-//   }
-
-//   console.log(reactiveOrders.value);
-// }
-
-// const updateOrder = (order: DeviceOrder) => {
-//   const existingOrder = reactiveOrders.value.find(o => o.id === order.id);
-//   if (existingOrder) {
-//     Object.assign(existingOrder, order); // Mutate directly (Vue tracks this)
-//     console.log('Order updated:', order);
-//   }
-// };
-
-
-// 🧩 Handle new or updated orders
-// const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-//   if (isUpdate) {
-//     updateOrder(event);
-//     console.log('Order updated:', event);
-//   } else {
-//      addOrder(event);
-//     // Prevent duplicate
-//     if (!reactiveOrders.value.some(o => o.id === event.id)) {
-//       reactiveOrders.value.unshift(event); // Push to top
-//       console.log('New order created:', event);
-//     }
-//   }
-// };
-
-// watch(reactiveOrders, (val) => {
-//   console.log('Orders changed!', val);
-// });
-
-// const updateOrder = (order: DeviceOrder) => {
-
-//    console.log(order)
-
-//   if (ordersMap[order.id]) {
-//     Object.assign(ordersMap[order.id], order);
-//     console.log('Order updated:', order);
-//   }
-// };
-
-// // Add new order — does NOT trigger deep watchers on existing data
-// const addOrder = (order: DeviceOrder) => {
-//   if (!ordersMap[order.id]) {
-//     ordersMap[order.id] = order;
-//     console.log('New order added:', order);
-//   }
-// };
-
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-
-  if( isUpdate ) {
-
-
-  }
-    
-    fetchData(route('orders.live'));
-    // addOrder(event);
-
- 
-  // console.log(isUpdate);
-  // console.log(event); 
-  // if (isUpdate) {
-  //   updateOrder(event);
-  // } else {
-  //   addOrder(event);
-  // }
+  fetchData(route('orders.live'));
 };
 
-// Computed array version if needed for rendering
-// const ordersList = computed(() => Object.values(ordersMap));
-
 onMounted(() => {
-  console.log('Display.vue mounted. Joining "admin.orders" channel.');
-
   if (!window.Echo) {
     console.error('Display.vue: window.Echo is not available.');
     return;
@@ -133,6 +51,14 @@ onMounted(() => {
       .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
       .listen('.order.voided', (e: DeviceOrder) => handleOrderEvent(e, true))
       .error((error: DeviceOrder) => {
+        console.error('Error connecting to admin.orders channel:', error);
+      });
+
+    window.Echo.private('admin.service-requests')
+      .listen('.service-request.notification', (e: ServiceRequest) => {
+        fetchData(route('orders.live'));
+      })
+      .error((error: ServiceRequest) => {
         console.error('Error connecting to admin.orders channel:', error);
       });
   }
@@ -150,7 +76,7 @@ onUnmounted(() => {
   <Head :title="title" :description="description" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <!-- <pre>{{ ordersList }}</pre> -->
+    <!-- <pre>{{ orders }}</pre> -->
 
     <div class="p-6">
       <AppTable :rows="orders" :columns="columns" :filter="false" />

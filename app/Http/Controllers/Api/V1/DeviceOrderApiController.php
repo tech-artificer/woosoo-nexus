@@ -32,7 +32,7 @@ class DeviceOrderApiController extends Controller
 
         $errors = [];
         $device = $request->user();
-
+      
       
         if( $device->table_id ) {
         

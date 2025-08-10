@@ -12,4 +12,8 @@ class TableService extends Model
         'name'
     ];
 
+    protected $hidden = [
+        'created_at',
+        'updated_at'
+    ];
 }

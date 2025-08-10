@@ -12,8 +12,9 @@ use App\Http\Controllers\Api\V1\{
     DeviceOrderUpdateApiController,
     OrderUpdateLogController,
     ServiceMonitorController,
-    TableServiceController,
+    TableServiceApiController,
     Menu\MenuBundleController,
+    ServiceRequestApiController,
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -48,7 +49,7 @@ Route::middleware(['api'])->group(function () {
 
 });
 
-Route::middleware(['api', 'auth:device'])->group(function () {
+Route::middleware(['auth:device'])->group(function () {
 
     Route::resource('/devices', DeviceApiController::class);
     Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
@@ -59,7 +60,10 @@ Route::middleware(['api', 'auth:device'])->group(function () {
     Route::post('/devices/create-order', DeviceOrderApiController::class);
     Route::post('/devices/update-order', DeviceOrderUpdateApiController::class);
 
-    Route::post('/tables/{table}/service', [TableServiceController::class, 'service'])->name('api.tables.service');
+    Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
+
+    Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
+    // Route::post('/tables/{table}/service', [TableServiceApiController::class, 'service'])->name('api.tables.service');
 
     // Log
     // Route::get('/after-payment', [OrderUpdateLogController::class, 'index'])->name('api.order.update.log');

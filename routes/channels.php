@@ -29,11 +29,12 @@ Broadcast::channel('orders.{orderId}', function (User $user, int $orderId) {
     return true;
 });
 
-// Broadcast::channel('private-orders', function (User $user) {
-//     return $user->is_admin;
-// });
+Broadcast::channel('service-requests.{deviceId}', function (User $user, int $deviceId) {
+    return true;
+});
 
 Broadcast::channel('admin.orders', fn($user) => $user->is_admin);
+Broadcast::channel('admin.service-requests', fn($user) => $user->is_admin);
 
 // Broadcast::channel('orders', function (User $user, int $deviceId) {
 //     return true;

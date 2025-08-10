@@ -77,7 +77,7 @@ class OrderService
                 'terminal_session_id' => $order->terminal_session_id,
                 'status' => OrderStatus::CONFIRMED,
                 'session_id' => $order->session_id,
-                'items' => $orderedMenus->toArray(),
+                'items' => $orderedMenus,
                 'meta' => [
                     'order_check' => $orderCheck,
                     'table_order' => $tableOrder,

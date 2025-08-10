@@ -34,6 +34,7 @@ class Menu extends Model
         'menu_group_id' => 'integer',
         'menu_tax_type_id' => 'integer',
         'menu_course_type_id' => 'integer',
+        'price' => 'decimal:2',
     ];
 
     protected $hidden = [

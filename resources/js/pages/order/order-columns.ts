@@ -38,9 +38,9 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         accessorKey: 'package',
         header: 'Package',
         cell: ({ row }) => {
-            const setMeal = row.original.items[0]?.receipt_name;
-            // console.log(JSON.stringify(row.original.items[0].receipt_name));
-            return h( 'div', { class: 'capitalize' },  `${setMeal} `); //| ${row.original.id}
+            const setMeal = row.original.items[0];
+            // console.log(JSON.stringify(row.original.items[0]?.receipt_name));
+            return h( 'div', { class: 'capitalize' },  `${setMeal?.receipt_name} `); //| ${row.original.id}
         },
     },
     {
@@ -57,7 +57,7 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
             const total = row.original.meta.order_check.total_amount;
-            console.log();
+            // console.log();
             return h(
                 'div',
                 { class: 'capitalize flex items-center' }, // Added 'items-center' for alignment
@@ -75,11 +75,12 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         },
     },
     {
-        accessorKey: 'id',
+        accessorKey: '',
         header: 'Service Request',
         cell: ({ row }) => {
-            const status = row.original.status
-            return h('div', { status: status })
+            const serviceRequests = row.original.service_requests.map((serviceRequest) => serviceRequest.table_service_name);
+
+            return h('div', { class: 'capitalize font-light w-20 flex wrap' }, serviceRequests.join(', '));
         },
     },
-]
+]   

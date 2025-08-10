@@ -61,6 +61,7 @@ export interface DeviceOrder {
     order?: Order;
     table?: Table;
     meta: any;
+    service_requests: ServiceRequest[];
 }
 export interface Menu {
     id: number;
@@ -132,6 +133,11 @@ export interface DeviceRegistrationCode {
     used_by_device_id: number;
 }
 
-
+export interface ServiceRequest {
+    device_order_id: number;
+    order_id: number;
+    table_service_id: number;
+    table_service_name: string;
+}
 
     
