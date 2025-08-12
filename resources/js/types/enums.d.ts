@@ -3,7 +3,7 @@ export enum OrderStatus {
     Confirmed = 'confirmed',
     Completed = 'completed',
     Voided = 'voided',
-    // Archived = 'archived',
+    Archived = 'archived',
 }
 
 export function getOrderStatusLabel(status: OrderStatus): string {
@@ -27,8 +27,9 @@ export function getNextOrderStatus(currentStatus: OrderStatus): OrderStatus | nu
   const statusFlow: Record<OrderStatus, OrderStatus | null> = {
     [OrderStatus.Pending]: OrderStatus.Confirmed,
     [OrderStatus.Confirmed]: OrderStatus.Completed,
-    // [OrderStatus.Completed]: OrderStatus.Archived,
-    // [OrderStatus.Archived]: null, // No next status after completed
+    [OrderStatus.Confirmed]: OrderStatus.Voided,
+    [OrderStatus.Completed]: OrderStatus.Archived,
+    [OrderStatus.Archived]: null, // No next status after completed
     [OrderStatus.Voided]: null, // No next status after voided
   };
 

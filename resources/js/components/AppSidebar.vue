@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BetweenHorizontalEnd,LayoutDashboard, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed, Fingerprint, Terminal, LockOpen, EllipsisVertical } from 'lucide-vue-next';
+import { BetweenHorizontalEnd,LayoutDashboard, ListOrdered, UserCog, MonitorSmartphone, UtensilsCrossed, Fingerprint, Terminal, LockOpen, EllipsisVertical, Coins } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import type { LucideIcon } from 'lucide-vue-next';
 import { usePage } from '@inertiajs/vue3'
@@ -68,7 +68,7 @@ const mainNavItems: NavItem[] = [
         hasSubItems: false,
     },
     {
-        title: 'Configuration',
+        title: 'Admin Settings',
         href: '/configuration',
         icon: ListOrdered,
         isActive: false,
@@ -93,9 +93,7 @@ const mainNavItems: NavItem[] = [
                 isActive: false,
             },
         ]
-    },
-
-    
+    }, 
 ];
 
 const page = usePage();
@@ -113,21 +111,6 @@ interface ActiveSession {
 }
 
 const footerActiveSessions: ActiveSession[] = [
-    // {
-    //     title: 'Github Repo',
-    //     href: 'https://github.com/laravel/vue-starter-kit',
-    //     icon: Circle,
-    // },
-    // {
-    //     title: 'Documentation',
-    //     href: 'https://laravel.com/docs/starter-kits#vue',
-    //     icon: Circle,
-    // },
-    // {
-    //     id: terminal?.id,
-    //     title: 'Terminal #',
-    //     icon: LockOpen,
-    // },
     {
         id: session?.id,
         title: 'Session #',
@@ -146,7 +129,7 @@ const footerActiveSessions: ActiveSession[] = [
     {
         id: cashTraySession?.id,
         title: 'Cash Tray Session #',
-        icon: Fingerprint,
+        icon: Coins,
     },
     
 ];
@@ -167,10 +150,10 @@ const footerActiveSessions: ActiveSession[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" class="font-light" />
+            <NavMain :items="mainNavItems" class="" />
         </SidebarContent>
         <SidebarFooter>
-            <NavFooter :items="footerActiveSessions" />
+            <NavFooter :items="footerActiveSessions" class="font-light" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

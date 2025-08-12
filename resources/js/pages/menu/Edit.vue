@@ -61,7 +61,7 @@ function submit() {
   form.post(route('menu.upload.image', { id: props.menu.id }), {
     forceFormData: true, // <-- THIS is the secret ingredient
     preserveScroll: true,
-    // preserveState: true,
+    preserveState: true,
     onSuccess: () => {
       // console.log('✅ Image uploaded successfully');
       toast('Image Uploaded:', {

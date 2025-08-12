@@ -133,7 +133,7 @@ console.log(table)
 
 
     <div class="p-4 rounded-md">
-      <Table>
+      <Table class="font-light">
         <TableHeader>
           <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
             <TableHead v-for="header in headerGroup.headers" :key="header.id">

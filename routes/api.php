@@ -44,7 +44,6 @@ Route::middleware(['api'])->group(function () {
     Route::get('/menus/course', [BrowseMenuApiController::class, 'getMenusByCourse'])->name('api.menus.by.course');
     Route::get('/menus/group', [BrowseMenuApiController::class, 'getMenusByGroup'])->name('api.menus.by.group');
     Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
-
     Route::get('/menus/bundle', MenuBundleController::class);
 
 });
@@ -63,11 +62,7 @@ Route::middleware(['auth:device'])->group(function () {
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
 
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
-    // Route::post('/tables/{table}/service', [TableServiceApiController::class, 'service'])->name('api.tables.service');
-
-    // Log
-    // Route::get('/after-payment', [OrderUpdateLogController::class, 'index'])->name('api.order.update.log');
-    
+    Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
 });
 
 

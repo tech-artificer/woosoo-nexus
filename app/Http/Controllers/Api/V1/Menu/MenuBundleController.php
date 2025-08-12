@@ -9,14 +9,21 @@ use App\Models\Krypton\MenuCourse;
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\MenuGroup;
 use App\Models\Krypton\MenuCategory;
-
 use App\Repositories\Krypton\MenuRepository;
-
 use Illuminate\Database\Eloquent\Builder;
+use GuzzleHttp\Client;
+use App\Services\ApiService;
 
 class MenuBundleController extends Controller
 {
     
+    protected ApiService $apiService;
+
+    // Inject the service into the constructor
+    public function __construct(ApiService $apiService)
+    {
+        $this->apiService = $apiService;
+    }
     /**
      * Get All Menu Selections
      *
@@ -31,27 +38,36 @@ class MenuBundleController extends Controller
     public function __invoke(Request $request)
     {   
         // Packages
-        $packages = MenuRepository::getMenusWithModifiers();
+        $packages =  $this->apiService->get('/api/menus/with-modifiers');
+        // $packages = MenuRepository::getMenusWithModifiers();
 
-        if ($packages->isEmpty()) {
-            $packages = Menu::with('modifiers')
-                ->whereIn('id', [46, 47, 48])
-                ->get();
-        }
-        // Load modifiers
-        $packages->load('modifiers');
+        // if ($packages->isEmpty()) {
+        //     $packages = Menu::with('modifiers')
+        //         ->whereIn('id', [46, 47, 48])
+        //         ->get();
+        // }
+        // // Load modifiers
+        // $packages->load('modifiers');
 
-        $sides = $this->getMenusByGroup('Sides');
-        $desserts = $this->getMenusByCategory('Dessert');
-        $beverages = $this->getMenusByCategory('Beverage');
+        // $sides = $this->getMenusByGroup('Sides');
+        // $desserts = $this->getMenusByCategory('Dessert');
+        // $beverages = $this->getMenusByCategory('Beverage');
 
         return response()->json([
-            'promos' => [],  // Placeholder for future promos logic
-            'packages' => MenuResource::collection($packages),
-            'sides' => MenuResource::collection($sides),
-            'desserts' => MenuResource::collection($desserts),
-            'alacarte' => [], // Placeholder for alacarte items
-            'beverages' => MenuResource::collection($beverages),
+            'packages' =>  $packages,
+
+            // 'sides' => [],  
+            // 'desserts' => [],
+            // 'alacarte' => [],
+            // 'beverages' => [],
+
+
+            // 'promos' => [],  // Placeholder for future promos logic
+            // 'packages' => MenuResource::collection($packages),
+            // 'sides' => MenuResource::collection($sides),
+            // 'desserts' => MenuResource::collection($desserts),
+            // 'alacarte' => [], // Placeholder for alacarte items
+            // 'beverages' => MenuResource::collection($beverages),
         ]);
     }
 

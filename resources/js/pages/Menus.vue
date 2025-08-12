@@ -7,7 +7,7 @@ import { Head } from '@inertiajs/vue3';
 import { Menu } from '@/types/models';
 import { getMenuColumns } from '@/pages/menu/menu-columns';
 // import MenuTable from '@/pages/menus/MenuTable.vue';
-import AppTable from '@/components/datatable/AppTable.vue';
+import AppTable from '@/pages/menu/MenuTable.vue';
 // import { useToast } from '@/composables/useToast';
 
 const breadcrumbs: BreadcrumbItem[] = [

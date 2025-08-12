@@ -5,8 +5,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
 import { DeviceOrder, ServiceRequest } from '@/types/models';
-import { getOrderColumns } from '@/pages/order/order-columns';
-import AppTable from '@/pages/order/OrderTable.vue';
+// import { getOrderColumns } from '@/pages/order/order-columns';
+// import AppTable from '@/pages/order/OrderTable.vue';
+import TablesGrid from '@/pages/table/TablesGrid.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -15,7 +16,7 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ];
 
-const columns = getOrderColumns();
+// const columns = getOrderColumns();
 
 const props = defineProps<{
   title?: string;
@@ -36,7 +37,13 @@ const fetchData = (url: string) => {
 }
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
+
+  if( isUpdate ) {
+    
+  }
+
   fetchData(route('orders.live'));
+
 };
 
 onMounted(() => {
@@ -56,6 +63,7 @@ onMounted(() => {
 
     window.Echo.private('admin.service-requests')
       .listen('.service-request.notification', (e: ServiceRequest) => {
+        console.log(e);
         fetchData(route('orders.live'));
       })
       .error((error: ServiceRequest) => {
@@ -79,7 +87,12 @@ onUnmounted(() => {
     <!-- <pre>{{ orders }}</pre> -->
 
     <div class="p-6">
-      <AppTable :rows="orders" :columns="columns" :filter="false" />
+      <!-- <AppTable :rows="orders" :columns="columns" :filter="false" /> -->
     </div>
+
+    <div>
+      <TablesGrid :orders="orders" />
+    </div>  
+
   </AppLayout>
 </template>

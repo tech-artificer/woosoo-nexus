@@ -30,6 +30,7 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+
         $orders = DeviceOrder::with(['device', 'order', 'table', 'order', 'serviceRequests'])
                     // ->whereDate('created_at', Carbon::today())
                     // ->where('status', OrderStatus::CONFIRMED)

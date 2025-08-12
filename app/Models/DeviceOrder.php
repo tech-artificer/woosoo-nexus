@@ -65,7 +65,7 @@ class DeviceOrder extends Model
         $this->attributes['status'] = $newStatus;
     }
 
-    public static function generateOrderNumber(): string
+    public static function generateOrderNumber($orderId): string
     {
         // Get the latest order number
         $latestOrder = static::latest()->first();
@@ -78,7 +78,7 @@ class DeviceOrder extends Model
         }
 
         // Format the number with leading zeros, e.g., ORD-000001
-        return 'ORD-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        return 'ORD-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT) . '-' . $orderId;
     }
 
     protected static function boot()
@@ -94,9 +94,9 @@ class DeviceOrder extends Model
             // This loop handles potential race conditions by retrying
             $maxAttempts = 5; // Or more, depending on expected concurrency
             for ($i = 0; $i < $maxAttempts; $i++) {
-                $orderNumber = static::generateOrderNumber();
+                $orderNumber = static::generateOrderNumber($model->order_id);
                 // Check if it already exists to avoid unique constraint violation
-                if (!static::where('order_number', $orderNumber)->exists()) {
+                if (!static::where('order_number', $orderNumber)->exists() && $model->order_id) {
                     $model->order_number = $orderNumber;
                     return; // Number is unique, proceed with creation
                 }

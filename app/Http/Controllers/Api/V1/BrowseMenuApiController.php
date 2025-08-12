@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
 use App\Repositories\Krypton\MenuRepository;
 use App\Http\Resources\MenuResource;
 use App\Http\Resources\MenuModifierResource;

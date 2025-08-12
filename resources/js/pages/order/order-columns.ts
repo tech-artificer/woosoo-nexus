@@ -2,6 +2,7 @@ import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
 import { DeviceOrder } from '@/types/models';
 import  OrderStatusBadge from '@/pages/order/OrderStatusBadge.vue'
+import ServiceRequestIcons from '@/pages/order/ServiceRequestIcons.vue';
 
 export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
     // {
@@ -22,27 +23,27 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         accessorKey: '',
         header: 'Table',
         cell: ({ row }) => {
-            return h( 'div', { class: 'capitalize' }, row.original.table?.name ?? 'N/A')
+            return h( 'div', { class: 'font-semibold' }, row.original.table?.name ?? 'N/A')
         },
     },
     {
         accessorKey: '',
-        header: 'Order Number | ID',
+        header: 'Order Number',
         cell: ({ row }) => {
             const orderNumber = row.original.order_number ?? '';
-            const orderId = row.original.order?.id ?? '';
-            return h( 'div', { class: 'capitalize' },  `${orderNumber}-${orderId} `); //| ${row.original.id}
+            // const orderId = row.original.order?.id ?? '';
+            return h( 'div', { class: 'capitalize' },  `${orderNumber}`); //| ${row.original.id}
         },
     },
-    {
-        accessorKey: 'package',
-        header: 'Package',
-        cell: ({ row }) => {
-            const setMeal = row.original.items[0];
-            // console.log(JSON.stringify(row.original.items[0]?.receipt_name));
-            return h( 'div', { class: 'capitalize' },  `${setMeal?.receipt_name} `); //| ${row.original.id}
-        },
-    },
+    // {
+    //     accessorKey: 'package',
+    //     header: 'Package',
+    //     cell: ({ row }) => {
+    //         const setMeal = row.original.items[0];
+    //         // console.log(JSON.stringify(row.original.items[0]?.receipt_name));
+    //         return h( 'div', { class: 'capitalize' },  `${setMeal?.receipt_name} `); //| ${row.original.id}
+    //     },
+    // },
     {
         accessorKey: 'guest_count',
         header: 'Guest',
@@ -57,7 +58,6 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
             const total = row.original.meta.order_check.total_amount;
-            // console.log();
             return h(
                 'div',
                 { class: 'capitalize flex items-center' }, // Added 'items-center' for alignment
@@ -77,10 +77,14 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
     {
         accessorKey: '',
         header: 'Service Request',
-        cell: ({ row }) => {
-            const serviceRequests = row.original.service_requests.map((serviceRequest) => serviceRequest.table_service_name);
+        cell: () => {
 
-            return h('div', { class: 'capitalize font-light w-20 flex wrap' }, serviceRequests.join(', '));
+            // createIcons({ icons });
+          
+            // const serviceRequests = row.original.service_requests.map((serviceRequest) => serviceRequest.table_service_name);
+            //  serviceRequests.join(', ')
+            return h(ServiceRequestIcons, { request: 'clean' })
+            // return <Bubbles></Bubbles>
         },
     },
 ]   

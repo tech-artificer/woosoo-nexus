@@ -12,19 +12,21 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
         cell: ({ row }) => {
             return h(MenuDisplayName, { menu: row.original });
         },
-    }, {
-        accessorKey: 'category',
-        header: 'Category',
-        cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.category ?? ''),
-    }, {
-        accessorKey: 'group',
-        header: 'Group',
-        cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.group ?? ''),
-    }, {
-        accessorKey: 'course',
-        header: 'Course',
-        cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.course ?? ''),
-    }, {
+    }, 
+    // {
+    //     accessorKey: 'category',
+    //     header: 'Category',
+    //     cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.category ?? ''),
+    // }, {
+    //     accessorKey: 'group',
+    //     header: 'Group',
+    //     cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.group ?? ''),
+    // }, {
+    //     accessorKey: 'course',
+    //     header: 'Course',
+    //     cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.course ?? ''),
+    // }, 
+    {
         accessorKey: 'price',
         header: 'Price',
         cell: ({ row }) => h('div', { class: '' }, row.getValue('price')),

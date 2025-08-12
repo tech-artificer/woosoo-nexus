@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class TableService extends Model
 {
     protected $table = 'table_services';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'name'
@@ -16,4 +17,7 @@ class TableService extends Model
         'created_at',
         'updated_at'
     ];
+
+    
+
 }

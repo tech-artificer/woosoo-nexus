@@ -39,6 +39,7 @@ export interface TableOrder {
 
 export interface Device {
     id: number;
+    name: string;
     table_id: number;
     branch_id: number;
     name: string;
@@ -54,7 +55,7 @@ export interface DeviceOrder {
     id: number;
     name: string;
     device_id: number;
-    order_id: number;
+    order_id: any;
     order_number: string;
     status: OrderStatus;
     device?: Device;

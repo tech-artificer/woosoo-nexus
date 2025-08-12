@@ -48,7 +48,7 @@ class Table extends Model
     // Optional: relationship (if needed)
     public function device() : HasOne
     {
-        return $this->hasOne(Device::class, 'id');
+        return $this->hasOne(Device::class, 'table_id');
     }
 
     public function checkTableStatus()
