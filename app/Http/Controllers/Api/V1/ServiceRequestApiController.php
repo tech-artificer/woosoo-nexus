@@ -28,8 +28,9 @@ class ServiceRequestApiController extends Controller
     }
 
     /**
-     * Store a service request.
-     * Sends a service request to the table.
+     * Sends a service request to the server 
+     * and broadcasts the event
+     *  
      */
     public function store(StoreServiceRequest $request)
     {
