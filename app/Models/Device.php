@@ -85,9 +85,8 @@ class Device extends Model
 
 
     # SCOPES
-
     public function scopeActive(Builder $query) 
     {
         return $query->where('is_active', true);
-    } 
+    }
 }

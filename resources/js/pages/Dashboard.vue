@@ -4,10 +4,9 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Head } from '@inertiajs/vue3'
 // import PlaceholderPattern from '../components/PlaceholderPattern.vue'
-// import { Card, CardContent } from '@/components/ui/card';
-// import { Button } from '@/components/ui/button';
-// import { Badge } from '@/components/ui/badge';
-// import { LockOpen, Terminal, Fingerprint, LucideIcon } from 'lucide-vue-next';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ListOrdered } from 'lucide-vue-next';
 
 
 // const page = usePage();
@@ -28,7 +27,8 @@ const props = defineProps<{
     title?: string
     description?: string
     tableOrders: any
-
+    openOrders: any,
+    sessionId: number
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -110,7 +110,22 @@ onMounted(() => {
 
         <div class="flex h-full flex-1 flex-col gap-4 rounded p-4">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-               <pre> {{ tableOrders }} </pre>
+                <Card  class="w-full">
+                    <CardContent class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-body text-woosoo-dark-gray">Active Orders</p>
+                            <h1 class="text-3xl font-semibold font-body text-woosoo-blue">{{ openOrders.length }}</h1>
+                        </div>
+                        <div class="flex flex-col items-center gap-2">
+                            <component :is="ListOrdered"/>
+                            <Badge v-if="openOrders.length" class="bg-success text-woosoo-green">
+                               {{ sessionId }}
+                            </Badge>
+                        </div>
+                      
+                    </CardContent>
+                </Card> 
+               <!-- <pre> {{ tableOrders }} </pre> -->
                 <!-- <Card v-for="activeSession in activeSessions" :key="activeSession.id" class="w-full">
                     <CardContent class="flex items-center justify-between">
                         <div>

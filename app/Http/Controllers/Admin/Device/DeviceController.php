@@ -14,7 +14,6 @@ class DeviceController extends Controller
 {
     public function index()
     {
-
         $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
         // Fetch tables from 3rd-party DB that are NOT assigned
         $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();

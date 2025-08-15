@@ -14,7 +14,7 @@ class OrderCompletedTest extends Command
      *
      * @var string
      */
-    protected $signature = 'broadcast:order-completed {id=33} {order_id=19585} {order_number=ORD-000001} {device_id=7}';
+    protected $signature = 'broadcast:order-completed {id=67} {order_id=19624} {order_number=ORD-000011-19624} {device_id=7}';
 
     /**
      * The console command description.

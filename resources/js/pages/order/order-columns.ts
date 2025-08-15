@@ -1,8 +1,9 @@
 import { h } from 'vue';
 import { ColumnDef } from '@tanstack/vue-table';
 import { DeviceOrder } from '@/types/models';
-import  OrderStatusBadge from '@/pages/order/OrderStatusBadge.vue'
+import OrderStatusBadge from '@/pages/order/OrderStatusBadge.vue'
 import ServiceRequestIcons from '@/pages/order/ServiceRequestIcons.vue';
+import OrderCompleteAction from '@/pages/order/Actions/Complete.vue';
 
 export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
     // {
@@ -13,17 +14,17 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
     //     },          
     // },
     {
-        accessorKey: '',  
+        accessorKey: '',
         header: 'Device',
         cell: ({ row }) => {
-            return h( 'div', { class: 'capitalize' }, row.original.device?.name ?? 'N/A')
-        },          
+            return h('div', { class: 'capitalize' }, row.original.device?.name ?? 'N/A')
+        },
     },
     {
         accessorKey: '',
         header: 'Table',
         cell: ({ row }) => {
-            return h( 'div', { class: 'font-semibold' }, row.original.table?.name ?? 'N/A')
+            return h('div', { class: 'font-semibold' }, row.original.table?.name ?? 'N/A')
         },
     },
     {
@@ -32,7 +33,7 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         cell: ({ row }) => {
             const orderNumber = row.original.order_number ?? '';
             // const orderId = row.original.order?.id ?? '';
-            return h( 'div', { class: 'capitalize' },  `${orderNumber}`); //| ${row.original.id}
+            return h('div', { class: 'capitalize' }, `${orderNumber}`); //| ${row.original.id}
         },
     },
     // {
@@ -48,10 +49,10 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         accessorKey: 'guest_count',
         header: 'Guest',
         cell: ({ row }) => {
-            return h( 'div', { class: 'capitalize' }, row.original.order?.guest_count ?? 'N/A')
+            return h('div', { class: 'capitalize' }, row.original.order?.guest_count ?? 'N/A')
         },
     },
-   {
+    {
         // Use an accessor function to extract the nested value for sorting/filtering
         accessorKey: '',
         header: 'Total',
@@ -62,7 +63,7 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
                 'div',
                 { class: 'capitalize flex items-center' }, // Added 'items-center' for alignment
                 '₱ ' + total.toLocaleString('locale', { minimumFractionDigits: 2 })
-            );  
+            );
         },
     },
     {
@@ -70,7 +71,7 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         header: 'Status',
         cell: ({ row }) => {
             const status = row.original.status
-           
+
             return h(OrderStatusBadge, { status: status })
         },
     },
@@ -80,11 +81,20 @@ export const getOrderColumns = (): ColumnDef<DeviceOrder>[] => [
         cell: () => {
 
             // createIcons({ icons });
-          
+
             // const serviceRequests = row.original.service_requests.map((serviceRequest) => serviceRequest.table_service_name);
             //  serviceRequests.join(', ')
             return h(ServiceRequestIcons, { request: 'clean' })
             // return <Bubbles></Bubbles>
+        },
+    },
+    {
+        accessorKey: 'id',
+        header: 'Actions',
+        cell: ({ row }) => {
+
+            return h(OrderCompleteAction, { class: 'capitalize', row: row.original }, { default: () => 'Complete' })
+          
         },
     },
 ]   

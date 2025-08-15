@@ -26,8 +26,9 @@ use App\Actions\Order\{
 };
 
 use App\Enums\OrderStatus;
-use App\Repositories\Krypton\MenuRepository;
-use App\Repositories\Krypton\OrderRepository;
+// use App\Repositories\Krypton\MenuRepository;
+// use App\Repositories\Krypton\OrderRepository;
+use App\Repositories\Krypton\TableRepository;
 use App\Services\Krypton\KryptonContextService;
 use App\Events\Order\OrderCreated;
 
@@ -120,7 +121,23 @@ class OrderService
      */
     public function checkIfTableIsOpen($tableId = null)
     {
-        // Logic to check if a table is open should be implemented here
+        $table = TableRepository::getActiveTableOrderByTable($tableId);
+    
+        if (!$table) return false;
+        return true;
+    }
+
+    public function checkIfTableIsAvailable($tableId = null)
+    {
+        // 
+    }
+
+    public function completeOrder() {
+        
+    }
+
+    public function completeOrderCheck() {
+        
     }
 }
 

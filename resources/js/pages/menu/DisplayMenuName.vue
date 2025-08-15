@@ -21,7 +21,7 @@ const attributes = reactive([props.menu.category, props.menu.group, props.menu.c
         />
         <div class="flex flex-col">
             <h3 class="font-normal capitalize">{{ menu.name }}</h3>
-            <span class="font-xs capitalize">
+            <span class="text-xs capitalize text-muted-foreground">
             {{ attributes.filter(v => v && v.trim()).join(' | ').toLocaleLowerCase() }}
             </span>
             <!-- <ul class="flex flex-row gap-1 font-light">

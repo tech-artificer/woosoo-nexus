@@ -4,26 +4,34 @@ import { onMounted, onUnmounted, } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/vue3';
-import { DeviceOrder, ServiceRequest } from '@/types/models';
-// import { getOrderColumns } from '@/pages/order/order-columns';
-// import AppTable from '@/pages/order/OrderTable.vue';
+import { DeviceOrder, ServiceRequest, TableOrder } from '@/types/models';
+import { getOrderColumns } from '@/pages/order/order-columns';
+import AppTable from '@/pages/order/OrderTable.vue';
 import TablesGrid from '@/pages/table/TablesGrid.vue';
+
+
+
+const columns = getOrderColumns();
+
+const props = defineProps<{
+  title?: string;
+  description?: string;
+  user: any;
+  orders: DeviceOrder[]; // You can refine this to Order[] if needed,
+  tableOrders: TableOrder[]
+
+}>()
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
     title: 'Orders',
     href: '/orders',
   },
+    {
+    title: 'Table Orders',
+    href: '/orders/live',
+  },
 ];
-
-// const columns = getOrderColumns();
-
-const props = defineProps<{
-  title?: string;
-  description?: string;
-  user: any;
-  orders: DeviceOrder[]; // You can refine this to Order[] if needed
-}>()
 
 const form = useForm({
 
@@ -41,7 +49,7 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   if( isUpdate ) {
     
   }
-
+  console.log(event);
   fetchData(route('orders.live'));
 
 };
@@ -84,15 +92,15 @@ onUnmounted(() => {
   <Head :title="title" :description="description" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <!-- <pre>{{ orders }}</pre> -->
+    <!-- <pre>{{ tableOrders }}</pre> -->
 
     <div class="p-6">
-      <!-- <AppTable :rows="orders" :columns="columns" :filter="false" /> -->
+     <AppTable :rows="orders" :columns="columns" :filter="false" />
     </div>
 
-    <div>
-      <TablesGrid :orders="orders" />
-    </div>  
+    <!-- <div> -->
+      <!-- <TablesGrid :orders="orders" /> -->
+    <!-- </div>   -->
 
   </AppLayout>
 </template>

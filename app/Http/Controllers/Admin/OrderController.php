@@ -9,6 +9,7 @@ use App\Services\Krypton\KryptonContextService;
 use Inertia\Inertia;
 
 use App\Repositories\Krypton\OrderRepository;
+use App\Repositories\Krypton\TableRepository;
 // use App\Http\Resources\OrderResource;
 
 use App\Models\Krypton\Order;
@@ -30,20 +31,26 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        $tableRepo = new TableRepository();
+
+        $activeOrders = $tableRepo->getActiveTableOrders();
 
         $orders = DeviceOrder::with(['device', 'order', 'table', 'order', 'serviceRequests'])
                     // ->whereDate('created_at', Carbon::today())
                     // ->where('status', OrderStatus::CONFIRMED)
-                    ->orderBy('table_id', 'asc')
-                    ->orderBy('created_at', 'desc')
+                        ->orderBy('table_id', 'asc')
+                        ->orderBy('created_at', 'desc')
                     ->activeOrder()
                     ->get();
+        
+                   
         
         return Inertia::render('Orders', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    
             'orders' => $orders,
             'user' => auth()->user(),
+            'tableOrders' => $activeOrders,
         ]);
     }
     
@@ -83,9 +90,9 @@ class OrderController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Order $order)
     {
-        //
+        return back()->with(['success' => true]);
     }
 
     /**
@@ -93,6 +100,6 @@ class OrderController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        // 
     }
 }

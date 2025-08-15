@@ -42,8 +42,9 @@ class AppServiceProvider extends ServiceProvider
      * Bootstrap any application services.
      */
     public function boot(KryptonContextService $contextService): void
-    {
-
+    {   
+        // const page = usePage()
+        // _token: page.props.csrf_token, for client side validation
         JsonResource::withoutWrapping();
 
         Inertia::share($contextService->getCurrentSessions());

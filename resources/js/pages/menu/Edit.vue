@@ -3,7 +3,7 @@
 import { onMounted, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-vue-next';
+import { Image, Pencil } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
@@ -104,16 +104,30 @@ onMounted(() => {
 <template>
   <Dialog v-model:open="showDialog">
     <TooltipProvider :delay-duration="100">
-      <Tooltip>
+      <Tooltip class="bg-woosoo-dark-gray">
         <TooltipTrigger as-child>
           <DialogTrigger as-child>
             <Button variant="ghost" class="cursor-pointer" @click="openDialog">
+              <Image />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Upload/Replace Image</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+    <TooltipProvider :delay-duration="100">
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <DialogTrigger as-child>
+             <Button variant="ghost" class="cursor-pointer">
               <Pencil />
             </Button>
           </DialogTrigger>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Click to View/Modify</p>
+          <p>Edit Menu</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

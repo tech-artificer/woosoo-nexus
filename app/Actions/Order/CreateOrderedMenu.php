@@ -16,12 +16,17 @@ class CreateOrderedMenu
 {
     use AsAction;
 
+
     public function handle(array $attr)
     {
+        $orderedMenuId = null;
+
         $menuItems = $attr['items'] ?? [];
 
         $orderedMenus = [];
         foreach ($menuItems as $item) {
+
+            if( $item['menu_id'] == null ) {}
 
             $item['order_id'] = $attr['order_id'];
             $item['order_check_id'] = $attr['order_check_id'];

@@ -13,6 +13,13 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
             return h(MenuDisplayName, { menu: row.original });
         },
     }, 
+    {
+        // Use an accessor function to extract the nested value for sorting/filtering
+        accessorKey: 'receipt_name',
+        header: 'Receipt Name',
+        // The cell function now just receives the extracted value from accessorFn
+         cell: ({ row }) => h('div', { class: '' }, row.getValue('receipt_name')),
+    },
     // {
     //     accessorKey: 'category',
     //     header: 'Category',
@@ -30,18 +37,35 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
         accessorKey: 'price',
         header: 'Price',
         cell: ({ row }) => h('div', { class: '' }, row.getValue('price')),
-    }, {
+    }, 
+    {
+        accessorKey: '',
+        header: 'Modifier',
+        cell: ({ row }) => {
+            return h(AppIconExp, { class: 'size-4 text-green-500 align-self-center', isTrue: row.original.is_modifier });
+        }
+    },
+    {
         // Use an accessor function to extract the nested value for sorting/filtering
         accessorKey: '',
         header: 'Available',
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
-            return h(AppIconExp, { class: 'text-green-500', isTrue: row.original.is_available });
+            return h(AppIconExp, { class: 'size-4 text-green-500 align-self-center', isTrue: row.original.is_available });
+        },
+    },
+    {
+        // Use an accessor function to extract the nested value for sorting/filtering
+        accessorKey: 'is_taxable',
+        header: 'Taxable',
+        // The cell function now just receives the extracted value from accessorFn
+        cell: ({ row }) => {
+            return h(AppIconExp, { class: 'size-4 text-green-500 align-self-center', isTrue: row.original.is_taxable });
         },
     },
     {
         accessorKey: 'id',
-        header: '',
+        header: 'Actions',
         cell: ({ row }) => {
             const menu = row.original
             return h(MenuEditDialog, {
