@@ -35,7 +35,6 @@ class DeviceOrder extends Model
 
     protected $hidden = [
         'deleted_at',
-        // 'created_at',
         'updated_at'
     ];
 
@@ -44,7 +43,11 @@ class DeviceOrder extends Model
         'status' => OrderStatus::class,
         'items' => 'array',
         'meta' => 'array',
-        // 'created_at' => 'string ',
+        'total' => 'decimal:2',
+        'tax' => 'decimal:2',
+        'discount' => 'decimal:2',
+        'sub_total' => 'decimal:2',
+        'guest_count' => 'integer',
     ];
 
     /**

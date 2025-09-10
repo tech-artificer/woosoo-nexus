@@ -100,7 +100,7 @@ class Menu extends Model
         $imgPath = MenuImage::where('menu_id', $this->id)->first()->path ?? null;
 
         if ($imgPath) {
-            return Storage::disk('public')->url($imgPath);
+            return Storage::url($imgPath);
         }
 
         return asset('images/menu-placeholder/1.jpg');

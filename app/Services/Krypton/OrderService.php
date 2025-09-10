@@ -26,14 +26,11 @@ use App\Actions\Order\{
 };
 
 use App\Enums\OrderStatus;
-// use App\Repositories\Krypton\MenuRepository;
-// use App\Repositories\Krypton\OrderRepository;
-use App\Repositories\Krypton\TableRepository;
 use App\Services\Krypton\KryptonContextService;
-use App\Events\Order\OrderCreated;
 
 class OrderService
 {
+    public $attributes = [];
     /**
      * Process an order for a given device with specified attributes.
      *
@@ -45,32 +42,36 @@ class OrderService
     {
         // Fetch default values and merge them with provided attributes
         $defaults = $this->getDefaultAttributes();
-        $attributes = array_merge($defaults, $attributes);
-      
-        return DB::transaction(function () use ($attributes, $device) {
-            // Create a new order using the provided attributes
-            $order = CreateOrder::run($attributes);
-            $attributes['order_id'] = $order->id;
-            $attributes['table_id'] = $device->table_id;
-        
-            if (!$order) {
-                return false;
-            }
-            // Update the order with terminal and cashier details
-            $order->update([
-                'end_terminal_id' => $order->terminal_id, 
-                'cash_tray_session_id' => $attributes['cash_tray_session_id'],
-                'cashier_employee_id' => $attributes['cashier_employee_id'],
-            ]);
+        $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
 
-            $tableOrder = CreateTableOrder::run($attributes);
-            $table = Table::where('id', $device->table_id)->update([
+        $this->attributes = $attributes;
+
+        return DB::transaction(function () use ($device) {
+            // Create a new order using the provided attributes
+
+            $order = CreateOrder::run($this->attributes);
+
+            if (!$order) return;
+
+            $this->updateAttributes([
+                'order_id' => $order->id,
+            ]);
+            // Create a table order
+            $tableOrder = CreateTableOrder::run($this->attributes);
+            // Update table availability
+            $table = Table::where('id', $this->attributes['table_id'])->update([
                 'is_available' => false
             ]);
-            // Set additional order details
-            $orderCheck = CreateOrderCheck::run($attributes);
-            $attributes['order_check_id'] = $order->orderCheck->id;
-            $orderedMenus = CreateOrderedMenu::run($attributes);
+
+            // Create an order check
+            $orderCheck = CreateOrderCheck::run($this->attributes);
+            // 
+            $this->updateAttributes([
+                'order_check_id' => $orderCheck->id,
+            ]);
+            // Create ordered menus
+            $orderedMenus = CreateOrderedMenu::run($this->attributes);
+
             // Create a new device order and associate it with the device
             $deviceOrder = $device->orders()->create([
                 'order_id' => $order->id,
@@ -83,11 +84,20 @@ class OrderService
                     'order_check' => $orderCheck,
                     'table_order' => $tableOrder,
                 ],
+                'total' => $orderCheck->total_amount,
+                'subtotal' => $orderCheck->subtotal_amount,
+                'tax' => $orderCheck->tax_amount,
+                'discount' => $orderCheck->discount_amount,
             ]);
 
-            broadcast(new OrderCreated($deviceOrder));
             return $deviceOrder;
         });
+    }
+
+    protected function updateAttributes($array = []) {
+        foreach ($array as $key => $value) {
+            $this->attributes[$key] = $value;
+        }
     }
 
     /**
@@ -113,30 +123,15 @@ class OrderService
         return array_merge($defaults, $params); 
     }
 
-    /**
-     * Check if a table is open based on the table ID.
-     *
-     * @param int|null $tableId
-     * @return bool
-     */
-    public function checkIfTableIsOpen($tableId = null)
-    {
-        $table = TableRepository::getActiveTableOrderByTable($tableId);
-    
-        if (!$table) return false;
-        return true;
-    }
-
-    public function checkIfTableIsAvailable($tableId = null)
-    {
-        // 
-    }
-
-    public function completeOrder() {
+    protected function cancelOrder(Device $device) {
         
     }
 
-    public function completeOrderCheck() {
+    protected function voidOrder(Device $device) {
+        
+    }
+
+    protected function rollBackOrder(Device $device) {
         
     }
 }

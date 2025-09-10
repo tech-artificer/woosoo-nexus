@@ -12,7 +12,7 @@ class BranchApiController extends Controller
      */
     public function index()
     {
-        //
+        $branches = Branch::all();
     }
 
     /**
@@ -34,9 +34,9 @@ class BranchApiController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Branch $branch)
     {
-        //
+        return response()->json($branch);
     }
 
     /**
@@ -44,7 +44,7 @@ class BranchApiController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        
     }
 
     /**

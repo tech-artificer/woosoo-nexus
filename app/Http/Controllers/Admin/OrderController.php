@@ -18,7 +18,7 @@ use App\Models\Krypton\OrderCheck;
 
 use App\Models\DeviceOrder;
 use App\Enums\OrderStatus;
-// use App\Models\Krypton\TerminalSession;
+use App\Models\Krypton\Session;
 
 use Carbon\Carbon;
 class OrderController extends Controller
@@ -32,14 +32,13 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $tableRepo = new TableRepository();
-
         $activeOrders = $tableRepo->getActiveTableOrders();
+        $session = Session::fromQuery('CALL get_latest_session_id()')->first();
 
         $orders = DeviceOrder::with(['device', 'order', 'table', 'order', 'serviceRequests'])
-                    // ->whereDate('created_at', Carbon::today())
-                    // ->where('status', OrderStatus::CONFIRMED)
-                        ->orderBy('table_id', 'asc')
-                        ->orderBy('created_at', 'desc')
+                    ->where('session_id', $session->id)
+                    ->orderBy('table_id', 'asc')
+                    ->orderBy('created_at', 'desc')
                     ->activeOrder()
                     ->get();
         

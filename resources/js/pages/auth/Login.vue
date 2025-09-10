@@ -10,8 +10,6 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Link } from '@inertiajs/vue3';
-// import axios from 'axios'; // Import axios here for API calls
-// import { router } from '@inertiajs/vue3';
 
 defineProps<{
     title?: string;
@@ -24,23 +22,6 @@ const form = useForm({
     password: '',
     remember: false,
 });
-
-// const loginApi = async () => {
-//     try {
-//         const response = await axios.post('/api/token/create', {
-//             email: form.email,
-//             password: form.password,
-//         });
-
-//         const token = response.data.token;
-//         // Store the token securely (e.g., localStorage)
-//         localStorage.setItem('auth_token', token);
-//         // Set the default Authorization header for all future Axios requests
-//         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-//     } catch (error) {
-
-//     }
-// };
 
 const submit = () => {
 
@@ -86,7 +67,7 @@ const submit = () => {
                         <form @submit.prevent="submit" class="flex flex-col gap-6">
                             <div class="grid gap-6">
                                 <div class="grid gap-2">
-                                    <Label for="email">Email address</Label>
+                                    <Label for="email" class="font-primary">Email address</Label>
                                     <Input id="email" type="email" required autofocus :tabindex="1" autocomplete="email"
                                         v-model="form.email" placeholder="email@example.com"
                                         class="border-woosoo-accent" />

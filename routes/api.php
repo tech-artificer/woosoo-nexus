@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\{
     TableServiceApiController,
     Menu\MenuBundleController,
     ServiceRequestApiController,
+    Reports\SalesApiController,
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -26,10 +27,15 @@ use App\Http\Controllers\Api\V1\Auth\{
 use App\Http\Controllers\Api\V1\Krypton\{
     MenuApiController,
     OrderApiController,
-    // TerminalSessionApiController,
 };
-Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 
+
+
+Route::options('{any}', function () {
+    return response()->json([], 200);
+})->where('any', '.*');
+
+Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
 
 Route::middleware(['api'])->group(function () {
@@ -56,18 +62,24 @@ Route::middleware(['auth:device'])->group(function () {
 
     Route::resource('/orders', OrderApiController::class);
 
-    Route::post('/devices/create-order', DeviceOrderApiController::class);
-    Route::post('/devices/update-order', DeviceOrderUpdateApiController::class);
+    Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
+    Route::post('/devices/update-order', DeviceOrderUpdateApiController::class)->name('api.devices.update.order');
 
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
 
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
+    // Route::resource('/orders', OrderApiController::class)->excludes(['destroy', 'create', 'store', 'update']);
 });
 
 
-Route::middleware('api')->group(function () {
-    Route::get('/service-status', [ServiceMonitorController::class, 'status']);
-    Route::post('/run-service', [ServiceMonitorController::class, 'run']);
+Route::middleware(['auth'])->group(function () {
+    Route::get('/reports/sales/', SalesApiController::class);
 });
+
+
+// Route::middleware('api')->group(function () {
+//     Route::get('/service-status', [ServiceMonitorController::class, 'status']);
+//     Route::post('/run-service', [ServiceMonitorController::class, 'run']);
+// });
 

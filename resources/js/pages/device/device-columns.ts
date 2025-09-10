@@ -103,16 +103,16 @@ export const getDeviceRegistrationCodeColumns = (): ColumnDef<DeviceRegistration
 //         return h(ActiveBadge, { row: row.original, class: 'text-center w-15' })
 //     } 
 //   },
-//   {
-//     accessorKey: 'id',
-//     header: '',
-//     cell: ({ row }) => {
-//       const device = row.original
-//       return h(DeviceEditDialog, {
-//         device,
-//         unassignedTables,
-//       })
-//     },
-//   }
+  {
+    accessorKey: 'id',
+    header: '',
+    cell: ({ row }) => {
+      const device = row.original
+      return h(DeviceEditDialog, {
+        device,
+        unassignedTables,
+      })
+    },
+  }
 ];
 

@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use App\Models\Krypton\Menu;
 use Illuminate\Support\Str;
 use App\Models\MenuImage;
+use Illuminate\Support\Facades\Storage;
 
 class MenuController extends Controller
 {

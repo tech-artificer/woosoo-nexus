@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TData, TValue">
-import { ref, defineProps, watch  } from 'vue'
+import { ref, watch  } from 'vue'
 import {
   ColumnDef, ColumnFiltersState,
   // ExpandedState,

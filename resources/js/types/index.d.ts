@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-vue-next';
 import type { Config } from 'ziggy-js';
+import type { User } from '@/types/models';
 
 export interface Auth {
     user: User;

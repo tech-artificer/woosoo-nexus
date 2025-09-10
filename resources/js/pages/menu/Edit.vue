@@ -104,11 +104,11 @@ onMounted(() => {
 <template>
   <Dialog v-model:open="showDialog">
     <TooltipProvider :delay-duration="100">
-      <Tooltip class="bg-woosoo-dark-gray">
+      <Tooltip class="">
         <TooltipTrigger as-child>
           <DialogTrigger as-child>
             <Button variant="ghost" class="cursor-pointer" @click="openDialog">
-              <Image />
+              <Image  />
             </Button>
           </DialogTrigger>
         </TooltipTrigger>

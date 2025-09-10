@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('device_orders', function (Blueprint $table) {
-          $table->unsignedBigInteger('terminal_session_id');
-        });
+        // Add column only if it doesn't exist
+        if (!Schema::hasColumn('device_orders', 'terminal_session_id')) {
+          Schema::table('device_orders', function (Blueprint $table) {
+            $table->unsignedBigInteger('terminal_session_id');
+          });
+        }
     }
 
     /**

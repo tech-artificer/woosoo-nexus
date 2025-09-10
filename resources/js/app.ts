@@ -21,7 +21,7 @@ if( 'performance' in window ) {
 }
 
 
-// const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content'); // Get the CSRF token
+ // Get the CSRF token
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };

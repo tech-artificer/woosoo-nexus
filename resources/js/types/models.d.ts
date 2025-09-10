@@ -5,15 +5,32 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    status: string;
     avatar?: string;
-    email_verified_at: string | null;
-    created_at: string;
-    updated_at: string;
+    role: string;
+    status: string;
+    deleted_at?: string;
+    roles: Role[];
+
+}
+
+export interface Role {
+    id: number;
+    name: string;
+    permissions: Permission[];
+}
+
+export interface Permission {
+    id: number;
+    name: string;
+    label: string;
+    guard_name: string;
 }
 
 export interface Branch {
     id: number;
     name: string;
+    location: string;
 }
 
 export interface Table {
@@ -23,7 +40,7 @@ export interface Table {
     is_available: boolean;
     is_locked: boolean;
     device: Device;
-    tableOrder: TableOrder;
+    tableOrder?: TableOrder;
 }
 
 export interface TableOrder {

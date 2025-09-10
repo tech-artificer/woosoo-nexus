@@ -47,7 +47,7 @@ class OrderVoided implements ShouldBroadcastNow
      */
     public function broadcastWith()
     {   
-         return [
+        return [
             'order' => $this->deviceOrder->only([
                 'id', 
                 'order_id', 

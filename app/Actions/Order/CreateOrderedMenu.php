@@ -3,30 +3,29 @@
 namespace App\Actions\Order;
 
 use Lorisleiva\Actions\Concerns\AsAction;
-
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\OrderedMenu;
-use App\Repositories\Krypton\MenuRepository;
 use Illuminate\Support\Facades\DB;
-
-
 use Carbon\Carbon;
 
 class CreateOrderedMenu
 {
     use AsAction;
 
-
+    public $orderedMenuId = null;
     public function handle(array $attr)
     {
-        $orderedMenuId = null;
+        $this->orderedMenuId = null;
 
         $menuItems = $attr['items'] ?? [];
 
         $orderedMenus = [];
-        foreach ($menuItems as $item) {
 
-            if( $item['menu_id'] == null ) {}
+        foreach ($menuItems as $key => $item) {
+
+            if( $key == 0 ) {
+                $this->orderedMenuId = $item['menu_id'];
+            }
 
             $item['order_id'] = $attr['order_id'];
             $item['order_check_id'] = $attr['order_check_id'];
@@ -42,8 +41,6 @@ class CreateOrderedMenu
     {
         // This method should contain the logic to create an ordered menu item.
         // It should validate the input, check if the menu item exists, and then create the ordered menu item in the database.
-        // Example of how you might implement this:
-        // Uncomment the following code and adjust it according to your application's logic.
         $menuId = $item['menu_id'];
         $quantity = $item['quantity'] ?? 0; // Default to 1 if not provided
         
@@ -69,7 +66,6 @@ class CreateOrderedMenu
         $taxAmount = $totalItemPrice * $taxRate;
         $subTotal = $totalItemPrice + $taxAmount; // Simple example
 
-          
         $index = $item['index'] ?? 1; // Default to 1 if not provided
         $seatNumber = $item['seat_number'] ?? 1; // Default to 1 if not provided
         $note = $item['note'] ?? ''; // Default to empty string if not provided
@@ -114,27 +110,15 @@ class CreateOrderedMenu
             $placeholders = implode(', ', $placeholdersArray);
 
             // Call the procedure
-            $orderedMenu = OrderedMenu::fromQuery('CALL create_ordered_menu(' . $placeholders . ')', $params)->first();
+            $orderedMenus = OrderedMenu::fromQuery('CALL create_ordered_menu(' . $placeholders . ')', $params)->first();
 
-
-            if (empty($orderedMenu)) {
+            if (empty($orderedMenus)) {
                 throw new \Exception("Failed to add menu item.");
             }
-
-            // // $newOrderedMenu = (array) $orderedMenuResult[0];
-
-            return $orderedMenu;
-            // return response()->json([
-            //     'message' => 'Menu item added successfully.',
-            //     'ordered_menu' => $newOrderedMenu
-            // ]);
-
+            return $orderedMenus;
         } catch (\Throwable $th) {
             //throw $th;
         }
-            
-
-          
 
     }
 

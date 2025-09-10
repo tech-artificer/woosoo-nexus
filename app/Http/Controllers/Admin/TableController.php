@@ -10,14 +10,14 @@ use App\Models\Krypton\Table;
 
 class TableController extends Controller
 {
-    public function index() 
-    {
-        $tables = Table::with(['tableOrders', 'device'])->get();
+    // public function index() 
+    // {
+    //     $tables = Table::with(['tableOrders', 'device'])->get();
 
-        return Inertia::render('Tables', [
-            'title' => 'Tables',
-            'description' => 'List of Tables',
-            'tables' => $tables,
-        ]);
-    }
+    //     return Inertia::render('Tables', [
+    //         'title' => 'Tables',
+    //         'description' => 'List of Tables',
+    //         'tables' => $tables,
+    //     ]);
+    // }
 }

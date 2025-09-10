@@ -4,9 +4,20 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Head } from '@inertiajs/vue3'
 // import PlaceholderPattern from '../components/PlaceholderPattern.vue'
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ListOrdered } from 'lucide-vue-next';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Badge } from '@/components/ui/badge';
+import Register from '@/pages/auth/Register.vue';
+import { 
+    type LucideIcon, 
+    ChartSpline,
+    Contact,
+    ArrowUp10,
+    ChartPie,
+} from 'lucide-vue-next';
+
+// import Overview from '@/pages/dashboard/components/Overview.vue';
+import TopItems from '@/pages/dashboard/components/TopItems.vue';
+import TopSales from '@/pages/dashboard/components/TopSales.vue';
 
 
 // const page = usePage();
@@ -16,25 +27,56 @@ import { ListOrdered } from 'lucide-vue-next';
 // const employeeLogs = page.props.employeeLog as { id?: any } || {};
 // const flag = page.props.sessionFlag as boolean || false;
 
-// interface ActiveSession {
-//   id?: any;
-//   title?: string;
-//   icon?: LucideIcon;
-//   is_active?: boolean;
-// }
+interface DashCards {
+  title?: string;
+  value?: string | number;
+  icon?: LucideIcon;
+  helpText?: string;
+}
 
 const props = defineProps<{
     title?: string
     description?: string
     tableOrders: any
     openOrders: any,
-    sessionId: number
+    sessionId: number,
+    totalSales: string | number,
+    guestCount: string | number,
+    totalOrders: string | number,
+    monthlySales: string | number
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
+    },
+];
+
+const dashCards: DashCards[] = [
+    {
+        title: 'Total Sales Today',
+        value: '₱' + props.totalSales,
+        icon: ChartSpline,
+        helpText: '50 Transactions',
+    },
+    {
+        title: `Today's Orders`,
+        value: props.totalOrders,
+        icon: ArrowUp10,
+        helpText: 'Total Orders',
+    },
+    {
+        title: `Total Guests`,
+        value: props.guestCount,
+        icon: Contact,
+        helpText: 'Total Orders',
+    },
+    {
+        title: `Monthly Sales`,
+        value: props.monthlySales,
+        icon: ChartPie,
+        helpText: 'Sales for the month',
     },
 ];
 
@@ -63,7 +105,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 //         icon: Fingerprint,
 //         is_active: flag == true
 //     },
-    
+
 // ];
 
 // const services = ref([
@@ -108,62 +150,36 @@ onMounted(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
 
-        <div class="flex h-full flex-1 flex-col gap-4 rounded p-4">
+        <div class="flex h-full flex-1 flex-col gap-4 rounded p-6">
+            <div class="flex flex-col gap-2">
+                <h1 class="text-2xl font-bold font-header text-woosoo-dark-gray">Overview</h1>
+                <p class=" font-body font-light text-woosoo-dark-gray">Welcome to the main dashboard</p>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card  class="w-full">
-                    <CardContent class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-body text-woosoo-dark-gray">Active Orders</p>
-                            <h1 class="text-3xl font-semibold font-body text-woosoo-blue">{{ openOrders.length }}</h1>
+                <Card v-for="dashCard in dashCards" :key="dashCard.title" class="border-0">
+                    <CardHeader class="flex flex-row items-center justify-between p-4 pb-2">
+                        <CardTitle class="text-sm font-medium">
+                        {{ dashCard.title }}
+                        </CardTitle>
+                        <component :is="dashCard.icon" class="text-woosoo-green " />   
+                    </CardHeader>
+                    <CardContent>
+                        <div class="text-2xl font-bold">
+                        {{ dashCard.value }}
                         </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <component :is="ListOrdered"/>
-                            <Badge v-if="openOrders.length" class="bg-success text-woosoo-green">
-                               {{ sessionId }}
-                            </Badge>
-                        </div>
-                      
+                        <p class="text-xs text-muted-foreground">
+                        {{ dashCard.helpText }}
+                        </p>
                     </CardContent>
-                </Card> 
-               <!-- <pre> {{ tableOrders }} </pre> -->
-                <!-- <Card v-for="activeSession in activeSessions" :key="activeSession.id" class="w-full">
-                    <CardContent class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-body text-woosoo-dark-gray">{{ activeSession.title }}</p>
-                            <h2 class="text-xl font-semibold font-body text-woosoo-blue">{{ activeSession.id }}</h2>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <component :is="activeSession.icon"/>
-                            <Badge v-if="activeSession.is_active" class="bg-success text-woosoo-green">
-                               Current
-                            </Badge>
-                             <Badge v-else class="bg-red text-woosoo-red">
-                               Previous
-                            </Badge>
-                        </div>
-                    </CardContent>
-                </Card> -->
+                </Card>
+         
+                
+              
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <!-- <Card v-for="service in services" :key="service.key" class="w-full">
-                    <CardContent class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-l font-semibold font-header text-woosoo-dark-gray">{{ service.name }}</h3>
-                            <p class="text-sm font-body text-muted-foreground">{{ service.description }}</p>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <Button :disabled="service.loading" @click="runService(service.key)">
-                                <Loader2 v-if="service.loading" class="animate-spin mr-2" />
-                                {{ service.loading ? 'Running...' : 'Run Now' }}
-                            </Button>
-                            <Badge class="bg-success text-woosoo-green"
-                                :variant="service.status === 'running' ? 'success' : service.status === 'stopped' ? 'destructive' : 'destructive'">
-                                {{ service.status }}
-                            </Badge>
-                        </div>
-                    </CardContent>
-                </Card> -->
-            </div>
+
+        
+  
+
         </div>
     </AppLayout>
 </template>

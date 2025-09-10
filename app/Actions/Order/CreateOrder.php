@@ -4,19 +4,25 @@ namespace App\Actions\Order;
 
 use Lorisleiva\Actions\Concerns\AsAction;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use App\Models\Krypton\Order;
-use App\Models\Device;
-use App\Repositories\Krypton\OrderRepository;
 
-class CreateOrder extends OrderRepository
+class CreateOrder
 {
     use AsAction;
 
     // public function handle(Device $device, array $params)
     public function handle(array $attr)
     {
-        return $this->createNewOrder($attr);
+       $order = $this->createNewOrder($attr);
+
+        // Update the order with terminal and cashier details
+        $order->update([
+            'end_terminal_id' => $order->terminal_id, 
+            'cash_tray_session_id' => $attr['cash_tray_session_id'],
+            'cashier_employee_id' => $attr['cashier_employee_id'],
+        ]);
+
+        return $order->refresh();
     }
 
     public function createNewOrder(array $attr = []) {
@@ -69,7 +75,6 @@ class CreateOrder extends OrderRepository
     
             $placeholdersArray = array_fill(0, count($params), '?');
             $placeholders = implode(', ', $placeholdersArray);
-
             // Call the procedure
             $order = Order::fromQuery('CALL create_order(' . $placeholders . ')', $params)->first();
 

@@ -11,6 +11,9 @@ use App\Models\Krypton\Session;
 use App\Repositories\Krypton\TableRepository;
 use App\Repositories\Krypton\OrderRepository;
 use App\Models\Device;
+use App\Models\DeviceOrder;
+use App\Enums\OrderStatus;
+use App\Services\DashboardService;
 
 class DashboardController extends Controller
 {
@@ -41,6 +44,12 @@ class DashboardController extends Controller
             ]);
         }
 
+
+        $dashboard = new DashboardService(); 
+
+        $totalSales = $dashboard->totalSales();
+        $monthlySales = $dashboard->monthlySales();
+
         $openOrders = $this->orderRepository->getOpenOrdersForSession($session->id);
         $tableOrders = $this->tableRepository->getActiveTableOrders();
 
@@ -57,7 +66,11 @@ class DashboardController extends Controller
             'description' => 'Analytics',
             'tableOrders' => $tableOrders,
             'openOrders' => $openOrders,
-            'sessionId' => $session->id
+            'sessionId' => $session->id,
+            'totalSales' => $totalSales,
+            'totalOrders' => 3,
+            'guestCount' => 19,
+            'monthlySales' => $monthlySales,
         ]);
     }
 }

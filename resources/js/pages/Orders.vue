@@ -7,9 +7,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { DeviceOrder, ServiceRequest, TableOrder } from '@/types/models';
 import { getOrderColumns } from '@/pages/order/order-columns';
 import AppTable from '@/pages/order/OrderTable.vue';
-import TablesGrid from '@/pages/table/TablesGrid.vue';
-
-
+// import TablesGrid from '@/pages/table/TablesGrid.vue';
 
 const columns = getOrderColumns();
 
@@ -27,15 +25,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     title: 'Orders',
     href: '/orders',
   },
-    {
-    title: 'Table Orders',
+  {
+    title: 'Live Orders (Table Orders)',
     href: '/orders/live',
   },
 ];
 
-const form = useForm({
-
-});
+const form = useForm({});
 
 const fetchData = (url: string) => {
   form.get(url, {
@@ -46,10 +42,10 @@ const fetchData = (url: string) => {
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
 
-  if( isUpdate ) {
-    
+  if (isUpdate) {
+    //
   }
-  console.log(event);
+
   fetchData(route('orders.live'));
 
 };
@@ -92,14 +88,14 @@ onUnmounted(() => {
   <Head :title="title" :description="description" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <!-- <pre>{{ tableOrders }}</pre> -->
+    <!-- <pre>{{ orders }}</pre> -->
 
     <div class="p-6">
-     <AppTable :rows="orders" :columns="columns" :filter="false" />
+      <!-- <AppTable :rows="orders" :columns="columns" :filter="true" /> -->
     </div>
 
     <!-- <div> -->
-      <!-- <TablesGrid :orders="orders" /> -->
+    <!-- <TablesGrid :orders="orders" /> -->
     <!-- </div>   -->
 
   </AppLayout>

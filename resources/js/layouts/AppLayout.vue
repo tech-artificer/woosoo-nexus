@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
+import AppContentLayout from '@/layouts/AppContentLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
 import { Toaster } from '@/components/ui/sonner'
 import 'vue-sonner/style.css' 
@@ -25,7 +26,7 @@ withDefaults(defineProps<Props>(), {
   
 });
 
-// 🟢 Watch for Flash Messages (Typed + Reactive)
+//  Watch for Flash Messages (Typed + Reactive)
 // watch(() => page.props.flash, (message) => {
 //     if (message) {
 //         toast.success(message, { duration: 3000 });
@@ -36,7 +37,9 @@ withDefaults(defineProps<Props>(), {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <slot />
+        <AppContentLayout>
+            <slot />
+        </AppContentLayout>
         <Toaster />
     </AppLayout>
 </template>

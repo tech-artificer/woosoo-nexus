@@ -4,7 +4,7 @@ import { useForm } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Pencil, Link, Trash } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
-import { Select } from '@/components/forms'
+// import { Select } from '@/components/forms'
 
 import {
   Tooltip,

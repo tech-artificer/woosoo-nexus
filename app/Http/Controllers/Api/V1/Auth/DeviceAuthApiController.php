@@ -76,7 +76,8 @@ class DeviceAuthApiController extends Controller
         if(  !$device ) {
             return response()->json([
                 'success' => false,
-                'error' => 'Device not found'
+                'error' => 'Device not found',
+                'ip_address' => $ip
             ], 404);
         }
 
