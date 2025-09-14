@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\V1\{
     TableServiceApiController,
     Menu\MenuBundleController,
     ServiceRequestApiController,
-    Reports\SalesApiController,
+    // Reports\SalesApiController,
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -73,9 +73,9 @@ Route::middleware(['auth:device'])->group(function () {
 });
 
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/reports/sales/', SalesApiController::class);
-});
+// Route::middleware(['auth'])->group(function () {
+//     Route::get('/reports/sales/', SalesApiController::class);
+// });
 
 
 // Route::middleware('api')->group(function () {

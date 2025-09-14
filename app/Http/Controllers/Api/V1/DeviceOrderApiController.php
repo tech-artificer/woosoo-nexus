@@ -11,6 +11,8 @@ use App\Events\Order\OrderCreated;
 use App\Models\Device;
 use App\Services\Krypton\OrderService;
 use App\Services\BroadcastService;
+use Illuminate\Support\Facades\Auth;
+use App\Enums\OrderStatus;
 
 /**
  * Handle incoming order requests from devices.
@@ -25,6 +27,12 @@ class DeviceOrderApiController extends Controller
      */
     public function __invoke(StoreDeviceOrderRequest $request)
     {   
+        // $device = Auth::guard('device')->user();
+
+        // if (!$device) {
+        //     return response()->json(['error' => 'Unauthorized'], 401);
+        // }
+
         // Validate the incoming request
         $validatedData = $request->validated();
         // Initialize errors array
@@ -34,8 +42,8 @@ class DeviceOrderApiController extends Controller
 
         if( $device && $device->table_id) {
 
-            $canOrder = $device->orders()->latest()->first();
-            
+            $canOrder = $device->orders()->whereIn('status', [OrderStatus::PENDING, OrderStatus::CONFIRMED])->latest()->first();
+           
             if( !$canOrder ) {
                 
                 $order = app(OrderService::class)->processOrder($device, $validatedData);

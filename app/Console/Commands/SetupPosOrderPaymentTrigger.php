@@ -38,6 +38,7 @@ class SetupPosOrderPaymentTrigger extends Command
                 $table->boolean('is_voided');
                 $table->string('action');
                 $table->boolean('is_processed')->default(false);
+                $table->unsignedBigInteger('session_id')->nullable();
                 $table->softDeletes();
                 $table->timestamps();
             });
@@ -84,14 +85,14 @@ class SetupPosOrderPaymentTrigger extends Command
                 ELSE
                     IF NEW.date_time_closed IS NOT NULL THEN
                         INSERT INTO woosoo_api.order_update_logs 
-                            (table_name, order_id, is_open, is_voided, action, created_at, updated_at, date_time_closed, session_id)
+                            (table_name, order_id, is_open, is_voided, action, created_at, updated_at, session_id)
                         VALUES 
                             ('orders', NEW.id, NEW.is_open, NEW.is_voided, 
                             CASE 
                                 WHEN NEW.is_voided = 1 THEN 'voided'
                                 ELSE 'paid'
                             END, 
-                            NOW(), NOW(), NEW.date_time_closed, NEW.session_id);
+                            NOW(), NOW(), NEW.session_id);
                     END IF;
                 END IF;
             END

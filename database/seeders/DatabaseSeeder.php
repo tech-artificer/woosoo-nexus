@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
         }
 
         User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'owner@example.com'],
             [
                 'name' => 'admin',
                 'password' => bcrypt('password'),
@@ -38,13 +38,22 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // User::firstOrCreate(
+        //     ['email' => 'admin@example.com'],
+        //     [
+        //         'name' => 'admin',
+        //         'password' => bcrypt('password'),
+        //         'is_admin' => true,
+        //     ]
+        // );
+
         $this->setupRolesAndPermissions();
     }
 
     protected function setupRolesAndPermissions() {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $user = User::where(['is_admin' => true])->first();
+        $user = User::where(['is_admin' => true, 'id' => 1])->first();
         /*
         |--------------------------------------------------------------------------
         | Define Permissions
@@ -95,37 +104,6 @@ class DatabaseSeeder extends Seeder
             // Reports
             'reports.sales.view',
             'reports.sales.export',
-
-            // Menu & Categories
-            // 'view menu',
-            // 'create menu',
-            // 'edit menu',
-            // 'delete menu',
-            // 'manage categories',
-
-            
-
-            // 'view orders',
-            // 'update order status',
-            // 'cancel order',
-            // 'void order',
-            // 'apply discount',
-            // 'refund payment',
-
-            
-
-           
-
-            // // Tables / Sessions
-            // 'view tables',
-            // 'assign table',
-            // 'close table',
-
-            // Payments
-            // 'process payment',
-            // 'void payment',
-            // 'print receipt',
-
             
         ];
 
@@ -138,14 +116,12 @@ class DatabaseSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
         $owner = Role::firstOrCreate(['name' => 'Owner']);
-        $accountant = Role::firstOrCreate(['name' => 'Accountant']);
-        $marketer = Role::firstOrCreate(['name' => 'Marketer']);
-        $manager = Role::firstOrCreate(['name' => 'Manager']);
+        $admin = Role::firstOrCreate(['name' => 'Administrator']);
         $staff = Role::firstOrCreate(['name' => 'Staff']);
 
         $owner->givePermissionTo(Permission::all());
-        $accountant->givePermissionTo(['reports.sales.view', 'reports.sales.export']);
-        $manager->givePermissionTo([
+        $admin->givePermissionTo(Permission::all());
+        $staff->givePermissionTo([
             'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.cancel', 'orders.complete', 'orders.void',
             'devices.view', 'devices.register', 'devices.assign.table', 'devices.unassign.table', 'devices.delete',
             'branches.view', 'branches.create', 'branches.edit', 'branches.delete',

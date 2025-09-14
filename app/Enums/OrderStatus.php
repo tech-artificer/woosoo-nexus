@@ -17,13 +17,15 @@ enum OrderStatus : string
     public function canTransitionTo(OrderStatus $newStatus): bool
     {
         return match ($this) {
-            self::PENDING => in_array($newStatus, [self::CONFIRMED, self::VOIDED, self::CANCELLED, self::COMPLETED]),
-            self::CONFIRMED => in_array($newStatus, [self::self::VOIDED, self::CANCELLED, self::COMPLETED]),
-            self::COMPLETED => in_array($newStatus, [self::ARCHIVED]),
-            self::IN_PROGRESS => in_array($newStatus, [self::READY, self::CANCELLED]),
-            self::READY => $newStatus === self::SERVED,
-            self::SERVED, self::CANCELLED, self::SERVED => false, // Terminal states,
-            self::SERVED => in_array($newStatus, [self::COMPLETED ,self::SERVED, self::CANCELLED]),
+            self::PENDING     => in_array($newStatus, [self::CONFIRMED, self::VOIDED, self::CANCELLED, self::COMPLETED]),
+            self::CONFIRMED   => in_array($newStatus, [self::VOIDED, self::CANCELLED, self::IN_PROGRESS, self::COMPLETED]),
+            self::IN_PROGRESS => in_array($newStatus, [self::READY, self::CANCELLED, self::COMPLETED]),
+            self::READY       => $newStatus === self::SERVED,
+            self::SERVED      => in_array($newStatus, [self::COMPLETED, self::CANCELLED]),
+            self::COMPLETED   => $newStatus === self::ARCHIVED,
+            self::CANCELLED,
+            self::VOIDED,
+            self::ARCHIVED    => false, // terminal states
         };
     }
 }

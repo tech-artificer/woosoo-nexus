@@ -60,7 +60,8 @@ class OrderService
             $tableOrder = CreateTableOrder::run($this->attributes);
             // Update table availability
             $table = Table::where('id', $this->attributes['table_id'])->update([
-                'is_available' => false
+                'is_available' => true,
+                'is_locked' => true,
             ]);
 
             // Create an order check

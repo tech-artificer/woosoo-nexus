@@ -10,6 +10,9 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Link } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+
+const page = usePage();
 
 defineProps<{
     title?: string;
@@ -25,7 +28,7 @@ const form = useForm({
 
 const submit = () => {
 
-    form.post(route('login'), {
+    form.post(route('login', { _token: page.props.csrfToken }), {
         onFinish: async () => {
             form.reset('password');
         }

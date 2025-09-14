@@ -25,16 +25,15 @@ class ProcessOrderLogs implements ShouldQueue
     {
         Log::info("Checking for log entries");
         $logs = OrderUpdateLog::where(['is_processed' => false])
-            ->whereNotNull('date_time_closed')
             ->with(['deviceOrder']) // Eloquent relation
             ->get();
 
-        Log::info("Has {$logs->count()} Log/s");
-
-        if( !$logs || $logs->isEmpty()) {
-            Log::info("Nothing to process");
-            return;
-        }
+        Log::info("Has {$logs} Log/s");
+        
+        // if( !$logs || $logs->isEmpty()) {
+        //     Log::info("Nothing to process");
+        //     return;
+        // }
 
 
         if( $logs->count() ) {
@@ -42,38 +41,40 @@ class ProcessOrderLogs implements ShouldQueue
             foreach ($logs as $log) {
                 try {
                     $deviceOrder = $log->deviceOrder;
-
+                    Log::info("Order: {$deviceOrder->status->value}");
                     if (!$deviceOrder) {
                         throw new \Exception("No device order for Order ID {$log->order_id}");
                     }
 
-                    if( $log->is_voided == true ) {
+                    // if( $log->is_voided == true ) {
 
-                        if(  $deviceOrder->status == OrderStatus::CONFIRMED ) {
-                            $deviceOrder->status = OrderStatus::VOIDED;
-                            $log->is_processed = true;
-                        }
-                        broadcast(new OrderVoided($deviceOrder));
-                        $deviceOrder->save();
-                        $log->delete();
-                        Log::info("Processed & broadcasted Voided Order ID {$log->order_id}");
-                        $deviceOrder->save();
-                        $log->delete();
-                        return;
-                    }
-
+                    //     if(  $deviceOrder->status == OrderStatus::CONFIRMED ) {
+                    //         $deviceOrder->status = OrderStatus::VOIDED;
+                    //         $log->is_processed = true;
+                    //     }
+                    //     broadcast(new OrderVoided($deviceOrder));
+                    //     $deviceOrder->save();
+                    //     $log->delete();
+                    //     Log::info("Processed & broadcasted Voided Order ID {$log->order_id}");
+                    //     $deviceOrder->save();
+                    //     $log->delete();
+                    //     return;
+                    // }
+                    Log::info("Open {$log->is_open}");
                     if( $log->is_open == false && $log->action == 'paid' ) {
 
-                        if(  $deviceOrder->status == OrderStatus::CONFIRMED ) {
-                            $deviceOrder->status = OrderStatus::COMPLETED;
+                        if( $deviceOrder->status == OrderStatus::CONFIRMED ) {
+                            $deviceOrder->status =  OrderStatus::COMPLETED;
+                            // Log::info("is true {$deviceOrder->status}");
+                            $deviceOrder->save();
                             $log->is_processed = true;
                         }
-                    
-                        $deviceOrder->save();
+                       
                         $log->delete();
 
                         broadcast(new OrderCompleted($deviceOrder));
                         Log::info("Processed & broadcasted Completed Order ID {$log->order_id}");
+                         Log::info("{$deviceOrder}");
                     }
 
                 } catch (\Throwable $e) {

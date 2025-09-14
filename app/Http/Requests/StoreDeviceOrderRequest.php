@@ -62,7 +62,7 @@ class StoreDeviceOrderRequest extends FormRequest
              * @var float
              * @example 1106.56
              */
-            'total' => ['required', 'numeric', 'min:0'],
+            'total_amount' => ['required', 'numeric', 'min:0'],
             /**
              * 
              * @var array {menu_id, name, quantity, price, note, subtotal, ordered_menu_id, tax, discount}

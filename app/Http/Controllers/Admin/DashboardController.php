@@ -33,16 +33,17 @@ class DashboardController extends Controller
      */
     public function index()
     {   
+        
         $session = Session::fromQuery('CALL get_latest_session_id()')->first();
 
-        if( !$session ) {
-            return Inertia::render('Dashboard', [
-                'title' => 'Dashboard',
-                'description' => 'Analytics',
-                'tableOrders' => [],
-                'openOrders' => []
-            ]);
-        }
+        // // if( !$session ) {
+        //     return Inertia::render('Dashboard', [
+        //         'title' => 'Dashboard',
+        //         'description' => 'Analytics',
+        //         'tableOrders' => [],
+        //         'openOrders' => []
+        //     ]);
+        // }
 
 
         $dashboard = new DashboardService(); 
