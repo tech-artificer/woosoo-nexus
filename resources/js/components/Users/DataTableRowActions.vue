@@ -19,11 +19,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  // AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ref, computed } from 'vue'
 import type { User } from '@/types/models';
-import UserForm from '@/components/users/UserForm.vue';
+// import UserForm from '@/components/users/UserForm.vue';
 import { toast } from 'vue-sonner'
 import {
   Sheet,
@@ -69,12 +69,15 @@ const restoreUser = (computedUser: User) => {
   // isRestoring.value = computedUser.id
   
   router.patch(route('users.restore', computedUser.id), {}, {
-    onSuccess: (page) => {
+    onSuccess: (page: any) => {
+
+      console.log(page)
       // isRestoring.value = null
       // showNotification('success', `${computedUser.name} has been restored successfully.`)
     },
-    onError: (errors) => {
+    onError: (errors: any) => {
       // isRestoring.value = null
+      console.log(errors)
       // showNotification('error', 'Failed to restore user. Please try again.')
     }
   })

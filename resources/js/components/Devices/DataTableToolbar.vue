@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import type { Table } from '@tanstack/vue-table'
 import type { Device } from '@/types/models';
-import { RefreshCcw, HardDriveDownload } from 'lucide-vue-next'
+import { RefreshCcw } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { computed } from 'vue'
 // import {  statuses } from '@/composables/useData'
-import DataTableFacetedFilter from '@/components/devices/DataTableFacetedFilter.vue'
+// import DataTableFacetedFilter from '@/components/devices/DataTableFacetedFilter.vue'
 // import DataTableViewOptions from '@/components/devices/components//DataTableViewOptions.vue'
-import AddUser from '@/components/devices/Register.vue'
+// import AddUser from '@/components/devices/Register.vue'
 
 
-import { usePage } from '@inertiajs/vue3'
-``
+// import { usePage } from '@inertiajs/vue3'
 
-const page = usePage()
+
+// const page = usePage()
 
 
 

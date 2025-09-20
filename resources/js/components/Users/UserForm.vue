@@ -1,34 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import {  onMounted } from 'vue'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import { toast } from 'vue-sonner'
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+// import {
+//   Select,
+//   SelectContent,
+//   SelectGroup,
+//   SelectItem,
+//   SelectLabel,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select"
 
 import {
   SheetClose,
   SheetFooter,
 } from "@/components/ui/sheet"
-import { ScrollArea } from '@/components/ui/scroll-area'
+// import { ScrollArea } from '@/components/ui/scroll-area'
 
 import { Label } from '@/components/ui/label';
-import { Role, Branch, User } from '@/types';
+import type{ Role, User } from '@/types/models';
 import Separator from '../ui/separator/Separator.vue';
 const page = usePage();
 // Props
 const roles = page.props.roles as Role[]
-const branches = page.props.branches as Branch[]
+// const branches = page.props.branches as Branch[]
 // const showDialog = ref(false); // Dialog state
 
 const props = defineProps<{
@@ -45,13 +45,13 @@ const form = useForm({
   branches: [] as number[]
 });
 
-const toggleBranch = (branchId: number, checked: boolean) => {
-  if (checked && !form.branches.includes(branchId)) {
-    form.branches.push(branchId)
-  } else if (!checked) {
-    form.branches = form.branches.filter(id => id !== branchId)
-  }
-}
+// const toggleBranch = (branchId: number, checked: boolean) => {
+//   if (checked && !form.branches.includes(branchId)) {
+//     form.branches.push(branchId)
+//   } else if (!checked) {
+//     form.branches = form.branches.filter(id => id !== branchId)
+//   }
+// }
 
 const toggleRole = (roleName: string | any, checked: boolean) => {
   
@@ -84,8 +84,8 @@ function submit() {
   } else {
     form.put(route('users.update', props.user?.id), {
       preserveScroll: true,
-      onSuccess: (response) => {
-        
+      onSuccess: (response: any) => {
+        console.log(response);
         toast('User Updated:', {
           description: 'User details have been updated.',
           // action: {
@@ -106,7 +106,7 @@ onMounted(() => {
     form.name = props.user.name
     form.email = props.user.email
     form.roles = props.user.roles.map((r: Role) => r.name) ?? []
-    form.branches = props.user.branches?.map((b: Branch) => b.id) ?? []
+    // form.branches = props.user.branches?.map((b: Branch) => b.id) ?? []
   }
 })
 
@@ -152,14 +152,14 @@ onMounted(() => {
           <Label for="branch">Branch</Label>
           <span class="text-xs text-muted-foreground">User can have multiple branches</span>
           <div class="flex flex-col gap-2">
-            <div v-for="branch in branches" :key="branch.id" class="flex justify-start items-center gap-2">
+            <!-- <div v-for="branch in branches" :key="branch.id" class="flex justify-start items-center gap-2">
               <Checkbox :id="`branch-${branch.id}`" :model-value="form.branches.includes(branch.id)"
                 @update:model-value="(checked: any) => toggleBranch(branch.id, checked)" />
               <label :for="`branch-${branch.id}`"
                 class="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 {{ branch.name }}
               </label>
-            </div>
+            </div> -->
           </div>
           <InputError :message="form.errors.branches" />
         </div>

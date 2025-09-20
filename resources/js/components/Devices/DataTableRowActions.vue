@@ -19,19 +19,19 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  // AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ref, computed } from 'vue'
 import type { Device } from '@/types/models';
-import UserForm from '@/components/devices/UserForm.vue';
+// import UserForm from '@/components/devices/UserForm.vue';
 import { toast } from 'vue-sonner'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+// import {
+//   Sheet,
+//   SheetContent,
+//   SheetDescription,
+//   SheetHeader,
+//   SheetTitle,
+// } from '@/components/ui/sheet'
 
 interface DataTableRowActionsProps {
   row: Row<Device>
@@ -69,14 +69,14 @@ const restoreUser = (computedDevice: Device) => {
   // isRestoring.value = computedDevice.id
   
   router.patch(route('devices.restore', computedDevice.id), {}, {
-    onSuccess: (page) => {
-      // isRestoring.value = null
-      // showNotification('success', `${computedDevice.name} has been restored successfully.`)
-    },
-    onError: (errors) => {
-      // isRestoring.value = null
-      // showNotification('error', 'Failed to restore user. Please try again.')
-    }
+    // onSuccess: (page) => {
+    //   // isRestoring.value = null
+    //   // showNotification('success', `${computedDevice.name} has been restored successfully.`)
+    // },
+    // onError: (errors) => {
+    //   // isRestoring.value = null
+    //   // showNotification('error', 'Failed to restore user. Please try again.')
+    // }
   })
 }
 
@@ -140,7 +140,7 @@ console.log(route('devices.restore', 3))
   </AlertDialog>
 
 
-  <Sheet v-model:open="isSheetOpen">
+  <!-- <Sheet v-model:open="isSheetOpen">
     <SheetContent>
       <SheetHeader>
         <SheetTitle>Edit User</SheetTitle>
@@ -148,9 +148,9 @@ console.log(route('devices.restore', 3))
           Edit the user's information.
         </SheetDescription>
       </SheetHeader>
-      <UserForm :user="computedDevice" form-type="edit" />
-    </SheetContent>
-  </Sheet>
+       <UserForm :user="computedDevice" form-type="edit" /> -->
+    <!-- </SheetContent> -->
+  <!-- </Sheet> -->
 
 
 </template>

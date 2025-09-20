@@ -9,9 +9,9 @@ import { Head } from '@inertiajs/vue3';
 //   TabsTrigger,
 // } from '@/components/ui/tabs'
 // import { KeyRound } from 'lucide-vue-next'
-import { usePage } from '@inertiajs/vue3';
+// import { usePage } from '@inertiajs/vue3';
 import RolePermissions from '@/pages/accessibility/Index.vue'
-const page = usePage();
+// const page = usePage();
 
 const breadcrumbs: BreadcrumbItem[] = [
   {

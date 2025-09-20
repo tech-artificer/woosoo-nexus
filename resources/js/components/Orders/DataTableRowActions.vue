@@ -6,8 +6,8 @@ import { router } from '@inertiajs/vue3'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
+  // DropdownMenuItem,
+  // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -19,22 +19,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  // AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ref, computed } from 'vue'
 import type { DeviceOrder } from '@/types/models';
 // import UserForm from '@/components/Orders/UserForm.vue';
 import { toast } from 'vue-sonner'
-import { usePage } from '@inertiajs/vue3'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+// import { usePage } from '@inertiajs/vue3'
+// import {
+//   Sheet,
+//   SheetContent,
+//   SheetDescription,
+//   SheetHeader,
+//   SheetTitle,
+// } from '@/components/ui/sheet'
 
-const page = usePage();
+// const page = usePage();
 
 interface DataTableRowActionsProps {
   row: Row<DeviceOrder>
@@ -49,17 +49,17 @@ const computedOrder = computed(() => {
 
 const showVoidDialog = ref(false);
 // control sheet open state
-const isSheetOpen = ref(false)
+// const isSheetOpen = ref(false)
 
 // const isRestoring = ref(null)
-const openSheet = () => {
-  isSheetOpen.value = true
-}
+// const openSheet = () => {
+//   isSheetOpen.value = true
+// }
 
-const showDialog = ref(false);
-const openVoidDialog = () => {
-  showVoidDialog.value = true
-}
+// const showDialog = ref(false);
+// const openVoidDialog = () => {
+//   showVoidDialog.value = true
+// }
 
 
 const voidOrder = () => {
@@ -96,13 +96,13 @@ const voidOrder = () => {
           Print 
         </DropdownMenuItem> -->
           
-        <DropdownMenuItem 
+        <!-- <DropdownMenuItem 
           @click="openVoidDialog"
           v-if="!computedOrder.deleted_at" 
           class="text-orange cursor-pointer"
           >
           Void Order
-        </DropdownMenuItem>
+        </DropdownMenuItem> -->
     
      
 

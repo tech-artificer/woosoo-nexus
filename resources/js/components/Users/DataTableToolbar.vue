@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { computed } from 'vue'
 // import {  statuses } from '@/composables/useData'
-import DataTableFacetedFilter from '@/components/users/DataTableFacetedFilter.vue'
+// import DataTableFacetedFilter from '@/components/users/DataTableFacetedFilter.vue'
 // import DataTableViewOptions from '@/components/users/components//DataTableViewOptions.vue'
-import AddUser from '@/components/users/Register.vue'
+// import AddUser from '@/components/users/Register.vue'
 
 
 import { usePage } from '@inertiajs/vue3'
-``
+
 
 const page = usePage()
 
