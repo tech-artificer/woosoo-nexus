@@ -16,13 +16,12 @@ class BranchController extends Controller
     public function index()
     {
 
-        $branch = Branch::latest()->first();
-
+        $branches = Branch::all();
 
         return Inertia::render('Branches', [
             'title' => 'Branches',
             'description' => 'Branches',
-            'branch' => $branch
+            'branches' => $branches
         ]);
     }
 

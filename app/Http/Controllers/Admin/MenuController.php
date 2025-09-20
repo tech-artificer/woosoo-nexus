@@ -9,7 +9,6 @@ use Inertia\Inertia;
 use App\Models\Krypton\Menu;
 use Illuminate\Support\Str;
 use App\Models\MenuImage;
-use Illuminate\Support\Facades\Storage;
 
 class MenuController extends Controller
 {
@@ -46,7 +45,7 @@ class MenuController extends Controller
             ];
         });
 
-        return Inertia::render('Menus', [
+        return Inertia::render('Menus/Index', [
             'title' => 'Menus',
             'description' => 'List of Menus',
             'menus' => $menus,

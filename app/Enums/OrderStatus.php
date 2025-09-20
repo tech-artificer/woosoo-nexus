@@ -22,7 +22,7 @@ enum OrderStatus : string
             self::IN_PROGRESS => in_array($newStatus, [self::READY, self::CANCELLED, self::COMPLETED]),
             self::READY       => $newStatus === self::SERVED,
             self::SERVED      => in_array($newStatus, [self::COMPLETED, self::CANCELLED]),
-            self::COMPLETED   => $newStatus === self::ARCHIVED,
+            self::COMPLETED   => in_array($newStatus, [self::PENDING, self::ARCHIVED]), // $newStatus === self::ARCHIVED,
             self::CANCELLED,
             self::VOIDED,
             self::ARCHIVED    => false, // terminal states

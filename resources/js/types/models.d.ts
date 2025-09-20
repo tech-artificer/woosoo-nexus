@@ -9,9 +9,9 @@ export interface User {
     avatar?: string;
     role: string;
     status: string;
+    is_admin: boolean;
     deleted_at?: string;
     roles: Role[];
-
 }
 
 export interface Role {
@@ -53,36 +53,38 @@ export interface TableOrder {
     order?: Order;
 }
 
-
 export interface Device {
-    id: number;
+  id: number;
     name: string;
     table_id: number;
     branch_id: number;
     name: string;
     is_active: boolean;
     ip_address?: string;
+    deleted_at?: string;
     port?: number;
     branch?: Branch;
     table?: Table;
 }
 
 export interface DeviceOrder {
-    items: OrderedMenu[];
+    items: OrderedMenu[] | [];
     id: number;
+    guest_count: number;
     name: string;
     device_id: number;
-    order_id: any;
+    order_id: number | string | null;
     order_number: string;
-    status: OrderStatus;
-    device?: Device;
-    order?: Order;
-    table?: Table;
-    meta: any;
-    service_requests: ServiceRequest[];
+    status: OrderStatus | string | null;
+    device?: Device | null;
+    order?: Order | null;
+    table?: Table | null;
+    meta: any | null;
+    deleted_at?: string;
+    service_requests: ServiceRequest[] | []
 }
 export interface Menu {
-    id: number;
+     id: number;
     menu_group_id: number;
     menu_tax_type_id: number;
     menu_category_id: number;
@@ -96,20 +98,20 @@ export interface Menu {
     course: string;
     img_url: string;
     img_path: string;
-    cost: number;
+    // cost: number;
     description: string;
     index: number;
     is_taxable: boolean;
     is_available: boolean;
     is_modifier: boolean;
     is_discountable: boolean;
-    tare_weight: number;
-    scale_unit: string;
-    measurement_unit: string;
-    is_locked: boolean;
+    // tare_weight: number;
+    // scale_unit: string;
+    // measurement_unit: string;
+    // is_locked: boolean;
     quantity: number;
-    in_stock: number;
-    is_modifier_only: boolean;
+    // in_stock: number;
+    // is_modifier_only: boolean;
     guest_count: number;
 }
 

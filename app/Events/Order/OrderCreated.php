@@ -57,6 +57,7 @@ class OrderCreated implements ShouldBroadcastNow
                 'order_id', 
                 'order_number', 
                 'device_id', 
+                'session_id',
                 'status'
             ])
         ];

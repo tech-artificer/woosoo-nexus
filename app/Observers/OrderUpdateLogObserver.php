@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\OrderUpdateLog;
+use Illuminate\Support\Facades\Log;
 
 class OrderUpdateLogObserver
 {
@@ -11,9 +12,11 @@ class OrderUpdateLogObserver
      */
     public function created(OrderUpdateLog $orderUpdateLog): void
     {
-        if (!$orderUpdateLog->is_processed) {
-            ProcessOrderUpdateLog::dispatch($orderUpdateLog);
-        }
+
+        Log::info("An OrderUpdate Log was created: {$orderUpdateLog}");
+        // if (!$orderUpdateLog->is_processed) {
+        //     ProcessOrderUpdateLog::dispatch($orderUpdateLog);
+        // }
     }
 
     /**
@@ -21,9 +24,9 @@ class OrderUpdateLogObserver
      */
     public function updated(OrderUpdateLog $orderUpdateLog): void
     {
-        if (!$orderUpdateLog->is_processed) {
-            ProcessOrderUpdateLog::dispatch($orderUpdateLog);
-        }
+        // if (!$orderUpdateLog->is_processed) {
+        //     ProcessOrderUpdateLog::dispatch($orderUpdateLog);
+        // }
     }
 
     /**

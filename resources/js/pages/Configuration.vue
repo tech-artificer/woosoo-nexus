@@ -33,7 +33,7 @@ defineProps<{
            <!-- <pre>{{ roles }}</pre> -->
             <!-- <pre>{{ permissions }}</pre> -->
              <div class="flex flex-col gap-2">
-                <Configuration />
+                <!-- <Configuration /> -->
              </div>
         </div>
     </AppLayout>

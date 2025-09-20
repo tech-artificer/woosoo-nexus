@@ -14,28 +14,15 @@ class AccessibilityController extends Controller
 {
     public function index()
     {
-        // Fetch all roles from the database
-        $roles = Role::all(['id', 'name']);
 
-        // Fetch all permissions, grouped by the first part of their name (e.g., 'users', 'roles')
-        $allPermissions = Permission::all(['id', 'name', 'guard_name']);
-        
-        $groupedPermissions = $allPermissions->groupBy(function ($permission) {
-            return explode('.', $permission->name)[0];
-        })->map(function ($group) {
-            return $group->values(); // Reset keys for easier access in Vue
-        });
+        // return Inertia::render('accessibility/Index', [  
+        //     'title' => 'Accessibility',
+        //     'description' => 'Manage what each role can access across the system.',
+        // ]);
 
-        // Prepare the permissions assigned to each role for the frontend
-        $assignedPermissions = $roles->pluck('name')->mapWithKeys(function ($roleName) {
-            $role = Role::findByName($roleName);
-            return [$roleName => $role->permissions->pluck('name')];
-        });
-
-        return Inertia::render('roles/Permissions', [
-            'roles' => $roles,
-            'permissions' => $groupedPermissions,
-            'assignedPermissions' => $assignedPermissions,
+        return Inertia::render('Accessibility', [
+            'title' => 'Accessibility',
+            'description' => 'Manage what each role can access across the system.',
         ]);
     }
 

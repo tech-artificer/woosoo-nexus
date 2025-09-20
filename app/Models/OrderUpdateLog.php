@@ -21,13 +21,17 @@ class OrderUpdateLog extends Model
         return $this->hasOne(DeviceOrder::class, 'order_id', 'order_id');
     }
 
-    // protected static function booted() {
-        
-    //     // Detect when a row is created
-    //     static::created(function ($model) {
-    //         // Logic after the row is created
-    //         \Log::info('A new row was created: ' . json_encode($model->toArray()));
-    //     });
+    // public function created(OrderUpdateLog $orderUpdateLog): void
+    // {
+
+    //     // A new row was just created.
+    //     // You can now perform actions, like logging to an update_log table.
+    //     // For example:
+    //     // UpdateLog::create([
+    //     //     'model_id' => $yourModel->id,
+    //     //     'action' => 'created',
+    //     //     'data' => json_encode($yourModel->getOriginal())
+    //     // ]);
     // }
 
 }

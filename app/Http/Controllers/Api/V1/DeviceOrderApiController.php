@@ -44,7 +44,15 @@ class DeviceOrderApiController extends Controller
 
             $canOrder = $device->orders()->whereIn('status', [OrderStatus::PENDING, OrderStatus::CONFIRMED])->latest()->first();
            
-            if( !$canOrder ) {
+            if(  $canOrder ) {
+                 return response()->json([
+                    'success' => true,
+                    'message' => 'Order already in progress',
+                    'order' => new DeviceOrderResource($canOrder)
+                ], 201);
+            }
+
+            // if( !$canOrder ) {
                 
                 $order = app(OrderService::class)->processOrder($device, $validatedData);
 
@@ -55,7 +63,7 @@ class DeviceOrderApiController extends Controller
                     'order' => new DeviceOrderResource($order)
                 ], 201);
 
-            }
+            // }
             $errors[] = 'There is already an order in progress for this device.';  
         }else{
             $errors[] = 'The device is not assigned to a table. Please assign the device to a table and try again.';

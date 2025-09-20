@@ -19,6 +19,7 @@ use App\Models\Krypton\OrderCheck;
 use App\Models\DeviceOrder;
 use App\Enums\OrderStatus;
 use App\Models\Krypton\Session;
+use App\Services\Krypton\OrderService;
 
 use Carbon\Carbon;
 class OrderController extends Controller
@@ -42,14 +43,12 @@ class OrderController extends Controller
                     ->activeOrder()
                     ->get();
         
-                   
-        
-        return Inertia::render('Orders', [
+        return Inertia::render('Orders/Index', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    
             'orders' => $orders,
-            'user' => auth()->user(),
-            'tableOrders' => $activeOrders,
+            // 'user' => auth()->user(),
+            // 'tableOrders' => $activeOrders,
         ]);
     }
     
@@ -97,8 +96,14 @@ class OrderController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        // 
+    public function destroy(int $id)
+    {   
+        $deviceOrder = DeviceOrder::find($id); 
+        $orderService = new OrderService();
+        $orderService->voidOrder($deviceOrder);
+        $deviceOrder->update(['status' => OrderStatus::VOIDED]);
+        $deviceOrder->delete();
+
+        return to_route('orders.index')->with(['success' => true]);
     }
 }

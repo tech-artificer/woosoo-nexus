@@ -52,7 +52,8 @@ class OrderVoided implements ShouldBroadcastNow
                 'id', 
                 'order_id', 
                 'order_number', 
-                'device_id', 
+                'device_id',
+                'session_id', 
                 'status'
             ])
         ];

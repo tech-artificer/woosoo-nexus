@@ -1,32 +1,32 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-// import BranchIndex from '@/pages/branch/Index.vue'
-// import Profile from '@/pages/branch/Profile.vue'
-import { usePage } from '@inertiajs/vue3';
-// import { type Branch } from '@/types/models';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/vue3';
+import { Branch } from '@/types/models';
+// import List from '@/components/branches/Index.vue';
 
-const page = usePage();
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Manage Branches',
+        href: route('branches.index'),
+    },
+];
 
 defineProps<{
-    title?: string
-    description?: string
+    title?: string,
+    description?: string,
+    branches: Branch[],
 }>()
 
-onMounted(() => {
-
-    if(  page.props.server){
-        // fetch branches from api
-    }else{
-        // fetch branches from api
-    }
-
-});
 
 
 </script>
 
 <template>
-    <div></div>
-        <!-- <BranchIndex :title="title" :description="description" :branch="branches" /> -->
-        <!-- <Profile :title="title" :description="description" :branch="branch" /> -->
+    <Head :title="title" :description="description" />
+
+    <AppLayout :breadcrumbs="breadcrumbs">        
+        <!-- <List :rows="branches" /> -->
+    </AppLayout>
 </template>

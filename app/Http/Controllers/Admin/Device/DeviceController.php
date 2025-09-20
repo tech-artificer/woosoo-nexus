@@ -14,14 +14,14 @@ class DeviceController extends Controller
 {
     public function index()
     {
-        $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
+         $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
         // Fetch tables from 3rd-party DB that are NOT assigned
         $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
         $devices = Device::active()->with('table', 'branch')->get(); 
         $registrationCodes = DeviceRegistrationCode::with(['device'])->get();
 
         
-        return Inertia::render('Devices', [
+        return Inertia::render('Devices/Index', [
             'title' => 'Device',
             'description' => 'List of Registered Devices',
             'devices' => $devices,

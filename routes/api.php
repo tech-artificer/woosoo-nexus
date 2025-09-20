@@ -15,7 +15,6 @@ use App\Http\Controllers\Api\V1\{
     TableServiceApiController,
     Menu\MenuBundleController,
     ServiceRequestApiController,
-    // Reports\SalesApiController,
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -63,7 +62,7 @@ Route::middleware(['auth:device'])->group(function () {
     Route::resource('/orders', OrderApiController::class);
 
     Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
-    Route::post('/devices/update-order', DeviceOrderUpdateApiController::class)->name('api.devices.update.order');
+    
 
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
 
@@ -71,11 +70,6 @@ Route::middleware(['auth:device'])->group(function () {
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     // Route::resource('/orders', OrderApiController::class)->excludes(['destroy', 'create', 'store', 'update']);
 });
-
-
-// Route::middleware(['auth'])->group(function () {
-//     Route::get('/reports/sales/', SalesApiController::class);
-// });
 
 
 // Route::middleware('api')->group(function () {

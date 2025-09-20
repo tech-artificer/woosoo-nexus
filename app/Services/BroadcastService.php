@@ -31,7 +31,7 @@ class BroadcastService
     public function broadcastWithRetry($event, int $maxRetries = 3, int $delayMs = 200): bool
     {
         $attempt = 0;
-
+        Log::info("Broadcast Retry:  with {$maxRetries} attempts and {$delayMs}ms delay");
         while ($attempt < $maxRetries) {
             $attempt++;
             if ($this->safeBroadcast($event)) {
@@ -48,8 +48,9 @@ class BroadcastService
      * Queue a broadcast event for async retry via jobs.
      */
     public function dispatchBroadcastJob($event): void
-    {
+    {   
         BroadcastEventJob::dispatch($event)->onQueue('broadcasts');
+        Log::info("Dispatched BroadcastEventJob");
     }
 
 }
