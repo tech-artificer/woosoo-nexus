@@ -33,7 +33,7 @@ class AppControlEvent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('device.{$this->deviceId}'),
+            new Channel("device.{$this->deviceId}"),
         ];
     }
 

@@ -29,7 +29,7 @@ class OrderCompletedTest extends Command
      */
     public function handle()
     {
-        $deviceOrder = DeviceOrder::find(19);
+        $deviceOrder = DeviceOrder::find(20);
        
         $deviceOrder->status = OrderStatus::COMPLETED;
         $deviceOrder->save();

@@ -20,6 +20,7 @@ class RegisterDevice
             'name' => $data['name'],
             'table_id' => $data['table_id'] ?? null,
             'ip_address' => $data['ip_address'] ?? null,
+            'app_version' => $data['app_version'] ?? null,
             'last_ip_address' => $data['ip_address'] ?? null,
         ]);
 

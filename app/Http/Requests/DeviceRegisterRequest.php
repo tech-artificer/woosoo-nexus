@@ -24,6 +24,7 @@ class DeviceRegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required','string','exists:device_registration_codes,code'],
+            'app_version' => ['nullable', 'string', 'max:255'],
         ];
     }
 }
