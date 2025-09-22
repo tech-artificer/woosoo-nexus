@@ -10,6 +10,7 @@ export interface User {
     role: string;
     status: string;
     is_admin: boolean;
+    
     deleted_at?: string;
     roles: Role[];
 }

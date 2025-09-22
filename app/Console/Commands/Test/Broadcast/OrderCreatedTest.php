@@ -15,7 +15,7 @@ class OrderCreatedTest extends Command
      *
      * @var string
      */
-    protected $signature = 'broadcast:order-created {id=33} {order_id=19585} {order_number=ORD-000001} {device_id=7}';
+    protected $signature = 'broadcast:order-created {id=5} {order_id=19655} {order_number=ORD-000001-19655} {device_id=1}';
 
     /**
      * The console command description.
@@ -29,9 +29,8 @@ class OrderCreatedTest extends Command
      */
     public function handle()
     {
-        $deviceOrder = DeviceOrder::find(10);
+        $deviceOrder = DeviceOrder::find(6);
        
-
         // broadcast(new OrderCreated($deviceOrder))->toOthers();
         app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($deviceOrder));
         $this->info('Order Created event broadcasted successfully!');

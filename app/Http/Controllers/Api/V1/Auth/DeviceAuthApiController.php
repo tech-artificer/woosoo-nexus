@@ -52,8 +52,6 @@ class DeviceAuthApiController extends Controller
             'expires_at' => now()->addDays(7)->toDateTimeString()
         ], 201);
     }
-
-
     /**
      * Login a device
      * 
@@ -64,11 +62,6 @@ class DeviceAuthApiController extends Controller
      */
     public function authenticate(Request $request)
     {
-        // $validated = $request->validate([
-        //    'device_uuid' => ['nullable'],
-        //    'ip_address' => ['nullable', 'string', 'max:255'],
-        // ]);
-
         $ip = $request->ip();
        
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
@@ -82,21 +75,12 @@ class DeviceAuthApiController extends Controller
         }
 
         $device->update(['last_seen_at' => now()]);
-
         // Revoke all existing tokens (optional)
         $device->tokens()->delete();
 
          // Create token with device info
         $token = $device->createToken(
             name: 'device-auth',
-            // abilities: [
-            //     'order:create', 
-            //     'order:view', 
-            //     'order:edit', 
-            //     'order:delete', 
-            //     'service_request:create',
-            //     'menu:view',
-            // ],
             expiresAt: now()->addDays(7)
         )->plainTextToken;
         
@@ -127,19 +111,13 @@ class DeviceAuthApiController extends Controller
           // Create token with device info
         $newToken = $device->createToken(
             name: 'device-auth',
-            // abilities: [
-            //     'order:create', 
-            //     'order:view', 
-            //     'order:edit', 
-            //     'order:delete', 
-            //     'service_request:create',
-            //     'menu:view',
-            // ],
             expiresAt: now()->addDays(7)
         )->plainTextToken;
         
         return response()->json([
+            'success' => true,
             'token' => $newToken,
+            'device' => $device,
             'expires_at' => now()->addDays(7)->toDateTimeString(),
             'table' => $device->table()->get(['id', 'name']),
         ]);

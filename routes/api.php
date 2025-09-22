@@ -36,6 +36,7 @@ Route::options('{any}', function () {
 
 Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
 Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
 
 Route::middleware(['api'])->group(function () {
 
@@ -56,7 +57,7 @@ Route::middleware(['api'])->group(function () {
 Route::middleware(['auth:device'])->group(function () {
 
     Route::resource('/devices', DeviceApiController::class);
-    Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+    
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
 
     Route::resource('/orders', OrderApiController::class);

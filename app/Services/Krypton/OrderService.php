@@ -79,6 +79,7 @@ class OrderService
                 'table_id' => $device->table_id,
                 'terminal_session_id' => $order->terminal_session_id,
                 'status' => OrderStatus::CONFIRMED,
+                'guest_count' => $order->guest_count,
                 'session_id' => $order->session_id,
                 'items' => $orderedMenus,
                 'meta' => [

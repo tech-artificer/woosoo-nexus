@@ -15,7 +15,7 @@ class OrderCompletedTest extends Command
      *
      * @var string
      */
-    protected $signature = 'broadcast:order-completed {order_id=19624}';
+    protected $signature = 'broadcast:order-completed {id=19624}';
 
     /**
      * The console command description.
@@ -29,9 +29,10 @@ class OrderCompletedTest extends Command
      */
     public function handle()
     {
-        $deviceOrder = DeviceOrder::find(10);
+        $deviceOrder = DeviceOrder::find(19);
        
-
+        $deviceOrder->status = OrderStatus::COMPLETED;
+        $deviceOrder->save();
         // broadcast(new OrderCreated($deviceOrder))->toOthers();
         app(BroadcastService::class)->dispatchBroadcastJob(new OrderCompleted($deviceOrder));
         $this->info('Order Created event broadcasted successfully!');

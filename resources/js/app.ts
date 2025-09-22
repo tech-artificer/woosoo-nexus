@@ -19,8 +19,6 @@ if( 'performance' in window ) {
 }else{
     console.log('This browser does not support performance.now()');
 }
-
-
  // Get the CSRF token
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',

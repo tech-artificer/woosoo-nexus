@@ -14,6 +14,8 @@ use App\Services\BroadcastService;
 use Illuminate\Support\Facades\Auth;
 use App\Enums\OrderStatus;
 
+use App\Jobs\PrinterOrderJob;
+
 /**
  * Handle incoming order requests from devices.
  */
@@ -27,12 +29,6 @@ class DeviceOrderApiController extends Controller
      */
     public function __invoke(StoreDeviceOrderRequest $request)
     {   
-        // $device = Auth::guard('device')->user();
-
-        // if (!$device) {
-        //     return response()->json(['error' => 'Unauthorized'], 401);
-        // }
-
         // Validate the incoming request
         $validatedData = $request->validated();
         // Initialize errors array
@@ -51,19 +47,18 @@ class DeviceOrderApiController extends Controller
                     'order' => new DeviceOrderResource($canOrder)
                 ], 201);
             }
-
-            // if( !$canOrder ) {
                 
-                $order = app(OrderService::class)->processOrder($device, $validatedData);
+            $order = app(OrderService::class)->processOrder($device, $validatedData);
 
-                app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));
+            app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));
 
-                return response()->json([
-                    'success' => true,
-                    'order' => new DeviceOrderResource($order)
-                ], 201);
+            return response()->json([
+                'success' => true,
+                'order' => new DeviceOrderResource($order),
+                'print' => $this->printOrder($order)
+            ], 201);
 
-            // }
+           
             $errors[] = 'There is already an order in progress for this device.';  
         }else{
             $errors[] = 'The device is not assigned to a table. Please assign the device to a table and try again.';
@@ -74,6 +69,26 @@ class DeviceOrderApiController extends Controller
             'errors' => $errors,
         ], 500);
     
+    }
+
+    public function printOrder(DeviceOrder $order)
+    {
+        // foreach ($request->items as $item) {
+        //     $order->items()->create($item);
+        // }
+
+        
+        // foreach ($order->items as $item) {
+        //     $printer->text("{$item->qty}x {$item->name}\n");
+        // }
+
+        // Send to kitchen and bar printers
+        PrinterOrderJob::dispatch($order, 'cashier')->onQueue('cashier');
+        // PrinterOrderJob::dispatch($order->id, 'bar')->onQueue('bar');
+        // If dessert applies
+        // PrinterOrderJob::dispatch($order->id, 'dessert')->onQueue('dessert');
+
+        return response()->json(['success' => true, 'order' => $order]);
     }
 }
 
