@@ -26,7 +26,7 @@ window.config = {
 
 try {
     window.Echo = new Echo({
-        broadcaster: 'reverb',
+        broadcaster: import.meta.env.VITE_REVERB_BROADCASTER,
         cluster: 'mt1',
         // authEndpoint: '/broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,

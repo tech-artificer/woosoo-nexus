@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(
         __DIR__.'/../routes/channels.php',
-        ['prefix' => 'api', 'middleware' => ['auth:device']],
+        ['prefix' => 'api'],
     )
     ->withMiddleware(function (Middleware $middleware) {
         // ✅ Global middleware (runs on all routes)
