@@ -44,7 +44,7 @@ class OrderApiController extends Controller
      * Display the specified resource.
      */
     public function show(Order $order)
-    {
+    {   
         return new OrderResource ($order);
     }
 

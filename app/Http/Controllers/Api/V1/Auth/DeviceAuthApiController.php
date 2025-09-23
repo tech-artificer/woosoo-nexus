@@ -49,7 +49,7 @@ class DeviceAuthApiController extends Controller
             'success' => true,
             'token' => $token,
             'device' => $device,
-            //  'table' => $device->table()->get(['id', 'name']),
+            'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(7)->toDateTimeString()
         ], 201);
     }
@@ -89,7 +89,7 @@ class DeviceAuthApiController extends Controller
             'success' => true,
             'token' => $token,
             'device' => $device,
-            'table' => $device->table()->get(['id', 'name']),
+            'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(7)->toDateTimeString()
         ]);
     }
@@ -119,6 +119,7 @@ class DeviceAuthApiController extends Controller
             'success' => true,
             'token' => $newToken,
             'device' => $device,
+            'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(7)->toDateTimeString(),
             'table' => $device->table()->get(['id', 'name']) ?? null,
         ]);

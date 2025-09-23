@@ -6,13 +6,12 @@ services:
       - .:/var/www/html
 
   nginx:
-    image: nginx:stable-alpine
+    image: nginx:alpine
     ports:
-      - "443:443"
-      - "80:80"
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./nginx:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/certs
       - .:/var/www/html
     depends_on:
       - woosoo

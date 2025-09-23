@@ -2,8 +2,8 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import { columns } from '@/components/users/columns';
-import DataTable from '@/components/users/DataTable.vue'
+import { columns } from '@/components/Users/columns';
+import DataTable from '@/components/Users/DataTable.vue'
 import type { User } from '@/types/models';
 
 const breadcrumbs: BreadcrumbItem[] = [

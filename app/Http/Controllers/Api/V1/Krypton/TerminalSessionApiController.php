@@ -17,6 +17,11 @@ use App\Models\Krypton\TableOrder;
 
 class TerminalSessionApiController extends Controller
 {
+
+    public function getLatestSession() {
+        return response()->json(['session' => Session::getLatestSession()->first()]);
+    }
+
     /**
      * Display a listing of the resource.
      */

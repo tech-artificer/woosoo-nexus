@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\Auth\{
 use App\Http\Controllers\Api\V1\Krypton\{
     MenuApiController,
     OrderApiController,
+    TerminalSessionApiController,
 };
 
 
@@ -34,14 +35,15 @@ Route::options('{any}', function () {
     return response()->json([], 200);
 })->where('any', '.*');
 
-Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
-Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
-Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+Route::middleware(['guest'])->group(function () {
+    Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
+    Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+    Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+});
 
 Route::middleware(['api'])->group(function () {
 
     Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
-
     Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
     Route::get('/menus/with-modifiers', [BrowseMenuApiController::class, 'getMenusWithModifiers'])->name('api.menus.with.modifiers');
     Route::get('/menus/modifier-groups', [BrowseMenuApiController::class, 'getAllModifierGroups'])->name('api.menus.modifier-groups');
@@ -57,19 +59,15 @@ Route::middleware(['api'])->group(function () {
 Route::middleware(['auth:device'])->group(function () {
 
     Route::resource('/devices', DeviceApiController::class);
-    
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
-
     Route::resource('/orders', OrderApiController::class);
-
     Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
-    
-
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
-
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
-    // Route::resource('/orders', OrderApiController::class)->excludes(['destroy', 'create', 'store', 'update']);
+
+    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
+
 });
 
 

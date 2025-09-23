@@ -1,16 +1,15 @@
 <script setup lang="ts">
-// import { onMounted, onUnmounted, } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head} from '@inertiajs/vue3';
+
 import { columns } from '@/components/Devices/columns';
 import DataTable from '@/components/Devices/DataTable.vue'
-import { Device } from '@/types/models';
+import type { Device } from '@/types/models';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Devices',
-        href: route('devices.index'),
+        href: route('devices.index'), 
     },
 ];
 
@@ -23,7 +22,7 @@ defineProps<{
 </script>
 
 <template>
-    <Head :title="title" :description="description" />
+
    
     <AppLayout :breadcrumbs="breadcrumbs">    
         <!-- <pre> {{ devices }} </pre> -->
