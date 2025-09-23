@@ -27,7 +27,7 @@ window.config = {
 try {
     window.Echo = new Echo({
         broadcaster: 'reverb',
-        // cluster: 'mt1',
+        cluster: 'mt1',
         // authEndpoint: '/broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,
         wsHost: import.meta.env.VITE_REVERB_HOST,
@@ -38,7 +38,7 @@ try {
         disableStats: true,
         encrypted: true, // Also important for WSS
         enabledTransports: ['ws', 'wss'],
-        withCredentials: true, 
+        // withCredentials: true, 
     });
     
 } catch (error) {
