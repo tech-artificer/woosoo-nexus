@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Create required directories and set permissions
+        run: |
+          mkdir -p bootstrap/cache
+          chmod -R 777 storage bootstrap/cache
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -36,12 +41,6 @@ jobs:
 
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
-      
-      - name: Create Bootstrap Cache Directory
-        run: mkdir -p bootstrap/cache
-
-      - name: Set Directory Permissions
-        run: chmod -R 777 storage bootstrap/cache
 
       - name: Copy Environment File
         run: cp .env.example .env
