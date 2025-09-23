@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
+import { asset } from '@/lib/utils';
+
+const logoPath = asset('images/Woosoo Profile Photo-03.png');
 
 defineOptions({
     inheritAttrs: false,
@@ -10,11 +13,13 @@ interface Props {
 }
 
 defineProps<Props>();
+
+
 </script>
 
 <template>
+     <img :src="logoPath" alt="Woosoo Logo" />
 
-    <img src="/images/Woosoo Profile Photo-02.png" />
     <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" :class="className" v-bind="$attrs">
         <path
             fill="currentColor"

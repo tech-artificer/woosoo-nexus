@@ -29,8 +29,8 @@ return [
     'servers' => [
 
         'reverb' => [
-            'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
-            'port' => env('REVERB_SERVER_PORT', 8081),
+            'host' => env('REVERB_SERVER_HOST', 'http://192.168.100.85'),
+            'port' => env('REVERB_SERVER_PORT', 6001),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
             'options' => [
@@ -42,7 +42,7 @@ return [
                 'channel' => env('REVERB_SCALING_CHANNEL', 'reverb'),
                 'server' => [
                     'url' => env('REDIS_URL'),
-                    'host' => env('REDIS_HOST', '127.0.0.1'),
+                    'host' => env('REDIS_HOST', 'localhost'),
                     'port' => env('REDIS_PORT', '6379'),
                     'username' => env('REDIS_USERNAME'),
                     'password' => env('REDIS_PASSWORD'),
@@ -52,6 +52,11 @@ return [
             ],
             'pulse_ingest_interval' => env('REVERB_PULSE_INGEST_INTERVAL', 15),
             'telescope_ingest_interval' => env('REVERB_TELESCOPE_INGEST_INTERVAL', 15),
+            'ssl' => [
+                'local_cert'  => env('LARAVEL_SSL_CERT', base_path('../certs/localhost.pem')),
+                'local_pk'    => env('LARAVEL_SSL_KEY', base_path('../certs/localhost-key.pem')),
+                'passphrase'  => env('LARAVEL_SSL_PASSPHRASE', null),
+            ],
         ],
 
     ],
@@ -78,11 +83,12 @@ return [
                 'app_id' => env('REVERB_APP_ID'),
                 'options' => [
                     'host' => env('REVERB_HOST'),
-                    'port' => env('REVERB_PORT', 443),
+                    'port' => env('REVERB_PORT', 6001),
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
                 'allowed_origins' => ['*'],
+                'capacity' => null,
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_message_size' => env('REVERB_APP_MAX_MESSAGE_SIZE', 10_000),

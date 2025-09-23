@@ -1,1 +1,0 @@
-export { default as Select } from '@/components/forms/AppSelect.vue'

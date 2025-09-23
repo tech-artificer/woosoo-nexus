@@ -28,12 +28,12 @@ class StoreDeviceOrderRequest extends FormRequest
              * @example 2            
              */
             'guest_count' => ['required', 'integer', 'min:1'],
-            /**
-             * 
-             * @var integer
-             * @example 36
-             */
-            'table_id' => ['required', 'integer'],
+            // /**
+            //  * 
+            //  * @var integer
+            //  * @example 36
+            //  */
+            // 'table_id' => ['required', 'integer'],
             /**
              * 
              * @var float
@@ -62,7 +62,7 @@ class StoreDeviceOrderRequest extends FormRequest
              * @var float
              * @example 1106.56
              */
-            'total' => ['required', 'numeric', 'min:0'],
+            'total_amount' => ['required', 'numeric', 'min:0'],
             /**
              * 
              * @var array {menu_id, name, quantity, price, note, subtotal, ordered_menu_id, tax, discount}
@@ -76,8 +76,8 @@ class StoreDeviceOrderRequest extends FormRequest
             'items.*.price' => ['required', 'numeric', 'min:0'],
             'items.*.note' => ['nullable', 'string'],
             'items.*.subtotal' => ['required', 'numeric', 'min:0'],
-            'items.*.tax' => ['required', 'numeric', 'min:0'],
-            'items.*.discount' => ['required', 'numeric', 'min:0'],
+            'items.*.tax' => ['nullable', 'numeric', 'min:0'],
+            'items.*.discount' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

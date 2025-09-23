@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 
 class ReverbStart extends Command
 {
@@ -11,7 +12,7 @@ class ReverbStart extends Command
      *
      * @var string
      */
-    protected $signature = 'app:reverb-start';
+    protected $signature = 'app:start-reverb';
 
     /**
      * The console command description.
@@ -25,6 +26,13 @@ class ReverbStart extends Command
      */
     public function handle()
     {
-        
+        $this->info('Starting Reverb service...');
+
+        $phpBinary = PHP_BINARY; // Gets the PHP executable path dynamically
+        $command = "{$phpBinary} artisan reverb:start > /dev/null 2>&1 &";
+
+        shell_exec($command);
+
+        $this->info('Reverb service started successfully.');
     }
 }

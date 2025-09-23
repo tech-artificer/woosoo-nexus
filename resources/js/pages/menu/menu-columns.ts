@@ -12,48 +12,75 @@ export const getMenuColumns = (): ColumnDef<Menu>[] => [
         cell: ({ row }) => {
             return h(MenuDisplayName, { menu: row.original });
         },
-    },  {
-        accessorKey: 'category',
-        header: 'Category',
-        cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.category ?? ''),
-    },  {
-        accessorKey: 'group',
-        header: 'Group',
-        cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.group ?? ''),
-    },{
-        accessorKey: 'course',
-        header: 'Course',
-        cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.course ?? ''),
-    },{
+    }, 
+    {
+        // Use an accessor function to extract the nested value for sorting/filtering
+        accessorKey: 'receipt_name',
+        header: 'Receipt Name',
+        // The cell function now just receives the extracted value from accessorFn
+         cell: ({ row }) => h('div', { class: '' }, row.getValue('receipt_name')),
+    },
+    // {
+    //     accessorKey: 'category',
+    //     header: 'Category',
+    //     cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.category ?? ''),
+    // }, {
+    //     accessorKey: 'group',
+    //     header: 'Group',
+    //     cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.group ?? ''),
+    // }, {
+    //     accessorKey: 'course',
+    //     header: 'Course',
+    //     cell: ({ row }) => h('div', { class: 'capitalize' }, row.original.course ?? ''),
+    // }, 
+    {
         accessorKey: 'price',
         header: 'Price',
         cell: ({ row }) => h('div', { class: '' }, row.getValue('price')),
-    },{
-       // Use an accessor function to extract the nested value for sorting/filtering
+    }, 
+    {
+        accessorKey: '',
+        header: 'Modifier',
+        cell: ({ row }) => {
+            return h(AppIconExp, { class: 'size-4 text-green-500 align-self-center', isTrue: row.original.is_modifier });
+        }
+    },
+    {
+        // Use an accessor function to extract the nested value for sorting/filtering
         accessorKey: '',
         header: 'Available',
         // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
-            return h( AppIconExp, { class: 'text-green-500 center', isTrue: row.original.is_available });
+            return h(AppIconExp, { class: 'size-4 text-green-500 align-self-center', isTrue: row.original.is_available });
         },
-    },{
-       // Use an accessor function to extract the nested value for sorting/filtering
-        accessorKey: 'img_url',
-        header: 'Featured Image',
-        // The cell function now just receives the extracted value from accessorFn
-        cell: ({ row }) => h('div', { class: '' }, row.getValue('img_url')),
     },
-     {
-        accessorKey: 'id',
-        header: '',
+    {
+        // Use an accessor function to extract the nested value for sorting/filtering
+        accessorKey: 'is_taxable',
+        header: 'Taxable',
+        // The cell function now just receives the extracted value from accessorFn
         cell: ({ row }) => {
-          const menu = row.original
-          return h(MenuEditDialog, {
-            menu
-          })
+            return h(AppIconExp, { class: 'size-4 text-green-500 align-self-center', isTrue: row.original.is_taxable });
         },
-      }
-   
-  
-  
+    },
+    {
+        accessorKey: 'id',
+        header: 'Actions',
+        cell: ({ row }) => {
+            const menu = row.original
+            return h(MenuEditDialog, {
+                menu
+            })
+        },
+    },
+    // ,{
+    //    // Use an accessor function to extract the nested value for sorting/filtering
+    //     accessorKey: 'img_url',
+    //     header: 'Featured Image',
+    //     // The cell function now just receives the extracted value from accessorFn
+    //     cell: ({ row }) => h('div', { class: '' }, row.getValue('img_url')),
+    // }
+
+
+
 ]

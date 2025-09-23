@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\MenuImage;
 use Illuminate\Support\Number;
+use Illuminate\Support\Facades\Storage;
 
 class Menu extends Model
 {
@@ -19,6 +20,7 @@ class Menu extends Model
     protected $table = 'menus';
     protected $primaryKey = 'id';
     protected $guarded = [];
+    protected $appends = ['computed_modifiers'];
     public $timestamps = false;
 
     protected $casts = [
@@ -28,6 +30,11 @@ class Menu extends Model
         'is_discountable' => 'boolean',
         'is_locked' => 'boolean',
         'is_modifier_only' => 'boolean',
+        'menu_category_id' => 'integer',
+        'menu_group_id' => 'integer',
+        'menu_tax_type_id' => 'integer',
+        'menu_course_type_id' => 'integer',
+        'price' => 'decimal:2',
     ];
 
     protected $hidden = [
@@ -35,12 +42,10 @@ class Menu extends Model
         'modified_on',
     ];
 
-    public function modifiers() : HasMany
+    public function modifiers()
     {
-        return $this->hasMany(self::class, 'id') // dummy just to use eager loading
-            ->whereRaw('1 = 0'); // always empty, we will override it
+        return $this->hasMany(Menu::class, 'id')->whereRaw('1 = 0');
     }
-
     public function category() : BelongsTo
     {
         return $this->belongsTo(MenuCategory::class, 'menu_category_id');
@@ -56,10 +61,16 @@ class Menu extends Model
         return $this->belongsTo(MenuCourse::class, 'menu_course_type_id', 'id');
     }
 
-    public function image() : HasOne
+    public function menuImage(): HasOne
     {
         return $this->hasOne(MenuImage::class, 'menu_id');
     }
+
+    public function image(): HasOne
+    {
+        return $this->hasOne(MenuImage::class, 'menu_id');
+    }
+
 
     public function orderedMenus() : HasMany
     {
@@ -84,52 +95,16 @@ class Menu extends Model
         return Number::format($taxAmount, $decimals);
     }
 
-    # SCOPES
-    //  public function scopeFilter(Builder $query, array $filters)
-    // {
-    //     if (!empty($filters['menu_category_id'])) {
-    //         $query->where('menu_category_id', $filters['menu_category_id']);
-    //     }
+    public function getImageUrlAttribute()
+    {
+        $imgPath = MenuImage::where('menu_id', $this->id)->first()->path ?? null;
 
-    //     if (!empty($filters['menu_course_type_id'])) {
-    //         $query->where('menu_course_type_id', $filters['menu_course_type_id']);
-    //     }
+        if ($imgPath) {
+            return url('storage/'.$imgPath);
+        }
 
-    //     if (!empty($filters['menu_group_id'])) {
-    //         $query->where('menu_group_id', $filters['menu_group_id']);
-    //     }
-
-    //     if (!empty($filters['search'])) {
-    //         $query->where('name', 'like', '%' . $filters['search'] . '%');
-    //     }
-
-    //     return $query;
-    // }
-
-    // public function scopeAvailable(Builder $query)
-    // {
-    //     return $query->where('is_available', 1);
-    // }
-
-
-    // public function scopeSetMeals($query)
-    // {
-    //     return $query->where('menu_category_id', 1);
-    // }
-
-    // public function scopeSetModifiers($query)
-    // {
-    //     return $query->where(['index' => NULL, 'is_modifier' => 1,'price' => 0]);
-    // }
-
-    // public function scopeNonModifiers($query)
-    // {
-    //     return $query->where(['is_modifier' => 0]);
-    // }
-    //  public function scopePriced($query)
-    // {
-    //     return $query->where('price', '>', 0);
-    // }
+        return asset('images/menu-placeholder/1.jpg');
+    }
 
     public static function getModifiers(int $id) {
         
@@ -143,6 +118,40 @@ class Menu extends Model
             ],
         ];
 
-        return Menu::whereIn('receipt_name', $codes[$id])->where('is_modifier_only', false)->get();
+        return Menu::with(['image'])->whereIn('receipt_name', $codes[$id])->where('is_modifier_only', true)->get();
+    }
+
+    public function getComputedModifiersAttribute()
+    {
+        if (!in_array($this->id, [46, 47, 48])) {
+            return collect(); // Return empty collection if not a "package" menu
+        }
+
+        $codes = [
+            46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
+            47 => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
+            48 => [
+                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
+                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
+                'C1',
+            ],
+        ];
+
+        return Menu::with(['image'])->whereIn('receipt_name', $codes[$this->id])
+            ->whereHas('group', function ($query) {
+                $query->where('name', 'Meat Order');
+            })
+            ->get();
+    }
+
+    public function loadModifiers() {
+    
+        $modifiers = $this->getComputedModifiersAttribute();
+
+        if( $modifiers->isEmpty() ) {
+            $modifiers = $this->modifiers;
+        }
+
+        return $modifiers ?? [];
     }
 }

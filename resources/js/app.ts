@@ -1,5 +1,5 @@
 import '../css/app.css';
-import './bootstrap';
+// import './bootstrap';
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -7,26 +7,40 @@ import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
-
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
-
 // Make Pusher globally available for Echo
 window.Pusher = Pusher;
 
+if( 'performance' in window ) {
+    console.log('This browser supports performance.now()');
+    console.log(window.performance.now());
+    window.performance.now();
+}else{
+    console.log('This browser does not support performance.now()');
+}
+ // Get the CSRF token
+window.config = {
+    baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
+};
+
 try {
     window.Echo = new Echo({
-        broadcaster: 'reverb',
+        broadcaster: import.meta.env.VITE_REVERB_BROADCASTER,
+        cluster: 'mt1',
+        // authEndpoint: '/broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,
         wsHost: import.meta.env.VITE_REVERB_HOST,
-        wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-        wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+        wssHost: import.meta.env.VITE_REVERB_HOST,
+        wsPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
+        wssPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
         disableStats: true,
         encrypted: true, // Also important for WSS
         enabledTransports: ['ws', 'wss'],
+        // withCredentials: true, 
     });
-    console.log('[BOOTSTRAP] Echo initialized:', window.Echo);
+    
 } catch (error) {
     console.log('[BOOTSTRAP] Error initializing Echo:', error);
 }

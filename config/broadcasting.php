@@ -37,7 +37,7 @@ return [
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
                 'host' => env('REVERB_HOST'),
-                'port' => env('REVERB_PORT', 443),
+                'port' => env('REVERB_PORT', 6001),
                 'scheme' => env('REVERB_SCHEME', 'https'),
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
             ],
@@ -48,8 +48,8 @@ return [
 
         'pusher' => [
             'driver' => 'pusher',
-            'key' => env('PUSHER_APP_KEY'),
-            'secret' => env('PUSHER_APP_SECRET'),
+            'key' => env('PUSHER_APP_KEY', 'key'),
+            'secret' => env('PUSHER_APP_SECRET', 'secret'),
             'app_id' => env('PUSHER_APP_ID'),
             'options' => [
                 'cluster' => env('PUSHER_APP_CLUSTER'),

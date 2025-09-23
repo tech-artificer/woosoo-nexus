@@ -8,6 +8,8 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Branch;
 use App\Models\TableService;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 class DatabaseSeeder extends Seeder
 {
@@ -28,13 +30,108 @@ class DatabaseSeeder extends Seeder
         }
 
         User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'owner@example.com'],
             [
                 'name' => 'admin',
                 'password' => bcrypt('password'),
                 'is_admin' => true,
             ]
         );
+
+        // User::firstOrCreate(
+        //     ['email' => 'admin@example.com'],
+        //     [
+        //         'name' => 'admin',
+        //         'password' => bcrypt('password'),
+        //         'is_admin' => true,
+        //     ]
+        // );
+
+        $this->setupRolesAndPermissions();
+    }
+
+    protected function setupRolesAndPermissions() {
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $user = User::where(['is_admin' => true, 'id' => 1])->first();
+        /*
+        |--------------------------------------------------------------------------
+        | Define Permissions
+        |--------------------------------------------------------------------------
+        */
+        $permissions = [
+            // Users
+            'users.view',
+            'users.create',
+            'users.edit',
+            'users.delete',
+            // Roles
+            'roles.view',
+            'roles.create',
+            'roles.edit',
+            'roles.delete',
+            // Assign Role
+            'roles.assign',
+            'roles.remove',
+            // assign permission to role
+            'permissions.assign',
+            'permissions.remove',
+            // Menus
+            'menus.view',
+            'menus.create',
+            'menus.edit',
+            'menus.delete',
+            'menus.upload.image',
+            // Orders
+            'orders.view',
+            'orders.create',
+            'orders.edit',
+            'orders.delete',
+            'orders.cancel',
+            'orders.complete',
+            'orders.void',
+            // Device
+            'devices.view',
+            'devices.register',
+            'devices.assign.table',
+            'devices.unassign.table',
+            'devices.delete',
+             // Branch
+            'branches.view',
+            'branches.create',
+            'branches.edit',
+            'branches.delete',
+            // Reports
+            'reports.sales.view',
+            'reports.sales.export',
+            
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
+        /*
+        |--------------------------------------------------------------------------
+        | Define Roles & Assign Permissions
+        |--------------------------------------------------------------------------
+        */
+        $owner = Role::firstOrCreate(['name' => 'Owner']);
+        $admin = Role::firstOrCreate(['name' => 'Administrator']);
+        $staff = Role::firstOrCreate(['name' => 'Staff']);
+
+        $owner->givePermissionTo(Permission::all());
+        $admin->givePermissionTo(Permission::all());
+        $staff->givePermissionTo([
+            'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.cancel', 'orders.complete', 'orders.void',
+            'devices.view', 'devices.register', 'devices.assign.table', 'devices.unassign.table', 'devices.delete',
+            'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
+            'reports.sales.view', 'reports.sales.export',
+            'menus.view', 'menus.create', 'menus.edit', 'menus.delete', 'menus.upload.image',
+            'users.view', 'users.create', 'users.edit', 'users.delete',
+        ]);
+        // 
+        $user->assignRole($owner);
+
 
     }
 }

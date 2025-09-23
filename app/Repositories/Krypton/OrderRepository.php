@@ -63,8 +63,8 @@ class OrderRepository
             $order->orderCheck = OrderCheck::where('order_id', $order->id)->first();
             $order->orderedMenus = OrderedMenu::where('order_id', $order->id)->first();
 
-            unset($order->deviceOrder->device);
-            unset($order->deviceOrder->table);
+            // unset($order->deviceOrder->device);
+            // unset($order->deviceOrder->table);
 
             return $order;
         });
@@ -72,6 +72,15 @@ class OrderRepository
         return $mergedOrders;
     }
 
+    /**
+     * Gets all open orders with their associated tables.
+     *
+     * This function first gets all open orders, then joins them with the table_orders table to get the associated table ID.
+     * It then left joins the table_links table to get any linked tables associated with the order.
+     * The result is a collection of orders, each with a table_id and parent_table_id (if applicable).
+     *
+     * @return Collection
+     */
     public static function getOpenOrdersWithTables()
     {
         return Order::select('orders.*', DB::raw("
@@ -118,6 +127,15 @@ class OrderRepository
             ->orderByRaw('IFNULL(table_links.primary_table_id, 0) ASC')
             ->orderBy('table_links.table_id')
             ->get();
+    }
+
+    public function getOpenOrdersForSession($sessionId) {
+        try {
+            return Order::fromQuery("CALL get_open_orders_for_session(?)", [$sessionId]);
+        } catch (\Throwable $th) {
+            \Log::error('Procedure call failed: ' . $th->getMessage());
+            return false;
+        }
     }
     
 }

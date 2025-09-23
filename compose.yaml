@@ -1,0 +1,17 @@
+services:
+  woosoo:
+    build: .
+    container_name: woosoo-admin
+    volumes:
+      - .:/var/www/html
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - .:/var/www/html
+    depends_on:
+      - woosoo

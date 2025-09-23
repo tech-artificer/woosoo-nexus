@@ -18,9 +18,9 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "lorisleiva/laravel-actions": "^2.9",
-        "spatie/laravel-permission": "*",
+        "mike42/escpos-php": "^4.0",
+        "spatie/laravel-permission": "^6.21",
         "tightenco/ziggy": "^2.4"
-
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

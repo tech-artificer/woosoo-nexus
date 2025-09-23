@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2 } from 'lucide-vue-next';
 import { Menu } from '@/types/models'
-import { Input } from '@/components/ui/input'
-import InputError from '@/components/InputError.vue';
-import { Label } from '@/components/ui/label'
+// import { Input } from '@/components/ui/input'
+// import InputError from '@/components/InputError.vue';
+// import { Label } from '@/components/ui/label'
 
 
 const props = defineProps<{

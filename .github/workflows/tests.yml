@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Create required directories and set permissions
+        run: |
+          mkdir -p bootstrap/cache
+          chmod -R 777 storage bootstrap/cache
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

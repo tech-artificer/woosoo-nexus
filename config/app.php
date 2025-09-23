@@ -124,4 +124,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+
+    'instance_type' => env('APP_INSTANCE_TYPE', 'local'),
+
 ];

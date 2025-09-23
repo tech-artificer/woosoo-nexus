@@ -12,3 +12,9 @@ export function valueUpdater<T extends Updater<any>>(updaterOrValue: T, ref: Ref
     ? updaterOrValue(ref.value)
     : updaterOrValue
 }
+
+export const asset = (path: string): string => {
+  const base = window.config.baseUrl.replace(/\/+$/, ''); // remove trailing slashes
+  const cleanPath = path.replace(/^\/+/, ''); // remove leading slashes
+  return `${base}/${cleanPath}`;
+};

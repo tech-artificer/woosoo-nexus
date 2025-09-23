@@ -29,7 +29,6 @@ class SetupPosOrderPaymentTrigger extends Command
     {
         $connection = DB::connection('pos');
         
-
         if (!Schema::connection('mysql')->hasTable('order_update_logs')) {
             Schema::connection('mysql')->create('order_update_logs', function ($table) {
                 $table->id();
@@ -39,12 +38,26 @@ class SetupPosOrderPaymentTrigger extends Command
                 $table->boolean('is_voided');
                 $table->string('action');
                 $table->boolean('is_processed')->default(false);
+                $table->unsignedBigInteger('session_id')->nullable();
                 $table->softDeletes();
                 $table->timestamps();
             });
 
             $this->info('Created order_update_logs table in pos.');
         } else {
+
+            if (!Schema::connection('mysql')->hasColumn('order_update_logs', 'date_time_closed')) {
+                Schema::connection('mysql')->table('order_update_logs', function ($table) {
+                    $table->dateTime('date_time_closed')->nullable();
+                });
+            }
+
+            if (!Schema::connection('mysql')->hasColumn('order_update_logs', 'session_id')) {
+                Schema::connection('mysql')->table('order_update_logs', function ($table) {
+                    $table->integer('session_id')->nullable();
+                });
+            }
+
             $this->warn('order_update_logs table already exists.');
         }
 
@@ -63,14 +76,24 @@ class SetupPosOrderPaymentTrigger extends Command
                     SET 
                         is_open = NEW.is_open,
                         is_voided = NEW.is_voided,
-                        action = 'updated',
+                        action = CASE 
+                                    WHEN NEW.is_voided = 1 THEN 'voided'
+                                    ELSE 'paid'
+                                END,
                         updated_at = NOW()
                     WHERE order_id = NEW.id;
                 ELSE
-                    INSERT INTO woosoo_api.order_update_logs 
-                        (table_name, order_id, is_open, is_voided, action, created_at, updated_at)
-                    VALUES 
-                        ('orders', NEW.id, NEW.is_open, NEW.is_voided, 'updated', NOW(), NOW());
+                    IF NEW.date_time_closed IS NOT NULL THEN
+                        INSERT INTO woosoo_api.order_update_logs 
+                            (table_name, order_id, is_open, is_voided, action, created_at, updated_at, session_id)
+                        VALUES 
+                            ('orders', NEW.id, NEW.is_open, NEW.is_voided, 
+                            CASE 
+                                WHEN NEW.is_voided = 1 THEN 'voided'
+                                ELSE 'paid'
+                            END, 
+                            NOW(), NOW(), NEW.session_id);
+                    END IF;
                 END IF;
             END
         ");

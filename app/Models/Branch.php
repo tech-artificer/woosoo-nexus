@@ -16,7 +16,9 @@ class Branch extends Model
     ];
 
     protected $hidden = [
-        'branch_uuid',
+        'created_at',
+        'updated_at',
+        'deleted_at',
     ];
 
     /**

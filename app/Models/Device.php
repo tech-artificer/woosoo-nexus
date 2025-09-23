@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Krypton\Table;
 
 class Device extends Model
@@ -25,6 +26,7 @@ class Device extends Model
         'table_id',
         'is_active',
         'app_version',
+        'ip_address',
         'last_ip_address',
         'last_seen_at',
     ];
@@ -67,7 +69,7 @@ class Device extends Model
 
     public function table(): BelongsTo
     {
-        return $this->belongsTo(Table::class, 'table_id');
+        return $this->belongsTo(Table::class, 'table_id', 'id');
     }
 
     public function branch(): BelongsTo
@@ -75,12 +77,16 @@ class Device extends Model
         return $this->belongsTo(Branch::class, 'branch_id');
     }
 
+    public function registrationCode(): HasOne
+    {
+        return $this->hasOne(DeviceRegistrationCode::class);
+    }
+
 
 
     # SCOPES
-
     public function scopeActive(Builder $query) 
     {
         return $query->where('is_active', true);
-    } 
+    }
 }

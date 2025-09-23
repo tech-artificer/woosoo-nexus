@@ -2,7 +2,6 @@
 
 namespace App\Services\Krypton;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use App\Models\Krypton\{
     Order,
@@ -15,6 +14,7 @@ use App\Models\Krypton\{
     TerminalSession,
     TerminalService,
     CashTraySession,
+    Table,
 };
 use App\Models\Device;
 use App\Models\DeviceOrder;
@@ -24,13 +24,13 @@ use App\Actions\Order\{
     CreateTableOrder,
     CreateOrderedMenu
 };
-use App\Repositories\Krypton\MenuRepository;
-use App\Repositories\Krypton\OrderRepository;
+
 use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
 
 class OrderService
 {
+    public $attributes = [];
     /**
      * Process an order for a given device with specified attributes.
      *
@@ -41,46 +41,65 @@ class OrderService
     public function processOrder(Device $device, array $attributes)
     {
         // Fetch default values and merge them with provided attributes
-        $defaults = $this->fetchDefaults();
-        $attributes = array_merge($defaults, $attributes);
-      
-        return DB::transaction(function () use ($attributes, $device) {
+        $defaults = $this->getDefaultAttributes();
+        $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
+
+        $this->attributes = $attributes;
+
+        return DB::transaction(function () use ($device) {
             // Create a new order using the provided attributes
-            $order = CreateOrder::run($attributes);
 
-            if (!$order) {
-                return false;
-            }
+            $order = CreateOrder::run($this->attributes);
 
-            // Update the order with terminal and cashier details
-            $order->update([
-                'end_terminal_id' => $order->terminal_id, 
-                'cash_tray_session_id' => $attributes['cash_tray_session_id'],
-                'cashier_employee_id' => $attributes['cashier_employee_id'],
+            if (!$order) return;
+
+            $this->updateAttributes([
+                'order_id' => $order->id,
+            ]);
+            // Create a table order
+            $tableOrder = CreateTableOrder::run($this->attributes);
+            // Update table availability
+            $table = Table::where('id', $this->attributes['table_id'])->update([
+                'is_available' => true,
+                'is_locked' => true,
             ]);
 
-            // Set additional order details
-            $attributes['order_id'] = $order->id;
-            $order->orderCheck = CreateOrderCheck::run($attributes);
-            $attributes['order_check_id'] = $order->orderCheck->id;
-            $order->tableOrder = CreateTableOrder::run($attributes);
-            $order->orderedMenus = CreateOrderedMenu::run($attributes);
+            // Create an order check
+            $orderCheck = CreateOrderCheck::run($this->attributes);
+            // 
+            $this->updateAttributes([
+                'order_check_id' => $orderCheck->id,
+            ]);
+            // Create ordered menus
+            $orderedMenus = CreateOrderedMenu::run($this->attributes);
 
             // Create a new device order and associate it with the device
-            $device->orders()->create([
+            $deviceOrder = $device->orders()->create([
                 'order_id' => $order->id,
                 'table_id' => $device->table_id,
                 'terminal_session_id' => $order->terminal_session_id,
                 'status' => OrderStatus::CONFIRMED,
-                'items' => $order->orderedMenus->toJson(),
+                'guest_count' => $order->guest_count,
+                'session_id' => $order->session_id,
+                'items' => $orderedMenus,
                 'meta' => [
-                    'checks' => $order->orderCheck->toJson(),
-                    'table_order' => $order->tableOrder->toJson(),
+                    'order_check' => $orderCheck,
+                    'table_order' => $tableOrder,
                 ],
+                'total' => $orderCheck->total_amount,
+                'subtotal' => $orderCheck->subtotal_amount,
+                'tax' => $orderCheck->tax_amount,
+                'discount' => $orderCheck->discount_amount,
             ]);
 
-            return $order;
+            return $deviceOrder;
         });
+    }
+
+    protected function updateAttributes($array = []) {
+        foreach ($array as $key => $value) {
+            $this->attributes[$key] = $value;
+        }
     }
 
     /**
@@ -88,7 +107,7 @@ class OrderService
      *
      * @return array
      */
-    protected function fetchDefaults(): array
+    protected function getDefaultAttributes(): array
     {   
         $contextService = new KryptonContextService();
         $defaults = $contextService->getData();
@@ -98,20 +117,27 @@ class OrderService
             'current_employee_log_id' => $defaults['employee_log_id'],
             'close_employee_log_id' =>   $defaults['employee_log_id'],
             'server_employee_log_id' => null,
+            'is_online_order' => false,
+            'reference' => '',
+
         ];        
         
         return array_merge($defaults, $params); 
     }
 
-    /**
-     * Check if a table is open based on the table ID.
-     *
-     * @param int|null $tableId
-     * @return bool
-     */
-    public function checkIfTableIsOpen($tableId = null)
-    {
-        // Logic to check if a table is open should be implemented here
+    protected function cancelOrder(Device $device) {
+        
+    }
+
+    protected function voidOrder(Device $device) {
+        
+    }
+
+    protected function rollBackOrder(Device $device) {
+        
     }
 }
 
+// applied_taxes
+// applied_discounts
+// applied_menu_categories

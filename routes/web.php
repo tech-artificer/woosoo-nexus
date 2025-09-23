@@ -1,46 +1,70 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+
 
 use App\Http\Controllers\Admin\{
     DashboardController,
     OrderController,
     MenuController,
     UserController,
-    TableController,
-    DeviceController,
-    TerminalSessionController,
+    Device\DeviceController,
+    AccessibilityController,
+    RoleController,
+    BranchController
 };
 
-// Route::get('/', function () {
-//     redirect()->route('dashboard');
-// })->name('home');
+use App\Http\Controllers\Admin\Reports\{
+    SalesController,
+};
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('home');
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/orders/live', [OrderController::class, 'index'])->name('orders.live');
-    Route::get('/orders/kds', [OrderController::class, 'index'])->name('orders.kds');
-
-    Route::get('/menus', [MenuController::class, 'index'])->name('menus');
-    // Route::get('/menus/{menu}/edit', [MenuController::class, 'edit'])->name('menu.edit');
-    Route::put('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
-
-    Route::get('/users', [UserController::class, 'index'])->name('users');
-    Route::get('/tables', [TableController::class, 'index'])->name('tables');
-
-    Route::get('/devices', [DeviceController::class, 'index'])->name('devices');
-    // Route::get('/devices/{device}/edit', [DeviceController::class, 'edit'])->name('device.edit');
-    Route::put('/devices/{device}/assign-table', [DeviceController::class, 'assignTable'])->name('device.assign.table');
-
-    Route::get('/terminal-session', [TerminalSessionController::class, 'index'])->name('pos.terminal.session');
+  
+Route::get('/', function () {
+    redirect()->route('login');
 });
 
-// Route::get('dashboard', function () {
-//     return Inertia::render('Dashboard');
-// })->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth'])->group(function () {
+
+    Route::get('/', [DashboardController::class, 'index'])->name('home');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Orders
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+    // Menu
+    Route::get('/menus', [MenuController::class, 'index'])->name('menus');
+    // Route::get('/menus/{menu}/edit', [MenuController::class, 'edit'])->name('menu.edit');
+    Route::post('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
+    // User
+    Route::resource('/users', UserController::class);
+    Route::prefix('users')->name('users.')->group(function () {
+    // Route::get('trashed', [UserController::class, 'trashed'])->name('trashed');
+    Route::patch('{id}/restore', [UserController::class, 'restore'])->name('restore');
+    // Route::delete('{id}/force-delete', [UserController::class, 'forceDelete'])->name('force-delete');
+    });
+    // Branch
+    Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
+
+    Route::resource('/devices', DeviceController::class);
+    Route::prefix('devices')->name('devices.')->group(function () {
+        Route::get('trashed', [DeviceController::class, 'trashed'])->name('trashed');
+        Route::patch('{id}/restore', [DeviceController::class, 'restore'])->name('restore');
+        Route::post('/{device}/assign-table', [DeviceController::class, 'assignTable'])->name('device.assign.table');
+        Route::delete('{id}/force-delete', [DeviceController::class, 'forceDelete'])->name('force-delete');
+    });
+
+    Route::get('/accessibility', [AccessibilityController::class, 'index'])->name('accessibility.index');
+    Route::get('/accessibility/{role}/permissions', [AccessibilityController::class, 'updatePermissions'])->name('accessibility.update');
+    
+    Route::prefix('reports')->group(function () {
+        Route::get('/sales', [SalesController::class, 'index'])->name('reports.sales'); 
+        // Route::get('{type}', [ReportController::class, 'index'])->name('reports.index'); 
+        // Route::get('{type}/export', [ReportController::class, 'export']); // CSV export
+    });
+
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

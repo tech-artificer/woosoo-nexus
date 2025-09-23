@@ -9,6 +9,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
+// use App\Http\Middleware\CheckSessionIsOpened;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,10 +23,20 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(
         __DIR__.'/../routes/channels.php',
-        ['prefix' => 'api', 'middleware' => ['api', 'auth:sanctum']],
+        ['prefix' => 'api'],
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->prepend([ForceJsonResponse::class,HandleCors::class]);
+        // ✅ Global middleware (runs on all routes)
+        $middleware->prepend([
+            HandleCors::class,
+        ]);
+
+        $middleware->api(append: [
+            ForceJsonResponse::class,
+            // CheckSessionIsOpened::class,
+            SubstituteBindings::class,
+        ]);
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
@@ -36,5 +49,25 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+       $exceptions->render(function (QueryException $exception, Request $request) {
+
+            if( $request->is('api/*') ) {
+
+                if ($exception->errorInfo[1] == 1062) {
+                    return response()->json([
+                        'message' => 'Duplicate Entry Detected.',
+                    ], 409);
+                }
+
+                //  return response()->json([
+                //     'success' => false,
+                //     'message' => 'Error Occurred.',
+                // ]);
+            }
+           
+           
+
+            // // Not a duplicate entry? Let Laravel handle it.
+            // throw $exception;
+        });
     })->create();

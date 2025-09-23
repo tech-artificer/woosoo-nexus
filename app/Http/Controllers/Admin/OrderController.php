@@ -9,6 +9,7 @@ use App\Services\Krypton\KryptonContextService;
 use Inertia\Inertia;
 
 use App\Repositories\Krypton\OrderRepository;
+use App\Repositories\Krypton\TableRepository;
 // use App\Http\Resources\OrderResource;
 
 use App\Models\Krypton\Order;
@@ -16,7 +17,9 @@ use App\Models\Krypton\OrderCheck;
 // use App\Models\Krypton\Table;
 
 use App\Models\DeviceOrder;
-// use App\Models\Krypton\TerminalSession;
+use App\Enums\OrderStatus;
+use App\Models\Krypton\Session;
+use App\Services\Krypton\OrderService;
 
 use Carbon\Carbon;
 class OrderController extends Controller
@@ -29,29 +32,26 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $context = new KryptonContextService();
-        $currentSessions = $context->getCurrentSessions();
+        $tableRepo = new TableRepository();
+        $activeOrders = $tableRepo->getActiveTableOrders();
+        $session = Session::fromQuery('CALL get_latest_session_id()')->first();
 
-        $orders = OrderRepository::getAllOrdersWithDeviceData($currentSessions);
-        // $orders = Order::with(['tableOrders','orderChecks', 'orderedMenus'])->whereDate('created_on', Carbon::yesterday())->get();
-
-        // $orders = DeviceOrder::select('order_id', 'order_number', 'device_id', 'table_id')->with(['device'])
-        //         ->where('terminal_session_id', $terminalSession->id)
-        //         ->get();
-
-        // foreach ($orders as $order) {
-        //     $order->orderChecks = OrderCheck::where('order_id', $order->id)->get();
-        //     // $order->order_checks;
-        //     // $order->order->ordered_menus;
-        // }
-
-        return Inertia::render('Orders', [
+        $orders = DeviceOrder::with(['device', 'order', 'table', 'order', 'serviceRequests'])
+                    ->where('session_id', $session->id)
+                    ->orderBy('table_id', 'asc')
+                    ->orderBy('created_at', 'desc')
+                    ->activeOrder()
+                    ->get();
+        
+        return Inertia::render('Orders/Index', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    
             'orders' => $orders,
-            'user' => auth()->user(),
+            // 'user' => auth()->user(),
+            // 'tableOrders' => $activeOrders,
         ]);
     }
+    
 
     /**
      * Show the form for creating a new resource.
@@ -88,16 +88,22 @@ class OrderController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Order $order)
     {
-        //
+        return back()->with(['success' => true]);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        //
+    public function destroy(int $id)
+    {   
+        $deviceOrder = DeviceOrder::find($id); 
+        $orderService = new OrderService();
+        $orderService->voidOrder($deviceOrder);
+        $deviceOrder->update(['status' => OrderStatus::VOIDED]);
+        $deviceOrder->delete();
+
+        return to_route('orders.index')->with(['success' => true]);
     }
 }

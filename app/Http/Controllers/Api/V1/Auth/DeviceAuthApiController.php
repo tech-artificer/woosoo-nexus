@@ -27,6 +27,16 @@ class DeviceAuthApiController extends Controller
     {
         $validated = $request->validated();
         $validated['ip_address'] = $request->ip(); // Capture the device's IP address
+
+        $device = Device::where(['ip_address' => $validated['ip_address']])->first();
+
+        if( $device ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Device already registered'
+            ]);
+        }
+
         $device = RegisterDevice::run($validated);
         
         // Create token with device info
@@ -36,13 +46,13 @@ class DeviceAuthApiController extends Controller
         )->plainTextToken;
         
         return response()->json([
+            'success' => true,
             'token' => $token,
             'device' => $device,
+            'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(7)->toDateTimeString()
         ], 201);
     }
-
-
     /**
      * Login a device
      * 
@@ -51,40 +61,37 @@ class DeviceAuthApiController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login(Request $request)
+    public function authenticate(Request $request)
     {
-        $validated = $request->validate([
-           'device_uuid' => ['required', 'exists:devices,device_uuid'],
-        ]);
+        $ip = $request->ip();
+       
+        $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
 
-        $device = Device::where('device_uuid', $validated['device_uuid'])->first();
+        if(  !$device ) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Device not found',
+                'ip_address' => $ip
+            ], 404);
+        }
 
-        $device->update(['last_active_at' => now()]);
-
+        $device->update(['last_seen_at' => now()]);
         // Revoke all existing tokens (optional)
         $device->tokens()->delete();
 
          // Create token with device info
         $token = $device->createToken(
             name: 'device-auth',
-            // abilities: [
-            //     'order:create', 
-            //     'order:view', 
-            //     'order:edit', 
-            //     'order:delete', 
-            //     'service_request:create',
-            //     'menu:view',
-            // ],
             expiresAt: now()->addDays(7)
         )->plainTextToken;
         
         return response()->json([
+            'success' => true,
             'token' => $token,
             'device' => $device,
+            'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(7)->toDateTimeString()
         ]);
-
-
     }
 
 
@@ -105,20 +112,16 @@ class DeviceAuthApiController extends Controller
           // Create token with device info
         $newToken = $device->createToken(
             name: 'device-auth',
-            abilities: [
-                'order:create', 
-                'order:view', 
-                'order:edit', 
-                'order:delete', 
-                'service_request:create',
-                'menu:view',
-            ],
             expiresAt: now()->addDays(7)
         )->plainTextToken;
         
         return response()->json([
+            'success' => true,
             'token' => $newToken,
-            'expires_at' => now()->addDays(7)->toDateTimeString()
+            'device' => $device,
+            'table' => $device->table()->first(['id', 'name']),
+            'expires_at' => now()->addDays(7)->toDateTimeString(),
+            'table' => $device->table()->get(['id', 'name']) ?? null,
         ]);
     }
 
