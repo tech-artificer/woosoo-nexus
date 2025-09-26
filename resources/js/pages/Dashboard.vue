@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, defineProps } from 'vue'
+import { onMounted } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Head } from '@inertiajs/vue3'
@@ -11,10 +11,6 @@ import {
     ArrowUp10,
     ChartPie,
 } from 'lucide-vue-next';
-
-// import Overview from '@/pages/dashboard/components/Overview.vue';
-// import TopItems from '@/pages/dashboard/components/TopItems.vue';
-// import TopSales from '@/pages/dashboard/components/TopSales.vue';
 
 import LineChart from '@/components/charts/LineChart.vue';
 import DonutChart from '@/components/charts/DonutChart.vue';

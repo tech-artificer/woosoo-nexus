@@ -13,7 +13,6 @@ use App\Services\Krypton\OrderService;
 use App\Services\BroadcastService;
 use Illuminate\Support\Facades\Auth;
 use App\Enums\OrderStatus;
-
 use App\Jobs\PrinterOrderJob;
 
 /**
@@ -51,11 +50,12 @@ class DeviceOrderApiController extends Controller
             $order = app(OrderService::class)->processOrder($device, $validatedData);
 
             app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));
+            PrinterOrderJob::dispatch($order, 'cashier')->onQueue('cashier');
+  
 
             return response()->json([
                 'success' => true,
                 'order' => new DeviceOrderResource($order),
-                'print' => $this->printOrder($order)
             ], 201);
 
            
@@ -69,26 +69,6 @@ class DeviceOrderApiController extends Controller
             'errors' => $errors,
         ], 500);
     
-    }
-
-    public function printOrder(DeviceOrder $order)
-    {
-        // foreach ($request->items as $item) {
-        //     $order->items()->create($item);
-        // }
-
-        
-        // foreach ($order->items as $item) {
-        //     $printer->text("{$item->qty}x {$item->name}\n");
-        // }
-
-        // Send to kitchen and bar printers
-        PrinterOrderJob::dispatch($order, 'cashier')->onQueue('cashier');
-        // PrinterOrderJob::dispatch($order->id, 'bar')->onQueue('bar');
-        // If dessert applies
-        // PrinterOrderJob::dispatch($order->id, 'dessert')->onQueue('dessert');
-
-        return response()->json(['success' => true, 'order' => $order]);
     }
 }
 

@@ -30,20 +30,6 @@ const mainNavItems: NavItem[] = [
         icon: ListOrdered,
         isActive: false,
         hasSubItems: false,
-        // items: [
-        //     {
-        //         title: 'Live Orders',
-        //         href: '/orders/live',
-        //         icon: Minus,
-        //         isActive: false,
-        //     },
-        //     {
-        //         title: 'Order History',
-        //         href: '#',
-        //         icon: Minus,
-        //         isActive: false,
-        //     },
-        // ]
     },
     {
         title: 'Menus',
@@ -78,24 +64,17 @@ const configNavItems: NavItem[] = [
         isActive: false,
         hasSubItems: false,
     }, 
-    {
-        title: 'Manage Branches',
-        href: '/configuration/branches',
-        icon: Split,
-        isActive: false,
-        hasSubItems: false,
-    }, 
 ];
 
-const reportNavItems: NavItem[] = [
-    {
-        title: 'Sales Report',
-        href: route('reports.sales'),
-        icon: TrendingUp,
-        isActive: false,
-        hasSubItems: false,
-    }, 
-];
+// const reportNavItems: NavItem[] = [
+//     {
+//         title: 'Sales Report',
+//         href: route('reports.sales'),
+//         icon: TrendingUp,
+//         isActive: false,
+//         hasSubItems: false,
+//     }, 
+// ];
 
 </script>
 
@@ -115,7 +94,7 @@ const reportNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" title="Main"  />
-            <NavMain :items="reportNavItems" title="Reports" />
+            <!-- <NavMain :items="reportNavItems" title="Reports" /> -->
         </SidebarContent>
         <SidebarFooter>
             <NavMain :items="configNavItems" title="Configuration" />

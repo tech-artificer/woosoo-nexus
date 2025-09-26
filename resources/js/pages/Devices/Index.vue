@@ -25,7 +25,6 @@ defineProps<{
 
    
     <AppLayout :breadcrumbs="breadcrumbs">    
-        <!-- <pre> {{ devices }} </pre> -->
         <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
              <DataTable :data="devices" :columns="columns" />
         </div>

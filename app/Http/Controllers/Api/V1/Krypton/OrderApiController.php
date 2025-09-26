@@ -9,6 +9,7 @@ use App\Repositories\Krypton\OrderRepository;
 use App\Http\Resources\OrderResource;
 use App\Models\Krypton\Order;
 use App\Models\Krypton\Session;
+use Illuminate\Support\Facades\Artisan;
 
 class OrderApiController extends Controller
 {
@@ -20,24 +21,29 @@ class OrderApiController extends Controller
      */
     public function index()
     {
-        $sessionId = Session::fromQuery('CALL get_latest_session_id()')->first();
-        // $orders = OrderRepository::getAllOrdersWithDeviceData();
-        return OrderResource::collection(Order::latest('created_on')->where(['session_id' => $sessionId->id])->get());
+        // $sessionId = Session::fromQuery('CALL get_latest_session_id()')->first();
+        // // $orders = OrderRepository::getAllOrdersWithDeviceData();
+        // return OrderResource::collection(Order::latest('created_on')->where(['session_id' => $sessionId->id])->get());
     }
-    // /**
-    //  * Show the form for creating a new resource.
-    //  */
-    // public function create()
-    // {
-    //     //
-    // }
+    
+    // public function completeOrder(Request $request) {
 
-    // /**
-    //  * Store a newly created resource in storage.
-    //  */
-    // public function store(Request $request)
-    // {
-    //     //
+    //     $orderId = $request->input('order_id');
+
+    //     // Run the console command
+    //     $exitCode = Artisan::call('broadcast:order-completed', [
+    //         'order_id' => $orderId
+    //     ]);
+
+    //     // Optional: capture output
+    //     $output = Artisan::output();
+
+    //     return response()->json([
+    //         'status' => 'Order updated and broadcasted',
+    //         'output' => $output,
+    //         'exitCode' => $exitCode
+    //     ]);
+
     // }
 
     /**
@@ -47,28 +53,4 @@ class OrderApiController extends Controller
     {   
         return new OrderResource ($order);
     }
-
-    // /**
-    //  * Show the form for editing the specified resource.
-    //  */
-    // public function edit(string $id)
-    // {
-    //     //
-    // }
-
-    // /**
-    //  * Update the specified resource in storage.
-    //  */
-    // public function update(Request $request, string $id)
-    // {
-    //     //
-    // }
-
-    // /**
-    //  * Remove the specified resource from storage.
-    //  */
-    // public function destroy(string $id)
-    // {
-    //     //
-    // }
 }

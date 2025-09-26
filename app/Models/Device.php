@@ -79,7 +79,7 @@ class Device extends Model
 
     public function registrationCode(): HasOne
     {
-        return $this->hasOne(DeviceRegistrationCode::class);
+        return $this->hasOne(DeviceRegistrationCode::class, 'used_by_device_id', 'id');
     }
 
 

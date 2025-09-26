@@ -25,15 +25,6 @@ defineProps<{
     orders: DeviceOrder[];
 }>()    
 
-// const form = useForm({});
-
-// const fetchData = (url: string) => {
-//   form.get(url, {
-//     preserveState: true,
-//     replace: true, // Replace history entry
-//   });
-// }
-
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   console.log(event);
   if (isUpdate) {
@@ -83,7 +74,7 @@ onUnmounted(() => {
    
     <AppLayout :breadcrumbs="breadcrumbs">   
       <!-- <pre>
-        {{ orders }}
+        {{ orders[0].items }}
       </pre> -->
         <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
              <DataTable :data="orders" :columns="columns" />

@@ -18,3 +18,13 @@ export const asset = (path: string): string => {
   const cleanPath = path.replace(/^\/+/, ''); // remove leading slashes
   return `${base}/${cleanPath}`;
 };
+
+export function formatCurrency(value?: number | null): string {
+  if (value == null || isNaN(value)) return '₱0.00'
+
+  return value.toLocaleString('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+  })
+}

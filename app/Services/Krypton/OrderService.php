@@ -27,6 +27,8 @@ use App\Actions\Order\{
 
 use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
+use App\Services\BroadcastService;
+use App\Events\Order\OrderVoided;
 
 class OrderService
 {
@@ -129,8 +131,8 @@ class OrderService
         
     }
 
-    protected function voidOrder(Device $device) {
-        
+    public function voidOrder(DeviceOrder $deviceOrder) {
+        app(BroadcastService::class)->dispatchBroadcastJob(new OrderVoided($deviceOrder));
     }
 
     protected function rollBackOrder(Device $device) {

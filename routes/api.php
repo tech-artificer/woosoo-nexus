@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\Krypton\{
     TerminalSessionApiController,
 };
 
+use App\Models\DeviceOrder;
 
 
 Route::options('{any}', function () {
@@ -60,13 +61,16 @@ Route::middleware(['auth:device'])->group(function () {
 
     Route::resource('/devices', DeviceApiController::class);
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
-    Route::resource('/orders', OrderApiController::class);
+   
     Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
-
     Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
+
+    //  Route::resource('/orders', OrderApiController::class);
+    // Route::post('/order/complete', [OrderApiController::class, 'completeOrder']);
+
 
 });
 

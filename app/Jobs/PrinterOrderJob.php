@@ -37,51 +37,65 @@ class PrinterOrderJob implements ShouldQueue
      */
     public function handle()
     {
-        // $order = Order::with('items')->find($this->orderId);
-        // if (!$order) {
-        //     return;
-        // }
-
-        $config = config("printers.{$this->printerName}");
-        if (!$config) {
-            \Log::error("Printer config not found: {$this->printerName}");
+        if (! $this->order) {
             return;
         }
 
-        try {
-            // Pick connector type
-            switch ($config['type']) {
-                case 'network':
-                    $connector = new NetworkPrintConnector($config['ip'], $config['port']);
-                    break;
+        $items = $this->order->items;
 
-                case 'windows-com':
-                    $connector = new FilePrintConnector($config['com']);
-                    break;
-
-                default:
-                    throw new \Exception("Unsupported printer type: {$config['type']}");
-            }
-
-            $printer = new Printer($connector);
-
-            // ---- Example ticket format ----
-            $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $printer->text("=== ORDER #{$this->order->id} ===\n");
-            $printer->setJustification(Printer::JUSTIFY_LEFT);
-
-            foreach ($this->order->items as $item) {
-                $printer->text("{$item->qty}x {$item->name}\n");
-            }
-
-            $printer->feed(2);
-            $printer->cut();
-            $printer->close();
-
-            \Log::info("Order {$this->order->id} printed on {$this->printerName}");
-        } catch (\Exception $e) {
-            \Log::error("Failed to print order {$this->order} on {$this->printerName}: " . $e->getMessage());
-            $this->release(10); // retry in 10s
+        $ticket = " -- Kitchen Ticket -- \n";
+        $ticket .= "{$this->order->order_id}\n";
+        $ticket .= "-----------------\n";
+        foreach ($items as $item) {
+            $quantity = $item['quantity'];
+            $name = $item['kitchen_name'];
+            $ticket .= "{$quantity}x {$name}\n";
         }
+
+        file_put_contents(storage_path("logs/printjob-{$this->order->order_id}.txt"), $ticket);
+        \Log::info("printjob-{$this->order->order_id}\n {$ticket}");
+        $this->order->update(['is_printed' => true]);
+        // $ch = curl_init("http://127.0.0.1:9100/print");
+        // curl_setopt($ch, CURLOPT_POST, true);
+        // curl_setopt($ch, CURLOPT_POSTFIELDS, ['content' => $ticket]);
+        // curl_exec($ch);
+        // curl_close($ch);
+
+        // $config = config("printers.{$this->printerName}");
+        // if (!$config) {
+        //     \Log::error("Printer config not found: {$this->printerName}");
+        //     return;
+        // }
+
+        // try {
+        //     // Pick connector type
+        //     switch ($config['type']) {
+        //         case 'network':
+        //             $connector = new NetworkPrintConnector($config['ip'], $config['port']);
+        //             break;
+
+        //         default:
+        //             throw new \Exception("Unsupported printer type: {$config['type']}");
+        //     }
+
+        //     $printer = new Printer($connector);
+        //     // ---- Example ticket format ----
+        //     $printer->setJustification(Printer::JUSTIFY_CENTER);
+        //     $printer->text("=== ORDER #{$this->order->id} ===\n");
+        //     $printer->setJustification(Printer::JUSTIFY_LEFT);
+
+        //     foreach ($this->order->items as $item) {
+        //         $printer->text("{$item->qty}x {$item->name}\n");
+        //     }
+
+        //     $printer->feed(2);
+        //     $printer->cut();
+        //     $printer->close();
+
+        //     \Log::info("Order {$this->order->id} printed on {$this->printerName}");
+        // } catch (\Exception $e) {
+        //     \Log::error("Failed to print order {$this->order} on {$this->printerName}: " . $e->getMessage());
+        //     $this->release(10); // retry in 10s
+        // }
     }
 }

@@ -41,8 +41,6 @@ const isFiltered = computed(() => props.table.getState().columnFilters.length > 
 <template>
   <div class="flex flex-row flex-wrap justify-between gap-2">
 
-   
-
     <div class="flex flex-row flex-wrap gap-2">
         <Input
         placeholder="Filter Menu..."
@@ -80,9 +78,9 @@ const isFiltered = computed(() => props.table.getState().columnFilters.length > 
 
     <div class="flex flex-row flex-wrap gap-2">
         
-      <Button variant="outline" class="h-8 px-2 lg:px-3 ">
+      <!-- <Button variant="outline" class="h-8 px-2 lg:px-3 ">
       <HardDriveDownload class="h-4 w-4" />
-    </Button>
+    </Button> -->
        
    
     </div>

@@ -18,7 +18,7 @@ export interface User {
 export interface Role {
     id: number;
     name: string;
-    permissions: Permission[];
+    permissions: Permission[];De
 }
 
 export interface Permission {
@@ -63,6 +63,7 @@ export interface Device {
     is_active: boolean;
     ip_address?: string;
     deleted_at?: string;
+    registration_code?: DeviceRegistrationCode;
     port?: number;
     branch?: Branch;
     table?: Table;
@@ -81,6 +82,7 @@ export interface DeviceOrder {
     order?: Order | null;
     table?: Table | null;
     meta: any | null;
+    is_printed: boolean;
     deleted_at?: string;
     service_requests: ServiceRequest[] | []
 }
@@ -99,20 +101,13 @@ export interface Menu {
     course: string;
     img_url: string;
     img_path: string;
-    // cost: number;
     description: string;
     index: number;
     is_taxable: boolean;
     is_available: boolean;
     is_modifier: boolean;
     is_discountable: boolean;
-    // tare_weight: number;
-    // scale_unit: string;
-    // measurement_unit: string;
-    // is_locked: boolean;
     quantity: number;
-    // in_stock: number;
-    // is_modifier_only: boolean;
     guest_count: number;
 }
 

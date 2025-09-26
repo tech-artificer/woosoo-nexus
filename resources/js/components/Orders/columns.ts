@@ -4,6 +4,7 @@ import { h } from 'vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import DataTableColumnHeader from '@/components/Orders/DataTableColumnHeader.vue'
 import DataTableRowActions from '@/components/Orders/DataTableRowActions.vue'
+import { formatCurrency } from '@/lib/utils';
 
 export const columns: ColumnDef<DeviceOrder, any>[] = [
   {
@@ -67,8 +68,11 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     enableColumnFilter: false,
     enableSorting: false,
     cell: ({ row }) => {
+
+      const total = row.original.items.reduce((acc, item: any) => acc + item?.price * item.quantity + item?.tax, 0);
+
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, row.getValue('total_amount')),
+        h('span', { class: ' font-medium' }, formatCurrency(total) ),
       ])
     }
   }, 
@@ -80,6 +84,17 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     cell: ({ row }) => {
       return h('div', { class: 'w-20 flex space-x-2' }, [
         h('span', { class: ' font-medium' }, row.getValue('status')),
+      ])
+    }
+  },  
+  {
+    accessorKey: 'is_printed',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Printed', class: 'max-w-[200px]' }),
+    enableColumnFilter: false,
+    enableSorting: false,
+    cell: ({ row }) => {
+      return h('div', { class: 'w-20 flex space-x-2' }, [
+        h('span', { class: ' font-medium' }, row.getValue('is_printed') ? 'Yes' : 'No'),
       ])
     }
   },  

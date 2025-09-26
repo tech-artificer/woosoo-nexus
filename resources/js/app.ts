@@ -26,8 +26,8 @@ window.config = {
 
 try {
     window.Echo = new Echo({
-        broadcaster: import.meta.env.VITE_REVERB_BROADCASTER,
-        cluster: 'mt1',
+        broadcaster: import.meta.env.VITE_BROADCAST_DRIVER ? 'reverb' : 'pusher',
+        // cluster: 'mt1',
         // authEndpoint: '/broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,
         wsHost: import.meta.env.VITE_REVERB_HOST,
@@ -42,6 +42,7 @@ try {
     });
     
 } catch (error) {
+    console.log( import.meta.env)
     console.log('[BOOTSTRAP] Error initializing Echo:', error);
 }
 

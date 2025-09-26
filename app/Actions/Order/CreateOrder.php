@@ -17,6 +17,7 @@ class CreateOrder
 
         // Update the order with terminal and cashier details
         $order->update([
+            'is_available' => true,
             'end_terminal_id' => $order->terminal_id, 
             'cash_tray_session_id' => $attr['cash_tray_session_id'],
             'cashier_employee_id' => $attr['cashier_employee_id'],

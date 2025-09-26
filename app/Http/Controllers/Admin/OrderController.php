@@ -7,24 +7,27 @@ use Illuminate\Http\Request;
 use App\Services\Krypton\KryptonContextService;
 
 use Inertia\Inertia;
-
 use App\Repositories\Krypton\OrderRepository;
 use App\Repositories\Krypton\TableRepository;
-// use App\Http\Resources\OrderResource;
-
 use App\Models\Krypton\Order;
 use App\Models\Krypton\OrderCheck;
-// use App\Models\Krypton\Table;
-
 use App\Models\DeviceOrder;
 use App\Enums\OrderStatus;
 use App\Models\Krypton\Session;
 use App\Services\Krypton\OrderService;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Artisan;
+
+
 class OrderController extends Controller
 {
-   
+    
+    protected $orderService;
+
+    public function __construct(OrderService $orderService) {
+        $this->orderService = $orderService;
+    }
     /**
      * Render the orders page.
      *
@@ -41,7 +44,7 @@ class OrderController extends Controller
                     ->orderBy('table_id', 'asc')
                     ->orderBy('created_at', 'desc')
                     ->activeOrder()
-                    ->get();
+                    ->get(); 
         
         return Inertia::render('Orders/Index', [
             'title' => 'Orders',
@@ -99,11 +102,24 @@ class OrderController extends Controller
     public function destroy(int $id)
     {   
         $deviceOrder = DeviceOrder::find($id); 
-        $orderService = new OrderService();
-        $orderService->voidOrder($deviceOrder);
+        $this->orderService->voidOrder($deviceOrder);
         $deviceOrder->update(['status' => OrderStatus::VOIDED]);
-        $deviceOrder->delete();
+        return redirect()->back()->with('success');
+    }
 
-        return to_route('orders.index')->with(['success' => true]);
+    public function complete(Request $request) {
+
+        $orderId = $request->input('order_id');
+
+        // Run the console command
+        $exitCode = Artisan::call('broadcast:order-completed', [
+            'order_id' => $orderId
+        ]);
+
+        // Optional: capture output
+        $output = Artisan::output();
+
+     
+        return redirect()->back()->with('success');
     }
 }

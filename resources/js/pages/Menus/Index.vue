@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// import { defineProps } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
@@ -31,6 +30,7 @@ defineProps<{
     <Head :title="title" :description="description" />
     
    <AppLayout :breadcrumbs="breadcrumbs">    
+    <!-- <pre> {{ menus }} </pre> -->
         <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
              <DataTable :data="menus" :columns="columns" />
         </div>

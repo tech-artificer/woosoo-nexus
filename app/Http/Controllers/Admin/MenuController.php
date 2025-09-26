@@ -22,8 +22,6 @@ class MenuController extends Controller
                 'id' => $menu->id,
                 'name' => $menu->name,
                 'img_url' => $menu->image_url,
-                // 'img_path' => $menu->image_url,
-                // 'image' => MenuImage::where('menu_id', $menu->id)->first(), 
                 'group' => $menu->group->name ?? null,
                 'category' => $menu->category->name ?? null,
                 'course' => $menu->course->name ?? null,
