@@ -32,8 +32,7 @@ class OrderCompletedTest extends Command
         $order_id = $this->argument('order_id');
         $deviceOrder = DeviceOrder::where('order_id', $order_id)->first();
        
-        $deviceOrder->status = OrderStatus::COMPLETED;
-        $deviceOrder->save();
+        $deviceOrder->update(['status' => OrderStatus::COMPLETED]);
         // broadcast(new OrderCreated($deviceOrder))->toOthers();
         app(BroadcastService::class)->dispatchBroadcastJob(new OrderCompleted($deviceOrder));
         $this->info('Order Created event broadcasted successfully!');

@@ -1,5 +1,28 @@
 import '../css/app.css';
 // import './bootstrap';
+import axios from 'axios'
+
+declare global {
+  interface Window {
+    axios: typeof axios;
+  }
+}
+
+// Configure Axios CSRF + credentials globally
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
+
+const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+if (token) {
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = token
+} else {
+    console.warn('⚠️ CSRF token not found in <meta> tag!')
+}
+
+// Important if you’re using cookies/sessions
+axios.defaults.withCredentials = true
+
+// Make Axios globally accessible if needed
+window.axios = axios
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -23,12 +46,12 @@ if( 'performance' in window ) {
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };
-
+console.log(import.meta.env);
 try {
     window.Echo = new Echo({
-        broadcaster: import.meta.env.VITE_BROADCAST_DRIVER ? 'reverb' : 'pusher',
+        broadcaster: import.meta.env.VITE_BROADCAST_DRIVER ?? 'reverb',
         // cluster: 'mt1',
-        // authEndpoint: '/broadcasting/auth',
+        // authEndpoint: window.config.baseUrl + 'broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,
         wsHost: import.meta.env.VITE_REVERB_HOST,
         wssHost: import.meta.env.VITE_REVERB_HOST,

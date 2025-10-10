@@ -81,7 +81,7 @@ class MenuRepository
         try {
             return Menu::fromQuery('CALL get_all_modifier_groups()');
         } catch (Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }

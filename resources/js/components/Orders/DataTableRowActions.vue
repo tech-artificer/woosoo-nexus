@@ -62,6 +62,17 @@ const voidOrder = () => {
   })
 }
 
+const printOrder = (order_id: number | string) => {
+
+  router.post(`/orders/print`, { 
+    order_id: order_id, 
+  }, { 
+    onSuccess: () => {
+      toast.success('Order Sent to Printer')
+    }
+  })
+}
+
 const completeOrder = (order_id: number | string) => {
 
   router.post(`/orders/complete`, { 
@@ -87,7 +98,7 @@ const completeOrder = (order_id: number | string) => {
   <DropdownMenuContent align="end">
     
     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-    <DropdownMenuItem @click="completeOrder(computedOrder.order_id as number | string)">
+    <DropdownMenuItem @click="printOrder(computedOrder.order_id as number | string)">
       Print
     </DropdownMenuItem>
     <DropdownMenuItem @click="completeOrder(computedOrder.order_id as number | string)">

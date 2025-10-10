@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\{
     TableServiceApiController,
     Menu\MenuBundleController,
     ServiceRequestApiController,
+    PrintController,
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -29,7 +30,6 @@ use App\Http\Controllers\Api\V1\Krypton\{
     TerminalSessionApiController,
 };
 
-use App\Models\DeviceOrder;
 
 
 Route::options('{any}', function () {
@@ -39,7 +39,6 @@ Route::options('{any}', function () {
 Route::middleware(['guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
     Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
-    Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
 });
 
 Route::middleware(['api'])->group(function () {
@@ -60,6 +59,7 @@ Route::middleware(['api'])->group(function () {
 Route::middleware(['auth:device'])->group(function () {
 
     Route::resource('/devices', DeviceApiController::class);
+    Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
    
     Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
@@ -68,6 +68,7 @@ Route::middleware(['auth:device'])->group(function () {
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
 
+    Route::get('/print/kitchen', [PrintController::class, 'printKitchen'])->name('api.print.kitchen');
     //  Route::resource('/orders', OrderApiController::class);
     // Route::post('/order/complete', [OrderApiController::class, 'completeOrder']);
 

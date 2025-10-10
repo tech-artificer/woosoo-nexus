@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+// use Illuminate\Support\Facades\Auth;
 use App\Models\Device;
 use App\Actions\Device\RegisterDevice;
-use App\Http\Resources\DeviceResource;
+// use App\Http\Resources\DeviceResource;
 use App\Http\Requests\DeviceRegisterRequest;
-use App\Models\DeviceRegistrationCode;
+// use App\Models\DeviceRegistrationCode;
 
 class DeviceAuthApiController extends Controller
 {
@@ -102,28 +102,29 @@ class DeviceAuthApiController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function refresh(Request $request) {
+    public function refresh(Request $request)
+    {
+        $device = $request->user(); // Sanctum resolves Device model
 
-        $device = $request->user(); // Sanctum resolves the Device model
+        // Revoke current token safely
+        if ( $device->currentAccessToken() ?? null) {
+            $device->currentAccessToken()->delete() ?? null;
+        }
 
-        // Revoke current token
-        $device->currentAccessToken()->delete();
-        
-          // Create token with device info
-        $newToken = $device->createToken(
-            name: 'device-auth',
-            expiresAt: now()->addDays(7)
-        )->plainTextToken;
-        
+        // Create new token (no built-in expiry unless custom implemented)
+        $newToken = $device->createToken('device-auth')->plainTextToken;
+
+        $expiresAt = now()->addDays(7);
+
         return response()->json([
             'success' => true,
             'token' => $newToken,
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
-            'expires_at' => now()->addDays(7)->toDateTimeString(),
-            'table' => $device->table()->get(['id', 'name']) ?? null,
+            'expires_at' => $expiresAt->toDateTimeString(),
         ]);
-    }
+}
+
 
     /**
      * Revoke the token of the device that made the request and logout.

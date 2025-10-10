@@ -42,7 +42,7 @@ onMounted(() => {
   }
 
   if (user.is_admin) {
-    window.Echo.private('admin.orders')
+    window.Echo.channel('admin.orders')
       .listen('.order.created', (e: DeviceOrder) => handleOrderEvent(e, false))
       .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
       .listen('.order.voided', (e: DeviceOrder) => handleOrderEvent(e, true))
@@ -50,7 +50,7 @@ onMounted(() => {
         console.error('Error connecting to admin.orders channel:', error);
       });
 
-    window.Echo.private('admin.service-requests')
+    window.Echo.channel('admin.service-requests')
       .listen('.service-request.notification', (e: ServiceRequest) => {
         console.log(e);
         // fetchData(route('orders.live'));

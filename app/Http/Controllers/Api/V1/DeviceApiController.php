@@ -32,7 +32,4 @@ class DeviceApiController extends Controller
         return new DeviceResource($device->load(['table']));
     }
 
-    public function heartbeat(Request $request) {
-        
-    }
 }
