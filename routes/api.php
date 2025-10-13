@@ -36,6 +36,13 @@ Route::options('{any}', function () {
     return response()->json([], 200);
 })->where('any', '.*');
 
+Route::get('/device/ip', function (Request $request) {
+    return response()->json([
+        'ip' => $request->ip(),
+        'user_agent' => $request->userAgent()
+    ]);
+});
+
 Route::middleware(['guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
     Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
