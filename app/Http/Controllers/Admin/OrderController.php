@@ -41,15 +41,24 @@ class OrderController extends Controller
 
         $orders = DeviceOrder::with(['device', 'order', 'table', 'order', 'serviceRequests'])
                     ->where('session_id', $session->id)
+                    ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::PENDING])
                     ->orderBy('table_id', 'asc')
                     ->orderBy('created_at', 'desc')
                     ->activeOrder()
-                    ->get(); 
+                    ->get();
+
+        $orderHistory = DeviceOrder::with(['device', 'order', 'table', 'order', 'serviceRequests'])
+                    ->where('session_id', $session->id)
+                    ->whereIn('status', [OrderStatus::COMPLETED, OrderStatus::VOIDED, OrderStatus::CANCELLED])
+                    ->orderBy('table_id', 'asc')
+                    ->orderBy('created_at', 'desc')
+                    ->get();
         
         return Inertia::render('Orders/Index', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    
             'orders' => $orders,
+            'orderHistory' => $orderHistory,
             // 'user' => auth()->user(),
             // 'tableOrders' => $activeOrders,
         ]);
