@@ -29,15 +29,7 @@ class DatabaseSeeder extends Seeder
             TableService::firstOrCreate(['name' => $name]);
         }
 
-        User::firstOrCreate(
-            ['email' => 'owner@example.com'],
-            [
-                'name' => 'admin',
-                'password' => bcrypt('password'),
-                'is_admin' => true,
-            ]
-        );
-
+      
         User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
@@ -115,11 +107,11 @@ class DatabaseSeeder extends Seeder
         | Define Roles & Assign Permissions
         |--------------------------------------------------------------------------
         */
-        $owner = Role::firstOrCreate(['name' => 'Owner']);
+        $admin = Role::firstOrCreate(['name' => 'admin']);
         // $admin = Role::firstOrCreate(['name' => 'Administrator']);
         // $staff = Role::firstOrCreate(['name' => 'Staff']);
 
-        $owner->givePermissionTo(Permission::all());
+        $admin->givePermissionTo(Permission::all());
         // $admin->givePermissionTo(Permission::all());
         // $staff->givePermissionTo([
         //     'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.cancel', 'orders.complete', 'orders.void',
@@ -130,7 +122,7 @@ class DatabaseSeeder extends Seeder
         //     'users.view', 'users.create', 'users.edit', 'users.delete',
         // ]);
         // 
-        $user->assignRole($owner);
+        $user->assignRole($admin);
 
 
     }

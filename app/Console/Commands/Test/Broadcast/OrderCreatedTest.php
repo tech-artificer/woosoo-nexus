@@ -29,7 +29,7 @@ class OrderCreatedTest extends Command
      */
     public function handle()
     {
-        $deviceOrder = DeviceOrder::find(6);
+        $deviceOrder = DeviceOrder::find(1);
        
         // broadcast(new OrderCreated($deviceOrder))->toOthers();
         app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($deviceOrder));

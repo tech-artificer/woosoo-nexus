@@ -52,13 +52,13 @@ class ProcessOrderLogs implements ShouldQueue
                     $action = null;
                  
                     if( $log->is_voided == true ) {
-                        $log->deviceOrder->status = OrderStatus::VOIDED;
+                        $log->deviceOrder->update(['status' => OrderStatus::VOIDED]);
                         $action = 'void';
                         Log::info("Order is voided and broadcasted {$log->deviceOrder}.");
                    
                     }else{
                         $action = 'complete';
-                        $log->deviceOrder->status = OrderStatus::COMPLETED;
+                        $log->deviceOrder->update(['status' => OrderStatus::COMPLETED]);
                         Log::info("Order is COMPLETED and broadcasted {$log->deviceOrder}.");
                     }
 

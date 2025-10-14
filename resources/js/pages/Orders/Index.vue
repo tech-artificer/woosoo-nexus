@@ -21,7 +21,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const page = usePage();
-console.log('called');
 const user = page.props.auth.user as User;
 
 defineProps<{
@@ -32,46 +31,41 @@ defineProps<{
 }>()    
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-  console.log(event);
   console.log('Order event received:', event, 'Is update:', isUpdate);
-  if (isUpdate) {
-    //
-  }
 
-  router.visit(route('orders.index'));
-  return true;
+  // Slight delay so Echo finishes its callback cleanly
+  setTimeout(() => {
+    router.visit(route('orders.index'));
+  }, 50);
+
+  // no need to return true here — it’s not a message listener
 };
 
 onMounted(() => {
   if (!window.Echo) {
     console.error('Display.vue: window.Echo is not available.');
-    return true;
+    return;
   }
 
-  if (user.is_admin) {
+  if (!user.is_admin) return;
 
-    console.log('Display.vue mounted. Joining channels.');
-    window.Echo.channel('admin.orders')
-      .listen('.order.created', (e: DeviceOrder) => handleOrderEvent(e, false))
-      .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
-      .listen('.order.voided', (e: DeviceOrder) => handleOrderEvent(e, true))
-      
-      .error((error: DeviceOrder) => {
-        console.error('Error connecting to admin.orders channel:', error);
-      });
+  console.log('Display.vue mounted. Joining channels.');
 
-    window.Echo.channel('admin.service-requests')
-      .listen('.service-request.notification', (e: ServiceRequest) => {
-        console.log(e);
-        // fetchData(route('orders.live'));
-      })
-      .error((error: ServiceRequest) => {
-        console.error('Error connecting to admin.orders channel:', error);
-      });
-      
-  }
+  window.Echo.channel('admin.orders')
+    .listen('.order.created', (e: DeviceOrder) => handleOrderEvent(e, false))
+    .listen('.order.completed', (e: DeviceOrder) => handleOrderEvent(e, true))
+    .listen('.order.voided', (e: DeviceOrder) => handleOrderEvent(e, true))
+    .error((error: unknown) => {
+      console.error('Error connecting to admin.orders channel:', error);
+    });
 
-  return true
+  window.Echo.channel('admin.service-requests')
+    .listen('.service-request.notification', (e: ServiceRequest) => {
+      console.log(e);
+    })
+    .error((error: unknown) => {
+      console.error('Error connecting to admin.service-requests channel:', error);
+    });
 });
 
 onUnmounted(() => {

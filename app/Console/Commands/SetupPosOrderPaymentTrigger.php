@@ -70,9 +70,9 @@ class SetupPosOrderPaymentTrigger extends Command
             FOR EACH ROW
             BEGIN
                 IF EXISTS (
-                    SELECT 1 FROM woosoo_api.order_update_logs WHERE order_id = NEW.id
+                    SELECT 1 FROM woosoo_db.order_update_logs WHERE order_id = NEW.id
                 ) THEN
-                    UPDATE woosoo_api.order_update_logs
+                    UPDATE woosoo_db.order_update_logs
                     SET 
                         is_open = NEW.is_open,
                         is_voided = NEW.is_voided,
@@ -84,7 +84,7 @@ class SetupPosOrderPaymentTrigger extends Command
                     WHERE order_id = NEW.id;
                 ELSE
                     IF NEW.date_time_closed IS NOT NULL THEN
-                        INSERT INTO woosoo_api.order_update_logs 
+                        INSERT INTO woosoo_db.order_update_logs 
                             (table_name, order_id, is_open, is_voided, action, created_at, updated_at, session_id)
                         VALUES 
                             ('orders', NEW.id, NEW.is_open, NEW.is_voided, 

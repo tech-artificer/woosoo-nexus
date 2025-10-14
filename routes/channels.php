@@ -8,11 +8,11 @@ use App\Models\User;
 use App\Models\Device;
 
 
-Broadcast::channel('device.{deviceId}', function (User $user, int $deviceId) {
+Broadcast::channel('device.{deviceId}', function (Device $device, int $deviceId) {
     return true;
 });
 
-Broadcast::channel('orders.{orderId}', function (User $user, int $orderId) {
+Broadcast::channel('orders.{orderId}', function (Device $device, int $orderId) {
     return true;
 });
 

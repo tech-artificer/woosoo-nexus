@@ -1,0 +1,1 @@
+import{S as s}from"./SelectLabel.vue_vue_type_script_setup_true_lang-BUxOdxkD.js";import{d as a,x as r,o as p,u as l,E as n,w as c,l as u}from"./app-Ck0_Oz6D.js";const _=a({__name:"SelectGroup",props:{asChild:{type:Boolean},as:{}},setup(e){const o=e;return(t,d)=>(p(),r(l(s),n({"data-slot":"select-group"},o),{default:c(()=>[u(t.$slots,"default")]),_:3},16))}});export{_};

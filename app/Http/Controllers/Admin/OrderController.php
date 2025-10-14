@@ -113,6 +113,15 @@ class OrderController extends Controller
         $deviceOrder = DeviceOrder::find($id); 
         $this->orderService->voidOrder($deviceOrder);
         $deviceOrder->update(['status' => OrderStatus::VOIDED]);
+
+         //Run the console command
+        $exitCode = Artisan::call('broadcast:order-voided', [
+            'order_id' => $deviceOrder->order_id
+        ]);
+
+        // Optional: capture output
+        $output = Artisan::output();
+
         return redirect()->back()->with('success');
     }
 
@@ -120,7 +129,7 @@ class OrderController extends Controller
 
         $orderId = $request->input('order_id');
 
-        // Run the console command
+        //Run the console command
         $exitCode = Artisan::call('broadcast:order-completed', [
             'order_id' => $orderId
         ]);

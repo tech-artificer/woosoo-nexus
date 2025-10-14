@@ -4,9 +4,6 @@ namespace App\Events\Order;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -41,7 +38,7 @@ class OrderCreated implements ShouldBroadcastNow
         return [
             new Channel('orders.' . $this->deviceOrder->order_id),
             //  new PrivateChannel('orders.' . $this->deviceOrder->device_id);
-            new PrivateChannel('admin.orders'),
+            new Channel('admin.orders'),
         ];
     }
 

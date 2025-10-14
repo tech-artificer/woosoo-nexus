@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Broadcast;
 use App\Jobs\BroadcastEventJob;
+
 class BroadcastService
 {
     /**
@@ -14,15 +15,15 @@ class BroadcastService
     {
         try {
             broadcast($event);
-            return true;
+  
         } catch (\Throwable $e) {
             Log::error("Broadcast failed", [
                 'event' => get_class($event),
                 'error' => $e->getMessage(),
             ]);
-
-            return false;
         }
+
+        return true;
     }
 
 /**
@@ -49,7 +50,7 @@ class BroadcastService
      */
     public function dispatchBroadcastJob($event): void
     {   
-        BroadcastEventJob::dispatch($event)->onQueue('broadcasts');
+        BroadcastEventJob::dispatch($event);
         Log::info("Dispatched BroadcastEventJob");
     }
 

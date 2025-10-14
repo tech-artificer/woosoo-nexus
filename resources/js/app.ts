@@ -61,7 +61,7 @@ try {
         disableStats: true,
         encrypted: true, // Also important for WSS
         enabledTransports: ['ws', 'wss'],
-        // withCredentials: true, 
+        withCredentials: true, 
     });
     
 } catch (error) {
