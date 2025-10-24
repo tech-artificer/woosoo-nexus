@@ -66,6 +66,14 @@ onMounted(() => {
     .error((error: unknown) => {
       console.error('Error connecting to admin.service-requests channel:', error);
     });
+  
+  window.Echo.channel('admin.print')
+    .listen('.order.printed', (e: DeviceOrder) => {
+      console.log('Print order event received:', e);
+    })
+    .error((error: unknown) => {
+      console.error('Error connecting to admin.print channel:', error);
+    });
 });
 
 onUnmounted(() => {
