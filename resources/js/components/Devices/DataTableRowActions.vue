@@ -87,7 +87,7 @@ const restore = (computedDevice: Device) => {
   })
 }
 
-console.log(route('devices.restore', 3))
+// console.log(route('devices.restore', 3))
 </script>
 
 <template>

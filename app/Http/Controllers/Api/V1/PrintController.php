@@ -19,7 +19,6 @@ class PrintController extends Controller
         return response()->json(['message' => 'Print function called']);
     }
 
-
     public function printKitchen(Request $request)
     {
 

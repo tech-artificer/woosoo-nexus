@@ -30,7 +30,8 @@ use App\Http\Controllers\Api\V1\Krypton\{
     TerminalSessionApiController,
 };
 
-
+use App\Models\DeviceOrder;
+use App\Events\PrintOrder;
 
 Route::options('{any}', function () {
     return response()->json([], 200);
@@ -60,7 +61,24 @@ Route::middleware(['api'])->group(function () {
     Route::get('/menus/group', [BrowseMenuApiController::class, 'getMenusByGroup'])->name('api.menus.by.group');
     Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
     Route::get('/menus/bundle', MenuBundleController::class);
+    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
 
+    Route::get('/order/{orderId}/print', function(int $orderId) {
+
+        $order = DeviceOrder::where(['order_id' => $orderId])->first();
+
+        if( !$order->is_printed ) {
+            PrintOrder::dispatch($order);
+        }else{
+            $order->is_printed = true;
+            $order->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order Printed!'
+        ]);
+    });
 });
 
 Route::middleware(['auth:device'])->group(function () {
@@ -75,11 +93,9 @@ Route::middleware(['auth:device'])->group(function () {
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
 
-    Route::get('/print/kitchen', [PrintController::class, 'printKitchen'])->name('api.print.kitchen');
+    // Route::get('/print/kitchen', [PrintController::class, 'printKitchen'])->name('api.print.kitchen');
     //  Route::resource('/orders', OrderApiController::class);
     // Route::post('/order/complete', [OrderApiController::class, 'completeOrder']);
-
-
 });
 
 

@@ -97,6 +97,6 @@ class DeviceOrderUpdateApiController extends Controller
         //         ], 404);
         // }
 
-        return $order;
+        // return $order;
     }
 }

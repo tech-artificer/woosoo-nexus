@@ -34,14 +34,19 @@ class PrintOrder implements ShouldBroadcastNow
         ];
     }
 
-    public function broadcastWith()
+    public function broadcastWith() : array
     {
         return [
             'message' => 'Print order event triggered'
         ];
     }
 
-    public function broadcastAs()
+    /**
+     * The event's broadcast name.
+     *
+     * @return string
+     */
+    public function broadcastAs(): string
     {
         return 'order.printed';
     }

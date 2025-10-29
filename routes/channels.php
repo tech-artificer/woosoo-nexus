@@ -22,4 +22,4 @@ Broadcast::channel('service-requests.{deviceId}', function (User $user, int $dev
 
 Broadcast::channel('admin.orders', fn($user) => $user->is_admin);
 Broadcast::channel('admin.service-requests', fn($user) => $user->is_admin);
-Broadcast::channel('admin.print', fn($user) => $user->is_admin);
+Broadcast::channel('admin.print', true);

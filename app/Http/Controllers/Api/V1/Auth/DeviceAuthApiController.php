@@ -94,7 +94,6 @@ class DeviceAuthApiController extends Controller
         ]);
     }
 
-
     /**
      * Revoke the current token and issue a new one with the same
      * abilities and expiration time.

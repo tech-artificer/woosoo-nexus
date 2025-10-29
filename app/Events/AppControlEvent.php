@@ -37,6 +37,16 @@ class AppControlEvent implements ShouldBroadcastNow
         ];
     }
 
+    public function broadcastWith() : array
+    {
+        return [
+            'action' => $this->action,
+            'payload' => $this->payload,
+            'deviceId' => $this->deviceId
+
+        ];
+    }
+
     public function broadcastAs()
     {
         return 'device.control';
