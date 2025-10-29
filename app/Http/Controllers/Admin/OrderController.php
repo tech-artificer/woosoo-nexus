@@ -111,13 +111,13 @@ class OrderController extends Controller
     public function destroy(int $id)
     {   
         $deviceOrder = DeviceOrder::find($id); 
-        $this->orderService->voidOrder($deviceOrder);
+      
         $deviceOrder->update(['status' => OrderStatus::VOIDED]);
-
+        $this->orderService->voidOrder($deviceOrder);
          //Run the console command
-        $exitCode = Artisan::call('broadcast:order-voided', [
-            'order_id' => $deviceOrder->order_id
-        ]);
+        // $exitCode = Artisan::call('broadcast:order-voided', [
+        //     'order_id' => $deviceOrder->order_id
+        // ]);
 
         // Optional: capture output
         $output = Artisan::output();

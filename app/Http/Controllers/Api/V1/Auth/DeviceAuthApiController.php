@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-// use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Device;
 use App\Actions\Device\RegisterDevice;
 // use App\Http\Resources\DeviceResource;
@@ -13,7 +13,6 @@ use App\Http\Requests\DeviceRegisterRequest;
 
 class DeviceAuthApiController extends Controller
 {
-    
     /**
      * Register a device
      * 
@@ -106,9 +105,9 @@ class DeviceAuthApiController extends Controller
         $device = $request->user(); // Sanctum resolves Device model
 
         // Revoke current token safely
-        if ( $device->currentAccessToken() ?? null) {
-            $device->currentAccessToken()->delete() ?? null;
-        }
+
+        $device->currentAccessToken()?->delete();
+     
 
         // Create new token (no built-in expiry unless custom implemented)
         $newToken = $device->createToken('device-auth')->plainTextToken;
@@ -133,7 +132,7 @@ class DeviceAuthApiController extends Controller
      */
     public function logout(Request $request) {
 
-        $request->user()->currentAccessToken()->delete();
+        $request->user()->currentAccessToken()?->delete();
         
         return response()->json([
             'message' => 'Successfully logged out'

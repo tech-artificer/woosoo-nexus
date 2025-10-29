@@ -47,6 +47,7 @@ Route::get('/device/ip', function (Request $request) {
 Route::middleware(['guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
     Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+    //  Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
 });
 
 Route::middleware(['api'])->group(function () {
@@ -61,8 +62,6 @@ Route::middleware(['api'])->group(function () {
     Route::get('/menus/group', [BrowseMenuApiController::class, 'getMenusByGroup'])->name('api.menus.by.group');
     Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
     Route::get('/menus/bundle', MenuBundleController::class);
-    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
-
     Route::get('/order/{orderId}/print', function(int $orderId) {
 
         $order = DeviceOrder::where(['order_id' => $orderId])->first();
@@ -91,8 +90,8 @@ Route::middleware(['auth:device'])->group(function () {
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
-    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
-
+    // Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
+Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
     // Route::get('/print/kitchen', [PrintController::class, 'printKitchen'])->name('api.print.kitchen');
     //  Route::resource('/orders', OrderApiController::class);
     // Route::post('/order/complete', [OrderApiController::class, 'completeOrder']);

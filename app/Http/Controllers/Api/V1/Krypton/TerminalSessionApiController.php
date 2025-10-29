@@ -5,21 +5,21 @@ namespace App\Http\Controllers\Api\V1\Krypton;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Krypton\Session;
-use App\Models\Krypton\CashTraySession;
-use App\Models\Krypton\Tax;
-use App\Models\Krypton\EmployeeLog;
-use App\Models\Krypton\Revenue;
-use App\Models\Krypton\Terminal;
-use App\Models\Krypton\TerminalSession;
-use App\Models\Krypton\TerminalService;
-use App\Models\Krypton\TableOrder;
+// use App\Models\Krypton\CashTraySession;
+// use App\Models\Krypton\Tax;
+// use App\Models\Krypton\EmployeeLog;
+// use App\Models\Krypton\Revenue;
+// use App\Models\Krypton\Terminal;
+// use App\Models\Krypton\TerminalSession;
+// use App\Models\Krypton\TerminalService;
+// use App\Models\Krypton\TableOrder;
 
 
 class TerminalSessionApiController extends Controller
 {
 
-    public function getLatestSession() {
-        return response()->json(['session' => Session::getLatestSession()->first()]);
+    public function getLatestSession(Request $request) {
+        return response()->json(['session' => Session::getLatestSession()]);
     }
 
     /**
