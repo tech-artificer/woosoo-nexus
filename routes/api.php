@@ -2,20 +2,21 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\PersonalAccessToken;
 
 use App\Http\Controllers\Api\V1\{
-    BranchApiController,
+    // BranchApiController,
     DeviceApiController,
     DeviceOrderApiController,
-    MenuImageApiController,
+    // MenuImageApiController,
     BrowseMenuApiController,
-    DeviceOrderUpdateApiController,
-    OrderUpdateLogController,
-    ServiceMonitorController,
+    // DeviceOrderUpdateApiController,
+    // OrderUpdateLogController,
+    // ServiceMonitorController,
     TableServiceApiController,
     Menu\MenuBundleController,
     ServiceRequestApiController,
-    PrintController,
+    // PrintController,
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -25,8 +26,8 @@ use App\Http\Controllers\Api\V1\Auth\{
 };
 
 use App\Http\Controllers\Api\V1\Krypton\{
-    MenuApiController,
-    OrderApiController,
+    // MenuApiController,
+    // OrderApiController,
     TerminalSessionApiController,
 };
 
@@ -47,7 +48,6 @@ Route::get('/device/ip', function (Request $request) {
 Route::middleware(['guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
     Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
-    //  Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
 });
 
 Route::middleware(['api'])->group(function () {
@@ -82,6 +82,44 @@ Route::middleware(['api'])->group(function () {
 
 Route::middleware(['auth:device'])->group(function () {
 
+
+    Route::get('/token/verify', function(Request $request) {
+
+        $tokenString = $request->bearerToken();
+
+        if (! $tokenString) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'No bearer token provided.',
+            ], 400);
+        }
+
+        $token = PersonalAccessToken::findToken($tokenString);
+        
+        if (! $token || ! $token->tokenable) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid or revoked token.',
+            ], 401);
+        }
+
+        // Optional: check for expiration if you added expires_at column
+        if ($token->expires_at && $token->expires_at->isPast()) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Token expired.',
+            ], 401);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'device' => $token->tokenable->only(['id', 'name']),
+            'created_at' => $token->created_at,
+            'expires_at' => $token->expires_at ?? null,
+        ]);
+
+    });
+
     Route::resource('/devices', DeviceApiController::class);
     Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
@@ -91,11 +129,14 @@ Route::middleware(['auth:device'])->group(function () {
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     // Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
-Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
+    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
     // Route::get('/print/kitchen', [PrintController::class, 'printKitchen'])->name('api.print.kitchen');
     //  Route::resource('/orders', OrderApiController::class);
     // Route::post('/order/complete', [OrderApiController::class, 'completeOrder']);
 });
+
+
+
 
 
 // Route::middleware('api')->group(function () {

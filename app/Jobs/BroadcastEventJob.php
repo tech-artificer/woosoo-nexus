@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Laravel\Reverb\Loggers\Log;
 
 class BroadcastEventJob implements ShouldQueue
 {
@@ -26,7 +27,7 @@ class BroadcastEventJob implements ShouldQueue
 
     public function failed(\Throwable $exception)
     {
-        \Log::error("Broadcast job permanently failed", [
+        Log::error("Broadcast job permanently failed", [
             'event' => get_class($this->event),
             'error' => $exception->getMessage(),
         ]);

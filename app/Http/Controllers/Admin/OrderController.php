@@ -120,7 +120,7 @@ class OrderController extends Controller
         // ]);
 
         // Optional: capture output
-        $output = Artisan::output();
+        // $output = Artisan::output();
 
         return redirect()->back()->with('success');
     }
