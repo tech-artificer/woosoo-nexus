@@ -16,7 +16,8 @@ use App\Http\Controllers\Api\V1\{
     TableServiceApiController,
     Menu\MenuBundleController,
     ServiceRequestApiController,
-    // PrintController,
+    PrintController,
+    OrderApiController
 };
 
 use App\Http\Controllers\Api\V1\Auth\{
@@ -34,6 +35,8 @@ use App\Http\Controllers\Api\V1\Krypton\{
 use App\Models\DeviceOrder;
 use App\Events\PrintOrder;
 
+use function PHPUnit\Framework\returnValue;
+
 Route::options('{any}', function () {
     return response()->json([], 200);
 })->where('any', '.*');
@@ -44,6 +47,61 @@ Route::get('/device/ip', function (Request $request) {
         'user_agent' => $request->userAgent()
     ]);
 });
+
+Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
+
+Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId) {
+
+    $order = DeviceOrder::where(['order_id' => $orderId])->first();
+
+    PrintOrder::dispatch($order);
+   
+});
+Route::get('/order/{orderId}/print', function(Request $request, int $orderId) {
+
+    $order = DeviceOrder::where(['order_id' => $orderId])->first();
+
+    // if( !$order->is_printed ) {
+        // PrintOrder::dispatch($order);
+    // }else{
+    //     $order->is_printed = true;
+    //     $order->save();
+    // }
+
+//     'order' => $this->deviceOrder->only([
+//                 'id', 
+//                 'order_id', 
+//                 'order_number', 
+//                 'device_id', 
+//                 'status'
+//             ])
+   return [
+            // 'order' => $this->deviceOrder,
+            'order' => $order->only([
+                'id', 
+                'order_id', 
+                'order_number', 
+                'device_id', 
+                'status',
+                'created_at',
+                'guest_count',
+            ]),
+            
+            'tablename' => $order->table->name,
+            'items' => collect($order->items)->map(fn ($item) => [
+                'name' => $item['name'] ?? null,
+                'quantity' => $item['quantity'] ?? null,
+            ]),
+                            // 'table' => $this->deviceOrder->table,   
+                            // 'message' => 'Print order event triggered'
+        ];
+    // return response()->json([
+    //     // 'device' => $request->user(),
+    //     // 'order' => 'Order Printed!',
+    //     'order' => $order
+    // ]);
+});
+
 
 Route::middleware(['guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
@@ -62,22 +120,24 @@ Route::middleware(['api'])->group(function () {
     Route::get('/menus/group', [BrowseMenuApiController::class, 'getMenusByGroup'])->name('api.menus.by.group');
     Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
     Route::get('/menus/bundle', MenuBundleController::class);
-    Route::get('/order/{orderId}/print', function(int $orderId) {
+    
+    // Route::get('/order/print/{orderId}', [PrintController::class, 'printOrder']);
+    // Route::get('/order/{orderId}/print', function(int $orderId) {
 
-        $order = DeviceOrder::where(['order_id' => $orderId])->first();
+    //     // $order = DeviceOrder::where(['order_id' => $orderId])->first();
 
-        if( !$order->is_printed ) {
-            PrintOrder::dispatch($order);
-        }else{
-            $order->is_printed = true;
-            $order->save();
-        }
+    //     // if( !$order->is_printed ) {
+    //     //     PrintOrder::dispatch($order);
+    //     // }else{
+    //     //     $order->is_printed = true;
+    //     //     $order->save();
+    //     // }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Order Printed!'
-        ]);
-    });
+    //     // return response()->json([
+    //     //     'success' => true,
+    //     //     'message' => 'Order Printed!'
+    //     // ]);
+    // });
 });
 
 Route::middleware(['auth:device'])->group(function () {
@@ -125,6 +185,8 @@ Route::middleware(['auth:device'])->group(function () {
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
    
     Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
+
+
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');

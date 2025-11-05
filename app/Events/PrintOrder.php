@@ -37,7 +37,23 @@ class PrintOrder implements ShouldBroadcastNow
     public function broadcastWith() : array
     {
         return [
-            'message' => 'Print order event triggered'
+            // 'order' => $this->deviceOrder,
+            'order' => $this->deviceOrder->only([
+                'id', 
+                'order_id', 
+                'order_number', 
+                'device_id', 
+                'status',
+                'created_at',
+                'guest_count',
+            ]),
+            'tablename' => $this->deviceOrder->table->name,
+            'items' => collect($this->deviceOrder->items)->map(fn ($item) => [
+                'name' => $item['name'] ?? null,
+                'quantity' => $item['quantity'] ?? null,
+            ]),
+                            // 'table' => $this->deviceOrder->table,   
+                            // 'message' => 'Print order event triggered'
         ];
     }
 

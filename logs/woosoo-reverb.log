@@ -166,3 +166,6 @@ Warning: PHP Startup: Unable to load dynamic library 'xsl' (tried: C:/laragon/bi
   2   vendor\laravel\framework\src\Illuminate\Database\Connectors\Connector.php:66
       PDO::__construct("mysql:host=127.0.0.1;port=3306;dbname=woosoo_db", "root", Object(SensitiveParameterValue), [])
 
+
+   INFO  Gracefully terminating connections.  
+

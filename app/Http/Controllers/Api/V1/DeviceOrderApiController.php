@@ -5,14 +5,14 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDeviceOrderRequest;
 use App\Http\Resources\DeviceOrderResource;
-// use App\Models\DeviceOrder;
+use App\Models\DeviceOrder;
 use App\Events\Order\OrderCreated;
 use App\Events\PrintOrder;
 use App\Services\Krypton\OrderService;
 use App\Enums\OrderStatus;
 
-// use Mike42\Escpos\Printer;
-// use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
+use Mike42\Escpos\Printer;
+use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 
 // use Mike42\Escpos\PrintConnectors\FilePrintConnector;
 // use Illuminate\Support\Facades\Http;
