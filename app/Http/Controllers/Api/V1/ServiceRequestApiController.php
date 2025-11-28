@@ -8,6 +8,7 @@ use App\Http\Requests\StoreServiceRequest;
 use App\Models\DeviceOrder;
 use App\Models\ServiceRequest;
 use App\Events\ServiceRequest\ServiceRequestNotification;
+use App\Http\Resources\ServiceRequestResource;
 
 class ServiceRequestApiController extends Controller
 {
@@ -60,10 +61,11 @@ class ServiceRequestApiController extends Controller
 
         broadcast(new ServiceRequestNotification($serviceRequest))->toOthers();
 
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => 'Service sent successfully'
-        // ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Service sent successfully',
+            'service_request' => new ServiceRequestResource($serviceRequest),
+        ], 201);
     }
 
     /**
