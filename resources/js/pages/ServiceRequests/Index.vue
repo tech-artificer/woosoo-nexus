@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { onMounted, onUnmounted, ref } from 'vue';
 import { router, Head } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';

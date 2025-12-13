@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';

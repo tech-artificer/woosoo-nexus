@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars, vue/valid-v-for */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import axios from 'axios'
 import { useForm } from '@inertiajs/vue3'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import AppLayout from '@/layouts/AppLayout.vue';
 import { ref } from 'vue';
 import { type BreadcrumbItem } from '@/types';

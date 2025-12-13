@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { Plus } from 'lucide-vue-next'

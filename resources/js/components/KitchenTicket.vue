@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -34,11 +35,11 @@ const formattedTime = computed(() => {
     </div> -->
 
 
-    <div  class="text-xs leading-tight">
-    <div v-for="item in itemData">
+     <div  class="text-xs leading-tight">
+     <div v-for="(item, idx) in itemData" :key="item.id ?? idx">
        ({{ item.quantity }}) {{ item.name }}
-    </div>
-    </div>
+     </div>
+     </div>
     <div class="text-xs leading-snug">
       <p class="font-bold">** ITEM NOTES:</p>
       <p>{{ itemData.note || '(No special requests/notes)' }}</p>

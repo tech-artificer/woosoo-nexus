@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ref } from 'vue'
 import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'

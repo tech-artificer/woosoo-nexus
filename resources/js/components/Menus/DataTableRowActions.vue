@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Row } from '@tanstack/vue-table'
 import { Ellipsis } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { defineEmits, defineProps } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'

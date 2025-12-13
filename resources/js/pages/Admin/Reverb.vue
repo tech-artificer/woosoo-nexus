@@ -87,7 +87,7 @@ const copyCommand = async (command: string, label: string) => {
             title: 'Copied!',
             description: `${label} command copied to clipboard`,
         })
-    } catch (e) {
+    } catch {
         // Fallback for older browsers
         const textArea = document.createElement('textarea')
         textArea.value = command

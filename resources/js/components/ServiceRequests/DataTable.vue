@@ -20,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { defineProps } from 'vue'
 import type { Ref } from 'vue'
 import { columns as defaultColumns } from './columns'

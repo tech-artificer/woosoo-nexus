@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { type PropType, computed } from 'vue'
 import type { Component } from 'vue'
 
