@@ -11,6 +11,7 @@ use App\Models\Krypton\CashTraySession;
 use App\Models\Krypton\TerminalService;
 use App\Models\Krypton\Revenue;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class KryptonContextService
 {
@@ -102,7 +103,7 @@ class KryptonContextService
                 return [$currentSessions, $data];
             });
         } catch (\Throwable $e) {
-            \Log::warning("KryptonContextService failed to load: " . $e->getMessage());
+            Log::warning("KryptonContextService failed to load: " . $e->getMessage());
             $this->currentSessions = [];
             $this->data = [];
         }

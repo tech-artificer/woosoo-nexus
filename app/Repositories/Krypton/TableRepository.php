@@ -3,7 +3,7 @@
 namespace App\Repositories\Krypton;
 
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Log;
 use App\Models\Krypton\Table;
 
 class TableRepository
@@ -14,7 +14,7 @@ class TableRepository
         try {
             return Table::fromQuery('CALL get_active_table_orders()');
         } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }
@@ -24,7 +24,7 @@ class TableRepository
         try {
             return Table::fromQuery($this->connection)->select('CALL get_active_table_orders_by_table_group(?)', $tableGroupId);
         } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }
@@ -35,7 +35,7 @@ class TableRepository
         try {
             return Table::fromQuery('CALL get_active_table_order_by_table(?)', [$tableId])->first();
         } catch (\Exception $e) {
-            \Log::error('Procedure call failed: ' . $e->getMessage());
+            Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');
         }
     }

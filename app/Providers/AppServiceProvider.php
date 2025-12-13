@@ -22,7 +22,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\Cache;
+// use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -49,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
             // Roles & Permissions (moved to dedicated private method for clarity)
             $this->shareRolesAndPermissions();
         } catch (\Throwable $e) {
-            \Log::warning("Skipping context share: " . $e->getMessage());
+            Log::warning("Skipping context share: " . $e->getMessage());
         }
         
         // API Docs (Scramble config)
@@ -78,22 +79,21 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $data = Cache::remember('roles_permissions', now()->addHour(), function () {
                 $roles = Role::with(['permissions'])->withCount('users')->get(['id', 'name']);
                 $allPermissions = Permission::all()->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
                     'label' => $this->humanizePermission($p->name),
                 ]);
-                $groupedPermissions = $allPermissions->groupBy(fn ($p) => explode('.', $p['name'])[0])->map(fn ($g) => $g->values());
+                $groupedPermissions = $allPermissions->groupBy(fn ($p) => explode('.', $p['name'])[0])->map(fn ($g) => $g);
                 $assignedPermissions = $roles->mapWithKeys(fn ($role) => [$role->name => $role->permissions->pluck('name')]);
 
-                return compact('roles', 'allPermissions', 'groupedPermissions', 'assignedPermissions');
-            });
+               $data = compact('roles', 'allPermissions', 'groupedPermissions', 'assignedPermissions');
+          
 
             Inertia::share($data);
         } catch (\Throwable $e) {
-            \Log::warning("Skipping role/permission sharing: " . $e->getMessage());
+            Log::warning("Skipping role/permission sharing: " . $e->getMessage());
         }
     }
 

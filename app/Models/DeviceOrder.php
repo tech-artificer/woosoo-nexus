@@ -13,6 +13,7 @@ use App\Enums\OrderStatus;
 use Illuminate\Support\Str; 
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\ServiceRequest;
+use App\Models\DeviceOrderItems;
 
 class DeviceOrder extends Model
 {
@@ -41,31 +42,70 @@ class DeviceOrder extends Model
     protected $casts = [
         'order_number' => 'string',
         'status' => OrderStatus::class,
-        'items' => 'array',
-        'meta' => 'array',
         'total' => 'decimal:2',
         'tax' => 'decimal:2',
         'discount' => 'decimal:2',
         'sub_total' => 'decimal:2',
         'guest_count' => 'integer',
+        'is_printed' => 'boolean',
+        'printed_at' => 'datetime',
     ];
 
     /**
-     * Set the status attribute
-     *
-     * @return string
+     * Return related device order items (local canonical source).
      */
-    public function setStatusAttribute(OrderStatus $newStatus): void
+    public function items() : HasMany
     {
+        return $this->hasMany(DeviceOrderItems::class, 'order_id');
+    }
+
+    /**
+     * Provide a computed `meta` attribute for backwards compatibility.
+     * If POS order_check information exists, surface it under ['order_check'].
+     */
+    public function getMetaAttribute()
+    {
+        try {
+            $orderCheck = $this->order?->orderCheck ?? null;
+            return [ 'order_check' => $orderCheck ];
+        } catch (\Throwable $_e) {
+            return [];
+        }
+    }
+
+    /**
+     * Set the status attribute, accepting either an OrderStatus enum or a string value.
+     */
+    public function setStatusAttribute($newStatus): void
+    {
+        // Coerce string values to the OrderStatus enum
+        if (is_string($newStatus)) {
+            $newStatus = OrderStatus::from($newStatus);
+        }
+
+        if (!$newStatus instanceof OrderStatus) {
+            $newStatus = OrderStatus::PENDING;
+        }
+
+        // If this is a new model (creating), skip transition validation
+        if (!$this->exists) {
+            $this->attributes['status'] = $newStatus->value;
+            return;
+        }
+
         $currentStatus = $this->status ?? OrderStatus::PENDING;
-        
+        if (is_string($currentStatus)) {
+            $currentStatus = OrderStatus::from($currentStatus);
+        }
+
         if (!$currentStatus->canTransitionTo($newStatus)) {
             throw new \InvalidArgumentException(
                 "Invalid status transition: {$currentStatus->value} → {$newStatus->value}"
             );
         }
 
-        $this->attributes['status'] = $newStatus;
+        // Store the underlying value (string) so casting remains consistent
+        $this->attributes['status'] = $newStatus->value;
     }
 
     public static function generateOrderNumber($orderId): string
@@ -131,8 +171,25 @@ class DeviceOrder extends Model
     }
 
     public function scopeActiveOrder(Builder $query) {
-        
-        return $query->where('status', OrderStatus::CONFIRMED);
+        return $query->whereIn('status', [
+            OrderStatus::PENDING,
+            OrderStatus::CONFIRMED,
+            OrderStatus::IN_PROGRESS,
+            OrderStatus::READY,
+            OrderStatus::SERVED,
+        ]);
+    }
 
+    /**
+     * Scope to return completed / terminal orders
+     */
+    public function scopeCompletedOrder(Builder $query)
+    {
+        return $query->whereIn('status', [
+            OrderStatus::COMPLETED,
+            OrderStatus::VOIDED,
+            OrderStatus::CANCELLED,
+            OrderStatus::ARCHIVED,
+        ]);
     }
 }

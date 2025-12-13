@@ -23,14 +23,14 @@ class CreateOrderCheck
         $isVoided = false;
         $isSettled = false;
         $fromSplit = false;
-        $totalAmount = $attr['total'] ?? 0.00;
+        $totalAmount = $attr['total_amount'] ?? 0.00;
         $paidAmount = 0.00;
         $change = 0.00;
         $subtotalAmount = $attr['subtotal'] ?? 0.00;
         $taxAmount = $attr['tax'] ?? 0.00;
         $taxExemptAmount = $attr['tax_exempt_amount'] ?? 0.00;
         $discountAmount = $attr['discount_amount'] ?? 0.00;
-        $grossAmount = $attr['total'] ?? 0.00;
+        $grossAmount = $attr['total_amount'] ?? 0.00;
         $taxableAmount = $attr['taxable'] ?? 0.00;
         $itemDiscountAmount = $attr['item_discount_amount'] ?? 0.00;
         $checkDiscountAmount = $attr['check_discount_amount'] ?? 0.00;

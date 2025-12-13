@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import NavMain from '@/components/NavMain.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
@@ -30,20 +31,6 @@ const mainNavItems: NavItem[] = [
         icon: ListOrdered,
         isActive: false,
         hasSubItems: false,
-        // items: [
-        //     {
-        //         title: 'Live Orders',
-        //         href: '/orders/live',
-        //         icon: Minus,
-        //         isActive: false,
-        //     },
-        //     {
-        //         title: 'Order History',
-        //         href: '#',
-        //         icon: Minus,
-        //         isActive: false,
-        //     },
-        // ]
     },
     {
         title: 'Menus',
@@ -73,29 +60,22 @@ const mainNavItems: NavItem[] = [
 const configNavItems: NavItem[] = [
     {
         title: 'Roles & Permissions',
-        href: '/roles/permissions',
+        href: route('roles.index'),
         icon: Lock,
-        isActive: false,
-        hasSubItems: false,
-    }, 
-    {
-        title: 'Manage Branches',
-        href: '/configuration/branches',
-        icon: Split,
         isActive: false,
         hasSubItems: false,
     }, 
 ];
 
-const reportNavItems: NavItem[] = [
-    {
-        title: 'Sales Report',
-        href: route('reports.sales'),
-        icon: TrendingUp,
-        isActive: false,
-        hasSubItems: false,
-    }, 
-];
+// const reportNavItems: NavItem[] = [
+//     {
+//         title: 'Sales Report',
+//         href: route('reports.sales'),
+//         icon: TrendingUp,
+//         isActive: false,
+//         hasSubItems: false,
+//     }, 
+// ];
 
 </script>
 
@@ -115,7 +95,7 @@ const reportNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" title="Main"  />
-            <NavMain :items="reportNavItems" title="Reports" />
+            <!-- <NavMain :items="reportNavItems" title="Reports" /> -->
         </SidebarContent>
         <SidebarFooter>
             <NavMain :items="configNavItems" title="Configuration" />

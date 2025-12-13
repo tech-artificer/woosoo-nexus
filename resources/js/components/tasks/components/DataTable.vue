@@ -28,7 +28,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import DataTablePagination from './DataTablePagination.vue'
-import DataTableToolbar from './DataTableToolbar.vue'
+import DataTableToolbar from '@/components/ui/DataTableToolbar.vue'
 
 interface DataTableProps {
   columns: ColumnDef<Task, any>[]

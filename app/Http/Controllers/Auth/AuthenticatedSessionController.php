@@ -58,6 +58,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with('success', 'Mission Complete. You’ve been logged out, Commander Specter.');
+        // Redirect to the site root after logout to match test expectations.
+        return redirect('/')->with('success', 'Mission Complete. You’ve been logged out, Commander Specter.');
     }
 }

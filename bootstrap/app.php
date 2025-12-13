@@ -21,10 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
-    ->withBroadcasting(
-        __DIR__.'/../routes/channels.php',
-        ['prefix' => 'api'],
-    )
+    // ->withBroadcasting(
+    //     __DIR__.'/../routes/channels.php',
+    //     ['prefix' => 'api'],
+    // )
     ->withMiddleware(function (Middleware $middleware) {
         // ✅ Global middleware (runs on all routes)
         $middleware->prepend([

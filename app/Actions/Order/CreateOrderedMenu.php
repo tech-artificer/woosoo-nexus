@@ -5,7 +5,7 @@ namespace App\Actions\Order;
 use Lorisleiva\Actions\Concerns\AsAction;
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\OrderedMenu;
-use Illuminate\Support\Facades\DB;
+use App\Models\DeviceOrderItems;
 use Carbon\Carbon;
 
 class CreateOrderedMenu
@@ -13,120 +13,141 @@ class CreateOrderedMenu
     use AsAction;
 
     public $orderedMenuId = null;
+
     public function handle(array $attr)
     {
         $this->orderedMenuId = null;
 
         $menuItems = $attr['items'] ?? [];
-
-        $orderedMenus = [];
+        $created = [];
 
         foreach ($menuItems as $key => $item) {
-
-            if( $key == 0 ) {
+            if ($key == 0) {
                 $this->orderedMenuId = $item['menu_id'];
             }
 
-            $item['order_id'] = $attr['order_id'];
-            $item['order_check_id'] = $attr['order_check_id'];
-            $item['employee_log_id'] = $attr['employee_log_id']; // Default to current user or 1
+            $menuId = $item['menu_id'];
+            $quantity = intval($item['quantity'] ?? 1);
+            $seatNumber = $item['seat_number'] ?? 1;
+            $index = $item['index'] ?? ($key + 1);
+            $note = $item['note'] ?? '';
+            $price = $item['price'] ?? Menu::find($menuId)->price ?? 0.00;
+            $priceLevelId = $this->getMenuPriceLevel($menuId);
+            $orderId = $attr['order_id'];
+            $orderCheckId = $attr['order_check_id'] ?? null;
+            $employeeLogId = $attr['employee_log_id'] ?? 1;
 
-            $orderedMenus[] = $this->createOrderedMenu($item);
+            $unitPrice = (float) $price;
+            $totalItemPrice = $unitPrice * $quantity;
+            $taxRate = 0.10;
+            $taxAmount = round($totalItemPrice * $taxRate, 2);
+            $subTotal = round($totalItemPrice + $taxAmount, 2);
+            $orderedMenu = $this->createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId);
+
+            $local = null;
+            if (!empty($attr['device_order_id'])) {
+                $localPayload = [
+                    'order_id' => $attr['device_order_id'],
+                    // Store the package/menu id as ordered_menu_id (package_id),
+                    // not the POS ordered_menus.id
+                    'ordered_menu_id' => $menuId,
+                    'menu_id' => $menuId,
+                    'quantity' => $quantity,
+                    'price' => $orderedMenu->price ?? $unitPrice,
+                    'subtotal' => $orderedMenu->sub_total ?? $subTotal,
+                    'tax' => $orderedMenu->tax ?? $taxAmount,
+                    'total' => $orderedMenu->sub_total ?? $subTotal,
+                    'notes' => $orderedMenu->note ?? $note,
+                    'seat_number' => $seatNumber,
+                    'index' => $index,
+                ];
+
+                $local = DeviceOrderItems::create($localPayload);
+            }
+
+            $created[] = [
+                'pos' => (array) $orderedMenu,
+                'local' => $local ? $local->toArray() : null,
+            ];
         }
 
-        return $orderedMenus;
+        return $created;
     }
 
-    protected function createOrderedMenu(array $item = []) 
+    protected function createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId)
     {
-        // This method should contain the logic to create an ordered menu item.
-        // It should validate the input, check if the menu item exists, and then create the ordered menu item in the database.
-        $menuId = $item['menu_id'];
-        $quantity = $item['quantity'] ?? 0; // Default to 1 if not provided
-        
         $menu = Menu::findOrFail($menuId);
-
-        if( !$menu ) {
-            throw new \Exception("Menu item not found.");
-        }
-      
-        $now = Carbon::now();
-        $employeeLogId = $item['employee_log_id'] ?? 1; // Default to current user or 1
-        $orderId = $item['order_id'];
-        $orderCheckId = $item['order_check_id'] ?? null; // Default to null if not provided
-
-        if (!$orderId || !$orderCheckId) {
-            throw new \Exception("Order ID and Order Check ID are required.");
-        }
-       
-        // Basic calculations (you'll have more complex logic in a real POS)
-        $price = $menu->price;
-        $totalItemPrice = $price * $quantity;
-        $taxRate = 0.10; // Example tax rate
-        $taxAmount = $totalItemPrice * $taxRate;
-        $subTotal = $totalItemPrice + $taxAmount; // Simple example
-
-        $index = $item['index'] ?? 1; // Default to 1 if not provided
-        $seatNumber = $item['seat_number'] ?? 1; // Default to 1 if not provided
-        $note = $item['note'] ?? ''; // Default to empty string if not provided
-        $priceLevelId = $this->getMenuPriceLevel($menuId); // Default to 1 if no price level found
-        // Initialize many fields to 0.00 or false/null as defaults for a new item
-        $zeroAmount = 0.00;
-        $falseFlag = false;
+        $totalItemPrice = round($unitPrice * $quantity, 2);
+        $taxAmount = round($totalItemPrice * 0.10, 2);
+        $subTotal = round($totalItemPrice + $taxAmount, 2);
+        $now = Carbon::now()->format('H:i:s');
+        $false = false;
+        $zero = 0.00;
 
         $params = [
-            $orderId, $menuId, $priceLevelId, null, // pOrderedMenuId
-            $orderCheckId, null, null, // pModifierAdjectiveId, pCancelledOrderId
-            $seatNumber, $quantity, $price,
-            $zeroAmount, // pDiscount
-            $price, // pOriginalPrice
-            $taxAmount, // pTax
-            $now, // pTimeSent
-            $index, // pIndex (increment this per item)
-            $falseFlag, $falseFlag, // pIsPrinted, pIsHeld
-            $menu->name, $menu->receipt_name ?? $menu->name, $menu->kitchen_name ?? $menu->name,
-            $menu->description, $note, $employeeLogId,
-            $menu->is_for_kitchen_display ?? true, // pIsForKitchenDisplay from menu config
-            $totalItemPrice, // pTaxablePrice (example)
-            $zeroAmount, // pItemDiscount
-            $zeroAmount, // pCheckDiscount
-            $price, // pUnitPrice
-            $falseFlag, // pTaxExempt
-            $falseFlag, // pIsTaxRemoved
-            $totalItemPrice, // pNoTaxPrice
-            $totalItemPrice, // pItemGrossTotal
-            $totalItemPrice, // pItemOriginalWoVat (example)
-            $zeroAmount, $zeroAmount, // pItemDiscountMain, pItemDiscountAdj
-            $totalItemPrice, $totalItemPrice, $totalItemPrice, $totalItemPrice, // pVatable...
-            $zeroAmount, $zeroAmount, $zeroAmount, $zeroAmount, // pVatExempt...
-            $zeroAmount, $zeroAmount, // pNonVatable...
-            $zeroAmount, $zeroAmount, // pZeroRated...
-            $subTotal // pSubTotal
+            $orderId,
+            $menuId,
+            $priceLevelId,
+            null,
+            $orderCheckId,
+            null,
+            null,
+            $seatNumber,
+            $quantity,
+            $unitPrice,
+            $zero,
+            $unitPrice,
+            $taxAmount,
+            $now,
+            $index,
+            $false,
+            $false,
+            $menu->name,
+            $menu->receipt_name ?? $menu->name,
+            $menu->kitchen_name ?? $menu->name,
+            $menu->description,
+            $note,
+            $employeeLogId,
+            $menu->is_for_kitchen_display ?? true,
+            $totalItemPrice,
+            $zero,
+            $zero,
+            $unitPrice,
+            $false,
+            $false,
+            $totalItemPrice,
+            $totalItemPrice,
+            $totalItemPrice,
+            $zero,
+            $zero,
+            $totalItemPrice,
+            $totalItemPrice,
+            $totalItemPrice,
+            $totalItemPrice,
+            $zero,
+            $zero,
+            $zero,
+            $zero,
+            $zero,
+            $zero,
+            $zero,
+            $zero,
+            $subTotal,
         ];
 
-        try {
+        $placeholders = implode(', ', array_fill(0, count($params), '?'));
+        $orderedMenu = OrderedMenu::fromQuery('CALL create_ordered_menu(' . $placeholders . ')', $params)->first();
 
-            $placeholdersArray = array_fill(0, count($params), '?');
-            $placeholders = implode(', ', $placeholdersArray);
-
-            // Call the procedure
-            $orderedMenus = OrderedMenu::fromQuery('CALL create_ordered_menu(' . $placeholders . ')', $params)->first();
-
-            if (empty($orderedMenus)) {
-                throw new \Exception("Failed to add menu item.");
-            }
-            return $orderedMenus;
-        } catch (\Throwable $th) {
-            //throw $th;
+        if (!$orderedMenu) {
+            throw new \Exception('Failed to insert ordered menu.');
         }
 
+        return $orderedMenu;
     }
 
     private function getMenuPriceLevel($menuId)
-    {   
-        if(empty($menuId)) return 1;
-        // This method should return the price level for the given menu item.
+    {
+        if (empty($menuId)) return 1;
         return Menu::fromQuery('CALL get_menu_price_levels_by_menu(?)', [$menuId])->first() ?? 1;
     }
-
 }

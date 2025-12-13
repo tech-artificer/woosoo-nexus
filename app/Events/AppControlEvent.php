@@ -6,11 +6,11 @@ use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class AppControlEvent implements ShouldBroadcast
+class AppControlEvent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
     
@@ -34,6 +34,16 @@ class AppControlEvent implements ShouldBroadcast
     {
         return [
             new Channel("device.{$this->deviceId}"),
+        ];
+    }
+
+    public function broadcastWith() : array
+    {
+        return [
+            'action' => $this->action,
+            'payload' => $this->payload,
+            'deviceId' => $this->deviceId
+
         ];
     }
 

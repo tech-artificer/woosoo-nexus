@@ -1,7 +1,6 @@
 <?php
 
-test('returns a successful response', function () {
+test('root redirects to login when guest', function () {
     $response = $this->get('/');
-
-    $response->assertStatus(200);
+    $response->assertStatus(302);
 });

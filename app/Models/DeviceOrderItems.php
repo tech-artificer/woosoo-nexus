@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
+use App\Models\Krypton\Menu;
 
 class DeviceOrderItems extends Model
 {
@@ -14,6 +14,11 @@ class DeviceOrderItems extends Model
 
     public function device_order()
     {
-        return $this->belongsTo(DeviceOrder::class);
+        return $this->belongsTo(DeviceOrder::class, 'order_id');
+    }
+
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class, 'menu_id');
     }
 }

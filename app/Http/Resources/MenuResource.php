@@ -24,6 +24,8 @@ class MenuResource extends JsonResource
             // 'menu_course_type_id' => $this->menu_course_type_id ?? null,
             // 'menu_tax_type_id' => $this->menu_tax_type_id ?? null,
             'group' => $this->group->name ?? null,
+            // POS/raw fields (some stored-procs return these exact keys)
+            'groupName' => $this->groupName ?? $this->group->name ?? null,
             'category' => $this->category->name ?? null,
             'course' => $this->course->name ?? null,
             'name' => $this->name,
@@ -37,6 +39,9 @@ class MenuResource extends JsonResource
             // 'is_available' => $this->is_available,
             'is_modifier' => $this->is_modifier,
             'is_modifier_only' => $this->is_modifier_only,
+            // Legacy/pos keys for clients that use camelCase flags
+            'isMod' => $this->isMod ?? (bool) ($this->is_modifier ?? false),
+            'isModOnly' => $this->isModOnly ?? (bool) ($this->is_modifier_only ?? false),
             // 'can_open_price' => $this->can_open_price,
             'is_discountable' => $this->is_discountable,
             // 'tare_weight' => $this->tare_weight,

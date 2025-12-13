@@ -25,7 +25,7 @@ class Session extends Model
      * @return string
      */
     public static function getLatestSession() {
-      return Self::fromQuery('CALL get_latest_session()');
+      return Self::fromQuery('CALL get_latest_session()')->first();
     } 
 
     /**

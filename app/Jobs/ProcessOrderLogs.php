@@ -44,31 +44,37 @@ class ProcessOrderLogs implements ShouldQueue
                 try {
 
                     // $deviceOrder = $log->deviceOrder;
-
                     if( !$log->deviceOrder ) {
                         Log::info('Order has no device order.');
                         continue;
                     }
+
+                    $action = null;
                  
                     if( $log->is_voided == true ) {
-                        Log::info("Order is voided and broadcasted {$log->is_voided}.");
-                        $log->deviceOrder->status = OrderStatus::VOIDED;
-                        app(BroadcastService::class)->dispatchBroadcastJob(new OrderVoided($log->deviceOrder));
+                        $log->deviceOrder->update(['status' => OrderStatus::VOIDED]);
+                        $action = 'void';
                         Log::info("Order is voided and broadcasted {$log->deviceOrder}.");
                    
                     }else{
-                        $log->deviceOrder->status = OrderStatus::COMPLETED;
-                        app(BroadcastService::class)->dispatchBroadcastJob(new OrderCompleted($log->deviceOrder));
-                       
+                        $action = 'complete';
+                        $log->deviceOrder->update(['status' => OrderStatus::COMPLETED]);
                         Log::info("Order is COMPLETED and broadcasted {$log->deviceOrder}.");
                     }
 
-                    // $log->is_processed = true;
-                    // $log->deviceOrder->save();
-                    // $log->save();
-                    // $log->delete(); 
-                   
+                    $log->is_processed = true;
+                    $log->deviceOrder->save();
+                     $log->save();
+                    if(  $action == 'void' ) {
+                        app(BroadcastService::class)->dispatchBroadcastJob(new OrderVoided($log->deviceOrder));
+                    }else{
+                       app(BroadcastService::class)->dispatchBroadcastJob(new OrderCompleted($log->deviceOrder));
                     
+                    }
+          
+                    $log->delete(); 
+                    
+                
                     // if (!$deviceOrder) {
                     //     throw new \Exception("No device order for Order ID {$log->order_id}");
                     // }

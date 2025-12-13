@@ -13,8 +13,7 @@ class DeviceControlTest extends Command
      *
      * @var string
      */
-    protected $signature = 'app:device-control';
-
+    protected $signature = 'app:device-control {deviceId} {action}';
     /**
      * The console command description.
      *
@@ -28,7 +27,9 @@ class DeviceControlTest extends Command
     public function handle()
     {
         $deviceId = 1;
-         app(BroadcastService::class)->dispatchBroadcastJob(new AppControlEvent($deviceId, 'print_status', [
+         $deviceId = $this->argument('deviceId');
+         $action = $this->argument('action');
+         app(BroadcastService::class)->dispatchBroadcastJob(new AppControlEvent($deviceId, $action, [
             'success' => true,
             'message' => 'Device Control'
         ]));

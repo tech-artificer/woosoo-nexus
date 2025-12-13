@@ -22,16 +22,21 @@ import {
   // AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ref, computed } from 'vue'
-import type { Device } from '@/types/models';
-// import UserForm from '@/components/devices/UserForm.vue';
+import type { Device, Table } from '@/types/models';
+import DeviceForm from '@/components/Devices/DeviceForm.vue';
 import { toast } from 'vue-sonner'
-// import {
-//   Sheet,
-//   SheetContent,
-//   SheetDescription,
-//   SheetHeader,
-//   SheetTitle,
-// } from '@/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+
+import { usePage } from '@inertiajs/vue3'
+
+const page = usePage()
+const unassignedTables = page.props.unassignedTables as Table[]
 
 interface DataTableRowActionsProps {
   row: Row<Device>
@@ -65,26 +70,27 @@ const deactivateAccount = (computedDevice: Device) => {
 }
 
 
-const restoreUser = (computedDevice: Device) => {
+const restore = (computedDevice: Device) => {
   // isRestoring.value = computedDevice.id
   
   router.patch(route('devices.restore', computedDevice.id), {}, {
-    // onSuccess: (page) => {
-    //   // isRestoring.value = null
-    //   // showNotification('success', `${computedDevice.name} has been restored successfully.`)
-    // },
-    // onError: (errors) => {
-    //   // isRestoring.value = null
-    //   // showNotification('error', 'Failed to restore user. Please try again.')
-    // }
+    onSuccess: (page) => {
+      // isRestoring.value = null
+      // showNotification('success', `${computedDevice.name} has been restored successfully.`)
+      console.log(page)
+    },
+    onError: (errors) => {
+      console.log(errors)
+      // isRestoring.value = null
+      // showNotification('error', 'Failed to restore user. Please try again.')
+    }
   })
 }
 
-console.log(route('devices.restore', 3))
+// console.log(route('devices.restore', 3))
 </script>
 
 <template>
-
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" class="flex h-8 w-8 p-0 data-[state=open]:bg-muted">
@@ -94,7 +100,7 @@ console.log(route('devices.restore', 3))
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="w-[160px]">
 
-      <DropdownMenuItem class="cursor-pointer" @click="openSheet">Edit User</DropdownMenuItem>
+      <DropdownMenuItem class="cursor-pointer" @click="openSheet">Edit Device</DropdownMenuItem>
       
         
       <DropdownMenuItem 
@@ -102,19 +108,15 @@ console.log(route('devices.restore', 3))
         v-if="!computedDevice.deleted_at" 
         class="text-orange cursor-pointer"
         >
-        Deactivate account 
+        Deactivate 
       </DropdownMenuItem>
-      
-
       <DropdownMenuItem 
-        @click="restoreUser(computedDevice)"
+        @click="restore(computedDevice)"
         v-else-if="computedDevice.deleted_at"
-        class="text-green cursor-pointer">
-        Activate account
+        class="text-green cursor-pointer text-sm">
+        Activate
         <DropdownMenuSeparator />
       </DropdownMenuItem>
-
-
     </DropdownMenuContent>
   </DropdownMenu>
 
@@ -140,7 +142,7 @@ console.log(route('devices.restore', 3))
   </AlertDialog>
 
 
-  <!-- <Sheet v-model:open="isSheetOpen">
+  <Sheet v-model:open="isSheetOpen">
     <SheetContent>
       <SheetHeader>
         <SheetTitle>Edit User</SheetTitle>
@@ -148,9 +150,9 @@ console.log(route('devices.restore', 3))
           Edit the user's information.
         </SheetDescription>
       </SheetHeader>
-       <UserForm :user="computedDevice" form-type="edit" /> -->
-    <!-- </SheetContent> -->
-  <!-- </Sheet> -->
+       <DeviceForm :device="computedDevice" :unassignedTables="unassignedTables"  />
+    </SheetContent>
+  </Sheet>
 
 
 </template>

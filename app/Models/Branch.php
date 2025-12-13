@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class Branch extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'branches';
 
     protected $fillable = [
@@ -18,7 +22,6 @@ class Branch extends Model
     protected $hidden = [
         'created_at',
         'updated_at',
-        'deleted_at',
     ];
 
     /**
@@ -37,5 +40,15 @@ class Branch extends Model
                 $model->branch_uuid = (string) Str::uuid();
             }
         });
+    }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(Device::class);
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
     }
 }

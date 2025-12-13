@@ -18,17 +18,17 @@ export const columns: ColumnDef<Device, any>[] = [
   },
   {
     accessorKey: 'name',
-    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Name', class: 'w-[150px]' }),
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Name', class: 'w-[100px]' }),
 
     cell: ({ row }) => {
       return h('div', { class: 'flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, row.getValue('name')),
+        h('span', { class: ' font-medium capitalize' }, row.getValue('name')),
       ])
     },
   },
   {
     accessorKey: 'table',
-    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Table', class: 'max-w-[200px]' }),
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Table', class: 'max-w-[100px]' }),
     enableColumnFilter: false,
     enableSorting: false,
     cell: ({ row }) => {
@@ -48,6 +48,17 @@ export const columns: ColumnDef<Device, any>[] = [
         h('span', { class: ' font-medium' }, row.getValue('ip_address')),
       ])
     }
+  },
+  {
+    accessorKey: 'port',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Port', class: 'max-w-[200px]' }),
+    enableColumnFilter: false,
+    enableSorting: false,
+    cell: ({ row }) => {
+      return h('div', { class: 'w-20 flex space-x-2' }, [
+        h('span', { class: ' font-medium' }, row.getValue('port')),
+      ])
+    }
   },  
   {
     accessorKey: 'last_ip_address',
@@ -56,7 +67,7 @@ export const columns: ColumnDef<Device, any>[] = [
     enableSorting: false,
     cell: ({ row }) => {
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, row.getValue('last_ip_address')),
+        h('span', { class: ' font-medium truncate' }, row.getValue('last_ip_address')),
       ])
     }
   }, 
@@ -67,20 +78,28 @@ export const columns: ColumnDef<Device, any>[] = [
     enableSorting: false,
     cell: ({ row }) => {
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, row.getValue('last_seen_at')),
+        h('span', { class: ' font-medium truncate' }, row.getValue('last_seen_at')),
       ])
     }
-  },  
+  }, 
+  {
+    accessorKey: 'registration_code',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Code', class: 'max-w-[200px]' }),
+    enableColumnFilter: false,
+    enableSorting: false,
+    cell: ({ row }) => {
+      const code = row.original.registration_code?.code;
+      return h('div', { class: 'w-20 flex space-x-2' }, [
+        h('span', { class: ' font-medium' }, code),
+      ])
+    }
+  },   
   {
     accessorKey: 'id',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: '' }),
     enableColumnFilter: false,
     enableSorting: false,
     cell: ({ row }) => {
-      // if( user.role as any == 'Owner' || user.role as any == 'Admin' ) {
-      //   return h('div', { row })
-      // }
-
       return h(DataTableRowActions, { row })
     }
   },

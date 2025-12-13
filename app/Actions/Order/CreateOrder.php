@@ -17,6 +17,7 @@ class CreateOrder
 
         // Update the order with terminal and cashier details
         $order->update([
+            'is_available' => true,
             'end_terminal_id' => $order->terminal_id, 
             'cash_tray_session_id' => $attr['cash_tray_session_id'],
             'cashier_employee_id' => $attr['cashier_employee_id'],
@@ -84,8 +85,9 @@ class CreateOrder
             // Return success or proceed to next steps
             return $order;
 
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+        } catch (\Throwable $e) {
+            // Rethrow so calling services/controllers can handle and logs capture the stacktrace.
+            throw $e;
         }
 
     }

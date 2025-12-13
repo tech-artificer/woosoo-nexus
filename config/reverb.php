@@ -29,7 +29,7 @@ return [
     'servers' => [
 
         'reverb' => [
-            'host' => env('REVERB_SERVER_HOST', 'http://192.168.100.85'),
+            'host' => env('REVERB_SERVER_HOST', 'http://127.0.0.1'),
             'port' => env('REVERB_SERVER_PORT', 6001),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
@@ -52,11 +52,11 @@ return [
             ],
             'pulse_ingest_interval' => env('REVERB_PULSE_INGEST_INTERVAL', 15),
             'telescope_ingest_interval' => env('REVERB_TELESCOPE_INGEST_INTERVAL', 15),
-            'ssl' => [
-                'local_cert'  => env('LARAVEL_SSL_CERT', base_path('../certs/localhost.pem')),
-                'local_pk'    => env('LARAVEL_SSL_KEY', base_path('../certs/localhost-key.pem')),
-                'passphrase'  => env('LARAVEL_SSL_PASSPHRASE', null),
-            ],
+            // 'ssl' => [
+            //     'local_cert'  => env('LARAVEL_SSL_CERT', base_path('../certs/localhost.pem')),
+            //     'local_pk'    => env('LARAVEL_SSL_KEY', base_path('../certs/localhost-key.pem')),
+            //     'passphrase'  => env('LARAVEL_SSL_PASSPHRASE', null),
+            // ],
         ],
 
     ],

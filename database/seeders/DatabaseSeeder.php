@@ -29,23 +29,15 @@ class DatabaseSeeder extends Seeder
             TableService::firstOrCreate(['name' => $name]);
         }
 
+      
         User::firstOrCreate(
-            ['email' => 'owner@example.com'],
+            ['email' => 'admin@example.com'],
             [
                 'name' => 'admin',
                 'password' => bcrypt('password'),
                 'is_admin' => true,
             ]
         );
-
-        // User::firstOrCreate(
-        //     ['email' => 'admin@example.com'],
-        //     [
-        //         'name' => 'admin',
-        //         'password' => bcrypt('password'),
-        //         'is_admin' => true,
-        //     ]
-        // );
 
         $this->setupRolesAndPermissions();
     }
@@ -115,22 +107,22 @@ class DatabaseSeeder extends Seeder
         | Define Roles & Assign Permissions
         |--------------------------------------------------------------------------
         */
-        $owner = Role::firstOrCreate(['name' => 'Owner']);
-        $admin = Role::firstOrCreate(['name' => 'Administrator']);
-        $staff = Role::firstOrCreate(['name' => 'Staff']);
+        $admin = Role::firstOrCreate(['name' => 'admin']);
+        // $admin = Role::firstOrCreate(['name' => 'Administrator']);
+        // $staff = Role::firstOrCreate(['name' => 'Staff']);
 
-        $owner->givePermissionTo(Permission::all());
         $admin->givePermissionTo(Permission::all());
-        $staff->givePermissionTo([
-            'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.cancel', 'orders.complete', 'orders.void',
-            'devices.view', 'devices.register', 'devices.assign.table', 'devices.unassign.table', 'devices.delete',
-            'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
-            'reports.sales.view', 'reports.sales.export',
-            'menus.view', 'menus.create', 'menus.edit', 'menus.delete', 'menus.upload.image',
-            'users.view', 'users.create', 'users.edit', 'users.delete',
-        ]);
+        // $admin->givePermissionTo(Permission::all());
+        // $staff->givePermissionTo([
+        //     'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.cancel', 'orders.complete', 'orders.void',
+        //     'devices.view', 'devices.register', 'devices.assign.table', 'devices.unassign.table', 'devices.delete',
+        //     'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
+        //     'reports.sales.view', 'reports.sales.export',
+        //     'menus.view', 'menus.create', 'menus.edit', 'menus.delete', 'menus.upload.image',
+        //     'users.view', 'users.create', 'users.edit', 'users.delete',
+        // ]);
         // 
-        $user->assignRole($owner);
+        $user->assignRole($admin);
 
 
     }

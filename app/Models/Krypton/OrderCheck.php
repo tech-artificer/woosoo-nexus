@@ -44,9 +44,9 @@ class OrderCheck extends Model
         return $this->hasMany(AppliedTax::class, 'order_check_id');
     }
 
-    public function appliedDiscounts() : HasMany
-    {
-        return $this->hasMany(AppliedDiscount::class, 'order_check_id');
-    }
+    // public function appliedDiscounts() : HasMany
+    // {
+    //     return $this->hasMany(AppliedDiscount::class, 'order_check_id');
+    // }
 
 }

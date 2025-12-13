@@ -27,6 +27,10 @@ use App\Actions\Order\{
 
 use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
+use App\Services\BroadcastService;
+use App\Events\Order\OrderVoided;
+
+use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
@@ -43,6 +47,20 @@ class OrderService
         // Fetch default values and merge them with provided attributes
         $defaults = $this->getDefaultAttributes();
         $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
+
+        // Calculate totals from items if not provided or if they are 0
+        // if (!isset($attributes['total_amount']) || $attributes['total_amount'] == 0) {
+        //     Log::info('OrderService: Calculating totals from items', [
+        //         'items_count' => count($attributes['items'] ?? []),
+        //         'original_total' => $attributes['total_amount'] ?? 'not set'
+        //     ]);
+        //     // $calculatedTotals = $this->calculateTotalsFromItems($attributes['items'] ?? []);
+        //     $attributes['subtotal'] = $calculatedTotals['subtotal'];
+        //     $attributes['tax'] = $calculatedTotals['tax'];
+        //     $attributes['total_amount'] += $calculatedTotals['total'];
+        //     $attributes['discount_amount'] = $attributes['discount'] ?? 0;
+        //     Log::info('OrderService: Totals calculated', $calculatedTotals);
+        // }
 
         $this->attributes = $attributes;
 
@@ -70,10 +88,8 @@ class OrderService
             $this->updateAttributes([
                 'order_check_id' => $orderCheck->id,
             ]);
-            // Create ordered menus
-            $orderedMenus = CreateOrderedMenu::run($this->attributes);
 
-            // Create a new device order and associate it with the device
+            // Create a new device order FIRST so we have device_order_id for items
             $deviceOrder = $device->orders()->create([
                 'order_id' => $order->id,
                 'table_id' => $device->table_id,
@@ -81,16 +97,19 @@ class OrderService
                 'status' => OrderStatus::CONFIRMED,
                 'guest_count' => $order->guest_count,
                 'session_id' => $order->session_id,
-                'items' => $orderedMenus,
-                'meta' => [
-                    'order_check' => $orderCheck,
-                    'table_order' => $tableOrder,
-                ],
-                'total' => $orderCheck->total_amount,
-                'subtotal' => $orderCheck->subtotal_amount,
-                'tax' => $orderCheck->tax_amount,
+                'total' => $this->attributes['total_amount'],
+                'subtotal' => $this->attributes['subtotal'],
+                'tax' => $this->attributes['tax'],
                 'discount' => $orderCheck->discount_amount,
             ]);
+
+            // Add device_order_id so CreateOrderedMenu can save to device_order_items
+            $this->updateAttributes([
+                'device_order_id' => $deviceOrder->id,
+            ]);
+
+            // Create ordered menus (both POS and local device_order_items)
+            $orderedMenus = CreateOrderedMenu::run($this->attributes);
 
             return $deviceOrder;
         });
@@ -129,13 +148,49 @@ class OrderService
         
     }
 
-    protected function voidOrder(Device $device) {
-        
+    public function voidOrder(DeviceOrder $deviceOrder) {
+        app(BroadcastService::class)->dispatchBroadcastJob(new OrderVoided($deviceOrder));
     }
 
     protected function rollBackOrder(Device $device) {
         
     }
+
+    /**
+     * Calculate totals from items array
+     * This matches the calculation logic in CreateOrderedMenu
+     *
+     * @param array $items
+     * @return array
+     */
+    // protected function calculateTotalsFromItems(array $items): array
+    // {
+    //     $subtotal = 0;
+    //     $tax = 0;
+    //     $taxRate = 0.10; // 10% tax rate (same as CreateOrderedMenu)
+
+    //     foreach ($items as $item) {
+    //         $quantity = $item['quantity'] ?? 0;
+    //         $price = $item['price'] ?? 0;
+            
+    //         // Calculate item total (price * quantity)
+    //         $itemTotal = $price * $quantity;
+            
+    //         // Calculate tax for this item (same as CreateOrderedMenu: totalItemPrice * taxRate)
+    //         $itemTax = $itemTotal * $taxRate;
+            
+    //         $subtotal += $itemTotal;
+    //         $tax += $itemTax;
+    //     }
+
+    //     $total = $subtotal + $tax;
+
+    //     return [
+    //         'subtotal' => $subtotal,
+    //         'tax' => $tax,
+    //         'total' => $total,
+    //     ];
+    // }
 }
 
 // applied_taxes
