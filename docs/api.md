@@ -35,6 +35,17 @@
 - **GET**: `/session/latest` : `TerminalSessionApiController@getLatestSession`
 - **POST**: `/devices/heartbeat` : Inline closure — updates device last seen in cache. Body: `deviceID`, `timestamp`.
 
+**Printer API Group (middleware: `auth:device`)** — For Flutter Printer App
+- **POST**: `/orders/{orderId}/printed` : `PrinterApiController@markPrinted` — Mark single order as printed (idempotent). Requires Bearer token (`auth:device`). Response includes `printed_at` and `printed_by`.
+- **GET**: `/orders/unprinted` : `PrinterApiController@getUnprintedOrders` — Polling fallback to fetch unprinted orders. Query: `session_id` (required), `since` (optional), `limit` (optional). Returns orders with `is_printed == 0` and excludes `CANCELLED`/`VOIDED` statuses.
+- **POST**: `/orders/printed/bulk` : `PrinterApiController@markPrintedBulk` — Bulk mark orders as printed (optional). Response returns `{ updated, already_printed, not_found }`.
+- **POST**: `/printer/heartbeat` : `PrinterApiController@heartbeat` — Track active printer devices (optional). Heartbeat cached for 2 minutes; response includes `session_active`.
+
+**Admin-only (web) device token generation**
+- **POST**: `/devices/{device}/token` : Admin-only web route, creates a personal access token for the specified `Device`. Returns JSON with `token` and `expires_at` when called via AJAX. Tokens are labeled `admin-issued` and default to 1 year expiry. Use this for pre-provisioning devices with static IPs.
+
+- **Note:** There is a legacy route `POST /order/{orderId}/printed` used by the admin web dashboard — retain for compatibility but endorse plural `orders/*` for printer apps.
+
 **FormRequest Schemas (exact validation rules)**
 - **`DeviceRegisterRequest`** (`app/Http/Requests/DeviceRegisterRequest.php`)
   - `name`: required, string, max:255
@@ -93,6 +104,11 @@
 - If you want, I can:
   - Expand each controller's doc into its own detailed markdown with example request/response payloads (I have already created `docs/api/*.md` for several controllers).
   - Extract response resource field lists (e.g., `MenuResource`, `MenuModifierResource`, `DeviceOrderResource`) and include sample JSON for each endpoint.
+
+**Admin / Printer Manuals**
+
+- **Admin manual**: [docs/admin_manual.md](docs/admin_manual.md) — quick guide for administrators: device management, token generation, and troubleshooting.
+- **Printer manual**: [docs/printer_manual.md](docs/printer_manual.md) — instructions and smoke-test commands for the print team (temporary guest-access routes noted).
 
 Generated from `routes/api.php` and the FormRequest classes in `app/Http/Requests`.
 
