@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;   
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Branch;
 
 class User extends Authenticatable
 {
@@ -106,6 +108,11 @@ class User extends Authenticatable
     public function scopeActive(Builder $query) 
     {
         return $query->where(['is_admin' => false])->withTrashed();
+    }
+
+    public function branches(): BelongsToMany
+    {
+        return $this->belongsToMany(Branch::class, 'branch_user', 'user_id', 'branch_id');
     }
 
 }

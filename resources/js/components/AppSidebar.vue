@@ -59,7 +59,7 @@ const mainNavItems: NavItem[] = [
 const configNavItems: NavItem[] = [
     {
         title: 'Roles & Permissions',
-        href: '/roles/permissions',
+        href: route('roles.index'),
         icon: Lock,
         isActive: false,
         hasSubItems: false,

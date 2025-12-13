@@ -16,7 +16,7 @@ import {
   getSortedRowModel,  
   useVueTable,
 } from '@tanstack/vue-table'
-import { ref } from 'vue'
+import { ref, computed, toRef } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 import {
   Table,
@@ -35,14 +35,18 @@ interface DataTableProps {
 }
 const props = defineProps<DataTableProps>()
 
+// Use computed to ensure reactivity is properly tracked
+const tableData = computed(() => props.data ?? [])
+const tableColumns = computed(() => props.columns ?? [])
+
 const sorting = ref<SortingState>([])
 const columnFilters = ref<ColumnFiltersState>([])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 
 const table = useVueTable({
-  get data() { return props.data },
-  get columns() { return props.columns },
+  get data() { return tableData.value },
+  get columns() { return tableColumns.value },
   state: {
     get sorting() { return sorting.value },
     get columnFilters() { return columnFilters.value },

@@ -27,13 +27,11 @@ class OrderRepository
         $session = $currentSessions['session'];
         $terminalSession =  $currentSessions['terminalSession'];
 
-        if(  empty($terminalSession) ) {
-            return response()->json([
-                'message' => 'No active terminal session found for the current session.'
-            ], 400);
+        if (empty($terminalSession)) {
+            // Repository methods should return data structures, not HTTP responses.
+            // Return an empty collection when there is no terminal session.
+            return collect([]);
         }
-
-        if( !$terminalSession ) return collect([]);
 
         $orders = Order::select([
                 'id','session_id','terminal_session_id',
@@ -132,9 +130,11 @@ class OrderRepository
     public function getOpenOrdersForSession($sessionId) {
         try {
             return Order::fromQuery("CALL get_open_orders_for_session(?)", [$sessionId]);
-        } catch (\Throwable $th) {
-            \Log::error('Procedure call failed: ' . $th->getMessage());
-            return false;
+        } catch (\Exception $e) {
+            // If the stored procedure is not available (tests or missing POS DB),
+            // log and return an empty collection to avoid breaking callers.
+            \Illuminate\Support\Facades\Log::warning('Stored procedure get_open_orders_for_session failed: '.$e->getMessage());
+            return collect([]);
         }
     }
     

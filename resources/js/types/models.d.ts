@@ -8,7 +8,6 @@ export interface User {
     status: string;
     avatar?: string;
     role: string;
-    status: string;
     is_admin: boolean;
     
     deleted_at?: string;
@@ -18,7 +17,7 @@ export interface User {
 export interface Role {
     id: number;
     name: string;
-    permissions: Permission[];De
+    permissions: Permission[];
 }
 
 export interface Permission {
@@ -59,7 +58,6 @@ export interface Device {
     name: string;
     table_id: number;
     branch_id: number;
-    name: string;
     is_active: boolean;
     ip_address?: string;
     deleted_at?: string;
@@ -77,14 +75,24 @@ export interface DeviceOrder {
     device_id: number;
     order_id: number | string | null;
     order_number: string;
-    status: OrderStatus | string | null;
+    status: OrderStatus;
     device?: Device | null;
     order?: Order | null;
     table?: Table | null;
+    total: number;
+    created_at: string;
+    updated_at: string;
     meta: any | null;
+    __is_refill?: boolean;
+    is_voided: boolean;
+    is_settled: boolean;
     is_printed: boolean;
+    printed_at?: string | null;
+    printed_by?: string | null;
     deleted_at?: string;
+    status: string;
     service_requests: ServiceRequest[] | []
+    tablename?: string;
 }
 export interface Menu {
      id: number;
@@ -113,7 +121,7 @@ export interface Menu {
 
 export interface Order {
     id: number;
-    date_time_opened: date;
+    date_time_opened: string;
     transaction_no: number;
     guest_count: number;
     reprint_count: number;
@@ -124,9 +132,14 @@ export interface Order {
     table?: Table;
 }
 export interface OrderedMenu {
+    id?: number;
     menu_id: number;
+    name?: string;
     quantity: number;
-    price_level_id: number;
+    price_level_id?: number;
+    price?: number;
+    subtotal?: number;
+    notes?: string | null;
     menu?: Menu;
 }
 export interface OrderCheck {
@@ -134,7 +147,7 @@ export interface OrderCheck {
     date_time_opened: string;
     is_voided: boolean;
     is_settled: boolean;
-    total_amount: decimal;
+    total_amount: number;
     paid_amount: number;
     change: number;
     subtotal_amount: number;

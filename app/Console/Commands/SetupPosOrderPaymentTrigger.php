@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class SetupPosOrderPaymentTrigger extends Command
 {
@@ -20,85 +19,55 @@ class SetupPosOrderPaymentTrigger extends Command
      *
      * @var string
      */
-    protected $description = 'Creates update_logs table and a trigger on order_check table in the POS database';
+    protected $description = 'Creates a trigger on orders table in the POS database to update device_orders';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
+        // POS DB connection (trigger will be created here)
         $connection = DB::connection('pos');
-        
-        if (!Schema::connection('mysql')->hasTable('order_update_logs')) {
-            Schema::connection('mysql')->create('order_update_logs', function ($table) {
-                $table->id();
-                $table->string('table_name');
-                $table->unsignedBigInteger('order_id')->unique();
-                $table->boolean('is_open');
-                $table->boolean('is_voided');
-                $table->string('action');
-                $table->boolean('is_processed')->default(false);
-                $table->unsignedBigInteger('session_id')->nullable();
-                $table->softDeletes();
-                $table->timestamps();
-            });
 
-            $this->info('Created order_update_logs table in pos.');
-        } else {
+        // App DB (where device_orders lives)
+        $appDb = DB::connection('mysql')->getDatabaseName();
+        $appDbEscaped = str_replace('`', '', $appDb);
+        $fqDeviceOrdersTable = "`{$appDbEscaped}`.`device_orders`";
 
-            if (!Schema::connection('mysql')->hasColumn('order_update_logs', 'date_time_closed')) {
-                Schema::connection('mysql')->table('order_update_logs', function ($table) {
-                    $table->dateTime('date_time_closed')->nullable();
-                });
-            }
-
-            if (!Schema::connection('mysql')->hasColumn('order_update_logs', 'session_id')) {
-                Schema::connection('mysql')->table('order_update_logs', function ($table) {
-                    $table->integer('session_id')->nullable();
-                });
-            }
-
-            $this->warn('order_update_logs table already exists.');
-        }
-
+        // Drop any existing trigger and create a new one that updates device_orders directly
         $connection->unprepared("DROP TRIGGER IF EXISTS after_payment_update");
 
-        // Create new trigger
-        $connection->unprepared("
-            CREATE TRIGGER after_payment_update
-            AFTER UPDATE ON orders
-            FOR EACH ROW
-            BEGIN
-                IF EXISTS (
-                    SELECT 1 FROM woosoo_db.order_update_logs WHERE order_id = NEW.id
-                ) THEN
-                    UPDATE woosoo_db.order_update_logs
-                    SET 
-                        is_open = NEW.is_open,
-                        is_voided = NEW.is_voided,
-                        action = CASE 
-                                    WHEN NEW.is_voided = 1 THEN 'voided'
-                                    ELSE 'paid'
-                                END,
-                        updated_at = NOW()
-                    WHERE order_id = NEW.id;
-                ELSE
-                    IF NEW.date_time_closed IS NOT NULL THEN
-                        INSERT INTO woosoo_db.order_update_logs 
-                            (table_name, order_id, is_open, is_voided, action, created_at, updated_at, session_id)
-                        VALUES 
-                            ('orders', NEW.id, NEW.is_open, NEW.is_voided, 
-                            CASE 
-                                WHEN NEW.is_voided = 1 THEN 'voided'
-                                ELSE 'paid'
-                            END, 
-                            NOW(), NOW(), NEW.session_id);
-                    END IF;
-                END IF;
-            END
-        ");
+        $triggerSql = <<<SQL
+        CREATE TRIGGER after_payment_update
+        AFTER UPDATE ON `orders`
+        FOR EACH ROW
+        BEGIN
+          -- Act when order is closed/voided or when it transitions from open to closed
+          IF (NEW.date_time_closed IS NOT NULL
+              OR NEW.is_voided = 1
+              OR (OLD.is_open = 1 AND NEW.is_open = 0)) THEN
+
+            -- Determine the new status for device_orders
+            SET @new_status = CASE 
+                WHEN NEW.is_voided = 1 THEN 'voided'
+                ELSE 'completed'
+            END;
+
+            -- Directly update device_orders table (cross-database)
+            UPDATE {$fqDeviceOrdersTable}
+            SET 
+                status = @new_status,
+                updated_at = NOW()
+            WHERE order_id = NEW.id;
+
+          END IF;
+        END;
+        SQL;
+
+        $connection->unprepared($triggerSql);
 
         $this->info('Trigger "after_payment_update" created successfully.');
+        $this->info('The trigger will now directly update device_orders status when orders are paid/voided.');
 
     }
 }

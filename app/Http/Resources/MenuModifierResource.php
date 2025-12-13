@@ -19,7 +19,18 @@ class MenuModifierResource extends JsonResource
 
         return [
             'id' => $this->id,
+            // Preserve existing relation-based group name
             'group' => $this->group->name ?? null,
+            // POS/group label derived from `receipt_name` (P=Pork, B=Beef, C=Chicken)
+            'groupName' => $this->receipt_name ? (function ($code) {
+                $first = strtoupper(substr($code, 0, 1));
+                return match ($first) {
+                    'P' => 'Pork',
+                    'B' => 'Beef',
+                    'C' => 'Chicken',
+                    default => null,
+                };
+            })($this->receipt_name) : ($this->group->name ?? null),
             'name' => $this->name,
             'category' => $this->category->name ?? null,
             'kitchen_name' => $this->kitchen_name,
@@ -37,6 +48,8 @@ class MenuModifierResource extends JsonResource
             // 'quantity' => $this->quantity,
             'is_modifier' => $this->is_modifier,
             'is_modifier_only' => $this->is_modifier_only,
+            'isMod' => $this->isMod ?? (bool) ($this->is_modifier ?? false),
+            'isModOnly' => $this->isModOnly ?? (bool) ($this->is_modifier_only ?? false),
             'img_url' => $this->image_url ?? $this->image->path ?? $placeholder,
             // 'img_path' => $this->image_url,
         ];

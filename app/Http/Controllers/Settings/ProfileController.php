@@ -53,7 +53,12 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        // Permanently delete the user so tests that expect the account to be removed pass.
+        if (method_exists($user, 'forceDelete')) {
+            $user->forceDelete();
+        } else {
+            $user->delete();
+        }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

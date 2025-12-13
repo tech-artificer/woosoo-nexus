@@ -28,7 +28,6 @@ import Separator from '../ui/separator/Separator.vue';
 const page = usePage();
 // Props
 const roles = page.props.roles as Role[]
-// const branches = page.props.branches as Branch[]
 // const showDialog = ref(false); // Dialog state
 
 const props = defineProps<{
@@ -39,19 +38,9 @@ const props = defineProps<{
 const form = useForm({
   name: '',
   email: '',
-  password: 'password',
-  // role_name: '' as string | any,
+  password: '',
   roles: [] as string[],
-  branches: [] as number[]
 });
-
-// const toggleBranch = (branchId: number, checked: boolean) => {
-//   if (checked && !form.branches.includes(branchId)) {
-//     form.branches.push(branchId)
-//   } else if (!checked) {
-//     form.branches = form.branches.filter(id => id !== branchId)
-//   }
-// }
 
 const toggleRole = (roleName: string | any, checked: boolean) => {
   
@@ -106,7 +95,6 @@ onMounted(() => {
     form.name = props.user.name
     form.email = props.user.email
     form.roles = props.user.roles.map((r: Role) => r.name) ?? []
-    // form.branches = props.user.branches?.map((b: Branch) => b.id) ?? []
   }
 })
 

@@ -41,13 +41,14 @@ class PrintController extends Controller
 
         // Prepare data for printing
         // You can customize this part based on your order structure
-        $items = $order->items;
+        $items = $order->items()->with('menu')->orderBy('index')->get();
         $tableName = $order->table->name ?? 'Unknown Table';
         $date = $order->created_at->toDateString() ?? now()->toDateString();
         $time = $order->created_at->format('h:i A') ?? now()->format('h:i A');
         $guestCount = $order->guest_count ?? 0;
         $orderId = $order->order_id ?? 'Unknown ID';
-        $package = $order->items[0]['name'] ?? 'Unknown Package';
+        $packageItem = $items->first();
+        $package = $packageItem?->menu?->receipt_name ?? $packageItem?->menu?->name ?? 'Unknown Package';
 
         // Specify your printer name here (as configured in Windows)
         $printerName = "WoosooPrinter"; 
@@ -73,12 +74,10 @@ class PrintController extends Controller
         $printer->text("Guests: {$guestCount}" . PHP_EOL);
         $printer->text(str_repeat('-', 30) . PHP_EOL);
        
-        foreach ($items as $key => $item) {
-
-            if( $key == 0  ) continue;
-
-            $name = $item['name'];
-            $quantity = $item['quantity'];
+        foreach ($items->slice(1) as $item) {
+            $name = $item->menu?->receipt_name ?? $item->menu?->name ?? null;
+            $quantity = $item->quantity;
+            if (! $name) continue;
             $printer->text("$quantity {$name}\n");
         }
 
@@ -133,13 +132,14 @@ class PrintController extends Controller
 
         // Prepare data for printing
         // You can customize this part based on your order structure
-        $items = $order->items;
+        $items = $order->items()->with('menu')->orderBy('index')->get();
         $tableName = $order->table->name ?? 'Unknown Table';
         $date = $order->created_at->toDateString() ?? now()->toDateString();
         $time = $order->created_at->format('h:i A') ?? now()->format('h:i A');
         $guestCount = $order->guest_count ?? 0;
         $orderId = $order->order_id ?? 'Unknown ID';
-        $package = $order->items[0]['name'] ?? 'Unknown Package';
+        $packageItem = $items->first();
+        $package = $packageItem?->menu?->receipt_name ?? $packageItem?->menu?->name ?? 'Unknown Package';
 
         // Specify your printer name here (as configured in Windows)
         $printerName = "lan_printer"; 
@@ -167,12 +167,10 @@ class PrintController extends Controller
         $printer->text("Guests: {$guestCount}" . PHP_EOL);
         $printer->text(str_repeat('-', 30) . PHP_EOL);
        
-        foreach ($items as $key => $item) {
-
-            if( $key == 0  ) continue;
-
-            $name = $item['name'];
-            $quantity = $item['quantity'];
+        foreach ($items->slice(1) as $item) {
+            $name = $item->menu?->receipt_name ?? $item->menu?->name ?? null;
+            $quantity = $item->quantity;
+            if (! $name) continue;
             $printer->text("$quantity {$name}\n");
         }
 

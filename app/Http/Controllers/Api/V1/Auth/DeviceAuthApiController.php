@@ -9,10 +9,25 @@ use App\Models\Device;
 use App\Actions\Device\RegisterDevice;
 // use App\Http\Resources\DeviceResource;
 use App\Http\Requests\DeviceRegisterRequest;
-// use App\Models\DeviceRegistrationCode;
+use App\Models\DeviceRegistrationCode;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
 {
+    // Utility: check for private/local IPv4 (10.*, 192.168.*, 172.16-31.*, 169.254.*)
+    protected function isPrivateIp(?string $ip): bool
+    {
+        if (!$ip) return false;
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) return false;
+
+        // Private ranges
+        if (str_starts_with($ip, '10.')) return true;
+        if (str_starts_with($ip, '192.168.')) return true;
+        if (preg_match('/^172\\.(1[6-9]|2[0-9]|3[0-1])\\./', $ip)) return true;
+        if (str_starts_with($ip, '169.254.')) return true;
+
+        return false;
+    }
     /**
      * Register a device
      * 
@@ -25,31 +40,66 @@ class DeviceAuthApiController extends Controller
     public function register(DeviceRegisterRequest $request)
     {
         $validated = $request->validated();
-        $validated['ip_address'] = $request->ip(); // Capture the device's IP address
 
-        $device = Device::where(['ip_address' => $validated['ip_address']])->first();
+        // Prefer client-supplied ip_address when it looks like a LAN/private IP.
+        $clientSupplied = $request->input('ip_address');
+        $requestIp = $request->ip();
 
-        if( $device ) {
+        $ipToUse = null;
+        if ($clientSupplied && $this->isPrivateIp($clientSupplied)) {
+            $ipToUse = $clientSupplied;
+        } elseif ($this->isPrivateIp($requestIp)) {
+            $ipToUse = $requestIp;
+        } else {
+            // If neither is private, prefer request ip (still usable), or null
+            $ipToUse = $requestIp;
+        }
+
+        // Attach ip_address for RegisterDevice action
+        $validated['ip_address'] = $ipToUse;
+
+        // Avoid accidental collisions: if code provided, prefer code-based uniqueness.
+        // The `code` column lives in `device_registration_codes` table — lookup that
+        // table and if the code has already been claimed (used_by_device_id) return
+        // the owning device as an existing registration.
+        if (! empty($validated['code'])) {
+            $codeRow = DeviceRegistrationCode::where('code', $validated['code'])->first();
+            if ($codeRow && ! empty($codeRow->used_by_device_id)) {
+                $existing = Device::find($codeRow->used_by_device_id);
+            } else {
+                $existing = null;
+            }
+        } else {
+            $existing = null;
+        }
+
+        if (!$existing && $ipToUse) {
+            $existing = Device::where('ip_address', $ipToUse)->first();
+        }
+
+        if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'Device already registered'
-            ]);
+                'message' => 'Device already registered',
+                'device' => $existing,
+                'ip_used' => $ipToUse,
+            ], 409);
         }
 
         $device = RegisterDevice::run($validated);
-        
-        // Create token with device info
+
         $token = $device->createToken(
-            name: 'device-auth',           
+            name: 'device-auth',
             expiresAt: now()->addDays(7)
         )->plainTextToken;
-        
+
         return response()->json([
             'success' => true,
             'token' => $token,
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
-            'expires_at' => now()->addDays(7)->toDateTimeString()
+            'expires_at' => now()->addDays(7)->toDateTimeString(),
+            'ip_used' => $ipToUse,
         ], 201);
     }
     /**
@@ -62,8 +112,16 @@ class DeviceAuthApiController extends Controller
      */
     public function authenticate(Request $request)
     {
-        $ip = $request->ip();
-       
+        // Prefer client-supplied ip_address when private, otherwise request->ip()
+        $clientSupplied = $request->input('ip_address');
+        $requestIp = $request->ip();
+
+        if ($clientSupplied && $this->isPrivateIp($clientSupplied)) {
+            $ip = $clientSupplied;
+        } else {
+            $ip = $requestIp;
+        }
+
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
 
         if(  !$device ) {
@@ -89,7 +147,8 @@ class DeviceAuthApiController extends Controller
             'token' => $token,
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
-            'expires_at' => now()->addDays(7)->toDateTimeString()
+            'expires_at' => now()->addDays(7)->toDateTimeString(),
+            'ip_used' => $ip,
         ]);
     }
 
@@ -105,12 +164,17 @@ class DeviceAuthApiController extends Controller
         $device = $request->user(); // Sanctum resolves Device model
 
         // Revoke current token safely
+        // Delete the current access token via the tokens relationship to appease static analyzers
+        $currentToken = $request->user()?->currentAccessToken();
+        if ($currentToken) {
+            $request->user()->tokens()->where('id', $currentToken->id)->delete();
+        }
 
-        $device->currentAccessToken()?->delete();
-     
-
-        // Create new token (no built-in expiry unless custom implemented)
-        $newToken = $device->createToken('device-auth')->plainTextToken;
+        // Create new token (with 7 days expiry for parity with register/auth)
+        $newToken = $device->createToken(
+            name: 'device-auth',
+            expiresAt: now()->addDays(7)
+        )->plainTextToken;
 
         $expiresAt = now()->addDays(7);
 
@@ -131,12 +195,56 @@ class DeviceAuthApiController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function logout(Request $request) {
+        // Delete current access token via relation (avoid static analyzer warning on token model)
+        $current = $request->user()?->currentAccessToken();
+        if ($current) {
+            $request->user()->tokens()->where('id', $current->id)->delete();
+        }
 
-        $request->user()->currentAccessToken()?->delete();
-        
         return response()->json([
             'message' => 'Successfully logged out'
         ]);
 
+    }
+
+    /**
+     * Verify a bearer token and return its validity and associated device.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verifyToken(Request $request)
+    {
+        $tokenString = $request->bearerToken();
+
+        if (! $tokenString) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'No bearer token provided.',
+            ], 400);
+        }
+
+        $token = PersonalAccessToken::findToken($tokenString);
+
+        if (! $token || ! $token->tokenable) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid or revoked token.',
+            ], 401);
+        }
+
+        if ($token->expires_at && $token->expires_at->isPast()) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Token expired.',
+            ], 401);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'device' => $token->tokenable->only(['id', 'name']),
+            'created_at' => $token->created_at,
+            'expires_at' => $token->expires_at ?? null,
+        ]);
     }
 }

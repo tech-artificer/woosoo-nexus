@@ -26,7 +26,7 @@ class ServiceRequest extends Model
 
     public function getTableServiceNameAttribute()
     {
-        return $this->tableService->name;
+        return $this->tableService?->name ?? null;
     }
 
     public function deviceOrder(): BelongsTo

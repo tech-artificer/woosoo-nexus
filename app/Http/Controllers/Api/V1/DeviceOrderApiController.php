@@ -39,20 +39,20 @@ class DeviceOrderApiController extends Controller
 
         if( $device && $device->table_id) {
 
-            $canOrder = $device->orders()->whereIn('status', [OrderStatus::PENDING, OrderStatus::CONFIRMED])->latest()->first();
-           
-            if(  $canOrder ) {
-                 return response()->json([
-                    'success' => true,
-                    'message' => 'Order already in progress',
-                    'order' => new DeviceOrderResource($canOrder)
-                ], 201);
+            // Ensure there is no existing PENDING or CONFIRMED order for this device before creating a new one.
+            $existing = $device->orders()->whereIn('status', [OrderStatus::CONFIRMED->value, OrderStatus::PENDING->value])->latest()->first();
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An existing order (pending or confirmed) prevents creating a new order for this device.',
+                    'order' => new DeviceOrderResource($existing)
+                ], 409);
             }
-                
+
             $order = app(OrderService::class)->processOrder($device, $validatedData);
 
             OrderCreated::dispatch($order);
-            PrintOrder::dispatch($order);
+            // PrintOrder::dispatch($order);
 
             // $this->printKitchen($order->order_id);
             // app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));

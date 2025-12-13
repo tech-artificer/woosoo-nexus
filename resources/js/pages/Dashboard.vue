@@ -32,7 +32,8 @@ const props = defineProps<{
     totalSales: string | number,
     guestCount: string | number,
     totalOrders: string | number,
-    monthlySales: string | number
+    monthlySales: string | number,
+    salesData?: any[]
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [

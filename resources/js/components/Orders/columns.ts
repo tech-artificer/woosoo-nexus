@@ -4,6 +4,7 @@ import { h } from 'vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import DataTableColumnHeader from '@/components/Orders/DataTableColumnHeader.vue'
 import DataTableRowActions from '@/components/Orders/DataTableRowActions.vue'
+import OrderStatusBadge from '@/components/Orders/OrderStatusBadge.vue'
 import { formatCurrency } from '@/lib/utils';
 
 export const columns: ColumnDef<DeviceOrder, any>[] = [
@@ -22,8 +23,10 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Order #', class: 'w-[100px]' }),
 
     cell: ({ row }) => {
-      return h('div', { class: 'flex space-x-2' }, [
+      const isRefill = row.original && (row.original.__is_refill === true || (Array.isArray(row.original.items) && row.original.items.some((it: any) => it.is_refill || (it.name && String(it.name).toLowerCase().includes('refill')))) )
+      return h('div', { class: 'flex items-center space-x-2' }, [
         h('span', { class: ' font-medium' }, row.getValue('order_number')),
+        isRefill ? h('span', { class: 'text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full' }, 'Refill') : null,
       ])
     },
   },
@@ -68,9 +71,8 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     enableColumnFilter: false,
     enableSorting: false,
     cell: ({ row }) => {
-
-      const total = row.original.items.reduce((acc, item: any) => acc + item?.price * item.quantity + item?.tax, 0);
-
+      
+      const total = row.original.total || 0;
       return h('div', { class: 'w-20 flex space-x-2' }, [
         h('span', { class: ' font-medium' }, formatCurrency(total) ),
       ])
@@ -78,15 +80,39 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
   }, 
   {
     accessorKey: 'status',
-    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Status', class: 'max-w-[200px]' }),
-    enableColumnFilter: false,
-    enableSorting: false,
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Status', class: 'max-w-[140px]' }),
+    enableColumnFilter: true,
+    enableSorting: true,
     cell: ({ row }) => {
-      return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, row.getValue('status')),
-      ])
+      return h(OrderStatusBadge, { status: row.getValue('status') })
     }
   },  
+  {
+    accessorKey: 'created_at',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Created', class: 'max-w-[140px]' }),
+    enableColumnFilter: true,
+    enableSorting: false,
+    filterFn: (row: any, columnId: string, filterValue: any) => {
+      if (!filterValue) return true
+      // expected filterValue: 'from|to'
+      const [from, to] = String(filterValue).split('|')
+      const created = new Date(row.getValue(columnId))
+      if (from) {
+        const f = new Date(from)
+        if (created < f) return false
+      }
+      if (to) {
+        const t = new Date(to)
+        t.setHours(23,59,59,999)
+        if (created > t) return false
+      }
+      return true
+    },
+    cell: ({ row }) => {
+      const d = row.original.created_at ? new Date(row.original.created_at).toLocaleString() : ''
+      return h('div', { class: 'w-32' }, [ h('span', { class: 'text-sm' }, d) ])
+    }
+  },
   {
     accessorKey: 'is_printed',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Printed', class: 'max-w-[200px]' }),

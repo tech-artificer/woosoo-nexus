@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Krypton\Menu;
+use Illuminate\Support\Facades\Storage;
 
 class MenuImage extends Model
 {

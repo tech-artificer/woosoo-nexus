@@ -9,6 +9,8 @@ use App\Models\DeviceOrder;
 use App\Models\ServiceRequest;
 use App\Events\ServiceRequest\ServiceRequestNotification;
 use App\Http\Resources\ServiceRequestResource;
+use App\Http\Responses\ApiResponse;
+use Illuminate\Support\Facades\DB;
 
 class ServiceRequestApiController extends Controller
 {
@@ -39,33 +41,45 @@ class ServiceRequestApiController extends Controller
 
         $deviceOrder = DeviceOrder::where('order_id', $validatedData['order_id'])->first();
 
-        $deviceOrder->serviceRequests()->create([
-            'table_service_id' => $validatedData['table_service_id'],
-            'order_id' => $validatedData['order_id'],
-        ]);
-              
-        $serviceRequest = $deviceOrder->serviceRequests()->latest()->first();
-
-        if( !$serviceRequest ) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Service request could not be sent'
-            ], 400);
+        if (! $deviceOrder) {
+            return ApiResponse::notFound('Device order not found', ['order_id' => $validatedData['order_id']]);
         }
 
-        // $device = $request->user(); 
-        // return response()->json([
-        //     'success' => true,
-        //     'message' => 'Service sent successfully',
-        // ]);
+        // Ensure the requesting device owns the order (prevent cross-device requests)
+        $device = $request->user();
+        if ($device && $device->id !== $deviceOrder->device_id) {
+            return ApiResponse::error('Unauthorized to request service for this order', null, 403);
+        }
 
-        broadcast(new ServiceRequestNotification($serviceRequest))->toOthers();
+        try {
+            DB::beginTransaction();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Service sent successfully',
-            'service_request' => new ServiceRequestResource($serviceRequest),
-        ], 201);
+            $deviceOrder->serviceRequests()->create([
+                'table_service_id' => $validatedData['table_service_id'],
+                'order_id' => $validatedData['order_id'],
+            ]);
+
+            $serviceRequest = $deviceOrder->serviceRequests()->latest()->first();
+
+            if (! $serviceRequest) {
+                DB::rollBack();
+                return ApiResponse::error('Service request could not be sent', null, 400);
+            }
+
+            // Broadcast to other listeners
+            broadcast(new ServiceRequestNotification($serviceRequest))->toOthers();
+
+            DB::commit();
+
+            return ApiResponse::success([
+                'service_request' => new ServiceRequestResource($serviceRequest),
+            ], 'Service sent successfully', 201);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+            return ApiResponse::error('Failed to send service request', null, 500);
+        }
     }
 
     /**

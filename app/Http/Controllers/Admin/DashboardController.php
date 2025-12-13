@@ -49,6 +49,9 @@ class DashboardController extends Controller
 
         $totalSales = $dashboard->totalSales();
         $monthlySales = $dashboard->monthlySales();
+        $totalOrders = $dashboard->getTotalOrders();
+        $guestCount = $dashboard->getTotalGuests();
+        $salesData = $dashboard->getSalesData(7);
 
         $openOrders = $this->orderRepository->getOpenOrdersForSession($session->id);
         $tableOrders = $this->tableRepository->getActiveTableOrders();
@@ -68,9 +71,10 @@ class DashboardController extends Controller
             'openOrders' => $openOrders,
             'sessionId' => $session->id,
             'totalSales' => $totalSales,
-            'totalOrders' => 3,
-            'guestCount' => 19,
+            'totalOrders' => $totalOrders,
+            'guestCount' => $guestCount,
             'monthlySales' => $monthlySales,
+            'salesData' => $salesData,
         ]);
     }
 }

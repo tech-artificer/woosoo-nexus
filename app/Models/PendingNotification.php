@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Device;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PendingNotification extends Model
 {
