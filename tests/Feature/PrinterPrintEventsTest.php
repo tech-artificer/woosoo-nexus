@@ -201,4 +201,124 @@ class PrinterPrintEventsTest extends TestCase
         $resp->assertStatus(200);
         $this->assertLessThanOrEqual(200, $resp->json('count'));
     }
+
+    public function test_ack_returns_404_for_unknown_event()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'X404', 'location' => 'X']);
+        $device = Device::create(['name' => 'device-x404', 'ip_address' => '127.0.0.3', 'branch_id' => $branch->id]);
+
+        $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/999999/ack', ['printer_id' => 'PR1'])
+            ->assertStatus(404);
+    }
+
+    public function test_fail_returns_404_for_unknown_event()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'Y404', 'location' => 'Y']);
+        $device = Device::create(['name' => 'device-y404', 'ip_address' => '127.0.0.4', 'branch_id' => $branch->id]);
+
+        $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/999998/failed', ['error' => 'Test'])
+            ->assertStatus(404);
+    }
+
+    public function test_ack_without_printer_id_is_allowed()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'NoPrinter', 'location' => 'NP']);
+        $device = Device::create(['name' => 'device-np', 'ip_address' => '127.0.0.5', 'branch_id' => $branch->id]);
+
+        $order = DeviceOrder::create([
+            'order_id' => 55555,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => 1,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+        $resp = $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/ack', []);
+
+        $resp->assertStatus(200)->assertJsonPath('data.was_updated', true);
+        $evt->refresh();
+        $this->assertTrue($evt->is_acknowledged);
+        $this->assertNull($evt->printer_id);
+    }
+
+    public function test_ack_invalid_printed_at_returns_422()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'BadDate', 'location' => 'BD']);
+        $device = Device::create(['name' => 'device-bd', 'ip_address' => '127.0.0.6', 'branch_id' => $branch->id]);
+
+        $order = DeviceOrder::create([
+            'order_id' => 66666,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => 1,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+        $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/ack', ['printer_id' => 'P1', 'printed_at' => 'not-a-date'])
+            ->assertStatus(422);
+    }
+
+    public function test_fail_invalid_error_length_returns_422()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'ErrLen', 'location' => 'EL']);
+        $device = Device::create(['name' => 'device-el', 'ip_address' => '127.0.0.7', 'branch_id' => $branch->id]);
+
+        $order = DeviceOrder::create([
+            'order_id' => 77777,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => 1,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+        $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/failed', ['error' => str_repeat('x', 2000)])
+            ->assertStatus(422);
+    }
+
+    public function test_get_unprinted_events_negative_limit_returns_422()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'LimitBad', 'location' => 'LB']);
+        $device = Device::create(['name' => 'device-lb', 'ip_address' => '127.0.0.8', 'branch_id' => $branch->id]);
+        $this->actingAs($device, 'device')
+            ->getJson('/api/printer/unprinted-events?limit=-1')
+            ->assertStatus(422);
+    }
+
+    public function test_get_unprinted_events_invalid_since_returns_422()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'SinceBad', 'location' => 'SB']);
+        $device = Device::create(['name' => 'device-sb', 'ip_address' => '127.0.0.9', 'branch_id' => $branch->id]);
+        $this->actingAs($device, 'device')
+            ->getJson('/api/printer/unprinted-events?since=notadate')
+            ->assertStatus(422);
+    }
 }

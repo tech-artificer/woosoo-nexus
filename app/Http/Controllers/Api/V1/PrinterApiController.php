@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Requests\AckPrintEventRequest;
+use App\Http\Requests\FailPrintEventRequest;
 use Illuminate\Support\Facades\Cache;
+use App\Http\Requests\GetUnprintedOrdersRequest;
 use Carbon\Carbon;
 use App\Models\DeviceOrder;
 // TerminalSession checks removed; sessions are device-local
 use App\Http\Requests\MarkOrderPrintedRequest;
-use App\Http\Requests\GetUnprintedOrdersRequest;
 use App\Http\Requests\MarkOrderPrintedBulkRequest;
 use App\Http\Requests\PrinterHeartbeatRequest;
 use App\Events\PrintOrder;
@@ -189,9 +191,10 @@ class PrinterApiController extends Controller
         /**
          * Return unacknowledged PrintEvents for printers to consume.
          */
-        public function getUnprintedEvents(Request $request)
+        public function getUnprintedEvents(GetUnprintedOrdersRequest $request)
         {
-            $limit = min((int)$request->input('limit', 100), 200);
+            $limitInput = (int)$request->input('limit', 100);
+            $limit = max(1, min($limitInput, 200));
             $since = $request->input('since');
 
             $device = $request->user();
@@ -242,7 +245,7 @@ class PrinterApiController extends Controller
         /**
          * Acknowledge a PrintEvent as handled by a printer.
          */
-        public function ackPrintEvent(Request $request, int $id)
+        public function ackPrintEvent(AckPrintEventRequest $request, int $id)
         {
                 $printerId = $request->input('printer_id');
                 $printedAt = $request->input('printed_at');
@@ -271,7 +274,7 @@ class PrinterApiController extends Controller
         /**
          * Mark a PrintEvent as failed (printer reported error).
          */
-        public function failPrintEvent(Request $request, int $id)
+        public function failPrintEvent(FailPrintEventRequest $request, int $id)
         {
                 try {
                     $evt = $this->printEventService->getById($id);

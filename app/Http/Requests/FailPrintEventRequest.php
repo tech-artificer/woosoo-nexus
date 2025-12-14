@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class GetUnprintedOrdersRequest extends FormRequest
+class FailPrintEventRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,9 +14,7 @@ class GetUnprintedOrdersRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'session_id' => ['nullable', 'integer'],
-            'since' => ['nullable', 'date'],
-            'limit' => ['nullable', 'integer', 'min:1'],
+            'error' => ['nullable', 'string', 'max:1000'],
         ];
     }
 }
