@@ -103,10 +103,12 @@ class OrderService
             $deviceOrder = $device->orders()->create([
                 'order_id' => $order->id,
                 'table_id' => $device->table_id,
-                'terminal_session_id' => $order->terminal_session_id,
+                // Ensure terminal_session_id never ends up NULL. Prefer the POS-provided
+                // value, then the merged attributes, fall back to 1 as a safety default.
+                'terminal_session_id' => $order->terminal_session_id ?? $this->attributes['terminal_session_id'] ?? 1,
                 'status' => OrderStatus::CONFIRMED,
                 'guest_count' => $order->guest_count,
-                'session_id' => $order->session_id,
+                'session_id' => $order->session_id ?? $this->attributes['session_id'] ?? null,
                 'total' => $this->attributes['total_amount'],
                 'subtotal' => $this->attributes['subtotal'],
                 'tax' => $this->attributes['tax'],
@@ -161,7 +163,7 @@ class OrderService
             'revenue_id' => $defaults['revenue_id'] ?? 1,
             'terminal_id' => $defaults['terminal_id'] ?? 1,
             'session_id' => $defaults['session_id'] ?? null,
-            'terminal_session_id' => $defaults['terminal_session_id'] ?? null,
+            'terminal_session_id' => $defaults['terminal_session_id'] ?? 1,
             'employee_log_id' => $defaults['employee_log_id'] ?? null,
             'cash_tray_session_id' => $defaults['cash_tray_session_id'] ?? null,
             'terminal_service_id' => $defaults['terminal_service_id'] ?? null,

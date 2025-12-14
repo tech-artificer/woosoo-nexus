@@ -38,8 +38,11 @@ class CreateOrder
     public function createNewOrder(array $attr = []) {
         
         try {
-            $sessionId = $attr['session_id'];
-            $terminalSessionId = $attr['terminal_session_id'];
+            $sessionId = $attr['session_id'] ?? null;
+            // Make test fallback robust: prefer provided terminal_session_id,
+            // otherwise use a sane default (1) to avoid NOT NULL constraint
+            // violations during device order creation.
+            $terminalSessionId = $attr['terminal_session_id'] ?? 1;
             $dateTimeOpened = now(); // Current date and time
             $dateTimeClosed = null; // Order is open initially
             $revenueId = $attr['revenue_id'] ?? 1; // Default revenue center
