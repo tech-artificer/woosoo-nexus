@@ -89,7 +89,7 @@ class OrderCreateAndRefillTest extends TestCase
         $posConn->shouldReceive('table')->with('ordered_menus')->andReturn($qb);
 
         $realDb = DB::getFacadeRoot();
-        DB::shouldReceive('getDefaultConnection')->andReturn('sqlite');
+            DB::shouldReceive('getDefaultConnection')->andReturn('testing');
         DB::shouldReceive('connection')->andReturnUsing(function ($name = null) use ($posConn, $realDb) {
             if ($name === 'pos') {
                 return $posConn;

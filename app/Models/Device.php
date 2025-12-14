@@ -59,7 +59,9 @@ class Device extends Authenticatable
                 $model->device_uuid = (string) Str::uuid();
             }
 
-            $model->branch_id = Branch::first()->id;
+            if (empty($model->branch_id)) {
+                $model->branch_id = Branch::first()->id;
+            }
         });
     }
 

@@ -62,6 +62,16 @@ class OrderService
         //     Log::info('OrderService: Totals calculated', $calculatedTotals);
         // }
 
+        // Defensive: strip legacy payload keys that should not be persisted
+        // directly on the `device_orders` table. `items` belong in
+        // `device_order_items` and `meta` is exposed via an accessor.
+        if (isset($attributes['items'])) {
+            unset($attributes['items']);
+        }
+        if (isset($attributes['meta'])) {
+            unset($attributes['meta']);
+        }
+
         $this->attributes = $attributes;
 
         return DB::transaction(function () use ($device) {
@@ -110,6 +120,16 @@ class OrderService
 
             // Create ordered menus (both POS and local device_order_items)
             $orderedMenus = CreateOrderedMenu::run($this->attributes);
+
+            // Schedule creation of a PrintEvent after the database transaction commits.
+            // This ensures we don't create print events while the order transaction is still open.
+            DB::afterCommit(function () use ($deviceOrder) {
+                try {
+                    app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            });
 
             return $deviceOrder;
         });

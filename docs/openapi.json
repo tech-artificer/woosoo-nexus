@@ -1,0 +1,3297 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Laravel",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1/api"
+        }
+    ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
+    "paths": {
+        "/token/create": {
+            "get": {
+                "operationId": "user.token.create",
+                "summary": "Create a new token for the authenticated user",
+                "tags": [
+                    "AuthApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "email"
+                        }
+                    },
+                    {
+                        "name": "password",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "device_name",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "token"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/menus": {
+            "get": {
+                "operationId": "menus",
+                "summary": "Get all menus",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "menu_id",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/MenuResource"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/menus/with-modifiers": {
+            "get": {
+                "operationId": "menus.with.modifiers",
+                "summary": "Get menu with modifiers [Set Meal]",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "menu_id",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MenuResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/MenuResource"
+                                            }
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/MenuResource"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/menus/modifier-groups": {
+            "get": {
+                "operationId": "menus.modifier-groups",
+                "description": "Returns all modifier groups. Adding a query param of modifiers = 1 will include the modifiers in the response",
+                "summary": "Get all modifier groups",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "modifiers",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/menus/modifiers": {
+            "get": {
+                "operationId": "menus.modifiers",
+                "description": "List of all menu modifiers like P1, P2, P3, P4, P5.",
+                "summary": "Get all menu modifiers",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MenuModifierResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MenuModifierResource"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/menus/course": {
+            "get": {
+                "operationId": "menus.by.course",
+                "summary": "Get all menus for the given course",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "starter"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MenuResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MenuResource"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/menus/group": {
+            "get": {
+                "operationId": "menus.by.group",
+                "summary": "Get all menus for the given group",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "group",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "Sides"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MenuResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MenuResource"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/menus/group-raw": {
+            "get": {
+                "operationId": "menus.group.raw",
+                "description": "Query params:\n- group: string (optional) POS group name, defaults to 'Meat Order'\n\nThis returns the raw rows the stored procedure emits. Useful for clients\nthat need the exact POS-provided structure (menuName, groupName, computed_modifiers, etc.).",
+                "summary": "Return raw stored-proc output for a POS group (calls `get_menus_by_group`)",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "Meat Order"
+                        }
+                    }
+                ],
+                "responses": {
+                    "500": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Failed to fetch group rows"
+                                            ]
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "rows": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                },
+                                                "ids": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                },
+                                                "packages": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                }
+                                            },
+                                            "required": [
+                                                "rows",
+                                                "ids",
+                                                "packages"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "rows": {
+                                                    "type": "string"
+                                                },
+                                                "ids": {
+                                                    "type": "string"
+                                                },
+                                                "packages": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "rows",
+                                                "ids",
+                                                "packages"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/menus/modifiers-by-group": {
+            "get": {
+                "operationId": "menus.modifiers.by.grouped",
+                "description": "Query params:\n- group: string (optional) POS group name, defaults to 'Meat Order'\n\nResponse: object with keys 'Pork','Beef','Chicken' mapping to arrays of modifiers.",
+                "summary": "Return modifiers grouped by meat type (Pork/Beef/Chicken) for a POS menu group",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "Meat Order"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "minItems": 0,
+                                    "maxItems": 0,
+                                    "additionalItems": false
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/menus/package-modifiers": {
+            "get": {
+                "operationId": "menus.package.modifiers",
+                "description": "Accepts a single parameter `package_id` (integer). For packages 46,47,48\nthis will return the exact modifiers selected by `Menu::getModifiers()`\nwhich uses `receipt_name` codes (P*, B*, C*).",
+                "summary": "Return exact modifiers for a package menu by package id",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "package_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MenuModifierResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MenuModifierResource"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/menus/category": {
+            "get": {
+                "operationId": "menus.by.category",
+                "summary": "Get all menus for the given category",
+                "tags": [
+                    "BrowseMenuApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "beverage"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `MenuResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MenuResource"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/devices": {
+            "get": {
+                "operationId": "devices.index",
+                "summary": "Returns a list of all devices",
+                "tags": [
+                    "DeviceApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `DeviceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DeviceResource"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "devices.store",
+                "summary": "Store a newly created device in storage",
+                "tags": [
+                    "DeviceApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreDeviceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`DeviceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeviceResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/devices/{device}": {
+            "get": {
+                "operationId": "devices.show",
+                "summary": "Display the specified device",
+                "tags": [
+                    "DeviceApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "device",
+                        "in": "path",
+                        "required": true,
+                        "description": "The device ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`DeviceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeviceResource"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "devices.update",
+                "summary": "Update the specified device",
+                "tags": [
+                    "DeviceApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "device",
+                        "in": "path",
+                        "required": true,
+                        "description": "The device ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateDeviceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`DeviceResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeviceResource"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "devices.destroy",
+                "summary": "Remove the specified device from storage",
+                "tags": [
+                    "DeviceApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "device",
+                        "in": "path",
+                        "required": true,
+                        "description": "The device ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/device/table": {
+            "get": {
+                "operationId": "device.table",
+                "description": "Behaviour: If the request is authenticated as a device, use that device.\nOtherwise, use the optional `ip_address` query param or the request IP\nto find an active device record.\n\nResponse: { success: true, device_id, table: { id, name } } or 404.",
+                "summary": "Find the device (and its table) by the authenticated device or by IP",
+                "tags": [
+                    "DeviceApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "OK"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "device": {
+                                                    "$ref": "#/components/schemas/DeviceResource"
+                                                },
+                                                "table": {
+                                                    "anyOf": [
+                                                        {
+                                                            "$ref": "#/components/schemas/TableResource"
+                                                        },
+                                                        {
+                                                            "type": "null"
+                                                        }
+                                                    ]
+                                                },
+                                                "ip_used": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "device",
+                                                "table",
+                                                "ip_used"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Device not found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/devices/login": {
+            "get": {
+                "operationId": "devices.login",
+                "summary": "Login a device",
+                "tags": [
+                    "DeviceAuthApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "ip_address",
+                        "in": "query",
+                        "description": "Prefer client-supplied ip_address when private, otherwise request->ip()",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "token": {
+                                            "type": "string"
+                                        },
+                                        "device": {
+                                            "type": "string"
+                                        },
+                                        "table": {
+                                            "type": "string"
+                                        },
+                                        "expires_at": {
+                                            "type": "string"
+                                        },
+                                        "ip_used": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "token",
+                                        "device",
+                                        "table",
+                                        "expires_at",
+                                        "ip_used"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Device not found"
+                                            ]
+                                        },
+                                        "ip_address": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "error",
+                                        "ip_address"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/devices/register": {
+            "post": {
+                "operationId": "devices.register",
+                "summary": "Register a device",
+                "tags": [
+                    "DeviceAuthApi"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/DeviceRegisterRequest"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "ip_address": {
+                                                "type": "string",
+                                                "description": "Prefer client-supplied ip_address when it looks like a LAN/private IP."
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "token": {
+                                            "type": "string"
+                                        },
+                                        "device": {
+                                            "type": "object"
+                                        },
+                                        "table": {
+                                            "type": "string"
+                                        },
+                                        "expires_at": {
+                                            "type": "string"
+                                        },
+                                        "ip_used": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "token",
+                                        "device",
+                                        "table",
+                                        "expires_at",
+                                        "ip_used"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Device already registered"
+                                            ]
+                                        },
+                                        "device": {
+                                            "type": "string"
+                                        },
+                                        "ip_used": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "device",
+                                        "ip_used"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/devices/refresh": {
+            "post": {
+                "operationId": "devices.refresh",
+                "summary": "Revoke the current token and issue a new one with the same\nabilities and expiration time",
+                "tags": [
+                    "DeviceAuthApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "token": {
+                                            "type": "string"
+                                        },
+                                        "device": {
+                                            "type": "string"
+                                        },
+                                        "table": {
+                                            "type": "string"
+                                        },
+                                        "expires_at": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "token",
+                                        "device",
+                                        "table",
+                                        "expires_at"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/devices/logout": {
+            "post": {
+                "operationId": "devices.logout",
+                "summary": "Revoke the token of the device that made the request and logout",
+                "tags": [
+                    "DeviceAuthApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Successfully logged out"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/devices/create-order": {
+            "post": {
+                "operationId": "devices.create.order",
+                "summary": "Handle the incoming order request from a specific device",
+                "tags": [
+                    "DeviceOrderApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreDeviceOrderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "500": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Order processing failed."
+                                            ]
+                                        },
+                                        "errors": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "minItems": 0,
+                                            "maxItems": 0,
+                                            "additionalItems": false
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "errors"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "PrintOrder::dispatch($order);\n$this->printKitchen($order->order_id);\napp(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));\nPrinterOrderJob::dispatch($order, 'cashier')->onQueue('cashier');",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "order": {
+                                            "$ref": "#/components/schemas/DeviceOrderResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "order"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "An existing order (pending or confirmed) prevents creating a new order for this device."
+                                            ]
+                                        },
+                                        "order": {
+                                            "$ref": "#/components/schemas/DeviceOrderResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "order"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/menus/bundle": {
+            "get": {
+                "operationId": "menu.menuBundle",
+                "description": "This endpoint will return a list of all menu items available for selection.",
+                "summary": "Get All Menu Selections",
+                "tags": [
+                    "MenuBundle"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "$packages = MenuRepository::getMenusWithModifiers();\nif ($packages->isEmpty()) {\n$packages = Menu::with('modifiers')\n->whereIn('id', [46, 47, 48])\n->get();\n}\nLoad modifiers\n$packages->load('modifiers');\n$sides = $this->getMenusByGroup('Sides');\n$desserts = $this->getMenusByCategory('Dessert');\n$beverages = $this->getMenusByCategory('Beverage');",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "packages": {
+                                            "type": [
+                                                "array",
+                                                "null"
+                                            ],
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "packages"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/order/{orderId}/refill": {
+            "post": {
+                "operationId": "orderApi.refill",
+                "summary": "Persist refill items and dispatch print event",
+                "tags": [
+                    "OrderApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "items"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "500": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Failed to persist refill"
+                                            ]
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "created": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "created"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Order not found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/order/{orderId}/printed": {
+            "post": {
+                "operationId": "orderApi.markPrinted",
+                "summary": "Mark a device order as printed",
+                "tags": [
+                    "OrderApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Order not found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/device-order/{order}": {
+            "get": {
+                "operationId": "orderApi.show",
+                "summary": "Display the specified resource",
+                "tags": [
+                    "OrderApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "description": "The order ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "order": {
+                                            "$ref": "#/components/schemas/DeviceOrder"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "order"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/device-order/by-order-id/{orderId}": {
+            "get": {
+                "operationId": "orderApi.showByExternalId",
+                "summary": "Show the specified resource by external order_id field",
+                "tags": [
+                    "OrderApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "order": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "order"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Order not found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/printer/unprinted-events": {
+            "get": {
+                "operationId": "printerApi.getUnprintedEvents",
+                "summary": "Return unacknowledged PrintEvents for printers to consume",
+                "tags": [
+                    "PrinterApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "since",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "session_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "count": {
+                                            "type": "string"
+                                        },
+                                        "events": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "count",
+                                        "events"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/printer/print-events/{id}/ack": {
+            "post": {
+                "operationId": "printerApi.ackPrintEvent",
+                "summary": "Acknowledge a PrintEvent as handled by a printer",
+                "tags": [
+                    "PrinterApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "printer_id": {
+                                        "type": "string"
+                                    },
+                                    "printed_at": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Acknowledged"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Event not found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/printer/print-events/{id}/failed": {
+            "post": {
+                "operationId": "printerApi.failPrintEvent",
+                "summary": "Mark a PrintEvent as failed (printer reported error)",
+                "tags": [
+                    "PrinterApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "error": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Marked failed"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "attempts": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "attempts"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Event not found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/printer/heartbeat": {
+            "post": {
+                "operationId": "printerApi.heartbeat",
+                "tags": [
+                    "PrinterApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrinterHeartbeatRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Heartbeat received"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "server_time": {
+                                                    "type": "string"
+                                                },
+                                                "session_active": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "server_time",
+                                                "session_active"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/orders/{orderId}/printed": {
+            "post": {
+                "operationId": "printerApi.markPrinted",
+                "tags": [
+                    "PrinterApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "orderId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MarkOrderPrintedRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "Order marked as printed"
+                                                    ]
+                                                },
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "order_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "is_printed": {
+                                                            "type": "string"
+                                                        },
+                                                        "printed_at": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "order_id",
+                                                        "is_printed",
+                                                        "printed_at"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "message",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "Order was already printed"
+                                                    ]
+                                                },
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "order_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "is_printed": {
+                                                            "type": "string"
+                                                        },
+                                                        "printed_at": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "order_id",
+                                                        "is_printed",
+                                                        "printed_at"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "message",
+                                                "data"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Forbidden"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Order not found"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/orders/printed/bulk": {
+            "post": {
+                "operationId": "printerApi.markPrintedBulk",
+                "tags": [
+                    "PrinterApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MarkOrderPrintedBulkRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "updated": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                },
+                                                "already_printed": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                },
+                                                "not_found": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                }
+                                            },
+                                            "required": [
+                                                "updated",
+                                                "already_printed",
+                                                "not_found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/service/request": {
+            "post": {
+                "operationId": "service.request",
+                "summary": "Sends a service request to the server \nand broadcasts the event",
+                "tags": [
+                    "ServiceRequestApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreServiceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "500": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Failed to send service request"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Service sent successfully"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "service_request": {
+                                                    "$ref": "#/components/schemas/ServiceRequestResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "service_request"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Service request could not be sent"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Unauthorized to request service for this order"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Device order not found"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/tables/services": {
+            "get": {
+                "operationId": "tables.services",
+                "summary": "Returns a list of all services",
+                "tags": [
+                    "TableServiceApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/session/latest": {
+            "get": {
+                "operationId": "session.latest",
+                "tags": [
+                    "TerminalSessionApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "session": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "session"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "Branch": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 0,
+                "maxItems": 0,
+                "additionalItems": false,
+                "title": "Branch"
+            },
+            "DeviceOrder": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 0,
+                "maxItems": 0,
+                "additionalItems": false,
+                "title": "DeviceOrder"
+            },
+            "DeviceOrderResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "order_id": {
+                        "type": "string"
+                    },
+                    "order_number": {
+                        "type": "string"
+                    },
+                    "device": {
+                        "$ref": "#/components/schemas/DeviceResource"
+                    },
+                    "order": {
+                        "$ref": "#/components/schemas/Order"
+                    },
+                    "table": {
+                        "type": "string"
+                    },
+                    "tablename": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "subtotal": {
+                        "type": "string",
+                        "description": "Expose monetary fields so clients (devices/clients) can display totals immediately"
+                    },
+                    "tax": {
+                        "type": "string"
+                    },
+                    "discount": {
+                        "type": "string"
+                    },
+                    "total": {
+                        "type": "string"
+                    },
+                    "guest_count": {
+                        "type": "string"
+                    },
+                    "is_printed": {
+                        "type": "string"
+                    },
+                    "printed_at": {
+                        "type": "string"
+                    },
+                    "printed_by": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "type": "string"
+                    },
+                    "print_events": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "order_id",
+                    "order_number",
+                    "device",
+                    "order",
+                    "table",
+                    "tablename",
+                    "status",
+                    "subtotal",
+                    "tax",
+                    "discount",
+                    "total",
+                    "guest_count",
+                    "is_printed",
+                    "printed_at",
+                    "printed_by",
+                    "items"
+                ],
+                "title": "DeviceOrderResource"
+            },
+            "DeviceRegisterRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "app_version": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "name",
+                    "code"
+                ],
+                "title": "DeviceRegisterRequest"
+            },
+            "DeviceResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "device_uuid": {
+                        "type": "string"
+                    },
+                    "branch": {
+                        "$ref": "#/components/schemas/Branch"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "table": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "device_uuid",
+                    "branch",
+                    "name",
+                    "table"
+                ],
+                "title": "DeviceResource"
+            },
+            "MarkOrderPrintedBulkRequest": {
+                "type": "object",
+                "properties": {
+                    "printed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "printer_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 100
+                    },
+                    "order_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "minItems": 1,
+                        "maxItems": 100
+                    }
+                },
+                "required": [
+                    "order_ids"
+                ],
+                "title": "MarkOrderPrintedBulkRequest"
+            },
+            "MarkOrderPrintedRequest": {
+                "type": "object",
+                "properties": {
+                    "printed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "printer_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 100
+                    }
+                },
+                "title": "MarkOrderPrintedRequest"
+            },
+            "MenuModifierResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "string",
+                        "description": "Preserve existing relation-based group name"
+                    },
+                    "groupName": {
+                        "description": "POS/group label derived from `receipt_name` (P=Pork, B=Beef, C=Chicken)",
+                        "anyOf": [
+                            {
+                                "type": "null"
+                            },
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "string",
+                                "enum": [
+                                    "Pork",
+                                    "Beef",
+                                    "Chicken"
+                                ]
+                            }
+                        ]
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "kitchen_name": {
+                        "type": "string"
+                    },
+                    "receipt_name": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "'cost' => Number::format($this->cost ?? 0, 2),"
+                    },
+                    "is_taxable": {
+                        "type": "string"
+                    },
+                    "is_available": {
+                        "type": "string"
+                    },
+                    "is_discountable": {
+                        "type": "string"
+                    },
+                    "is_modifier": {
+                        "type": "string",
+                        "description": "'tare_weight' => $this->tare_weight,\n'scale_unit' => $this->scale_unit,\n'measurement_unit' => $this->measurement_unit,\n'is_locked' => $this->is_locked,\n'quantity' => $this->quantity,"
+                    },
+                    "is_modifier_only": {
+                        "type": "string"
+                    },
+                    "isMod": {
+                        "type": "string"
+                    },
+                    "isModOnly": {
+                        "type": "string"
+                    },
+                    "img_url": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "group",
+                    "groupName",
+                    "name",
+                    "category",
+                    "kitchen_name",
+                    "receipt_name",
+                    "price",
+                    "description",
+                    "is_taxable",
+                    "is_available",
+                    "is_discountable",
+                    "is_modifier",
+                    "is_modifier_only",
+                    "isMod",
+                    "isModOnly",
+                    "img_url"
+                ],
+                "title": "MenuModifierResource"
+            },
+            "MenuResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "string",
+                        "description": "'menu_group_id' => $this->menu_group_id ?? null,\n'menu_category_id' => $this->menu_category_id ?? null,\n'menu_course_type_id' => $this->menu_course_type_id ?? null,\n'menu_tax_type_id' => $this->menu_tax_type_id ?? null,"
+                    },
+                    "groupName": {
+                        "type": "string",
+                        "description": "POS/raw fields (some stored-procs return these exact keys)"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "course": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "kitchen_name": {
+                        "type": "string"
+                    },
+                    "receipt_name": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": "string"
+                    },
+                    "cost": {
+                        "type": "string"
+                    },
+                    "is_taxable": {
+                        "type": "string",
+                        "description": "'description' => $this->description,\n'index' => $this->index,"
+                    },
+                    "is_modifier": {
+                        "type": "string",
+                        "description": "'is_available' => $this->is_available,"
+                    },
+                    "is_modifier_only": {
+                        "type": "string"
+                    },
+                    "isMod": {
+                        "type": "string",
+                        "description": "Legacy/pos keys for clients that use camelCase flags"
+                    },
+                    "isModOnly": {
+                        "type": "string"
+                    },
+                    "is_discountable": {
+                        "type": "string",
+                        "description": "'can_open_price' => $this->can_open_price,"
+                    },
+                    "img_url": {
+                        "type": "string",
+                        "description": "'tare_weight' => $this->tare_weight,\n'scale_unit' => $this->scale_unit,\n'measurement_unit' => $this->measurement_unit,\n'auto_counter' => $this->auto_counter,\n'is_locked' => $this->is_locked,\n'quantity' => $this->quantity,\n'in_stock' => $this->in_stock,\n'prompt_for_note' => $this->prompt_for_note,\n'is_modifier_only' => $this->is_modifier_only,\n'container_id' => $this->container_id,\n'quantity_option' => $this->quantity_option,\n'units' => $this->units,\n'show_unit_price_on_receipt' => $this->show_unit_price_on_receipt,\n'decimal_places_for_qty_input' => $this->decimal_places_for_qty_input,\n'prompt_description' => $this->prompt_description,\n'serving_count' => $this->serving_count,\n'best_seller_candidate' => $this->best_seller_candidate,\n'calories' => $this->calories,\n'guest_count' => $this->guest_count,"
+                    },
+                    "tax": {
+                        "type": "string",
+                        "description": "'image' => $this->image?->path,\n'images' => $this->menuImage,\n'img_path' => $this->image_url,"
+                    },
+                    "tax_amount": {
+                        "type": "string"
+                    },
+                    "modifiers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MenuModifierResource"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "group",
+                    "groupName",
+                    "category",
+                    "course",
+                    "name",
+                    "kitchen_name",
+                    "receipt_name",
+                    "price",
+                    "cost",
+                    "is_taxable",
+                    "is_modifier",
+                    "is_modifier_only",
+                    "isMod",
+                    "isModOnly",
+                    "is_discountable",
+                    "img_url",
+                    "tax",
+                    "tax_amount"
+                ],
+                "title": "MenuResource"
+            },
+            "Order": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "session_id": {
+                        "type": "integer"
+                    },
+                    "terminal_session_id": {
+                        "type": "integer"
+                    },
+                    "date_time_opened": {
+                        "type": "string"
+                    },
+                    "date_time_closed": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "revenue_id": {
+                        "type": "integer"
+                    },
+                    "terminal_id": {
+                        "type": "integer"
+                    },
+                    "current_terminal_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "end_terminal_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "customer_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "is_open": {
+                        "type": "boolean"
+                    },
+                    "is_transferred": {
+                        "type": "boolean"
+                    },
+                    "is_voided": {
+                        "type": "boolean"
+                    },
+                    "guest_count": {
+                        "type": "integer"
+                    },
+                    "service_type_id": {
+                        "type": "integer"
+                    },
+                    "is_available": {
+                        "type": "boolean"
+                    },
+                    "cash_tray_session_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "server_banking_session_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "start_employee_log_id": {
+                        "type": "integer"
+                    },
+                    "current_employee_log_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "close_employee_log_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "server_employee_log_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "transaction_no": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "reference": {
+                        "type": "string"
+                    },
+                    "created_on": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "modified_on": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cashier_employee_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "terminal_service_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "is_online_order": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "reprint_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "session_id",
+                    "terminal_session_id",
+                    "date_time_opened",
+                    "date_time_closed",
+                    "revenue_id",
+                    "terminal_id",
+                    "current_terminal_id",
+                    "end_terminal_id",
+                    "customer_id",
+                    "is_open",
+                    "is_transferred",
+                    "is_voided",
+                    "guest_count",
+                    "service_type_id",
+                    "is_available",
+                    "cash_tray_session_id",
+                    "server_banking_session_id",
+                    "start_employee_log_id",
+                    "current_employee_log_id",
+                    "close_employee_log_id",
+                    "server_employee_log_id",
+                    "transaction_no",
+                    "reference",
+                    "created_on",
+                    "modified_on",
+                    "cashier_employee_id",
+                    "terminal_service_id",
+                    "is_online_order",
+                    "reprint_count"
+                ],
+                "title": "Order"
+            },
+            "PrinterHeartbeatRequest": {
+                "type": "object",
+                "properties": {
+                    "printer_id": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "printer_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "bluetooth_address": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 17
+                    },
+                    "app_version": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 20
+                    },
+                    "session_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "last_printed_order_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "timestamp": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "printer_id"
+                ],
+                "title": "PrinterHeartbeatRequest"
+            },
+            "ServiceRequestResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "order_id": {
+                        "type": "string"
+                    },
+                    "table_service_id": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "order_id",
+                    "table_service_id",
+                    "created_at"
+                ],
+                "title": "ServiceRequestResource"
+            },
+            "StoreDeviceOrderRequest": {
+                "type": "object",
+                "properties": {
+                    "guest_count": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "subtotal": {
+                        "type": "number",
+                        "example": 988
+                    },
+                    "tax": {
+                        "type": "number",
+                        "example": 118.56
+                    },
+                    "discount": {
+                        "type": "number",
+                        "example": 0
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "example": 1106.56
+                    },
+                    "items": {
+                        "type": "array",
+                        "example": [
+                            {
+                                "menu_id": 46,
+                                "name": "Classic Feast",
+                                "quantity": 2,
+                                "price": 399,
+                                "note": "this is a note",
+                                "subtotal": 898,
+                                "tax": 107.76,
+                                "discount": 0
+                            },
+                            {
+                                "menu_id": 96,
+                                "name": "Coke Zero",
+                                "quantity": 2,
+                                "price": 45,
+                                "note": "this is a note",
+                                "subtotal": 90,
+                                "tax": 10.8,
+                                "discount": 0
+                            }
+                        ],
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "menu_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "quantity": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                },
+                                "price": {
+                                    "type": "number",
+                                    "minimum": 0
+                                },
+                                "note": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "subtotal": {
+                                    "type": "number",
+                                    "minimum": 0
+                                },
+                                "tax": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0
+                                },
+                                "discount": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0
+                                }
+                            },
+                            "required": [
+                                "menu_id",
+                                "name",
+                                "quantity",
+                                "price",
+                                "subtotal"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "guest_count",
+                    "subtotal",
+                    "tax",
+                    "discount",
+                    "total_amount",
+                    "items"
+                ],
+                "title": "StoreDeviceOrderRequest"
+            },
+            "StoreDeviceRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "ip_address": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "table_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "name",
+                    "ip_address"
+                ],
+                "title": "StoreDeviceRequest"
+            },
+            "StoreServiceRequest": {
+                "type": "object",
+                "properties": {
+                    "table_service_id": {
+                        "type": "integer"
+                    },
+                    "order_id": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "table_service_id",
+                    "order_id"
+                ],
+                "title": "StoreServiceRequest"
+            },
+            "TableResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ],
+                "title": "TableResource"
+            },
+            "UpdateDeviceRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "ip_address": {
+                        "type": "string"
+                    },
+                    "port": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "table_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "name",
+                    "ip_address"
+                ],
+                "title": "UpdateDeviceRequest"
+            }
+        },
+        "responses": {
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            },
+            "AuthenticationException": {
+                "description": "Unauthenticated",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ModelNotFoundException": {
+                "description": "Not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

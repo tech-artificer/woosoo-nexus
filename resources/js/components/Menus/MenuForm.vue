@@ -1,8 +1,7 @@
 <!-- resources/js/Pages/Menus/EditMenu.vue -->
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { ref, reactive, watch, computed } from 'vue'
-import { onMounted, ref } from 'vue';
+import { ref, reactive, watch, computed, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Image, Pencil } from 'lucide-vue-next';
@@ -10,31 +9,7 @@ import { Input } from '@/components/ui/input';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Menu } from '@/types/models';
-import { toast } from 'vue-sonner'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { onMounted, ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
-import { Image, Pencil } from 'lucide-vue-next';
-import { Input } from '@/components/ui/input';
-import InputError from '@/components/InputError.vue';
-import { Label } from '@/components/ui/label';
-import { Menu } from '@/types/models';
-import { toast } from 'vue-sonner'
+import { toast } from 'vue-sonner';
 import {
   Tooltip,
   TooltipContent,
