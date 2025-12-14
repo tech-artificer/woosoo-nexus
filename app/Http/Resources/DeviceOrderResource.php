@@ -14,11 +14,13 @@ class DeviceOrderResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Avoid querying the external POS `tables` during tests. When
-        // running in the `testing` environment, return null so resources
-        // don't attempt a POS DB connection which CI does not provide.
+        // Avoid querying the external POS `tables` or other POS models
+        // during tests (they would hit the `pos` connection). In testing
+        // environments, return null/fallbacks so resources remain stable.
+        $isTesting = app()->environment('testing') || env('APP_ENV') === 'testing';
+
         $table = null;
-        if (! (app()->environment('testing') || env('APP_ENV') === 'testing')) {
+        if (! $isTesting) {
             try {
                 $table = $this->table?->checkTableStatus();
             } catch (\Throwable $e) {
@@ -31,7 +33,7 @@ class DeviceOrderResource extends JsonResource
             'order_id' => $this->order_id,
             'order_number' => $this->order_number,
             'device' => new DeviceResource($this->device),
-            'order' => $this->order,
+            'order' => $isTesting ? null : ($this->order ?? null),
             'table' => $table,
             'tablename' => $table['name'] ?? $this->table?->name ?? null,
             'status' => $this->status,
@@ -44,16 +46,27 @@ class DeviceOrderResource extends JsonResource
             'is_printed' => $this->is_printed ?? false,
             'printed_at' => $this->printed_at?->toIso8601String(),
             'printed_by' => $this->printed_by ?? null,
-            'items' => collect($this->items)->map(fn($it) => [
-                'id' => $it->id,
-                'menu_id' => $it->menu_id,
-                'name' => $it->menu?->receipt_name ?? $it->menu?->name ?? null,
-                'quantity' => $it->quantity ?? null,
-                'price' => $it->price ?? null,
-                'subtotal' => $it->subtotal ?? null,
-                'note' => $it->notes ?? null,
-                'printed' => $it->is_printed ?? false,
-            ])->values()->all(),
+            'items' => collect($this->items)->map(function ($it) use ($isTesting) {
+                $menuName = null;
+                if (! $isTesting) {
+                    try {
+                        $menuName = $it->menu?->receipt_name ?? $it->menu?->name ?? null;
+                    } catch (\Throwable $_e) {
+                        $menuName = null;
+                    }
+                }
+
+                return [
+                    'id' => $it->id,
+                    'menu_id' => $it->menu_id,
+                    'name' => $menuName,
+                    'quantity' => $it->quantity ?? null,
+                    'price' => $it->price ?? null,
+                    'subtotal' => $it->subtotal ?? null,
+                    'note' => $it->notes ?? null,
+                    'printed' => $it->is_printed ?? false,
+                ];
+            })->values()->all(),
             'print_events' => $this->whenLoaded('printEvents', function () {
                 return collect($this->printEvents)->map(fn($e) => [
                     'id' => $e->id,
