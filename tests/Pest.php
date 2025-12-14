@@ -17,14 +17,10 @@ if (env('DB_CONNECTION') !== 'testing' && env('APP_ENV') !== 'testing') {
     exit(1);
 }
 
-// In the testing environment, point the external POS connection to the
-// in-memory sqlite testing connection. This prevents the test suite from
-// attempting to connect to a remote POS MySQL server (which CI doesn't
-// provide) while allowing code paths that reference `DB::connection('pos')`
-// to operate without failing due to missing socket files.
-if ((env('APP_ENV') === 'testing') || app()->environment('testing')) {
-    config(['database.connections.pos' => config('database.connections.testing')]);
-}
+// NOTE: POS connection mapping to the testing DB is performed in
+// `Tests\TestCase::setUp()` once the application container has been
+// created. Avoid calling `config()` here because the container isn't
+// guaranteed to be available at Pest bootstrap time.
 
 pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
