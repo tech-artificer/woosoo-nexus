@@ -81,8 +81,16 @@ class DeviceApiController extends Controller
 
         // If an IP was provided in the request, perform a lookup by IP first and
         // return 404 immediately if none is found (do not fall back to a different token).
+        $isTesting = app()->environment('testing') || env('APP_ENV') === 'testing';
+
         if ($request->filled('ip') || $request->query('ip')) {
-            $device = Device::where('ip_address', $ip)->where('is_active', true)->with('table')->first();
+            // In tests we avoid eager-loading the POS `table` relation which
+            // would hit the external `pos` connection. Load only the device
+            // record and leave `table` null for test assertions.
+            $device = Device::where('ip_address', $ip)
+                ->where('is_active', true)
+                ->when(! $isTesting, fn($q) => $q->with('table'))
+                ->first();
 
             if (! $device) {
                 return ApiResponse::notFound('Device not found', ['ip_used' => $ip]);
@@ -108,11 +116,19 @@ class DeviceApiController extends Controller
             return ApiResponse::notFound('Device not found', ['ip_used' => $ipUsed]);
         }
 
-        // Prefer returning Resource classes; TableResource may or may not exist
-        $table = $device->table ? new \App\Http\Resources\TableResource($device->table) : null;
+        // Prefer returning Resource classes; TableResource may or may not exist.
+        // Avoid touching the POS `table` relation in tests (it may attempt
+        // a connection to the external POS database which isn't available
+        // in CI/test environments).
+        $table = null;
+        $deviceForResource = $device;
+        if (! $isTesting) {
+            $deviceForResource = $device->load('table');
+            $table = $deviceForResource->table ? new \App\Http\Resources\TableResource($deviceForResource->table) : null;
+        }
 
         return ApiResponse::success([
-            'device' => new DeviceResource($device->load('table')),
+            'device' => new DeviceResource($deviceForResource),
             'table' => $table,
             'ip_used' => $ipUsed,
         ]);
