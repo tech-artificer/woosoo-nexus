@@ -150,18 +150,35 @@ class OrderService
     {   
         $contextService = new KryptonContextService();
         $defaults = $contextService->getData();
-        
-        $params =  [
-            'start_employee_log_id' => $defaults['employee_log_id'] ?? null,
-            'current_employee_log_id' => $defaults['employee_log_id'] ?? null,
-            'close_employee_log_id' =>   $defaults['employee_log_id'] ?? null,
+
+        // Ensure a predictable set of default keys are always present so
+        // callers can rely on their existence (tests run with empty Krypton
+        // context often). Use sensible fallbacks where appropriate.
+        $normalized = [
+            'price_level_id' => $defaults['price_level_id'] ?? null,
+            'tax_set_id' => $defaults['tax_set_id'] ?? null,
+            'service_type_id' => $defaults['service_type_id'] ?? 1,
+            'revenue_id' => $defaults['revenue_id'] ?? 1,
+            'terminal_id' => $defaults['terminal_id'] ?? 1,
+            'session_id' => $defaults['session_id'] ?? null,
+            'terminal_session_id' => $defaults['terminal_session_id'] ?? null,
+            'employee_log_id' => $defaults['employee_log_id'] ?? null,
+            'cash_tray_session_id' => $defaults['cash_tray_session_id'] ?? null,
+            'terminal_service_id' => $defaults['terminal_service_id'] ?? null,
+            'employee_id' => $defaults['employee_id'] ?? null,
+            'cashier_employee_id' => $defaults['cashier_employee_id'] ?? null,
+        ];
+
+        $params = [
+            'start_employee_log_id' => $normalized['employee_log_id'] ?? null,
+            'current_employee_log_id' => $normalized['employee_log_id'] ?? null,
+            'close_employee_log_id' => $normalized['employee_log_id'] ?? null,
             'server_employee_log_id' => null,
             'is_online_order' => false,
             'reference' => '',
+        ];
 
-        ];        
-        
-        return array_merge($defaults, $params); 
+        return array_merge($normalized, $params);
     }
 
     protected function cancelOrder(Device $device) {
