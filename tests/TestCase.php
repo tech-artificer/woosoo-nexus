@@ -21,24 +21,12 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-            // Use a file-backed sqlite DB for `pos` during tests. In-memory
-            // sqlite can be isolated per connection/process which causes "no
-            // such table" errors in some CI environments; a file-based DB is
-            // more reliable across connections.
-            $posDbPath = database_path('testing-pos.sqlite');
-
-            if (! file_exists($posDbPath)) {
-                // Ensure the database directory exists and create an empty file.
-                if (! is_dir(dirname($posDbPath))) {
-                    mkdir(dirname($posDbPath), 0777, true);
-                }
-                touch($posDbPath);
-            }
-
-            // Copy the testing connection config and point it at the file DB.
+            // Map the `pos` connection to the testing sqlite connection so
+            // tests do not accidentally attempt to connect to the external
+            // MySQL POS database. Keep the connection configuration identical
+            // to the `testing` connection to allow creation of minimal POS
+            // tables in tests when necessary.
             $posConnection = config('database.connections.testing');
-            $posConnection['database'] = $posDbPath;
-
             config(['database.connections.pos' => $posConnection]);
 
             // Purge any existing `pos` connection so the DatabaseManager will
@@ -46,6 +34,10 @@ abstract class TestCase extends BaseTestCase
             // connection objects that still use information_schema queries).
             DB::purge('pos');
             DB::reconnect('pos');
+
+            // Avoid contacting external broadcast drivers (e.g., Pusher) during tests.
+            // Use the `log` broadcaster so broadcasts are harmless and local.
+            config(['broadcasting.default' => 'log']);
 
             // Create minimal POS schema required by tests on the `pos`
             // connection (in-memory). This avoids 'no such table' errors
@@ -56,6 +48,8 @@ abstract class TestCase extends BaseTestCase
                 $schema->create('tables', function (Blueprint $table) {
                     $table->increments('id');
                     $table->string('name')->nullable();
+                    $table->boolean('is_available')->default(false);
+                    $table->boolean('is_locked')->default(false);
                 });
             }
 
@@ -63,6 +57,9 @@ abstract class TestCase extends BaseTestCase
                 $schema->create('orders', function (Blueprint $table) {
                     $table->increments('id');
                     $table->integer('order_id')->nullable();
+                    $table->integer('session_id')->nullable();
+                    $table->integer('terminal_session_id')->nullable();
+                    $table->integer('guest_count')->nullable();
                     $table->string('status')->nullable();
                 });
             }
@@ -97,10 +94,12 @@ abstract class TestCase extends BaseTestCase
             if (! $schema->hasTable('order_checks')) {
                 $schema->create('order_checks', function (Blueprint $table) {
                     $table->increments('id');
-                    $table->decimal('subtotal_amount', 8, 2)->nullable();
-                    $table->decimal('tax_amount', 8, 2)->nullable();
-                    $table->decimal('discount_amount', 8, 2)->nullable();
+                    $table->integer('order_id')->nullable();
                     $table->decimal('total_amount', 8, 2)->nullable();
+                    $table->decimal('paid_amount', 8, 2)->nullable()->default(0);
+                    $table->decimal('tax_amount', 8, 2)->nullable()->default(0);
+                    $table->decimal('discount_amount', 8, 2)->nullable()->default(0);
+                    $table->decimal('subtotal_amount', 8, 2)->nullable();
                 });
             }
         }

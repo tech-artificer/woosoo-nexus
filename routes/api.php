@@ -150,7 +150,16 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     // Printer API routes (device-authenticated)
     // Load printer routes for authenticated devices (PrintEvent support)
     require __DIR__ . '/api_printer_routes.php';
+    
+    // Session endpoints for devices
+    Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
+    Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
     });
+
+// Admin/device-reset endpoint (requires auth)
+Route::middleware(['requestId','auth:sanctum'])->group(function () {
+    Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
+});
 // Health endpoint — quick check for app DB and POS DB connectivity
 Route::get('/health', function () {
     $status = [

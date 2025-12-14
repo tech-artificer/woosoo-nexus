@@ -32,6 +32,8 @@ class DeviceOrderApiController extends Controller
     {   
         // Validate the incoming request
         $validatedData = $request->validated();
+        // `session_id` is considered device-local; accept client-provided session IDs
+        // without consulting the POS/`sessions` table.
         // Initialize errors array
         $errors = [];
         // Get the device from the incoming request

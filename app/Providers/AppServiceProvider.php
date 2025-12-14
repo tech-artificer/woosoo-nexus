@@ -34,6 +34,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(KryptonContextService::class, fn () => new KryptonContextService());
+        // Register test-only service provider when running tests so we can
+        // bind POS/Krypton repositories to fakes for isolation.
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            $this->app->register(\App\Providers\TestServiceProvider::class);
+        }
     }
 
     /**

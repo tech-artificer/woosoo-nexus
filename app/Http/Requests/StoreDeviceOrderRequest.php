@@ -70,6 +70,7 @@ class StoreDeviceOrderRequest extends FormRequest
              * {"menu_id":96,"name":"Coke Zero","quantity":2,"price":45,"note":"this is a note","subtotal":90.00,"tax":10.80,"discount":0.00}]
              */
             'items' => ['required', 'array'],
+            'session_id' => ['nullable', 'integer'],
             'items.*.menu_id' => ['required', 'integer'],
             'items.*.name' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
