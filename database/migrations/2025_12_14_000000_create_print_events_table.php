@@ -26,6 +26,7 @@ return new class extends Migration
             $table->foreign('device_order_id')->references('id')->on('device_orders')->onDelete('cascade');
             $table->index(['device_order_id', 'event_type']);
             $table->index('is_acknowledged');
+            $table->index('printer_id');
         });
     }
 

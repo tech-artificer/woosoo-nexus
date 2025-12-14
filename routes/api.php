@@ -147,19 +147,10 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     // Fetch a device order by its external order id (order_id)
     Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
-    // Printer API (temporarily guest-accessible)
-    // Moved out of auth:device group so printer apps can reach endpoints without device token.
-    // Also load printer routes for authenticated devices (added for PrintEvent support)
+    // Printer API routes (device-authenticated)
+    // Load printer routes for authenticated devices (PrintEvent support)
     require __DIR__ . '/api_printer_routes.php';
     });
-
-// Printer endpoints moved to guest temporarily (preserve exact routes)
-Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(function () {
-    Route::post('/orders/{orderId}/printed', [\App\Http\Controllers\Api\V1\PrinterApiController::class, 'markPrinted']);
-    Route::get('/orders/unprinted', [\App\Http\Controllers\Api\V1\PrinterApiController::class, 'getUnprintedOrders']);
-    Route::post('/orders/printed/bulk', [\App\Http\Controllers\Api\V1\PrinterApiController::class, 'markPrintedBulk']);
-    Route::post('/printer/heartbeat', [\App\Http\Controllers\Api\V1\PrinterApiController::class, 'heartbeat']);
-});
 // Health endpoint — quick check for app DB and POS DB connectivity
 Route::get('/health', function () {
     $status = [

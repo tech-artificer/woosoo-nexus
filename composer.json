@@ -71,6 +71,7 @@
         ],
         "test": [
             "@php artisan config:clear --ansi",
+            "@php artisan migrate --force --ansi",
             "@php artisan test"
         ]
     },

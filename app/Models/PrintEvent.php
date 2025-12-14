@@ -3,10 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * App\Models\PrintEvent
+ *
+ * attempts: server-side counter incremented on each ack/fail report.
+ */
 class PrintEvent extends Model
 {
+    use HasFactory;
+
     protected $table = 'print_events';
     protected $guarded = [];
 
