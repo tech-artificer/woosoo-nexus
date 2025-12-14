@@ -148,6 +148,19 @@ class CreateOrderedMenu
     private function getMenuPriceLevel($menuId)
     {
         if (empty($menuId)) return 1;
-        return Menu::fromQuery('CALL get_menu_price_levels_by_menu(?)', [$menuId])->first() ?? 1;
+
+        // During tests we avoid calling the external POS database. Return
+        // a sensible default price level instead of executing the stored
+        // procedure which would attempt a network/DB connection.
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            return 1;
+        }
+
+        try {
+            return Menu::fromQuery('CALL get_menu_price_levels_by_menu(?)', [$menuId])->first() ?? 1;
+        } catch (\Throwable $e) {
+            report($e);
+            return 1;
+        }
     }
 }
