@@ -152,9 +152,9 @@ class OrderService
         $defaults = $contextService->getData();
         
         $params =  [
-            'start_employee_log_id' => $defaults['employee_log_id'],
-            'current_employee_log_id' => $defaults['employee_log_id'],
-            'close_employee_log_id' =>   $defaults['employee_log_id'],
+            'start_employee_log_id' => $defaults['employee_log_id'] ?? null,
+            'current_employee_log_id' => $defaults['employee_log_id'] ?? null,
+            'close_employee_log_id' =>   $defaults['employee_log_id'] ?? null,
             'server_employee_log_id' => null,
             'is_online_order' => false,
             'reference' => '',

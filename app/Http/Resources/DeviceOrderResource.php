@@ -3,9 +3,9 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\BaseResource;
 
-class DeviceOrderResource extends JsonResource
+class DeviceOrderResource extends BaseResource
 {
     /**
      * Transform the resource into an array.
@@ -68,14 +68,7 @@ class DeviceOrderResource extends JsonResource
                 ];
             })->values()->all(),
             'print_events' => $this->whenLoaded('printEvents', function () {
-                return collect($this->printEvents)->map(fn($e) => [
-                    'id' => $e->id,
-                    'event_type' => $e->event_type,
-                    'meta' => $e->meta,
-                    'is_acknowledged' => $e->is_acknowledged ?? false,
-                    'acknowledged_at' => $e->acknowledged_at?->toIso8601String(),
-                    'created_at' => $e->created_at?->toIso8601String(),
-                ])->values()->all();
+                return PrintEventResource::collection($this->printEvents);
             }),
         ];
     }

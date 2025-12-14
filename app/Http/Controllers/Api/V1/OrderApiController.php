@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use Illuminate\Http\Request;
+use App\Models\Krypton\TerminalSession;
 use App\Models\Krypton\Menu as KryptonMenu;
 use App\Actions\Order\CreateOrderedMenu;
 use App\Events\PrintRefill;
@@ -42,8 +43,21 @@ class OrderApiController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(DeviceOrder $order)
+    public function show(Request $request, DeviceOrder $order)
     {
+        $device = $request->user();
+
+        // Branch-level authorization: devices may only access orders for their branch
+        if ($device && isset($device->branch_id) && isset($order->branch_id) && $device->branch_id !== $order->branch_id) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        // Optional session scoping: if client supplied a session_id, ensure it matches the order
+        $sessionId = $request->input('session_id');
+        if ($sessionId && $order->session_id != $sessionId) {
+            return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
+        }
+
         return response()->json([
             'success' => true,
             'order' => $order
@@ -53,12 +67,21 @@ class OrderApiController extends Controller
     /**
      * Show the specified resource by external order_id field.
      */
-    public function showByExternalId(string $orderId)
+    public function showByExternalId(Request $request, string $orderId)
     {
-       
         $order = DeviceOrder::where(['order_id' => $orderId])->first();
         if (! $order) {
             return response()->json([ 'success' => false, 'message' => 'Order not found' ], 404);
+        }
+
+        $device = $request->user();
+        if ($device && isset($device->branch_id) && isset($order->branch_id) && $device->branch_id !== $order->branch_id) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        $sessionId = $request->input('session_id');
+        if ($sessionId && $order->session_id != $sessionId) {
+            return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
         return response()->json([
@@ -103,6 +126,18 @@ class OrderApiController extends Controller
         $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
         if (! $deviceOrder) {
             return response()->json(['success' => false, 'message' => 'Order not found'], 404);
+        }
+
+        // Authorization: ensure device (if any) is allowed to operate on this order
+        $device = $request->user();
+        if ($device && isset($device->branch_id) && isset($deviceOrder->branch_id) && $device->branch_id !== $deviceOrder->branch_id) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        // Session scoping: if client provided session_id, ensure it matches
+        $sessionId = $request->input('session_id');
+        if ($sessionId && $deviceOrder->session_id != $sessionId) {
+            return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
         $incomingItems = $request->input('items', []);
@@ -177,6 +212,16 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Order not found'], 404);
         }
 
+        $device = $request->user();
+        if ($device && isset($device->branch_id) && isset($deviceOrder->branch_id) && $device->branch_id !== $deviceOrder->branch_id) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        $sessionId = $request->input('session_id');
+        if ($sessionId && $deviceOrder->session_id != $sessionId) {
+            return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
+        }
+
         $deviceOrder->is_printed = true;
         $deviceOrder->printed_at = now();
         $deviceOrder->save();
@@ -202,6 +247,7 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Order not found'], 404);
         }
 
+        // Branch/session checks are not strictly enforced for this internal dispatch endpoint.
         PrintOrder::dispatch($order);
 
         return response()->json(['success' => true]);

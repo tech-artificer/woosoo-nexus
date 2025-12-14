@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use App\Models\DeviceOrder;
-use App\Models\Krypton\TerminalSession;
+// TerminalSession checks removed; sessions are device-local
 use App\Http\Requests\MarkOrderPrintedRequest;
 use App\Http\Requests\GetUnprintedOrdersRequest;
 use App\Http\Requests\MarkOrderPrintedBulkRequest;
@@ -20,6 +20,12 @@ use App\Services\PrintEventService;
 
 class PrinterApiController extends Controller
 {
+    protected PrintEventService $printEventService;
+
+    public function __construct(PrintEventService $printEventService)
+    {
+        $this->printEventService = $printEventService;
+    }
     public function markPrinted(MarkOrderPrintedRequest $request, int $orderId)
     {
         $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
@@ -75,16 +81,8 @@ class PrinterApiController extends Controller
         $since = $request->input('since');
         $limit = min((int)$request->input('limit', 100), 200);
 
-        $session = TerminalSession::find($sessionId);
-        if (! $session) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Session not found or expired',
-                'session_id' => $sessionId,
-                'count' => 0,
-                'orders' => [],
-            ], 404);
-        }
+        // Do not require a canonical TerminalSession in POS. Treat session_id as
+        // an opaque device-local identifier; if provided, we'll filter by it below.
 
         $ordersQuery = DeviceOrder::where('session_id', $sessionId)
             ->where('is_printed', 0)
@@ -141,7 +139,8 @@ class PrinterApiController extends Controller
     public function markPrintedBulk(MarkOrderPrintedBulkRequest $request)
     {
         $orderIds = $request->input('order_ids');
-        $printedAt = $request->input('printed_at', now());
+        $printedAtInput = $request->input('printed_at');
+        $printedAt = $printedAtInput ? Carbon::parse($printedAtInput)->utc() : Carbon::now()->utc();
         $printerId = $request->input('printer_id');
 
         $updated = [];
@@ -195,7 +194,7 @@ class PrinterApiController extends Controller
             $limit = min((int)$request->input('limit', 100), 200);
             $since = $request->input('since');
 
-            $device = $request()->user();
+            $device = $request->user();
 
             $eventsQuery = PrintEvent::where('is_acknowledged', false)
                 ->when($since, fn($q) => $q->where('created_at', '>', $since))
@@ -249,8 +248,7 @@ class PrinterApiController extends Controller
                 $printedAt = $request->input('printed_at');
 
                 try {
-                    $service = app(PrintEventService::class);
-                    $evt = $service->getById($id);
+                    $evt = $this->printEventService->getById($id);
                 } catch (\Throwable $e) {
                     return response()->json(['success' => false, 'message' => 'Event not found'], 404);
                 }
@@ -258,9 +256,16 @@ class PrinterApiController extends Controller
                 // authorize device for this event
                 $this->authorizeDeviceForEvent($evt);
 
-                $evt = app(PrintEventService::class)->ack($id, $printerId, $printedAt);
+                $res = $this->printEventService->ack($id, $printerId, $printedAt);
 
-                return response()->json(['success' => true, 'message' => 'Acknowledged', 'data' => ['id' => $evt->id]]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Acknowledged',
+                    'data' => [
+                        'id' => $res['print_event']->id,
+                        'was_updated' => $res['was_updated'],
+                    ],
+                ]);
         }
 
         /**
@@ -269,17 +274,24 @@ class PrinterApiController extends Controller
         public function failPrintEvent(Request $request, int $id)
         {
                 try {
-                    $service = app(PrintEventService::class);
-                    $evt = $service->getById($id);
+                    $evt = $this->printEventService->getById($id);
                 } catch (\Throwable $e) {
                     return response()->json(['success' => false, 'message' => 'Event not found'], 404);
                 }
 
                 $this->authorizeDeviceForEvent($evt);
 
-                $evt = app(PrintEventService::class)->fail($id, $request->input('error'));
+                $res = $this->printEventService->fail($id, $request->input('error'));
 
-                return response()->json(['success' => true, 'message' => 'Marked failed', 'data' => ['id' => $evt->id, 'attempts' => $evt->attempts]]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Marked failed',
+                    'data' => [
+                        'id' => $res['print_event']->id,
+                        'attempts' => $res['print_event']->attempts,
+                        'was_updated' => $res['was_updated'],
+                    ],
+                ]);
         }
 
         /**
@@ -318,11 +330,7 @@ class PrinterApiController extends Controller
             'last_seen' => now(),
         ], now()->addMinutes(2));
 
-        $sessionActive = false;
-        if ($sessionId = $request->input('session_id')) {
-            $session = TerminalSession::find($sessionId);
-            $sessionActive = $session && $session->status === 'ACTIVE';
-        }
+        $sessionActive = $request->filled('session_id');
 
         return response()->json([
             'success' => true,
