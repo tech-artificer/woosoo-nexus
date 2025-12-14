@@ -16,7 +16,16 @@ class PrintEvent extends Model
     use HasFactory;
 
     protected $table = 'print_events';
-    protected $guarded = [];
+    protected $fillable = [
+        'device_order_id',
+        'printer_id',
+        'event_type',
+        'meta',
+        'is_acknowledged',
+        'acknowledged_at',
+        'attempts',
+        'last_error',
+    ];
 
     protected $casts = [
         'meta' => 'array',

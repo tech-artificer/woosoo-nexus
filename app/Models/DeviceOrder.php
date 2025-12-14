@@ -18,7 +18,10 @@ use App\Models\DeviceOrderItems;
 class DeviceOrder extends Model
 {
     protected $table = 'device_orders';
-    protected $guarded = [];
+    // Prevent accidental mass-assignment of legacy JSON columns
+    // The `items` and `meta` JSON columns have been migrated out
+    // to `device_order_items` and a computed accessor respectively.
+    protected $guarded = ['items', 'meta'];
     protected $primaryKey = 'id';
 
     // protected $fillable = [
