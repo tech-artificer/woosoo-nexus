@@ -14,6 +14,8 @@ use App\Http\Requests\PrinterHeartbeatRequest;
 use App\Events\PrintOrder;
 use App\Events\PrintRefill;
 use App\Events\Order\OrderPrinted;
+use App\Models\PrintEvent;
+use App\Services\PrintEventService;
 
 class PrinterApiController extends Controller
 {
@@ -170,6 +172,83 @@ class PrinterApiController extends Controller
             ],
         ]);
     }
+
+        /**
+         * Return unacknowledged PrintEvents for printers to consume.
+         */
+        public function getUnprintedEvents(Request $request)
+        {
+            $limit = min($request->input('limit', 50), 200);
+            $since = $request->input('since');
+
+            $events = PrintEvent::where('is_acknowledged', false)
+                ->when($since, fn($q) => $q->where('created_at', '>', $since))
+                ->with(['deviceOrder', 'deviceOrder.items'])
+                ->orderBy('created_at', 'asc')
+                ->limit($limit)
+                ->get();
+
+            $payload = $events->map(function ($e) {
+                return [
+                    'id' => $e->id,
+                    'device_order_id' => $e->device_order_id,
+                    'event_type' => $e->event_type,
+                    'meta' => $e->meta,
+                    'created_at' => $e->created_at?->toIso8601String(),
+                    'order' => $e->deviceOrder ? [
+                        'order_id' => $e->deviceOrder->order_id,
+                        'order_number' => $e->deviceOrder->order_number,
+                        'items' => $e->deviceOrder->items->map(fn($it) => [
+                            'menu_id' => $it->menu_id,
+                            'quantity' => $it->quantity,
+                            'name' => $it->name,
+                        ])->values(),
+                    ] : null,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'count' => $payload->count(),
+                'events' => $payload,
+            ]);
+        }
+
+        /**
+         * Acknowledge a PrintEvent as handled by a printer.
+         */
+        public function ackPrintEvent(Request $request, int $id)
+        {
+            $printerId = $request->input('printer_id');
+            $evt = PrintEvent::find($id);
+            if (! $evt) {
+                return response()->json(['success' => false, 'message' => 'Event not found'], 404);
+            }
+
+            $evt->is_acknowledged = true;
+            $evt->acknowledged_at = now();
+            if ($printerId) $evt->printer_id = $printerId;
+            $evt->save();
+
+            return response()->json(['success' => true, 'message' => 'Acknowledged', 'data' => ['id' => $evt->id]]);
+        }
+
+        /**
+         * Mark a PrintEvent as failed (printer reported error).
+         */
+        public function failPrintEvent(Request $request, int $id)
+        {
+            $evt = PrintEvent::find($id);
+            if (! $evt) {
+                return response()->json(['success' => false, 'message' => 'Event not found'], 404);
+            }
+
+            $evt->attempts = ($evt->attempts ?? 0) + 1;
+            $evt->last_error = $request->input('error');
+            $evt->save();
+
+            return response()->json(['success' => true, 'message' => 'Marked failed', 'data' => ['id' => $evt->id, 'attempts' => $evt->attempts]]);
+        }
 
     public function heartbeat(PrinterHeartbeatRequest $request)
     {

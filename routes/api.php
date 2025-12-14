@@ -149,6 +149,8 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
 
     // Printer API (temporarily guest-accessible)
     // Moved out of auth:device group so printer apps can reach endpoints without device token.
+    // Also load printer routes for authenticated devices (added for PrintEvent support)
+    require __DIR__ . '/api_printer_routes.php';
     });
 
 // Printer endpoints moved to guest temporarily (preserve exact routes)

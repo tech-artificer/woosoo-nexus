@@ -111,6 +111,16 @@ class OrderService
             // Create ordered menus (both POS and local device_order_items)
             $orderedMenus = CreateOrderedMenu::run($this->attributes);
 
+            // Schedule creation of a PrintEvent after the database transaction commits.
+            // This ensures we don't create print events while the order transaction is still open.
+            DB::afterCommit(function () use ($deviceOrder) {
+                try {
+                    app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            });
+
             return $deviceOrder;
         });
     }

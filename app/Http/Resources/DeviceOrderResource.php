@@ -43,6 +43,16 @@ class DeviceOrderResource extends JsonResource
                 'note' => $it->notes ?? null,
                 'printed' => $it->is_printed ?? false,
             ])->values()->all(),
+            'print_events' => $this->whenLoaded('printEvents', function () {
+                return collect($this->printEvents)->map(fn($e) => [
+                    'id' => $e->id,
+                    'event_type' => $e->event_type,
+                    'meta' => $e->meta,
+                    'is_acknowledged' => $e->is_acknowledged ?? false,
+                    'acknowledged_at' => $e->acknowledged_at?->toIso8601String(),
+                    'created_at' => $e->created_at?->toIso8601String(),
+                ])->values()->all();
+            }),
         ];
     }
 }

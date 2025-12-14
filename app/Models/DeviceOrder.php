@@ -170,6 +170,14 @@ class DeviceOrder extends Model
         return $this->hasMany(ServiceRequest::class, 'device_order_id');
     }
 
+    /**
+     * Related print events for this device order.
+     */
+    public function printEvents(): HasMany
+    {
+        return $this->hasMany(\App\Models\PrintEvent::class, 'device_order_id', 'id');
+    }
+
     public function scopeActiveOrder(Builder $query) {
         return $query->whereIn('status', [
             OrderStatus::PENDING,
