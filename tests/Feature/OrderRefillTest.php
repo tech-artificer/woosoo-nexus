@@ -76,7 +76,7 @@ class OrderRefillTest extends TestCase
 
         $realDb = DB::getFacadeRoot();
         // Ensure getDefaultConnection is available on the DB facade mock used by testing helpers
-        DB::shouldReceive('getDefaultConnection')->andReturn('sqlite');
+        DB::shouldReceive('getDefaultConnection')->andReturn('testing');
         DB::shouldReceive('connection')->andReturnUsing(function ($name = null) use ($posConn, $realDb) {
             if ($name === 'pos') {
                 return $posConn;
