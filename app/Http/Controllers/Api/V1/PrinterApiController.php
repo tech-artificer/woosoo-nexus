@@ -28,7 +28,7 @@ class PrinterApiController extends Controller
         }
 
         // Ensure the authenticated device is allowed to operate on this order (branch-level check)
-        $device = $request()->user();
+        $device = $request->user();
         if ($device && isset($deviceOrder->branch_id) && isset($device->branch_id) && $device->branch_id !== $deviceOrder->branch_id) {
             return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
         }
@@ -94,7 +94,7 @@ class PrinterApiController extends Controller
             ->orderBy('created_at', 'asc');
 
         // Enforce branch restriction: only return orders for the authenticated device's branch
-        $device = $request()->user();
+        $device = $request->user();
         if ($device && isset($device->branch_id)) {
             $ordersQuery->where('branch_id', $device->branch_id);
         }
