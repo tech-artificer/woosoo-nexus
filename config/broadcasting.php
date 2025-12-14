@@ -15,7 +15,11 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_CONNECTION', 'reverb'),
+    // Use configured driver if present. If no driver is configured and no
+    // Reverb/Pusher credentials are available (typical in CI), fall back to
+    // the `null` broadcaster so package discovery and tests do not attempt
+    // to instantiate external broadcasting clients like Pusher.
+    'default' => env('BROADCAST_CONNECTION') ?: (env('REVERB_APP_KEY') ? 'reverb' : (env('PUSHER_APP_KEY') ? 'pusher' : 'null')),
 
     /*
     |--------------------------------------------------------------------------
