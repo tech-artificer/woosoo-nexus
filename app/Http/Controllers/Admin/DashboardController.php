@@ -33,7 +33,13 @@ class DashboardController extends Controller
      */
     public function index()
     {   
-        $session = Session::fromQuery('CALL get_latest_session_id()')->first();
+        // In testing we use a simple query against the `pos` sessions table
+        // because SQLite does not support stored procedure `CALL` syntax.
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            $session = Session::orderByDesc('id')->first();
+        } else {
+            $session = Session::fromQuery('CALL get_latest_session_id()')->first();
+        }
 
         if( !$session ) {
             return Inertia::render('Dashboard', [

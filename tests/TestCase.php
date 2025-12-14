@@ -5,6 +5,7 @@ namespace Tests;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -39,6 +40,12 @@ abstract class TestCase extends BaseTestCase
             $posConnection['database'] = $posDbPath;
 
             config(['database.connections.pos' => $posConnection]);
+
+            // Purge any existing `pos` connection so the DatabaseManager will
+            // recreate it using the updated config (prevents lingering MySQL
+            // connection objects that still use information_schema queries).
+            DB::purge('pos');
+            DB::reconnect('pos');
 
             // Create minimal POS schema required by tests on the `pos`
             // connection (in-memory). This avoids 'no such table' errors
