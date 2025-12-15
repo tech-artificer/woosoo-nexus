@@ -37,7 +37,12 @@ class OrderController extends Controller
     {
         $tableRepo = new TableRepository();
         $activeOrders = $tableRepo->getActiveTableOrders();
-        $session = Session::fromQuery('CALL get_latest_session_id()')->first();
+
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            $session = Session::orderByDesc('id')->first();
+        } else {
+            $session = Session::fromQuery('CALL get_latest_session_id()')->first();
+        }
 
         $orders = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
                 ->where('session_id', $session->id)

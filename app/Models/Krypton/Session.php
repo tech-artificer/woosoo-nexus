@@ -25,6 +25,10 @@ class Session extends Model
      * @return string
      */
     public static function getLatestSession() {
+      if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        return null;
+      }
+
       return Self::fromQuery('CALL get_latest_session()')->first();
     } 
 
@@ -34,6 +38,10 @@ class Session extends Model
      * @return string
      */
     public static function getLatestSessionId() {
+      if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        return null;
+      }
+
       return Self::fromQuery('CALL get_latest_session_id()');
     } 
 

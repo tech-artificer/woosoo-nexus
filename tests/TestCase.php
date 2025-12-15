@@ -84,6 +84,14 @@ abstract class TestCase extends BaseTestCase
                 });
             }
 
+            if (! $schema->hasTable('table_orders')) {
+                $schema->create('table_orders', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->integer('order_id')->nullable();
+                    $table->integer('table_id')->nullable();
+                });
+            }
+
             if (! $schema->hasTable('sessions')) {
                 $schema->create('sessions', function (Blueprint $table) {
                     $table->increments('id');
