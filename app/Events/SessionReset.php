@@ -12,7 +12,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 
 class SessionReset implements ShouldBroadcast
 {
-    use InteractsWithSockets, SerializesModels;
+    use InteractsWithSockets, SerializesModels, Dispatchable;
 
     public int $sessionId;
     public int $version;

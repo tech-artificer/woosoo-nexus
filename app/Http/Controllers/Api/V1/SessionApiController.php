@@ -53,7 +53,7 @@ class SessionApiController extends Controller
      */
     public function reset(Request $request, int $id)
     {
-        $user = auth()->user();
+        $user = $request()->user();
         // Allow admins (User->is_admin) or devices
         $isAdmin = isset($user->is_admin) && $user->is_admin;
         $isDevice = $user && get_class($user) === '\\App\\Models\\Device';
