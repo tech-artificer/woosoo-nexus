@@ -40,6 +40,9 @@
 - **GET**: `/orders/unprinted` : `PrinterApiController@getUnprintedOrders` — Polling fallback to fetch unprinted orders. Query: `session_id` (required), `since` (optional), `limit` (optional). Returns orders with `is_printed == 0` and excludes `CANCELLED`/`VOIDED` statuses.
 - **POST**: `/orders/printed/bulk` : `PrinterApiController@markPrintedBulk` — Bulk mark orders as printed (optional). Response returns `{ updated, already_printed, not_found }`.
 - **POST**: `/printer/heartbeat` : `PrinterApiController@heartbeat` — Track active printer devices (optional). Heartbeat cached for 2 minutes; response includes `session_active`.
+ - **GET**: `/printer/unprinted-events` : `PrinterApiController@getUnprintedEvents` — Return unacknowledged `PrintEvent` records for printers to consume. Query: `session_id` (optional), `since` (optional), `limit` (optional, default 100, max 200).
+ - **POST**: `/printer/print-events/{id}/ack` : `PrinterApiController@ackPrintEvent` — Acknowledge a `PrintEvent` as handled by a printer. Body: `printer_id` (nullable), `printed_at` (nullable date). Returns `{ id, was_updated }`.
+ - **POST**: `/printer/print-events/{id}/failed` : `PrinterApiController@failPrintEvent` — Mark a `PrintEvent` as failed (store error and increment attempts). Body: `error` (nullable string). Returns `{ id, attempts, was_updated }`.
 
 **Admin-only (web) device token generation**
 - **POST**: `/devices/{device}/token` : Admin-only web route, creates a personal access token for the specified `Device`. Returns JSON with `token` and `expires_at` when called via AJAX. Tokens are labeled `admin-issued` and default to 1 year expiry. Use this for pre-provisioning devices with static IPs.

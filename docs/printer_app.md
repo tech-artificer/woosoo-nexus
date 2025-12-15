@@ -432,7 +432,64 @@ public function getUnprintedOrders(GetUnprintedOrdersRequest $request)
     ]);
 }
 ```
+## 2a. PrintEvent API (recommended)
 
+The PrintEvent API provides an event-driven alternative to polling raw `device_orders`. Servers create PrintEvents (for example on order creation) and printers consume them. This is the recommended flow for relay-style printer apps since it decouples printing from order persistence and preserves device-local session semantics.
+
+**Authentication:** `auth:device` (Sanctum device token)
+
+### Endpoints (PrintEvent workflow)
+
+- **GET** `/api/printer/unprinted-events` — List unacknowledged PrintEvents.
+  - Query: `session_id` (optional integer), `since` (optional ISO8601 datetime), `limit` (optional integer, default 100, max 200).
+  - Returns: `{ success, count, events: [ { id, device_order_id, event_type, meta, created_at, order } ] }` where `order` contains `order_id`, `order_number`, and `items` (menu_id, quantity, name).
+
+- **POST** `/api/printer/print-events/{id}/ack` — Acknowledge a PrintEvent.
+  - Body: `{ printer_id?: string, printed_at?: ISO8601 }`.
+  - Response: `200` `{ success: true, message: 'Acknowledged', data: { id, was_updated: bool } }`.
+  - Notes: This is a concurrency-safe conditional update. `was_updated` is `true` only if the event was unacknowledged when this request ran.
+
+- **POST** `/api/printer/print-events/{id}/failed` — Mark a PrintEvent as failed.
+  - Body: `{ error?: string }` (max 1000 chars).
+  - Response: `200` `{ success: true, message: 'Marked failed', data: { id, attempts, was_updated } }`.
+
+### Authorization & Errors
+
+- Devices are authorized at branch-level: the authenticated device's `branch_id` must match the `device_order.branch_id` for the event. Otherwise `403 Forbidden`.
+- `404 Not Found` if the PrintEvent id does not exist.
+- `422 Unprocessable Entity` for invalid inputs (e.g., malformed `printed_at` or too-long `error`).
+
+### Example: GET unprinted events
+
+```bash
+curl "http://localhost/api/printer/unprinted-events?limit=50&since=2025-12-15T00:00:00Z" \
+  -H "Authorization: Bearer <device-token>"
+```
+
+Example item in `events` array:
+
+```json
+{
+  "id": 42,
+  "device_order_id": 123,
+  "event_type": "INITIAL",
+  "meta": {},
+  "created_at": "2025-12-15T01:00:00Z",
+  "order": {
+    "order_id": 1001,
+    "order_number": "ORD-1001",
+    "items": [ { "menu_id": 46, "quantity": 2, "name": "Beef Rendang" } ]
+  }
+}
+```
+
+### Notes for implementers
+
+- Servers create PrintEvents via `PrintEventService::createForOrder($deviceOrder, 'INITIAL')` when an order is created. The printer app should prefer PrintEvents when available and fall back to `/api/orders/unprinted` only if needed.
+- Keep `limit` server-side capped at `200` to avoid large responses. The default is `100`.
+- Acknowledgements are idempotent — clients should call ack and treat `was_updated === false` as an already-handled event.
+
+## 3. Get Latest Session (Confirmation)
 ---
 
 ## 3. Get Latest Session (Confirmation)

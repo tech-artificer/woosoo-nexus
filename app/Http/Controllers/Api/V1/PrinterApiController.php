@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\AckPrintEventRequest;
 use App\Http\Requests\FailPrintEventRequest;
 use Illuminate\Support\Facades\Cache;
@@ -36,7 +37,7 @@ class PrinterApiController extends Controller
         }
 
         // Ensure the authenticated device is allowed to operate on this order (branch-level check)
-        $device = $request->user();
+        $device = Auth::user();
         if ($device && isset($deviceOrder->branch_id) && isset($device->branch_id) && $device->branch_id !== $deviceOrder->branch_id) {
             return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
         }
@@ -94,7 +95,7 @@ class PrinterApiController extends Controller
             ->orderBy('created_at', 'asc');
 
         // Enforce branch restriction: only return orders for the authenticated device's branch
-        $device = $request->user();
+        $device = Auth::user();
         if ($device && isset($device->branch_id)) {
             $ordersQuery->where('branch_id', $device->branch_id);
         }
@@ -197,7 +198,7 @@ class PrinterApiController extends Controller
             $limit = max(1, min($limitInput, 200));
             $since = $request->input('since');
 
-            $device = $request->user();
+            $device = Auth::user();
 
             $eventsQuery = PrintEvent::where('is_acknowledged', false)
                 ->when($since, fn($q) => $q->where('created_at', '>', $since))
@@ -303,7 +304,7 @@ class PrinterApiController extends Controller
          */
         protected function authorizeDeviceForEvent(PrintEvent $evt)
         {
-            $device = auth()->user();
+            $device = Auth::user();
             if (! $device) {
                 abort(403, 'Unauthenticated device');
             }

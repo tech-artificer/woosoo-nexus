@@ -8,10 +8,11 @@ use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Foundation\Events\Dispatchable;
 
 class SessionReset implements ShouldBroadcast
 {
-    use InteractsWithSockets, SerializesModels;
+    use InteractsWithSockets, SerializesModels, Dispatchable;
 
     public int $sessionId;
     public int $version;
