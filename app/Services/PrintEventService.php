@@ -43,24 +43,37 @@ class PrintEventService
     public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null): array
     {
         $ackAt = $printedAt ? Carbon::parse($printedAt)->utc() : Carbon::now()->utc();
+        $result = DB::transaction(function () use ($printEventId, $printerId, $ackAt) {
+            // Lock the row to avoid race conditions when multiple workers
+            // acknowledge/fail the same print event concurrently.
+            $evt = PrintEvent::where('id', $printEventId)->lockForUpdate()->first();
 
-        // Conditional update: only flip is_acknowledged when it's currently false.
-        // Return whether this call actually performed the acknowledgement.
-        $updated = PrintEvent::where('id', $printEventId)
-            ->where('is_acknowledged', false)
-            ->update([
-                'is_acknowledged' => true,
-                'acknowledged_at' => $ackAt,
-                'printer_id' => $printerId,
-                'attempts' => DB::raw('attempts + 1'),
-                'updated_at' => Carbon::now()->utc(),
-            ]);
+            if (! $evt) {
+                // Caller expects an exception-like behavior similar to findOrFail.
+                throw new \Illuminate\Database\Eloquent\ModelNotFoundException("PrintEvent not found: {$printEventId}");
+            }
 
-        $evt = $this->getById($printEventId);
+            // If already acknowledged, do not modify attempts or timestamps.
+            if ($evt->is_acknowledged) {
+                return ['evt' => $evt, 'was_updated' => false];
+            }
+
+            $evt->is_acknowledged = true;
+            $evt->acknowledged_at = $ackAt;
+            if ($printerId !== null) {
+                $evt->printer_id = $printerId;
+            }
+
+            $evt->attempts = (int) ($evt->attempts ?? 0) + 1;
+            $evt->updated_at = Carbon::now()->utc();
+            $evt->save();
+
+            return ['evt' => $evt, 'was_updated' => true];
+        });
 
         return [
-            'print_event' => $evt,
-            'was_updated' => ($updated > 0),
+            'print_event' => $result['evt'],
+            'was_updated' => $result['was_updated'],
         ];
     }
 
@@ -73,18 +86,29 @@ class PrintEventService
      */
     public function fail(int $printEventId, ?string $error = null): array
     {
-        $updated = PrintEvent::where('id', $printEventId)
-            ->update([
-                'attempts' => DB::raw('attempts + 1'),
-                'last_error' => $error,
-                'updated_at' => Carbon::now()->utc(),
-            ]);
+        $result = DB::transaction(function () use ($printEventId, $error) {
+            $evt = PrintEvent::where('id', $printEventId)->lockForUpdate()->first();
 
-        $evt = $this->getById($printEventId);
+            if (! $evt) {
+                throw new \Illuminate\Database\Eloquent\ModelNotFoundException("PrintEvent not found: {$printEventId}");
+            }
+
+            // Do not mark as failed if already acknowledged/printed.
+            if ($evt->is_acknowledged) {
+                return ['evt' => $evt, 'was_updated' => false];
+            }
+
+            $evt->attempts = (int) ($evt->attempts ?? 0) + 1;
+            $evt->last_error = $error;
+            $evt->updated_at = Carbon::now()->utc();
+            $evt->save();
+
+            return ['evt' => $evt, 'was_updated' => true];
+        });
 
         return [
-            'print_event' => $evt,
-            'was_updated' => ($updated > 0),
+            'print_event' => $result['evt'],
+            'was_updated' => $result['was_updated'],
         ];
     }
 }

@@ -57,6 +57,9 @@ class Table extends Model
         $currentSessions = $contextService->getCurrentSessions();
         $session = $currentSessions['session'];
 
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            return collect([]);
+        }
 
         return Table::fromQuery('CALL check_table_status(?,?)', [$this->id, $session->id]);
     }

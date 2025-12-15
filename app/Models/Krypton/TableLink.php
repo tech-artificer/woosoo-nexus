@@ -22,6 +22,10 @@ class TableLink extends Model
     ];
 
     public function createLinkTable() {
+        // During tests avoid calling external POS stored procedures.
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            return collect([]);
+        }
 
         $details = $this->toArray(); 
 

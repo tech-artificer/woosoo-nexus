@@ -129,6 +129,10 @@ class OrderRepository
 
     public function getOpenOrdersForSession($sessionId) {
         try {
+            if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+                return Order::where('session_id', $sessionId)->get();
+            }
+
             return Order::fromQuery("CALL get_open_orders_for_session(?)", [$sessionId]);
         } catch (\Exception $e) {
             // If the stored procedure is not available (tests or missing POS DB),

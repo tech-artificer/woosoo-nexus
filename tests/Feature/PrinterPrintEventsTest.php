@@ -321,4 +321,79 @@ class PrinterPrintEventsTest extends TestCase
             ->getJson('/api/printer/unprinted-events?since=notadate')
             ->assertStatus(422);
     }
+
+    public function test_fail_twice_increments_attempts()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'TwiceFail', 'location' => 'TF']);
+        $device = Device::create(['name' => 'device-tf', 'ip_address' => '127.0.0.9', 'branch_id' => $branch->id]);
+
+        $order = DeviceOrder::create([
+            'order_id' => 88888,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => 1,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $order->branch_id = $device->branch_id;
+        $order->save();
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+        $resp1 = $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/failed', ['error' => 'Network error']);
+
+        $resp1->assertStatus(200)->assertJsonPath('data.attempts', 1);
+
+        $resp2 = $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/failed', ['error' => 'Still failing']);
+
+        $resp2->assertStatus(200)->assertJsonPath('data.attempts', 2);
+    }
+
+    public function test_fail_after_ack_is_noop()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'FailAfterAck', 'location' => 'FA']);
+        $device = Device::create(['name' => 'device-fa', 'ip_address' => '127.0.0.10', 'branch_id' => $branch->id]);
+
+        $order = DeviceOrder::create([
+            'order_id' => 99999,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => 1,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $order->branch_id = $device->branch_id;
+        $order->save();
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+        // Acknowledge first
+        $ackResp = $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/ack', ['printer_id' => 'PA']);
+
+        $ackResp->assertStatus(200)->assertJsonPath('data.was_updated', true);
+
+        // Attempt to mark failed after ack — should be a noop
+        $failResp = $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/failed', ['error' => 'Paper jam']);
+
+        $failResp->assertStatus(200)->assertJsonPath('data.was_updated', false);
+
+        $evt->refresh();
+        $this->assertEquals(1, $evt->attempts);
+    }
 }

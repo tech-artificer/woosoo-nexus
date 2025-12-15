@@ -14,9 +14,16 @@ class ReportRegistry
 
     public function resolve(string $type): ReportService
     {
-        return match ($type) {
+        $instance = match ($type) {
             'sales' => $this->app->make(SalesReport::class),
-            default => throw new InvalidArgumentException('Unknown report type'),
+            default => throw new InvalidArgumentException("Unknown report type: {$type}"),
         };
+
+        if (! $instance instanceof ReportService) {
+            $given = is_object($instance) ? get_class($instance) : gettype($instance);
+            throw new InvalidArgumentException("Resolved report for type '{$type}' must implement " . ReportService::class . ", got {$given}");
+        }
+
+        return $instance;
     }
 }
