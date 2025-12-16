@@ -1,0 +1,13 @@
+
+> woosoo-nexus@1.0.0 dev
+> vite --host --port 3000
+
+
+  [32m[1mVITE[22m v6.4.1[39m  [2mready in [0m[1m2314[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.100.85:[1m3000[22m/[39m
+
+  [31m[1mLARAVEL[22m v12.20.0[39m  [2mplugin[22m [1mv1.3.0[22m
+
+  [32m➜[39m  [1mAPP_URL[22m: [36mhttp://192.168.100.85:[1m8000[22m[39m

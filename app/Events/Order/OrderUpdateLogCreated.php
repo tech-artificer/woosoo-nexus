@@ -8,6 +8,7 @@ use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Models\OrderUpdateLog;
 
 class OrderUpdateLogCreated
 {
@@ -16,9 +17,16 @@ class OrderUpdateLogCreated
     /**
      * Create a new event instance.
      */
-    public function __construct()
+    /**
+     * The OrderUpdateLog model instance.
+     *
+     * @var \App\Models\OrderUpdateLog
+     */
+    public OrderUpdateLog $orderUpdateLog;
+
+    public function __construct(OrderUpdateLog $orderUpdateLog)
     {
-        //
+        $this->orderUpdateLog = $orderUpdateLog;
     }
 
     /**

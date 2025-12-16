@@ -2,8 +2,8 @@
 
 namespace App\Listeners;
 
-use App\Events\OrderUpdateLogCreated;
-use App\Events\OrderCompleted;
+use App\Events\Order\OrderUpdateLogCreated;
+use App\Events\Order\OrderCompleted;
 use App\Models\DeviceOrder;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -32,10 +32,9 @@ class ProcessOrderUpdateListener implements ShouldQueue
      */
     public function handle(OrderUpdateLogCreated $event): void
     {
-        try {
-            $deviceOrder = null;
-            // Start a database transaction; capture the deviceOrder for after-commit actions
-            DB::transaction(function () use ($event, &$deviceOrder) {
+         try {
+            // Start a database transaction
+            DB::transaction(function () use ($event) {
                 // Get the related DeviceOrder
                 $deviceOrder = $event->orderUpdateLog->deviceOrder;
 
@@ -53,19 +52,19 @@ class ProcessOrderUpdateListener implements ShouldQueue
                     'order_id' => $deviceOrder->order_id,
                     'status' => $deviceOrder->status,
                 ]);
-            });
 
-            // After successful commit, broadcast the completion event to the device
-            if ($deviceOrder) {
-                try {
-                    event(new OrderCompleted($deviceOrder));
-                } catch (Exception $e) {
-                    Log::warning('Failed to broadcast OrderCompleted event', [
-                        'order_id' => $deviceOrder->order_id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
+                // Schedule broadcast after transaction commit to ensure consistency
+                DB::afterCommit(function () use ($deviceOrder) {
+                    try {
+                        event(new OrderCompleted($deviceOrder));
+                    } catch (Exception $e) {
+                        Log::warning('Failed to broadcast OrderCompleted event', [
+                            'order_id' => $deviceOrder->order_id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
+            });
         } catch (Exception $e) {
             // Log the error
             Log::error('Failed to process OrderUpdateLogCreated event', [

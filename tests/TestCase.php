@@ -110,6 +110,20 @@ abstract class TestCase extends BaseTestCase
                     $table->decimal('subtotal_amount', 8, 2)->nullable();
                 });
             }
+
+            // Some Eloquent queries use `whereHas('table')` which generates
+            // subqueries referencing the `tables` table on the default DB
+            // connection. To avoid cross-connection missing-table errors in
+            // tests, ensure a minimal `tables` table exists on the default
+            // (testing) connection as well.
+            $defaultConn = config('database.default');
+            $schemaDefault = Schema::connection($defaultConn);
+            if (! $schemaDefault->hasTable('tables')) {
+                $schemaDefault->create('tables', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->string('name')->nullable();
+                });
+            }
         }
     }
 }

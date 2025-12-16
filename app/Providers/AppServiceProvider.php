@@ -67,6 +67,8 @@ class AppServiceProvider extends ServiceProvider
 
         // 🔹 Gates
         Gate::define('viewPulse', fn (User $user) => $user->is_admin);
+        // Backwards-compatible shorthand used by middleware: `can:admin`
+        Gate::define('admin', fn (User $user) => $user->is_admin);
 
         // 🔹 Observers
         OrderUpdateLog::observe(OrderUpdateLogObserver::class);
