@@ -144,6 +144,7 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
 
 
     Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
+    Route::get('/device-orders', [OrderApiController::class, 'index']);
     // Fetch a device order by its external order id (order_id)
     Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
