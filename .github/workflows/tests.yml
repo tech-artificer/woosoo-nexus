@@ -17,6 +17,10 @@ jobs:
       APP_ENV: testing
       DB_CONNECTION: testing
       LARAVEL_BYPASS_ENV_CHECK: '1'
+      APP_URL: 'http://localhost:3000'
+      VITE_DEV_SERVER_URL: 'http://localhost:3000'
+      # Set START_FRONTEND=true to start and wait for the frontend dev server in CI
+      START_FRONTEND: 'false'
 
     steps:
       - name: Checkout
@@ -43,6 +47,15 @@ jobs:
       - name: Install Node Dependencies
         run: npm ci
 
+      - name: Start frontend dev server (optional)
+        if: env.START_FRONTEND == 'true'
+        run: |
+          npm run dev:monitor &
+
+      - name: Wait for frontend dev server (optional)
+        if: env.START_FRONTEND == 'true'
+        run: npx wait-on "${{ env.VITE_DEV_SERVER_URL }}" --timeout 120000
+
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
@@ -60,3 +73,7 @@ jobs:
 
       - name: Tests
         run: ./vendor/bin/pest
+
+      - name: Dump vite.log
+        if: always()
+        run: cat vite.log || true
