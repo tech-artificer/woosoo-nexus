@@ -19,6 +19,9 @@ use App\Services\Krypton\OrderService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rules\Enum as EnumRule;
+use App\Events\Order\OrderStatusUpdated;
+use App\Events\Order\OrderCompleted as OrderCompletedEvent;
 
 class OrderController extends Controller
 {
@@ -44,18 +47,69 @@ class OrderController extends Controller
             $session = Session::fromQuery('CALL get_latest_session_id()')->first();
         }
 
-        $orders = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
-                ->where('session_id', $session->id)
-                ->activeOrder()
-                ->orderBy('table_id', 'asc')
+        // Fallback session id for testing or missing POS session
+        $sessionId = $session?->id ?? $request->query('session_id') ?? 1;
+
+        // Apply optional query filters (status, device, table, search, date range)
+        $filters = $request->only(['status', 'device_id', 'table_id', 'search', 'date_from', 'date_to']);
+
+        $ordersQuery = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
+                ->where('session_id', $sessionId)
+                ->activeOrder();
+
+        // status may be comma-separated or array
+        if (!empty($filters['status'])) {
+            $statuses = is_array($filters['status']) ? $filters['status'] : explode(',', $filters['status']);
+            $ordersQuery->whereIn('status', array_map(fn($s) => trim($s), $statuses));
+        }
+
+        if (!empty($filters['device_id'])) {
+            $ordersQuery->where('device_id', $filters['device_id']);
+        }
+
+        if (!empty($filters['table_id'])) {
+            $ordersQuery->where('table_id', $filters['table_id']);
+        }
+
+        if (!empty($filters['search'])) {
+            $s = $filters['search'];
+            $ordersQuery->where(function ($q) use ($s) {
+                $q->where('order_number', 'like', "%{$s}%")
+                  ->orWhereHas('device', fn($q2) => $q2->where('name', 'like', "%{$s}%"))
+                  ->orWhereHas('table', fn($q2) => $q2->where('name', 'like', "%{$s}%"));
+            });
+        }
+
+        if (!empty($filters['date_from'])) {
+            $ordersQuery->where('created_at', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $ordersQuery->where('created_at', '<=', $filters['date_to']);
+        }
+
+        $orders = $ordersQuery->orderBy('table_id', 'asc')
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-        $orderHistory = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
-                ->where('session_id', $session->id)
-                ->completedOrder()
-                ->orderBy('updated_at', 'desc')
-                ->get();
+        // Order history (completed/terminal) — apply same filters where reasonable
+        $historyQuery = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
+                ->where('session_id', $sessionId)
+                ->completedOrder();
+
+        if (!empty($filters['status'])) {
+            $historyQuery->whereIn('status', array_map(fn($s) => trim($s), $statuses ?? (is_array($filters['status']) ? $filters['status'] : explode(',', $filters['status']))));
+        }
+
+        if (!empty($filters['search'])) {
+            $s = $filters['search'];
+            $historyQuery->where(function ($q) use ($s) {
+                $q->where('order_number', 'like', "%{$s}%")
+                  ->orWhereHas('device', fn($q2) => $q2->where('name', 'like', "%{$s}%"))
+                  ->orWhereHas('table', fn($q2) => $q2->where('name', 'like', "%{$s}%"));
+            });
+        }
+
+        $orderHistory = $historyQuery->orderBy('updated_at', 'desc')->get();
         
         // simple stats and sparkline for orders
         $today = \Carbon\Carbon::today();
@@ -215,5 +269,69 @@ class OrderController extends Controller
         }
 
         return redirect()->back()->with('success', "{$voided} order(s) voided successfully.");
+    }
+
+    /**
+     * Update a single order's status (admin action).
+     */
+    public function updateStatus(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'status' => ['required', new EnumRule(OrderStatus::class)],
+        ]);
+
+        $order = DeviceOrder::findOrFail($id);
+
+        $newStatus = OrderStatus::from($validated['status']);
+
+        try {
+            $order->update(['status' => $newStatus]);
+        } catch (\InvalidArgumentException $e) {
+            Log::warning('Invalid status transition attempted', ['order' => $order->id, 'error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Invalid status transition.');
+        }
+
+        // Broadcast status update
+        event(new OrderStatusUpdated($order));
+
+        // If completed, also dispatch the completed event
+        if ($newStatus === OrderStatus::COMPLETED) {
+            event(new OrderCompletedEvent($order));
+        }
+
+        return redirect()->back()->with('success', true);
+    }
+
+    /**
+     * Bulk update order statuses (admin action).
+     */
+    public function bulkStatus(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['required', 'integer', 'exists:device_orders,id'],
+            'status' => ['required', new EnumRule(OrderStatus::class)],
+        ]);
+
+        $status = OrderStatus::from($validated['status']);
+        $updated = 0;
+
+        foreach ($validated['ids'] as $id) {
+            try {
+                $deviceOrder = DeviceOrder::find($id);
+                if (! $deviceOrder) continue;
+                $deviceOrder->update(['status' => $status]);
+                event(new OrderStatusUpdated($deviceOrder));
+                if ($status === OrderStatus::COMPLETED) {
+                    event(new OrderCompletedEvent($deviceOrder));
+                }
+                $updated++;
+            } catch (\Throwable $e) {
+                Log::error('Failed to update order status', ['id' => $id, 'error' => $e->getMessage()]);
+                continue;
+            }
+        }
+
+        return redirect()->back()->with('success', "{$updated} order(s) updated.");
     }
 }

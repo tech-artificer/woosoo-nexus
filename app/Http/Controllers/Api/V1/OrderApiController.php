@@ -21,7 +21,37 @@ class OrderApiController extends Controller
      */
     public function index()
     {
-        //
+        // Support basic filtering and pagination for device/admin UIs.
+        $request = request();
+
+        $query = DeviceOrder::with(['device', 'table', 'items.menu'])->orderBy('created_at', 'desc');
+
+        // Optional status filter: comma-separated list of status values
+        if ($statuses = $request->query('status')) {
+            $statusArr = array_filter(array_map('trim', explode(',', $statuses)));
+            if (!empty($statusArr)) {
+                $query->whereIn('status', $statusArr);
+            }
+        }
+
+        if ($sessionId = $request->query('session_id')) {
+            $query->where('session_id', $sessionId);
+        }
+
+        // If authenticated as a device, restrict to device's branch
+        $device = $request->user();
+        if ($device && isset($device->branch_id)) {
+            $query->where('branch_id', $device->branch_id);
+        }
+
+        $perPage = (int) $request->query('per_page', 25);
+
+        $paginated = $query->paginate($perPage)->appends($request->query());
+
+        return response()->json([
+            'success' => true,
+            'data' => \App\Http\Resources\DeviceOrderResource::collection($paginated)->response()->getData(true),
+        ]);
     }
 
     /**

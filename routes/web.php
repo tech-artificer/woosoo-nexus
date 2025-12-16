@@ -33,7 +33,7 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 })->name('home');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'can:admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
@@ -41,6 +41,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
     Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
     Route::post('/orders/bulk-void', [OrderController::class, 'bulkVoid'])->name('orders.bulk-void');
+    // Admin: update single order status
+    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    // Admin: bulk update order statuses
+    Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
     // Menu
     Route::get('/menus', [MenuController::class, 'index'])->name('menus');
     Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');

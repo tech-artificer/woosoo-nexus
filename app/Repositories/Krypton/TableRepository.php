@@ -30,7 +30,7 @@ class TableRepository
                 return collect([]);
             }
 
-            return Table::fromQuery($this->connection)->select('CALL get_active_table_orders_by_table_group(?)', $tableGroupId);
+            return Table::fromQuery('CALL get_active_table_orders_by_table_group(?)', [$tableGroupId]);
         } catch (\Exception $e) {
             Log::error('Procedure call failed: ' . $e->getMessage());
             throw new \Exception('Something Went Wrong.');

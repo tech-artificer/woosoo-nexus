@@ -26,4 +26,8 @@ export default defineConfig({
             '@': path.resolve(__dirname, './resources/js'),
         },
     },
+    server: {
+        host: true,
+        port: Number(process.env.VITE_DEV_PORT) || 3000,
+    },
 });

@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\V1\{
     OrderApiController
 };
 
+use App\Http\Controllers\Api\V1\OrderController;
+
 use App\Http\Controllers\Api\V1\Auth\{
     AuthApiController,
     DeviceAuthApiController,
@@ -144,6 +146,7 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
 
 
     Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
+    Route::get('/device-orders', [OrderApiController::class, 'index']);
     // Fetch a device order by its external order id (order_id)
     Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
@@ -155,6 +158,14 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
     Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
     });
+
+// Device API v1 (device-only endpoints)
+Route::prefix('v1')->middleware(['auth:device'])->group(function () {
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+    Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus']);
+});
 
 // Admin/device-reset endpoint (requires auth)
 Route::middleware(['requestId','auth:sanctum'])->group(function () {

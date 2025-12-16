@@ -2,8 +2,8 @@
 
 namespace App\Listeners;
 
-use App\Events\OrderUpdateLogCreated;
-use App\Events\OrderCompleted;
+use App\Events\Order\OrderUpdateLogCreated;
+use App\Events\Order\OrderCompleted;
 use App\Models\DeviceOrder;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,8 +13,9 @@ use Exception;
 use App\Enums\OrderStatus;
 
 
-class ProcessOrderUpdateListener
+class ProcessOrderUpdateListener implements ShouldQueue
 {
+    use InteractsWithQueue;
     /**
      * Create the event listener.
      */
@@ -52,15 +53,17 @@ class ProcessOrderUpdateListener
                     'status' => $deviceOrder->status,
                 ]);
 
-                // Broadcast the completion event to the device
-                try {
-                    event(new OrderCompleted($deviceOrder));
-                } catch (Exception $e) {
-                    Log::warning('Failed to broadcast OrderCompleted event', [
-                        'order_id' => $deviceOrder->order_id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
+                // Schedule broadcast after transaction commit to ensure consistency
+                DB::afterCommit(function () use ($deviceOrder) {
+                    try {
+                        event(new OrderCompleted($deviceOrder));
+                    } catch (Exception $e) {
+                        Log::warning('Failed to broadcast OrderCompleted event', [
+                            'order_id' => $deviceOrder->order_id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
             });
         } catch (Exception $e) {
             // Log the error

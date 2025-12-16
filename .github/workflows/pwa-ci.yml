@@ -1,0 +1,84 @@
+name: PWA CI - tests + smoke
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pwa:
+    name: PWA unit tests and smoke checks
+    runs-on: ubuntu-latest
+    env:
+      LARAVEL_BYPASS_ENV_CHECK: '1'
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install PWA dependencies
+        run: npm ci
+        working-directory: tablet-ordering-pwa
+
+      - name: Run unit tests (Vitest)
+        run: npm test --if-present --silent
+        working-directory: tablet-ordering-pwa
+
+      - name: Smoke - start dev server and assert it responds
+        run: |
+          set -e
+          npm run dev --if-present &
+          DEV_PID=$!
+          echo "DEV PID=$DEV_PID"
+          n=0
+          until [ $n -ge 30 ]; do
+            if curl -sSf http://localhost:3000/ >/dev/null; then
+              echo "dev server is responding"
+              break
+            fi
+            n=$((n+1))
+            sleep 2
+          done
+          if [ $n -ge 30 ]; then
+            echo "dev server did not start in time" >&2
+            kill $DEV_PID || true
+            exit 1
+          fi
+          kill $DEV_PID || true
+        working-directory: tablet-ordering-pwa
+
+      - name: Build and preview (smoke)
+        run: |
+          set -e
+          npm run build --if-present
+          npm run preview --if-present &
+          PREVIEW_PID=$!
+          echo "PREVIEW PID=$PREVIEW_PID"
+          n=0
+          until [ $n -ge 30 ]; do
+            if curl -sSf http://localhost:3000/ >/dev/null; then
+              echo "preview server is responding"
+              break
+            fi
+            n=$((n+1))
+            sleep 2
+          done
+          if [ $n -ge 30 ]; then
+            echo "preview server did not start in time" >&2
+            kill $PREVIEW_PID || true
+            exit 1
+          fi
+          kill $PREVIEW_PID || true
+        working-directory: tablet-ordering-pwa
