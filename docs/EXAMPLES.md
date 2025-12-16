@@ -1,4 +1,45 @@
-﻿# Examples and PR Skeletons
+﻿# Examples and Expected Deliverables
+
+This document contains example outputs and expected deliverables for Copilot agent changes.
+
+Example PR body (required skeleton included)
+
+[PR-TEMPLATE]
+title: chore: add Copilot agent guidelines and enforcement
+motivation: Standardize how Copilot-style agents operate on this repository.
+changes:
+
+- .github/COPILOT_PROMPT_GUIDELINES.md: add strict agent rules and repo purpose
+- .github/PROMPT_TEMPLATES.md: add required prompt templates
+- docs/AGENT_WORKFLOWS.md: add workflows and verification commands
+- docs/EXAMPLES.md: add examples and expected deliverables
+- .github/workflows/pr_template_check.yml: add PR-body validation Action
+
+verification:
+run: composer install || true (backend)
+run: npm ci && npm run lint || true (frontend)
+
+acceptance_criteria:
+All five files present on branch chore/copilot-guidelines
+PR contains the [PR-TEMPLATE] skeleton
+No secrets or compiled binaries committed
+
+risk_level: low
+
+Example verification commands and expected results
+
+- `composer install || true` — expected: command completes (exit 0) or reports missing composer; vendor files not committed
+- `npm ci` — expected: dependencies installed cleanly
+- `npm run lint` — expected: either no lint errors or a list of lint messages; agent should include exit codes and logs if failures occur
+
+Example agent deliverable list
+
+- One paragraph summary (what was done and why)
+- Exact list of files added or modified
+- Commands to verify locally and their expected outputs
+- Tests run (or reason not run) and their outputs/exit codes
+- PR title and PR body (including `[PR-TEMPLATE]`)
+# Examples and PR Skeletons
 
 This file contains example prompts, PR body skeletons and expected deliverables for agent authors and reviewers.
 

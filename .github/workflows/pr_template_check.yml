@@ -5,6 +5,26 @@ on:
     types: [opened, edited, reopened, synchronize]
 
 jobs:
+  check-pr-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR body for required skeleton
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const body = context.payload.pull_request && context.payload.pull_request.body || '';
+            if (!body.includes('[PR-TEMPLATE]')) {
+              core.setFailed('PR body must include the [PR-TEMPLATE] skeleton from .github/PROMPT_TEMPLATES.md');
+            } else {
+              core.info('PR body contains required PR-TEMPLATE skeleton.');
+            }
+name: PR Template Check
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
   validate-pr-template:
     runs-on: ubuntu-latest
     steps:

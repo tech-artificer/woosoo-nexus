@@ -1,4 +1,51 @@
-﻿# Copilot Agent Guidelines
+﻿# Copilot Agent Prompt Guidelines
+
+Purpose
+-------
+These guidelines define required behavior for automated Copilot-style agents operating on this repository. Agents must follow these rules exactly when making changes, creating branches, or preparing PRs.
+
+Key rules
+---------
+- Branching: Use a single topic branch named `chore/copilot-guidelines` for this task unless the human instructs otherwise.
+- Commits: Make small, focused commits. Use conventional prefixes (e.g., `feat:`, `fix:`, `chore:`).
+- PR body: Every PR must include the exact `[PR-TEMPLATE]` skeleton (see `.github/PROMPT_TEMPLATES.md`).
+- No secrets: Never commit secrets (private keys, credentials, tokens). If secrets are required, stop and ask a human.
+- No binaries: Do not commit compiled binaries, firmware images, or packaged artifacts.
+- Repo-specific restrictions: Do not modify PWA service worker files or `nuxt.config.ts` in `tablet-ordering-pwa` in this PR. For firmware/device repos, do not commit firmware binaries; require `architect_approve` for any firmware patch.
+
+Verification and testing
+------------------------
+- Run the repository verification commands before preparing the PR body. If commands fail, include logs and remediation steps in the PR.
+- Include an explicit ``verification`` section in the PR body listing the commands run and their exit codes.
+
+When blocked
+------------
+- If the agent cannot authenticate with GitHub (push/create PR), stop and ask exactly one clarifying question requesting authentication or confirmation to proceed manually.
+
+[PR-TEMPLATE] (required in PR body)
+title: chore: add Copilot agent guidelines and enforcement
+motivation: Standardize how Copilot-style agents operate on this repository.
+changes:
+
+- .github/COPILOT_PROMPT_GUIDELINES.md: add strict agent rules and repo purpose
+- .github/PROMPT_TEMPLATES.md: add required prompt templates
+- docs/AGENT_WORKFLOWS.md: add workflows and verification commands
+- docs/EXAMPLES.md: add examples and expected deliverables
+- .github/workflows/pr_template_check.yml: add PR-body validation Action
+
+verification:
+run: composer install || true (backend)
+run: npm ci && npm run lint || true (frontend)
+
+acceptance_criteria:
+All five files present on branch chore/copilot-guidelines
+PR contains the [PR-TEMPLATE] skeleton
+No secrets or compiled binaries committed
+
+risk_level: low
+
+tests: NONE
+# Copilot Agent Guidelines
 
 Purpose
 -------
