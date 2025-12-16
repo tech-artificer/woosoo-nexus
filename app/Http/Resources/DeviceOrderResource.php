@@ -60,6 +60,7 @@ class DeviceOrderResource extends BaseResource
                     'id' => $it->id,
                     'menu_id' => $it->menu_id,
                     'name' => $menuName,
+                    'status' => $it->status,
                     'quantity' => $it->quantity ?? null,
                     'price' => $it->price ?? null,
                     'subtotal' => $it->subtotal ?? null,
