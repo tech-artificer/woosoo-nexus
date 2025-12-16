@@ -5,7 +5,7 @@
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite --host --port 3000",
-        "dev:monitor": "bash ./bin/dev-monitor.sh",
+        "dev:monitor": "node ./bin/dev-monitor-platform.js",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix"
