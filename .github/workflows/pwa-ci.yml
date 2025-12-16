@@ -10,6 +10,8 @@ jobs:
   pwa:
     name: PWA unit tests and smoke checks
     runs-on: ubuntu-latest
+    env:
+      LARAVEL_BYPASS_ENV_CHECK: '1'
     strategy:
       matrix:
         node-version: [18.x]

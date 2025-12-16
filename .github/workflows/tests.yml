@@ -16,6 +16,7 @@ jobs:
     env:
       APP_ENV: testing
       DB_CONNECTION: testing
+      LARAVEL_BYPASS_ENV_CHECK: '1'
 
     steps:
       - name: Checkout
