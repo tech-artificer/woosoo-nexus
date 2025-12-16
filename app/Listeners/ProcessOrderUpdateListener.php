@@ -13,8 +13,9 @@ use Exception;
 use App\Enums\OrderStatus;
 
 
-class ProcessOrderUpdateListener
+class ProcessOrderUpdateListener implements ShouldQueue
 {
+    use InteractsWithQueue;
     /**
      * Create the event listener.
      */
@@ -31,9 +32,10 @@ class ProcessOrderUpdateListener
      */
     public function handle(OrderUpdateLogCreated $event): void
     {
-         try {
-            // Start a database transaction
-            DB::transaction(function () use ($event) {
+        try {
+            $deviceOrder = null;
+            // Start a database transaction; capture the deviceOrder for after-commit actions
+            DB::transaction(function () use ($event, &$deviceOrder) {
                 // Get the related DeviceOrder
                 $deviceOrder = $event->orderUpdateLog->deviceOrder;
 
@@ -51,8 +53,10 @@ class ProcessOrderUpdateListener
                     'order_id' => $deviceOrder->order_id,
                     'status' => $deviceOrder->status,
                 ]);
+            });
 
-                // Broadcast the completion event to the device
+            // After successful commit, broadcast the completion event to the device
+            if ($deviceOrder) {
                 try {
                     event(new OrderCompleted($deviceOrder));
                 } catch (Exception $e) {
@@ -61,7 +65,7 @@ class ProcessOrderUpdateListener
                         'error' => $e->getMessage(),
                     ]);
                 }
-            });
+            }
         } catch (Exception $e) {
             // Log the error
             Log::error('Failed to process OrderUpdateLogCreated event', [
