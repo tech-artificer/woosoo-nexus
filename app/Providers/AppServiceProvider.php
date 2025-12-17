@@ -81,6 +81,12 @@ class AppServiceProvider extends ServiceProvider
      */
     private function shareRolesAndPermissions(): void
     {
+        // Avoid attempting to connect to MySQL for roles/permissions when
+        // running tests — this spawns noisy warnings and is unnecessary
+        // for the test environment.
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            return;
+        }
         try {
             if (!DB::connection('mysql')->getPdo() || !Schema::hasTable('roles')) {
                 return;

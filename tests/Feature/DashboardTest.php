@@ -8,9 +8,14 @@ test('guests are redirected to the login page', function () {
 });
 
 test('authenticated users can visit the dashboard', function () {
-    $user = User::factory()->create();
+    // Create a user with admin privileges so the `can:admin` gate passes.
+    $user = User::factory()->create([
+        'is_admin' => true,
+    ]);
+
     $this->actingAs($user);
 
     $response = $this->get('/dashboard');
+
     $response->assertStatus(200);
 });

@@ -124,6 +124,105 @@ abstract class TestCase extends BaseTestCase
                     $table->string('name')->nullable();
                 });
             }
+
+            // Ensure minimal device orders and items tables exist for tests on the default testing connection
+            $testingSchema = Schema::connection('testing');
+
+            // Recreate device_orders on both default and testing connections to
+            // ensure test schema is fresh and includes all expected columns.
+            if ($schemaDefault->hasTable('device_orders')) {
+                $schemaDefault->dropIfExists('device_orders');
+            }
+            $schemaDefault->create('device_orders', function (Blueprint $table) {
+                $table->increments('id');
+                $table->integer('device_id')->nullable();
+                $table->integer('table_id')->nullable();
+                $table->integer('terminal_session_id')->nullable();
+                $table->integer('session_id')->nullable();
+                $table->integer('order_id')->nullable();
+                $table->string('order_number')->nullable();
+                $table->string('status')->nullable();
+                $table->decimal('subtotal', 8, 2)->nullable();
+                $table->decimal('tax', 8, 2)->nullable();
+                $table->decimal('discount', 8, 2)->nullable();
+                $table->decimal('total', 8, 2)->nullable();
+                $table->integer('guest_count')->nullable();
+                $table->integer('branch_id')->nullable();
+                $table->boolean('is_printed')->default(false);
+                $table->timestamp('printed_at')->nullable();
+                $table->string('printed_by')->nullable();
+                $table->timestamps();
+            });
+
+            if ($testingSchema->hasTable('device_orders')) {
+                $testingSchema->dropIfExists('device_orders');
+            }
+            $testingSchema->create('device_orders', function (Blueprint $table) {
+                $table->increments('id');
+                $table->integer('device_id')->nullable();
+                $table->integer('table_id')->nullable();
+                $table->integer('terminal_session_id')->nullable();
+                $table->integer('session_id')->nullable();
+                $table->integer('order_id')->nullable();
+                $table->string('order_number')->nullable();
+                $table->string('status')->nullable();
+                $table->decimal('subtotal', 8, 2)->nullable();
+                $table->decimal('tax', 8, 2)->nullable();
+                $table->decimal('discount', 8, 2)->nullable();
+                $table->decimal('total', 8, 2)->nullable();
+                $table->integer('guest_count')->nullable();
+                $table->integer('branch_id')->nullable();
+                $table->boolean('is_printed')->default(false);
+                $table->timestamp('printed_at')->nullable();
+                $table->string('printed_by')->nullable();
+                $table->timestamps();
+            });
+
+            // Ensure device_order_items has the expected columns by dropping
+            // any previous test table and recreating it on both connections.
+            if ($schemaDefault->hasTable('device_order_items')) {
+                $schemaDefault->dropIfExists('device_order_items');
+            }
+            $schemaDefault->create('device_order_items', function (Blueprint $table) {
+                $table->increments('id');
+                $table->integer('order_id')->nullable();
+                $table->integer('device_order_id')->nullable();
+                $table->integer('menu_id')->nullable();
+                $table->integer('ordered_menu_id')->nullable();
+                $table->integer('quantity')->nullable();
+                $table->decimal('price', 8, 2)->nullable();
+                $table->decimal('subtotal', 8, 2)->nullable();
+                $table->decimal('tax', 8, 2)->nullable();
+                $table->decimal('total', 8, 2)->nullable();
+                $table->string('notes')->nullable();
+                $table->string('note')->nullable();
+                $table->integer('seat_number')->nullable();
+                $table->integer('index')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+            });
+
+            if ($testingSchema->hasTable('device_order_items')) {
+                $testingSchema->dropIfExists('device_order_items');
+            }
+            $testingSchema->create('device_order_items', function (Blueprint $table) {
+                $table->increments('id');
+                $table->integer('order_id')->nullable();
+                $table->integer('device_order_id')->nullable();
+                $table->integer('menu_id')->nullable();
+                $table->integer('ordered_menu_id')->nullable();
+                $table->integer('quantity')->nullable();
+                $table->decimal('price', 8, 2)->nullable();
+                $table->decimal('subtotal', 8, 2)->nullable();
+                $table->decimal('tax', 8, 2)->nullable();
+                $table->decimal('total', 8, 2)->nullable();
+                $table->string('notes')->nullable();
+                $table->string('note')->nullable();
+                $table->integer('seat_number')->nullable();
+                $table->integer('index')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+            });
         }
     }
 }

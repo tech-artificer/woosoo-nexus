@@ -12,6 +12,8 @@ use App\Repositories\Krypton\TableRepository;
 use App\Models\Krypton\Order;
 use App\Models\Krypton\OrderCheck;
 use App\Models\DeviceOrder;
+use App\Models\Device;
+use App\Models\Krypton\Table as KryptonTable;
 use App\Enums\OrderStatus;
 use App\Models\Krypton\Session;
 use App\Services\Krypton\OrderService;
@@ -88,8 +90,8 @@ class OrderController extends Controller
         }
 
         $orders = $ordersQuery->orderBy('table_id', 'asc')
-                ->orderBy('created_at', 'desc')
-                ->get();
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         // Order history (completed/terminal) — apply same filters where reasonable
         $historyQuery = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
@@ -133,12 +135,28 @@ class OrderController extends Controller
             [ 'title' => 'Order History', 'value' => $orderHistory->count(), 'subtitle' => 'Completed / Voided', 'variant' => 'default' ],
         ];
 
+        // Provide helper lists for the UI filters
+        try {
+            $devices = Device::orderBy('name')->get(['id', 'name']);
+        } catch (\Throwable $e) {
+            $devices = collect([]);
+        }
+
+        try {
+            $tables = KryptonTable::orderBy('name')->get(['id', 'name']);
+        } catch (\Throwable $e) {
+            $tables = collect([]);
+        }
+
         return Inertia::render('Orders/Index', [
             'title' => 'Orders',
             'description' => 'Daily Orders',    
             'orders' => $orders,
             'orderHistory' => $orderHistory,
             'stats' => $stats,
+            'filters' => $filters,
+            'devices' => $devices,
+            'tables' => $tables,
             // 'user' => auth()->user(),
             // 'tableOrders' => $activeOrders,
         ]);
