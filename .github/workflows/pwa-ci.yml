@@ -45,6 +45,9 @@ jobs:
         run: |
           set -euo pipefail
           LOG="/tmp/vite-pwa.log"
+          # Ensure APP_URL is set for the Vite/Laravel plugin in CI
+          echo "APP_URL=http://127.0.0.1:3000" > .env
+          export APP_URL="http://127.0.0.1:3000"
           # Start Vite dev server in background bound to 127.0.0.1:3000 and capture logs
           # rely on `working-directory: tablet-ordering-pwa` for the step context
           nohup npm run dev --if-present -- --host 127.0.0.1 --port 3000 > "$LOG" 2>&1 &
@@ -75,6 +78,9 @@ jobs:
         run: |
           set -euo pipefail
           PREVIEW_LOG="/tmp/vite-pwa-preview.log"
+          # Ensure APP_URL is set for the Vite/Laravel plugin in CI
+          echo "APP_URL=http://127.0.0.1:3000" > .env
+          export APP_URL="http://127.0.0.1:3000"
           # rely on `working-directory: tablet-ordering-pwa` for the step context
           npm run build --if-present
           nohup npm run preview --if-present -- --host 127.0.0.1 --port 3000 > "$PREVIEW_LOG" 2>&1 &
