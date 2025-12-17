@@ -34,6 +34,14 @@ interface DataTableProps {
   columns: ColumnDef<DeviceOrder, any>[]
   data: DeviceOrder[] | any[]
 }
+interface DataTableProps {
+  columns: ColumnDef<DeviceOrder, any>[]
+  data: DeviceOrder[] | any[]
+  serverFilters?: any
+  devices?: any[]
+  tables?: any[]
+}
+
 const props = defineProps<DataTableProps>()
 
 // Use computed to ensure reactivity is properly tracked
@@ -70,7 +78,7 @@ const table = useVueTable({
 
 <template>
   <div class="space-y-4">
-    <DataTableToolbar :table="table" />
+    <DataTableToolbar :table="table" :server-filters="props.serverFilters" :devices="props.devices" :tables="props.tables" />
     <div class="rounded-md border">
       <Table>
         <TableHeader>

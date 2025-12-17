@@ -30,11 +30,17 @@ const props = defineProps<{
   orders: DeviceOrder[];
   orderHistory: DeviceOrder[];
   stats?: any;
+  filters?: any;
+  devices?: any[];
+  tables?: any[];
 }>()
 
 const orders = props.orders ?? []
 const orderHistory = props.orderHistory ?? []
 const stats = props.stats ?? null
+const filters = props.filters ?? null
+const devices = props.devices ?? []
+const tables = props.tables ?? []
 
 // Keep a reactive local copy of orders so we can update in-place on Echo events
 const localOrders = ref(Array.isArray(orders) ? [...orders] : [])
@@ -351,10 +357,10 @@ onUnmounted(() => {
                     </button>
                   </div>
 
-                  <DataTable :data="localOrders" :columns="columns" />
+                  <DataTable :data="localOrders" :columns="columns" :server-filters="filters" :devices="devices" :tables="tables" />
                 </TabsContent>
                 <TabsContent value="order_history" class="p-2">
-                  <DataTable :data="localOrderHistory" :columns="columns" />  
+                  <DataTable :data="localOrderHistory" :columns="columns" :server-filters="filters" :devices="devices" :tables="tables" />  
                 </TabsContent>
             </Tabs>
         </div>
