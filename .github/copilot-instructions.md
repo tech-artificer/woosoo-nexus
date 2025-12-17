@@ -1,5 +1,24 @@
 Purpose: Help AI coding assistants become productive in woosoo-nexus. Focus on discoverable patterns, runnable commands, and concrete examples.
 
+## Quick Start
+
+A minimal set of commands to get a fresh developer environment running (PowerShell):
+
+```powershell
+composer install
+npm ci
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+composer dev
+```
+
+Or as a one-liner:
+
+```powershell
+composer install; npm ci; cp .env.example .env; php artisan key:generate; php artisan migrate --seed; composer dev
+```
+
 ## Architecture Overview
 
 **Tech Stack**
@@ -66,6 +85,35 @@ php artisan key:generate
 php artisan migrate
 ```
 
+**Recommended .env variables (examples)**
+```env
+# App
+APP_NAME=Woosoo
+APP_ENV=local
+APP_KEY=
+APP_URL=http://127.0.0.1:8000
+
+# MySQL (app)
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=woosoo_api
+DB_USERNAME=root
+DB_PASSWORD=
+
+# Krypton POS (read-only)
+DB_POS_CONNECTION=pos
+DB_POS_HOST=127.0.0.1
+DB_POS_PORT=3306
+DB_POS_DATABASE=krypton_woosoo
+DB_POS_USERNAME=pos_user
+DB_POS_PASSWORD=pos_pass
+
+# Reverb / WebSockets
+VITE_REVERB_HOST=127.0.0.1
+VITE_REVERB_PORT=6001
+```
+
 **Local Development**
 ```powershell
 # All-in-one: serve + queue + vite (recommended)
@@ -82,6 +130,16 @@ php artisan reverb:start       # WebSockets (port 6001)
 node print-service/index.js    # Print service (port 9100)
 ```
 
+**Canonical ports & scripts**
+
+- Laravel HTTP server (local): `8000` (`php artisan serve`) — canonical app URL: `http://127.0.0.1:8000`.
+- Vite dev server (HMR): commonly `5173`, but some package scripts override this (e.g., `--port 3000`). Always check the `dev` script in `package.json` for the authoritative port.
+- Reverb (WebSockets): `6001` (default for Reverb/Pusher local host).
+- Print service: `9100` (node print-service)
+
+Note: Ports and host values may be overridden via `package.json` scripts or `.env` values (e.g., `APP_URL`, `VITE_REVERB_*`). When CI health-checks fail, confirm the effective port by inspecting `npm run dev` output or `package.json` scripts.
+
+
 **Testing**
 ```powershell
 composer test                  # config:clear + artisan test
@@ -91,6 +149,20 @@ composer test                  # config:clear + artisan test
 - Feature tests in `tests/Feature/*` (uses RefreshDatabase)
 - Unit tests in `tests/Unit/*`
 - Test environment: SQLite :memory:, sync queue (see `phpunit.xml`)
+
+To reproduce tests locally:
+- The default CI/test suite uses the SQLite in-memory configuration defined in `phpunit.xml`. To run that locally, execute:
+
+```powershell
+./vendor/bin/pest
+```
+
+- To run feature tests against a local MySQL instance (closer to production), set up your local DB, copy `.env.example` to `.env`, update the DB_* variables, then run:
+
+```powershell
+php artisan migrate:fresh --seed
+./vendor/bin/pest
+```
 
 **Frontend**
 ```powershell
@@ -136,7 +208,8 @@ npm run lint          # ESLint
 - Server-side: `mike42/escpos-php` library (ESC/POS thermal printers)
 - Service: `print-service/index.js` (Express) — receives POST /print, writes to `/tmp/printjob.txt`, executes `lp` command (Linux printer utility)
 - Events: `PrintOrder`, `PrintRefill` broadcast on `admin.print` channel
-- **Note**: `lp` command is Linux-specific; Windows deployment uses different print handling
+- **Note**: `lp` command is Linux-specific; Windows deployment uses different print handling.
+- **Windows development tip**: On Windows run the `print-service` under WSL with CUPS installed or stub printing locally. A simple local stub is to set an env var `PRINT_CMD=echo` and adjust `print-service/index.js` to use `process.env.PRINT_CMD || 'lp'` for the print command, or configure the service to write jobs to a folder for inspection. See `docs/printer_manual.md` for deployment guidance.
 
 **Database Patterns**
 - Migrations: `database/migrations/*` (Laravel app schema only)
@@ -239,6 +312,7 @@ npx shadcn-vue@latest add dialog
 - **POS queries fail**: Verify `pos` connection in `.env` (DB_POS_*), check stored procedure signatures
 - **Tests fail**: Run `php artisan config:clear` before tests, check `phpunit.xml` env vars
 - **Vite build errors**: Clear cache (`rm -rf node_modules/.vite`), reinstall deps (`npm ci`)
+  If you see errors related to `esbuild` native binaries (common on CI runners), run `npm run rebuild:esbuild --if-present` during CI `postinstall` or manually locally to rebuild the native binary.
 
 **Debugging**
 ```powershell
