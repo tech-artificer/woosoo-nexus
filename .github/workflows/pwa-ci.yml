@@ -37,7 +37,8 @@ jobs:
         working-directory: tablet-ordering-pwa
 
       - name: Run unit tests (Vitest)
-        run: npm test --if-present --silent
+        # Ensure Vitest runs once in CI (non-watch). Pass `--run` to Vitest.
+        run: npm test --if-present --silent -- --run
         working-directory: tablet-ordering-pwa
 
       - name: Smoke - start dev server and assert it responds
