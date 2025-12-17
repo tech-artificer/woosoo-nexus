@@ -44,27 +44,30 @@ jobs:
       - name: Smoke - start dev server and assert it responds
         run: |
           set -euo pipefail
-          LOG="/tmp/vite-pwa.log"
+          LOG=/tmp/vite-pwa.log
           # Ensure APP_URL is set for the Vite/Laravel plugin in CI
           echo "APP_URL=http://127.0.0.1:3000" > .env
           export APP_URL="http://127.0.0.1:3000"
-          # Start Vite dev server in background bound to 127.0.0.1:3000 and capture logs
-          # rely on `working-directory: tablet-ordering-pwa` for the step context
-          nohup npm run dev --if-present -- --host 127.0.0.1 --port 3000 > "$LOG" 2>&1 &
+          # Start dev via the package script (do not override host/port here)
+          nohup npm run dev --if-present >"$LOG" 2>&1 &
           DEV_PID=$!
           echo "DEV PID=$DEV_PID"
-          TARGET="http://127.0.0.1:3000/"
-          echo "Waiting for dev server at $TARGET ..."
+          TARGETS=("http://127.0.0.1:3000/" "http://localhost:3000/")
+          FOUND=0
           n=0
           until [ $n -ge 60 ]; do
-            if curl -sSf "$TARGET" >/dev/null 2>&1; then
-              echo "dev server is responding"
-              break
-            fi
+            for T in "${TARGETS[@]}"; do
+              C=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "$T" || true)
+              if [ -n "$C" ] && [ "$C" -ge 200 ] && [ "$C" -lt 400 ]; then
+                echo "up $T ($C)"
+                FOUND=1
+                break 2
+              fi
+            done
             n=$((n+1))
             sleep 3
           done
-          if [ $n -ge 60 ]; then
+          if [ "${FOUND:-0}" -ne 1 ]; then
             echo "dev server did not start in time" >&2
             echo "---- Last 200 lines of $LOG ----" >&2
             tail -n 200 "$LOG" >&2 || true
@@ -77,27 +80,31 @@ jobs:
       - name: Build and preview (smoke)
         run: |
           set -euo pipefail
-          PREVIEW_LOG="/tmp/vite-pwa-preview.log"
+          PREVIEW_LOG=/tmp/vite-pwa-preview.log
           # Ensure APP_URL is set for the Vite/Laravel plugin in CI
           echo "APP_URL=http://127.0.0.1:3000" > .env
           export APP_URL="http://127.0.0.1:3000"
-          # rely on `working-directory: tablet-ordering-pwa` for the step context
+          # Build then start preview via package script (avoid host/port overrides)
           npm run build --if-present
-          nohup npm run preview --if-present -- --host 127.0.0.1 --port 3000 > "$PREVIEW_LOG" 2>&1 &
+          nohup npm run preview --if-present >"$PREVIEW_LOG" 2>&1 &
           PREVIEW_PID=$!
           echo "PREVIEW PID=$PREVIEW_PID"
-          TARGET="http://127.0.0.1:3000/"
-          echo "Waiting for preview server at $TARGET ..."
+          TARGETS=("http://127.0.0.1:3000/" "http://localhost:3000/")
+          FOUND=0
           n=0
           until [ $n -ge 60 ]; do
-            if curl -sSf "$TARGET" >/dev/null 2>&1; then
-              echo "preview server is responding"
-              break
-            fi
+            for T in "${TARGETS[@]}"; do
+              C=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 "$T" || true)
+              if [ -n "$C" ] && [ "$C" -ge 200 ] && [ "$C" -lt 400 ]; then
+                echo "up $T ($C)"
+                FOUND=1
+                break 2
+              fi
+            done
             n=$((n+1))
             sleep 3
           done
-          if [ $n -ge 60 ]; then
+          if [ "${FOUND:-0}" -ne 1 ]; then
             echo "preview server did not start in time" >&2
             echo "---- Last 200 lines of $PREVIEW_LOG ----" >&2
             tail -n 200 "$PREVIEW_LOG" >&2 || true
