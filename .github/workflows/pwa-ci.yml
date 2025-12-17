@@ -44,10 +44,10 @@ jobs:
       - name: Smoke - start dev server and assert it responds
         run: |
           set -euo pipefail
-          WORKDIR="tablet-ordering-pwa" # adjust path if needed
           LOG="/tmp/vite-pwa.log"
           # Start Vite dev server in background bound to 127.0.0.1:3000 and capture logs
-          nohup sh -c "cd $WORKDIR && npm run dev --if-present -- --host 127.0.0.1 --port 3000" > "$LOG" 2>&1 &
+          # rely on `working-directory: tablet-ordering-pwa` for the step context
+          nohup npm run dev --if-present -- --host 127.0.0.1 --port 3000 > "$LOG" 2>&1 &
           DEV_PID=$!
           echo "DEV PID=$DEV_PID"
           TARGET="http://127.0.0.1:3000/"
@@ -74,11 +74,10 @@ jobs:
       - name: Build and preview (smoke)
         run: |
           set -euo pipefail
-          WORKDIR="tablet-ordering-pwa" # adjust path if needed
           PREVIEW_LOG="/tmp/vite-pwa-preview.log"
-          cd "$WORKDIR"
+          # rely on `working-directory: tablet-ordering-pwa` for the step context
           npm run build --if-present
-          nohup sh -c "npm run preview --if-present -- --host 127.0.0.1 --port 3000" > "$PREVIEW_LOG" 2>&1 &
+          nohup npm run preview --if-present -- --host 127.0.0.1 --port 3000 > "$PREVIEW_LOG" 2>&1 &
           PREVIEW_PID=$!
           echo "PREVIEW PID=$PREVIEW_PID"
           TARGET="http://127.0.0.1:3000/"
