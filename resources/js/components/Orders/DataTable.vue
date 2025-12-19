@@ -33,11 +33,6 @@ import DataTableToolbar from '@/components/Orders/DataTableToolbar.vue'
 interface DataTableProps {
   columns: ColumnDef<DeviceOrder, any>[]
   data: DeviceOrder[] | any[]
-}
-interface DataTableProps {
-  columns: ColumnDef<DeviceOrder, any>[]
-  data: DeviceOrder[] | any[]
-  serverFilters?: any
   devices?: any[]
   tables?: any[]
 }
@@ -78,7 +73,7 @@ const table = useVueTable({
 
 <template>
   <div class="space-y-4">
-    <DataTableToolbar :table="table" :server-filters="props.serverFilters" :devices="props.devices" :tables="props.tables" />
+    <DataTableToolbar :table="table" :devices="props.devices" :tables="props.tables" />
     <div class="rounded-md border">
       <Table>
         <TableHeader>

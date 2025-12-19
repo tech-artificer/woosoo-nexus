@@ -17,10 +17,14 @@ class SessionRepository
                 return Session::orderByDesc('id')->first();
             }
 
-            return Session::fromQuery('CALL get_latest_session()');
-        } catch (\Exception $e) {
-            Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            return Session::fromQuery('CALL get_latest_session()')->first();
+        } catch (\Throwable $e) {
+            Log::warning('POS get_latest_session procedure failed (graceful fallback)', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+            ]);
+            // Return null instead of throwing - allows app to continue with degraded POS functionality
+            return null;
         }
     }
 

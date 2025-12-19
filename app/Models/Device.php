@@ -70,12 +70,12 @@ class Device extends Authenticatable
         return $this->hasMany(DeviceOrder::class, 'device_id');
     }
 
-    public function table(): BelongsTo
+    public function table(): BelongsTo|null
     {
         return $this->belongsTo(Table::class, 'table_id', 'id');
     }
 
-    public function branch(): BelongsTo
+    public function branch(): BelongsTo|null
     {
         return $this->belongsTo(Branch::class, 'branch_id');
     }

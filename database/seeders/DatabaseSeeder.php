@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
         }
 
       
-        User::firstOrCreate(
+        $adminUser = User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
                 'name' => 'admin',
@@ -39,13 +39,14 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $this->setupRolesAndPermissions();
+        $this->setupRolesAndPermissions($adminUser);
     }
 
-    protected function setupRolesAndPermissions() {
+    protected function setupRolesAndPermissions(?User $initialAdmin = null) {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $user = User::where(['is_admin' => true, 'id' => 1])->first();
+        // Prefer the user created above, otherwise find the first user flagged as is_admin.
+        $user = $initialAdmin ?? User::where('is_admin', true)->orderBy('id')->first();
         /*
         |--------------------------------------------------------------------------
         | Define Permissions
@@ -122,7 +123,9 @@ class DatabaseSeeder extends Seeder
         //     'users.view', 'users.create', 'users.edit', 'users.delete',
         // ]);
         // 
-        $user->assignRole($admin);
+        if ($user) {
+            $user->assignRole($admin);
+        }
 
 
     }

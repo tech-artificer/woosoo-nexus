@@ -17,17 +17,22 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 <template>
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="p-6 bg-white rounded">
-      <h2 class="text-xl font-semibold">Event Logs</h2>
-      <p class="text-sm text-muted-foreground">{{ description }}</p>
+    <div class="space-y-6">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Event Logs</h1>
+        <p class="text-muted-foreground">{{ description }}</p>
+      </div>
 
-      <div class="mt-4">
-        <div class="bg-gray-900 text-white p-4 rounded max-h-[60vh] overflow-auto font-mono text-xs">
+      <div class="rounded-lg border bg-card">
+        <div class="bg-muted/50 text-card-foreground p-4 rounded-t-lg border-b">
+          <span class="text-sm font-medium">Application Logs</span>
+        </div>
+        <div class="bg-slate-900 text-slate-100 p-4 rounded-b-lg max-h-[60vh] overflow-auto font-mono text-xs">
           <template v-if="logs && logs.length">
-            <div v-for="(line, idx) in logs" :key="idx" class="whitespace-pre-wrap">{{ line }}</div>
+            <div v-for="(line, idx) in logs" :key="idx" class="whitespace-pre-wrap py-0.5">{{ line }}</div>
           </template>
           <template v-else>
-            <div>No logs found.</div>
+            <div class="text-slate-400">No logs found.</div>
           </template>
         </div>
       </div>

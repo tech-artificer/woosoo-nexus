@@ -23,6 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        if (Schema::hasTable('device_orders') && Schema::hasColumn('device_orders', 'is_printed')) {
+            Schema::table('device_orders', function (Blueprint $table) {
+                $table->dropColumn('is_printed');
+            });
+        }
     }
 };

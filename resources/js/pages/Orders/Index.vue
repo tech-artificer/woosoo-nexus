@@ -14,6 +14,17 @@ import {
     TabsList,
     TabsTrigger,
 } from "@/components/ui/tabs"
+
+interface OrdersPageProps {
+  title: string
+  description: string
+  orders: DeviceOrder[]
+  orderHistory: DeviceOrder[]
+  stats?: Record<string, any>
+  devices?: Record<string, any>[]
+  tables?: Record<string, any>[]
+}
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Orders',
@@ -24,21 +35,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 const page = usePage();
 const user = (page.props.auth as any)?.user as User;
 
-const props = defineProps<{
-  title: string;
-  description: string;
-  orders: DeviceOrder[];
-  orderHistory: DeviceOrder[];
-  stats?: any;
-  filters?: any;
-  devices?: any[];
-  tables?: any[];
-}>()
+const props = defineProps<OrdersPageProps>()
 
 const orders = props.orders ?? []
 const orderHistory = props.orderHistory ?? []
 const stats = props.stats ?? null
-const filters = props.filters ?? null
 const devices = props.devices ?? []
 const tables = props.tables ?? []
 
@@ -63,7 +64,7 @@ const testAddOrder = () => {
   console.log('localOrders now has', localOrders.value.length, 'items')
 }
 
-// Filters moved into the DataTable toolbar; DataTable will own column filters
+// DataTable handles all client-side column filtering
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   console.log('Orders/Index.vue - Order event received:', event, 'Is update:', isUpdate);
@@ -74,7 +75,7 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   // Only process orders with confirmed or active status for live orders
   const liveStatuses = ['confirmed', 'pending', 'in_progress', 'ready', 'served']
   const terminalStatuses = ['completed', 'voided', 'cancelled', 'archived']
-  const incomingStatus = String(incoming.status).toLowerCase()
+  const incomingStatus = String((incoming as any).status).toLowerCase()
 
   // Heuristic: detect "refill" in items. Adjust to your domain's true refill marker.
   const isRefill = Array.isArray(incoming.items) && incoming.items.some((it: any) => {
@@ -357,10 +358,10 @@ onUnmounted(() => {
                     </button>
                   </div>
 
-                  <DataTable :data="localOrders" :columns="columns" :server-filters="filters" :devices="devices" :tables="tables" />
+                  <DataTable :data="localOrders" :columns="columns" :devices="devices" :tables="tables" />
                 </TabsContent>
                 <TabsContent value="order_history" class="p-2">
-                  <DataTable :data="localOrderHistory" :columns="columns" :server-filters="filters" :devices="devices" :tables="tables" />  
+                  <DataTable :data="localOrderHistory" :columns="columns" :devices="devices" :tables="tables" />  
                 </TabsContent>
             </Tabs>
         </div>

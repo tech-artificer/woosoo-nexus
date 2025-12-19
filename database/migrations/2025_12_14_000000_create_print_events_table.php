@@ -23,7 +23,7 @@ return new class extends Migration
             $table->text('last_error')->nullable();
             $table->timestamps();
 
-            $table->foreign('device_order_id')->references('id')->on('device_orders')->nullOnDelete();
+            $table->foreign('device_order_id')->references('id')->on('device_orders')->cascadeOnDelete();
             $table->index(['device_order_id', 'event_type']);
             $table->index('is_acknowledged');
             $table->index('printer_id');

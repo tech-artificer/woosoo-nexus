@@ -29,12 +29,12 @@ class ServiceRequest extends Model
         return $this->tableService?->name ?? null;
     }
 
-    public function deviceOrder(): BelongsTo
+    public function deviceOrder(): BelongsTo|null
     {
         return $this->belongsTo(DeviceOrder::class);
     }
 
-    public function tableService(): BelongsTo
+    public function tableService(): BelongsTo|null
     {
         return $this->belongsTo(TableService::class);
     }

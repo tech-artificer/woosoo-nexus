@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\{
     Device\DeviceController,
     AccessibilityController,
     RoleController,
+    PermissionController,
     BranchController,
     ReverbController
 };
@@ -64,6 +65,11 @@ Route::middleware(['auth'])->group(function () {
         // Roles & Permissions
         Route::resource('/roles', RoleController::class);
         Route::post('/roles/bulk-destroy', [RoleController::class, 'bulkDestroy'])->name('roles.bulk-destroy');
+        // Sync permissions for a role (expects array of permission names)
+        Route::post('/roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
+        // Permissions management
+        Route::resource('/permissions', PermissionController::class)->only(['index', 'store', 'destroy']);
+        Route::post('/permissions/bulk-destroy', [PermissionController::class, 'bulkDestroy'])->name('permissions.bulk-destroy');
         // Branch
         Route::resource('/branches', BranchController::class)->except(['show', 'create', 'edit']);
         Route::prefix('branches')->name('branches.')->group(function () {

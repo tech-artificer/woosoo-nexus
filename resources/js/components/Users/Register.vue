@@ -9,7 +9,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import UserForm from '@/components/users/UserForm.vue';
+import UserForm from '@/components/Users/UserForm.vue';
 </script>
 
 <template>

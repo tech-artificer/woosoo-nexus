@@ -42,31 +42,19 @@ function handleCreateRole() {
   <Head title="Roles & Permissions" />
 
   <AuthenticatedLayout>
-    <template #header>
+    <div class="space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-2xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-            Roles & Permissions
-          </h2>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Manage system roles and their associated permissions
-          </p>
+          <h1 class="text-2xl font-bold tracking-tight">Roles & Permissions</h1>
+          <p class="text-muted-foreground">Manage system roles and their associated permissions</p>
         </div>
         <Button @click="handleCreateRole">
           <Plus class="mr-2 h-4 w-4" />
           New Role
         </Button>
       </div>
-    </template>
 
-    <div class="py-12">
-      <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div class="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
-          <div class="p-6 text-gray-900 dark:text-gray-100">
-            <DataTable :columns="columns" :data="roles.data" />
-          </div>
-        </div>
-      </div>
+      <DataTable :columns="columns" :data="roles.data" />
     </div>
 
     <Sheet v-model:open="showCreateSheet">

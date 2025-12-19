@@ -117,13 +117,13 @@ onUnmounted(() => {
     <Head title="Reverb Service" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-6">
-            <div class="flex flex-col gap-2">
-                <h1 class="text-2xl font-bold font-header text-woosoo-dark-gray">
-                    <Radio class="inline-block mr-2 h-6 w-6" />
+        <div class="space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    <Radio class="h-6 w-6" />
                     Reverb WebSocket Service
                 </h1>
-                <p class="font-body font-light text-woosoo-dark-gray">
+                <p class="text-muted-foreground">
                     Manage the Laravel Reverb WebSocket server via PowerShell commands
                 </p>
             </div>

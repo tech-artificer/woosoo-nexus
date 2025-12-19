@@ -47,6 +47,16 @@ class OrderController extends Controller
             $query->where('session_id', $sessionId);
         }
 
+        // Branch filter (device or explicit query)
+        if ($branch = $request->query('branch')) {
+            $query->where('branch_id', $branch);
+        }
+
+        // Station filter: map to table_id by convention
+        if ($station = $request->query('station')) {
+            $query->where('table_id', $station);
+        }
+
         if ($since = $request->query('since')) {
             $query->where('created_at', '>=', $since);
         }
@@ -68,6 +78,12 @@ class OrderController extends Controller
         $countsQuery = DeviceOrder::query();
         if ($device && isset($device->branch_id)) {
             $countsQuery->where('branch_id', $device->branch_id);
+        }
+        if ($branch) {
+            $countsQuery->where('branch_id', $branch);
+        }
+        if ($station) {
+            $countsQuery->where('table_id', $station);
         }
         $counts = $countsQuery->select('status', DB::raw('count(*) as cnt'))->groupBy('status')->pluck('cnt', 'status')->toArray();
 
@@ -142,14 +158,13 @@ class OrderController extends Controller
     /**
      * Update a single order's status (server-enforced transitions).
      */
-    public function updateStatus(Request $request, $orderId)
+    public function updateStatus(Request $request, DeviceOrder $order)
     {
         $request->validate([
             'status' => ['required', new EnumRule(OrderStatus::class)],
         ]);
 
         $device = $request->user();
-        $order = DeviceOrder::where('order_id', $orderId)->firstOrFail();
 
         if ($device && isset($device->branch_id) && isset($order->branch_id) && $device->branch_id !== $order->branch_id) {
             return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
@@ -185,7 +200,8 @@ class OrderController extends Controller
         DB::beginTransaction();
         try {
             foreach ($orderIds as $oid) {
-                $order = DeviceOrder::where('order_id', $oid)->first();
+                // Lookup by DeviceOrder ID (internal ID)
+                $order = DeviceOrder::find($oid);
                 if (! $order) {
                     $results['failed'][] = ['order_id' => $oid, 'reason' => 'not_found'];
                     continue;

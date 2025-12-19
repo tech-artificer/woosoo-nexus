@@ -19,7 +19,7 @@ defineProps<{
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
       <h2 class="text-lg font-semibold">Create Device</h2>
-      <DeviceForm :device="{ id: null, name: '', ip_address: '', port: null, table_id: null }" :unassignedTables="unassignedTables" form-type="create" />
+      <DeviceForm :device="{ id: 0, name: '', ip_address: '', port: undefined, table_id: undefined }" :unassignedTables="unassignedTables" form-type="create" />
     </div>
   </AppLayout>
 </template>

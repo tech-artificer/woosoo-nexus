@@ -33,8 +33,8 @@ const props = defineProps<{
 const form = useForm({
     name: props.device?.name ?? '',
     ip_address: props.device?.ip_address ?? '',
-    port: props.device?.port ?? null,
-    table_id: props.device?.table_id ?? null
+    port: props.device?.port ?? undefined,
+    table_id: props.device?.table_id ?? undefined
 })
 
 const computedTables = computed(() => props.unassignedTables ) // unassigned tables
@@ -141,7 +141,7 @@ console.log(selectedTableName)
 
             <div class="flex flex-col">
                 <label class="mb-1 text-sm font-medium">Change Table Assignment</label>
-         
+        
                 <Select v-model="form.table_id">
                     <SelectTrigger class="w-[180px]">
                         <SelectValue placeholder="Assign a Table" />
@@ -158,6 +158,7 @@ console.log(selectedTableName)
 
                 <div v-if="form.errors.table_id" class="text-sm text-red-500 mt-1">{{ form.errors.table_id }}</div>
             </div>
+
 
 
 
@@ -182,10 +183,4 @@ console.log(selectedTableName)
     </SheetFooter>
 
 </template>
-
-<style scoped>
-.error {
-    color: red;
     font-size: 0.8em;
-}
-</style>

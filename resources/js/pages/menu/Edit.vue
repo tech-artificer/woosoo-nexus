@@ -176,9 +176,4 @@ onMounted(() => {
   </Dialog>
 </template>
 
-<style scoped>
-.error {
-  color: red;
-  font-size: 0.8em;
-}
-</style>
+ 

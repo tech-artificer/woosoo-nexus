@@ -1,34 +1,18 @@
 <script setup lang="ts">
-import {  onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import { toast } from 'vue-sonner'
 import { Checkbox } from "@/components/ui/checkbox"
-// import {
-//   Select,
-//   SelectContent,
-//   SelectGroup,
-//   SelectItem,
-//   SelectLabel,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select"
-
-import {
-  SheetClose,
-  SheetFooter,
-} from "@/components/ui/sheet"
-// import { ScrollArea } from '@/components/ui/scroll-area'
-
+import { SheetClose, SheetFooter } from "@/components/ui/sheet"
 import { Label } from '@/components/ui/label';
-import type{ Role, User } from '@/types/models';
+import type { Role, User } from '@/types/models';
 import Separator from '../ui/separator/Separator.vue';
+
 const page = usePage();
-// Props
-const roles = page.props.roles as Role[]
-// const showDialog = ref(false); // Dialog state
+const roles = page.props.roles as Role[];
 
 const props = defineProps<{
   user?: User
@@ -36,20 +20,20 @@ const props = defineProps<{
 }>();
 
 const form = useForm({
-  name: '',
-  email: '',
+  name: props.user?.name ?? '',
+  email: props.user?.email ?? '',
   password: '',
   roles: [] as string[],
 });
 
 const toggleRole = (roleName: string | any, checked: boolean) => {
-  
   if (checked && !form.roles.includes(roleName)) {
     form.roles.push(roleName)
   } else if (!checked) {
     form.roles = form.roles.filter(name => name !== roleName)
   }
 }
+
 function submit() {
   if (props.formType === 'create') {
     form.post(route('users.store'), {
@@ -59,11 +43,6 @@ function submit() {
       onSuccess: () => {
         toast('User Created:', {
           description: 'A new user has been created.',
-          // action: {
-          //   label: 'Ok',
-          //   variant: 'success',
-          
-          // },
           duration: 5000,
           position: 'top-right',
         });
@@ -77,11 +56,6 @@ function submit() {
         console.log(response);
         toast('User Updated:', {
           description: 'User details have been updated.',
-          // action: {
-          //   label: 'Ok',
-          //   variant: 'success',
-          
-          // },
           duration: 5000,
           position: 'top-right',
         });
@@ -97,7 +71,6 @@ onMounted(() => {
     form.roles = props.user.roles.map((r: Role) => r.name) ?? []
   }
 })
-
 </script>
 
 <template>
@@ -106,20 +79,19 @@ onMounted(() => {
     <form @submit.prevent="submit" class="p-4 flex flex-col gap-4">
 
       <div class="flex flex-col gap-3">
-        <Label for="name" class="">Name</Label>
+        <Label for="name">Name</Label>
         <Input type="text" v-model="form.name" placeholder="John Doe" />
         <InputError :message="form.errors.name" />
       </div>
 
       <div class="flex flex-col gap-3">
-        <Label for="email" class="">Email</Label>
+        <Label for="email">Email</Label>
         <Input type="email" v-model="form.email" placeholder="email@example" />
         <InputError :message="form.errors.email" />
       </div>
 
-        
       <div class="flex flex-row justify-between gap-2">
-        
+
         <div class="flex flex-col gap-2">
           <Label for="Role">Role</Label>
           <span class="text-xs text-muted-foreground">User can have multiple roles</span>
@@ -132,30 +104,20 @@ onMounted(() => {
                 {{ role.name }}
               </label>
             </div>
-          </div>       
+          </div>
           <InputError :message="form.errors.roles" />
         </div>
 
-         <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2">
           <Label for="branch">Branch</Label>
           <span class="text-xs text-muted-foreground">User can have multiple branches</span>
           <div class="flex flex-col gap-2">
-            <!-- <div v-for="branch in branches" :key="branch.id" class="flex justify-start items-center gap-2">
-              <Checkbox :id="`branch-${branch.id}`" :model-value="form.branches.includes(branch.id)"
-                @update:model-value="(checked: any) => toggleBranch(branch.id, checked)" />
-              <label :for="`branch-${branch.id}`"
-                class="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {{ branch.name }}
-              </label>
-            </div> -->
+            <!-- branch checkboxes go here -->
           </div>
-          <InputError :message="form.errors.branches" />
+          <InputError :message="(form.errors as any).branches" />
         </div>
 
-
       </div>
-
-   
 
     </form>
   </div>
@@ -177,10 +139,4 @@ onMounted(() => {
   </SheetFooter>
 
 </template>
-
-<style scoped>
-.error {
-  color: red;
-  font-size: 0.8em;
-}
-</style>
+                {{ branch.name }}

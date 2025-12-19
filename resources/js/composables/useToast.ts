@@ -1,8 +1,9 @@
-import { toast } from 'vue-sonner'
+import { toast as sonnerToast } from 'vue-sonner'
 
 export const useToast = () => {
   return {
-    success: (message: string) => toast({ title: 'Success', description: message }),
-    error: (message: string) => toast({ title: 'Error', description: message, variant: 'destructive' }),
+    toast: sonnerToast,
+    success: (message: string) => sonnerToast({ title: 'Success', description: message }),
+    error: (message: string) => sonnerToast({ title: 'Error', description: message, variant: 'destructive' }),
   }
 }

@@ -3,6 +3,7 @@
 namespace App\Models\Krypton;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 
 class Session extends Model
@@ -21,28 +22,32 @@ class Session extends Model
 
     /**
      * Get the latest session.
+     * Returns null if unable to query POS database (graceful fallback).
      *
-     * @return string
+     * @return self|null
      */
     public static function getLatestSession() {
-      if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-        return null;
+      try {
+        return self::fromQuery('CALL get_latest_session()')->first();
+      } catch (\Throwable $e) {
+        Log::warning('POS getLatestSession query failed', ['error' => $e->getMessage()]);
+        return null; // Graceful fallback when POS is unavailable
       }
-
-      return Self::fromQuery('CALL get_latest_session()')->first();
     } 
 
     /**
      * Get the latest session ID.
+     * Returns null if unable to query POS database (graceful fallback).
      * 
-     * @return string
+     * @return mixed
      */
     public static function getLatestSessionId() {
-      if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-        return null;
+      try {
+        return self::fromQuery('CALL get_latest_session_id()')->first();
+      } catch (\Throwable $e) {
+        Log::warning('POS getLatestSessionId query failed', ['error' => $e->getMessage()]);
+        return null; // Graceful fallback when POS is unavailable
       }
-
-      return Self::fromQuery('CALL get_latest_session_id()');
     } 
 
   }

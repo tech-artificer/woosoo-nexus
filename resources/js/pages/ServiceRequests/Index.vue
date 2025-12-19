@@ -167,12 +167,10 @@ const refreshData = () => {
 <template>
     <Head :title="props.title" :description="props.description" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 p-4 md:p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight">Service Requests</h1>
-                    <p class="text-muted-foreground">Manage and track customer service requests in real-time</p>
-                </div>
+        <div class="space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Service Requests</h1>
+                <p class="text-muted-foreground">Manage and track customer service requests in real-time</p>
             </div>
 
             <DataTableToolbar

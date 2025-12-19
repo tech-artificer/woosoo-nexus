@@ -3,7 +3,7 @@ import type { Table } from '@tanstack/vue-table'
 import { RefreshCw, CheckCircle, XCircle, Download } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import DataTableFacetedFilter from '@/components/Orders/DataTableFacetedFilter.vue'
 import {
   AlertDialog,
@@ -20,7 +20,6 @@ import { toast } from 'vue-sonner'
 
 interface DataTableToolbarProps {
   table: Table<any>
-  serverFilters?: any
   devices?: any[]
   tables?: any[]
 }
@@ -33,36 +32,6 @@ const selectedRows = computed(() => {
   return props.table.getFilteredSelectedRowModel().rows.map(row => row.original)
 })
 
-// Server-side filter mode if `serverFilters` prop is present (explicitly provided by Inertia)
-const serverMode = computed(() => props.serverFilters !== undefined)
-
-// Server-side reactive values
-const serverStatus = ref<string | null>(serverMode.value && props.serverFilters?.status ? (Array.isArray(props.serverFilters.status) ? props.serverFilters.status.join(',') : String(props.serverFilters.status)) : null)
-const serverDeviceId = ref<string | number | null>(serverMode.value ? props.serverFilters?.device_id ?? null : null)
-const serverTableId = ref<string | number | null>(serverMode.value ? props.serverFilters?.table_id ?? null : null)
-const serverSearch = ref<string>(serverMode.value ? props.serverFilters?.search ?? '' : '')
-
-let serverTimer: ReturnType<typeof setTimeout> | null = null
-
-const applyServerFilters = () => {
-  const params: any = {}
-  if (serverStatus.value) params.status = serverStatus.value
-  if (serverDeviceId.value) params.device_id = serverDeviceId.value
-  if (serverTableId.value) params.table_id = serverTableId.value
-  if (serverSearch.value) params.search = serverSearch.value
-  router.get(route('orders.index'), params, { preserveState: true, replace: true })
-}
-
-const debounceApply = () => {
-  if (serverTimer) clearTimeout(serverTimer)
-  serverTimer = setTimeout(() => applyServerFilters(), 300)
-}
-
-watch(serverStatus, () => debounceApply())
-watch(serverDeviceId, () => debounceApply())
-watch(serverTableId, () => debounceApply())
-watch(serverSearch, () => debounceApply())
-
 // Status options for filtering
 const statusOptions = [
   { label: 'Pending', value: 'pending' },
@@ -74,6 +43,16 @@ const statusOptions = [
   { label: 'Cancelled', value: 'cancelled' },
   { label: 'Voided', value: 'voided' },
 ]
+
+// Device options for filtering (derive from props)
+const deviceOptions = computed(() => {
+  return (props.devices ?? []).map(d => ({ label: d.name, value: d.name }))
+})
+
+// Table options for filtering (derive from props)
+const tableOptions = computed(() => {
+  return (props.tables ?? []).map(t => ({ label: t.name, value: t.name }))
+})
 
 // Dialog states
 const showCompleteDialog = ref(false)
@@ -160,49 +139,37 @@ const handleExport = () => {
   <div class="flex flex-row flex-wrap justify-between gap-2">
     <div class="flex flex-row flex-wrap gap-2">
 
-      <!-- Server-mode filters (Inertia server filtering) -->
-      <template v-if="serverMode">
-        <Input
-          placeholder="Search order #..."
-          :model-value="serverSearch"
-          class="h-8 w-[150px] lg:w-[200px]"
-          @input="(e) => serverSearch = e.target.value"
-        />
+      <!-- Search by order number -->
+      <Input
+        placeholder="Search order #..."
+        :model-value="(table.getColumn('order_number')?.getFilterValue() as string) ?? ''"
+        class="h-8 w-[150px] lg:w-[200px]"
+        @input="table.getColumn('order_number')?.setFilterValue($event.target.value)"
+      />
 
-        <select v-model="serverStatus" class="h-8 px-2 rounded border">
-          <option value="">All Statuses</option>
-          <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-        </select>
+      <!-- Status filter -->
+      <DataTableFacetedFilter
+        v-if="table.getColumn('status')"
+        :column="table.getColumn('status')"
+        title="Status"
+        :options="statusOptions"
+      />
 
-        <select v-if="props.devices" v-model="serverDeviceId" class="h-8 px-2 rounded border">
-          <option value="">All Devices</option>
-          <option v-for="d in props.devices" :key="d.id" :value="d.id">{{ d.name }}</option>
-        </select>
+      <!-- Device filter -->
+      <DataTableFacetedFilter
+        v-if="table.getColumn('device') && deviceOptions.length"
+        :column="table.getColumn('device')"
+        title="Device"
+        :options="deviceOptions"
+      />
 
-        <select v-if="props.tables" v-model="serverTableId" class="h-8 px-2 rounded border">
-          <option value="">All Tables</option>
-          <option v-for="t in props.tables" :key="t.id" :value="t.id">{{ t.name }}</option>
-        </select>
-      </template>
-
-      <!-- Client-mode filters (existing column-based filters) -->
-      <template v-else>
-        <!-- Search by order number -->
-        <Input
-          placeholder="Search order #..."
-          :model-value="(table.getColumn('order_number')?.getFilterValue() as string) ?? ''"
-          class="h-8 w-[150px] lg:w-[200px]"
-          @input="table.getColumn('order_number')?.setFilterValue($event.target.value)"
-        />
-
-        <!-- Status filter -->
-        <DataTableFacetedFilter
-          v-if="table.getColumn('status')"
-          :column="table.getColumn('status')"
-          title="Status"
-          :options="statusOptions"
-        />
-      </template>
+      <!-- Table filter -->
+      <DataTableFacetedFilter
+        v-if="table.getColumn('table') && tableOptions.length"
+        :column="table.getColumn('table')"
+        title="Table"
+        :options="tableOptions"
+      />
 
       <!-- Reset filters -->
       <Button

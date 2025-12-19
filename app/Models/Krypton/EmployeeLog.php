@@ -27,20 +27,22 @@ class EmployeeLog extends Model
 
     public static function getEmployeeLogsForSession($sessionId)
     {
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        try {
+            return self::fromQuery('CALL get_employee_logs_for_session(?)', [$sessionId]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('POS getEmployeeLogsForSession failed', ['sessionId' => $sessionId, 'error' => $e->getMessage()]);
             return collect([]);
         }
-
-        return Self::fromQuery("CALL get_employee_logs_for_session(?)", [$sessionId]);
     }
 
     public static function getEmployeeLog($logId)
     {
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        try {
+            return self::fromQuery('CALL get_employee_log(?)', [$logId]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('POS getEmployeeLog failed', ['logId' => $logId, 'error' => $e->getMessage()]);
             return null;
         }
-
-        return Self::fromQuery("CALL get_employee_log(?)", [$logId]);
     }
 
     protected $dates = [

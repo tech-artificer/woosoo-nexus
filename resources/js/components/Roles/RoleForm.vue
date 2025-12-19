@@ -43,24 +43,24 @@ const form = useForm({
   permissions: props.role?.permissions?.map((p: any) => p.id) || [] as number[],
 })
 
-// Group permissions by prefix
+// Use grouped permissions shared by the backend (grouped by first segment of the permission name)
 const groupedPermissions = computed(() => {
+  // `groupedPermissions` is provided via Inertia::share in AppServiceProvider
+  // it has the shape: { users: [{id,name,label}, ...], menus: [...] }
+  // fall back to building a simple grouping from `permissions` prop when absent
+  const shared = (page.props as any).groupedPermissions as Record<string, any[]> | undefined
+  if (shared && Object.keys(shared).length > 0) return shared
+
   const perms = permissions.value
   if (!perms || perms.length === 0) return {}
-  
+
   const groups: Record<string, Permission[]> = {}
-  
   perms.forEach(permission => {
-    const parts = permission.name.split(' ')
-    const action = parts[0] // view, create, update, delete
-    const resource = parts.slice(1).join(' ') // users, roles, etc.
-    
-    if (!groups[resource]) {
-      groups[resource] = []
-    }
+    const parts = permission.name.split('.')
+    const resource = parts[0] || 'general'
+    if (!groups[resource]) groups[resource] = []
     groups[resource].push(permission)
   })
-  
   return groups
 })
 
@@ -166,25 +166,30 @@ const submit = () => {
           :key="resource"
           class="space-y-2"
         >
-          <div class="flex items-center space-x-2 pb-2 border-b">
-            <Checkbox
-              :id="`resource-${resource}`"
-              :checked="isResourceFullySelected(resourcePerms)"
-              :indeterminate="isResourcePartiallySelected(resourcePerms)"
-              @update:checked="toggleResourcePermissions(resourcePerms)"
-            />
-            <Label
-              :for="`resource-${resource}`"
-              class="text-sm font-semibold capitalize cursor-pointer"
-            >
-              {{ resource }}
-            </Label>
+          <div class="flex items-center justify-between pb-2 border-b">
+            <div class="flex items-center space-x-2">
+              <Checkbox
+                :id="`resource-${resource}`"
+                :checked="isResourceFullySelected(resourcePerms)"
+                :indeterminate="isResourcePartiallySelected(resourcePerms)"
+                @update:checked="toggleResourcePermissions(resourcePerms)"
+              />
+              <Label
+                :for="`resource-${resource}`"
+                class="text-sm font-semibold capitalize cursor-pointer"
+              >
+                {{ resource.charAt(0).toUpperCase() + resource.slice(1) }}
+              </Label>
+            </div>
+            <div class="text-sm text-muted-foreground">
+              <span class="text-xs">{{ resourcePerms.length }} permission(s)</span>
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 pl-6">
+          <div class="grid grid-cols-2 gap-3 pl-6">
             <div
               v-for="permission in resourcePerms"
               :key="permission.id"
-              class="flex items-center space-x-2"
+              class="flex items-center space-x-3"
             >
               <Checkbox
                 :id="`permission-${permission.id}`"
@@ -193,9 +198,9 @@ const submit = () => {
               />
               <Label
                 :for="`permission-${permission.id}`"
-                class="text-sm cursor-pointer capitalize"
+                class="text-sm cursor-pointer"
               >
-                {{ permission.name.split(' ')[0] }}
+                {{ permission.label ?? permission.name }}
               </Label>
             </div>
           </div>

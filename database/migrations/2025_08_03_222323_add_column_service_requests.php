@@ -29,6 +29,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        if (Schema::hasTable('service_requests')) {
+            Schema::table('service_requests', function (Blueprint $table) {
+                $columns = ['device_order_id', 'table_service_id', 'order_id'];
+                foreach ($columns as $col) {
+                    if (Schema::hasColumn('service_requests', $col)) {
+                        $table->dropColumn($col);
+                    }
+                }
+            });
+        }
     }
 };

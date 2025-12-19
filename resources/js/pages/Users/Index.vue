@@ -50,7 +50,11 @@ function goto(link: any) {
    
     <AppLayout :breadcrumbs="breadcrumbs">    
         <!-- <pre> {{ users }} </pre> -->
-                <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
+                <div class="space-y-6">
+                        <div>
+                            <h1 class="text-2xl font-bold tracking-tight">User Management</h1>
+                            <p class="text-muted-foreground">Manage system users and their accounts</p>
+                        </div>
                         <!-- Filters moved into Users DataTable toolbar -->
                         <StatsCards :cards="(props.stats ?? [
                                      { title: 'Total Users', value: users?.meta?.total ?? users.data.length, subtitle: 'All registered users', variant: 'primary' },
@@ -59,11 +63,11 @@ function goto(link: any) {
                                  ])" />
                                  <DataTable :data="users.data" :columns="columns" />
 
-                         <div class="mt-4 flex items-center justify-between">
+                         <div class="flex items-center justify-between">
                              <div class="text-sm text-muted-foreground">Showing {{ users.data.length }} of {{ users.meta?.total ?? users.data.length }}</div>
-                             <div class="flex items-center space-x-2">
+                             <div class="flex items-center gap-1">
                                  <button v-for="link in paginationLinks" :key="link.label" @click.prevent="goto(link)"
-                                     class="px-3 py-1 border rounded bg-white hover:bg-gray-50 text-sm" :class="{ 'font-semibold': link.active }" v-html="link.label">
+                                     class="px-3 py-1.5 text-sm rounded-md border bg-background hover:bg-accent transition-colors" :class="{ 'font-semibold bg-primary text-primary-foreground hover:bg-primary/90': link.active }" v-html="link.label">
                                  </button>
                              </div>
                          </div>

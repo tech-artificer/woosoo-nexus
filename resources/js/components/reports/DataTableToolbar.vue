@@ -1,9 +1,12 @@
 <script setup lang="ts">
-/* eslint-disable vue/valid-define-props */
 import DataTableToolbar from '@/components/ui/DataTableToolbar.vue'
-defineProps()
+import type { Table } from '@tanstack/vue-table'
+
+defineProps<{
+  table: Table<any>
+}>()
 </script>
 
 <template>
-  <DataTableToolbar v-bind="$attrs" />
+  <DataTableToolbar :table="table" v-bind="$attrs" />
 </template>

@@ -52,6 +52,7 @@ class DeviceOrder extends Model
         'guest_count' => 'integer',
         'is_printed' => 'boolean',
         'printed_at' => 'datetime',
+        'printed_by' => 'string',
     ];
 
     /**
@@ -136,6 +137,11 @@ class DeviceOrder extends Model
         });
 
         static::creating(function ($model) {
+            // Skip auto-generation if order_number already set (e.g., in tests)
+            if ($model->order_number) {
+                return;
+            }
+
             // Attempt to generate a unique order number
             // This loop handles potential race conditions by retrying
             $maxAttempts = 5; // Or more, depending on expected concurrency
@@ -199,7 +205,6 @@ class DeviceOrder extends Model
         return $query->whereIn('status', [
             OrderStatus::COMPLETED,
             OrderStatus::VOIDED,
-            OrderStatus::CANCELLED,
             OrderStatus::ARCHIVED,
         ]);
     }

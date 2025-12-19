@@ -23,6 +23,7 @@ function hasColumn(id: string) {
 const courseOptions = computed(() => {
   if (!hasColumn('course')) return []
   const col = table.getColumn('course')
+  if (!col) return []
   const facets = col.getFacetedUniqueValues?.()
   if (!facets) return []
   return Array.from(facets.keys()).map((v: any) => ({ label: String(v), value: String(v) }))
@@ -31,6 +32,7 @@ const courseOptions = computed(() => {
 const categoryOptions = computed(() => {
   if (!hasColumn('category')) return []
   const col = table.getColumn('category')
+  if (!col) return []
   const facets = col.getFacetedUniqueValues?.()
   if (!facets) return []
   return Array.from(facets.keys()).map((v: any) => ({ label: String(v), value: String(v) }))
@@ -39,6 +41,7 @@ const categoryOptions = computed(() => {
 const groupOptions = computed(() => {
   if (!hasColumn('group')) return []
   const col = table.getColumn('group')
+  if (!col) return []
   const facets = col.getFacetedUniqueValues?.()
   if (!facets) return []
   return Array.from(facets.keys()).map((v: any) => ({ label: String(v), value: String(v) }))
@@ -58,7 +61,7 @@ const isAvailableFiltered = computed(() => {
           placeholder="Filter..."
           :model-value="hasColumn('name') ? ((table.getColumn('name')?.getFilterValue() as string) ?? '') : ''"
           class="h-8 w-[150px] lg:w-[250px]"
-          @input="(e) => { if (hasColumn('name')) table.getColumn('name')?.setFilterValue(e.target.value) }"
+          @input="(e: any) => { if (hasColumn('name')) table.getColumn('name')?.setFilterValue(e.target.value) }"
         />
       <DataTableFacetedFilter
         v-if="hasColumn('course')"
@@ -88,6 +91,7 @@ const isAvailableFiltered = computed(() => {
         @click="() => {
           if (!hasColumn('is_available')) return
           const col = table.getColumn('is_available')
+          if (!col) return
           const current = col.getFilterValue()
           col.setFilterValue(current ? undefined : true)
         }"

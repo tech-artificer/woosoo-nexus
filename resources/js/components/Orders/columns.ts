@@ -33,8 +33,13 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
   {
     accessorKey: 'device',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Device', class: 'max-w-[100px]' }),
-    enableColumnFilter: false,
+    enableColumnFilter: true,
     enableSorting: false,
+    filterFn: (row, columnId, filterValue) => {
+      if (!filterValue?.length) return true
+      const deviceName = row.original.device?.name
+      return filterValue.includes(deviceName)
+    },
     cell: ({ row }) => {
       const deviceName = row.original.device?.name;
       return h('div', { class: 'w-20 flex space-x-2' }, [
@@ -45,8 +50,13 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
   {
     accessorKey: 'table',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Table', class: 'max-w-[200px]' }),
-    enableColumnFilter: false,
+    enableColumnFilter: true,
     enableSorting: false,
+    filterFn: (row, columnId, filterValue) => {
+      if (!filterValue?.length) return true
+      const tableName = row.original.table?.name
+      return filterValue.includes(tableName)
+    },
     cell: ({ row }) => {
       const tableName = row.original.table?.name;
       return h('div', { class: 'w-20 flex space-x-2' }, [
@@ -83,8 +93,12 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Status', class: 'max-w-[140px]' }),
     enableColumnFilter: true,
     enableSorting: true,
+    filterFn: (row, columnId, filterValue) => {
+      if (!filterValue?.length) return true
+      return filterValue.includes(row.getValue(columnId))
+    },
     cell: ({ row }) => {
-      return h(OrderStatusBadge, { status: row.getValue('status') })
+      return h(OrderStatusBadge, { status: row.getValue('status') as string })
     }
   },  
   {

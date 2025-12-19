@@ -20,10 +20,7 @@ class DashboardService
 
         $totalSales = $query->whereIn('status', [
             OrderStatus::COMPLETED,
-            OrderStatus::CONFIRMED,
-            OrderStatus::IN_PROGRESS,
-            OrderStatus::READY,
-            OrderStatus::SERVED
+            OrderStatus::CONFIRMED
         ])->sum('total');
 
         return Number::format($totalSales, 2); 
@@ -42,10 +39,7 @@ class DashboardService
 
         $sales = $query->whereIn('status', [
             OrderStatus::COMPLETED,
-            OrderStatus::CONFIRMED,
-            OrderStatus::IN_PROGRESS,
-            OrderStatus::READY,
-            OrderStatus::SERVED
+            OrderStatus::CONFIRMED
         ])->sum('total');
 
         return Number::format($sales, 2); 
@@ -82,10 +76,7 @@ class DashboardService
         $daily = DeviceOrder::where('created_at', '>=', $start)
             ->whereIn('status', [
                 OrderStatus::COMPLETED,
-                OrderStatus::CONFIRMED,
-                OrderStatus::IN_PROGRESS,
-                OrderStatus::READY,
-                OrderStatus::SERVED
+                OrderStatus::CONFIRMED
             ])
             ->selectRaw("DATE(created_at) as date, SUM(total) as total, COUNT(*) as count")
             ->groupBy('date')

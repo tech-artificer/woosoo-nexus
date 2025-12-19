@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger('table_id');
             $table->string('order_id')->nullable();
             $table->string('order_number')->nullable();
-            $table->string('status')->default(OrderStatus::PENDING);
+            $table->string('status')->default(OrderStatus::CONFIRMED);
             $table->json('items');
             $table->json('meta'); //total, tax, discount, notes
             $table->softDeletes();

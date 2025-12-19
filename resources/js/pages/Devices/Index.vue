@@ -58,6 +58,12 @@ const search = ref('')
 const statusFilter = ref('')
 
 const originalDevices = computed(() => devices.value ?? [])
+
+const hasGeneratedCodes = computed(() => {
+    // Check if codes exist (either newly generated or from server)
+    return newCodes.value.length > 0 || (registrationCodes.value?.length ?? 0) > 0
+})
+
 const filteredDevices = computed(() => {
     return originalDevices.value.filter((d: any) => {
         if (search.value) {
@@ -80,7 +86,18 @@ function resetFilters() { search.value = ''; statusFilter.value = '' }
 async function generateCodes() {
     const count = 15
     try {
-        const res = await axios.post(route('devices.generate.codes'), { count }, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        const res = await axios.post(
+            route('devices.generate.codes'),
+            { count },
+            {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            }
+        )
         if (res?.data?.success) {
             newCodes.value = (res.data.created || []).map((c: any) => ({ id: c.id, code: c.code }))
             // reload page so server data stays in sync
@@ -135,7 +152,11 @@ function exportCSV() {
 
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
+        <div class="space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Device Management</h1>
+                <p class="text-muted-foreground">Manage registered devices and activation codes</p>
+            </div>
             <Tabs default-value="devices" class="">
                 <TabsList class="grid w-full grid-cols-2">
                     <TabsTrigger value="devices">
@@ -163,7 +184,7 @@ function exportCSV() {
                                 </CardDescription>
                             </div>
                             <div class="ml-4">
-                                <Button @click.prevent="generateCodes">Generate 15 Codes</Button>
+                                <Button v-if="!hasGeneratedCodes" @click.prevent="generateCodes">Generate 15 Codes</Button>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -204,7 +225,6 @@ function exportCSV() {
                     </Card>
                 </TabsContent>
             </Tabs>
-           
         </div>
     </AppLayout>
 </template>

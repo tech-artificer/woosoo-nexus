@@ -4,12 +4,12 @@
     <table class="w-full border-collapse">
       <thead>
         <tr>
-          <th v-for="col in columns" :key="col.key" class="text-left p-2 border">{{ col.label }}</th>
+          <th v-for="col in columns" :key="(col as any).key" class="text-left p-2 border">{{ (col as any).label }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in data" :key="row.id" class="border-t">
-          <td v-for="col in columns" :key="col.key" class="p-2 border">{{ row[col.key] }}</td>
+        <tr v-for="row in data" :key="(row as any).id" class="border-t">
+          <td v-for="col in columns" :key="(col as any).key" class="p-2 border">{{ (row as any)[(col as any).key] }}</td>
         </tr>
       </tbody>
     </table>

@@ -43,27 +43,27 @@ function reset() {
 <template>
   <div class="flex flex-col md:flex-row items-start md:items-center gap-3 mb-3">
     <div class="flex-1">
-      <input :value="search" @input="(e) => emit('update:search', e.target.value)" @keyup.enter="apply" placeholder="Search requests..." class="border rounded px-3 py-2 w-full" />
+      <input :value="search" @input="(e: any) => emit('update:search', e.target?.value)" @keyup.enter="apply" placeholder="Search requests..." class="border rounded px-3 py-2 w-full" />
     </div>
     <div class="flex items-center gap-2">
-      <select :value="status" @change="(e) => emit('update:status', e.target.value)" class="border rounded px-3 py-2">
+      <select :value="status" @change="(e: any) => emit('update:status', e.target?.value)" class="border rounded px-3 py-2">
         <option value="">All status</option>
         <option value="pending">Pending</option>
         <option value="in_progress">In Progress</option>
         <option value="completed">Completed</option>
         <option value="voided">Voided</option>
       </select>
-      <select :value="priority" @change="(e) => emit('update:priority', e.target.value)" class="border rounded px-3 py-2">
+      <select :value="priority" @change="(e: any) => emit('update:priority', e.target?.value)" class="border rounded px-3 py-2">
         <option value="">All priorities</option>
         <option value="low">Low</option>
         <option value="medium">Medium</option>
         <option value="high">High</option>
         <option value="urgent">Urgent</option>
       </select>
-      <input type="date" :value="fromDate" @change="(e) => emit('update:fromDate', e.target.value)" class="border rounded px-3 py-2" />
-      <input type="date" :value="toDate" @change="(e) => emit('update:toDate', e.target.value)" class="border rounded px-3 py-2" />
+      <input type="date" :value="fromDate" @change="(e: any) => emit('update:fromDate', e.target?.value)" class="border rounded px-3 py-2" />
+      <input type="date" :value="toDate" @change="(e: any) => emit('update:toDate', e.target?.value)" class="border rounded px-3 py-2" />
       <label class="flex items-center gap-2">
-        <input type="checkbox" :checked="showAll" @change="(e) => emit('update:showAll', e.target.checked)" />
+        <input type="checkbox" :checked="showAll" @change="(e: any) => emit('update:showAll', e.target?.checked)" />
         <span class="text-sm">Show All</span>
       </label>
       <button @click.prevent="apply" class="px-3 py-2 rounded bg-primary text-white">Apply</button>

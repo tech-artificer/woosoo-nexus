@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Table } from '@tantml:stack/vue-table'
+import type { Table } from '@tanstack/vue-table'
 import { SlidersHorizontal } from 'lucide-vue-next'
 import { computed } from 'vue'
 
@@ -22,7 +22,7 @@ const props = defineProps<DataTableViewOptionsProps>()
 const columns = computed(() => props.table
   .getAllColumns()
   .filter(
-    column =>
+    (column: any) =>
       typeof column.accessorFn !== 'undefined' && column.getCanHide(),
   ))
 </script>
@@ -48,7 +48,7 @@ const columns = computed(() => props.table
         :key="column.id"
         class="capitalize"
         :checked="column.getIsVisible()"
-        @update:checked="(value) => column.toggleVisibility(!!value)"
+        @update:checked="(value: any) => column.toggleVisibility(!!value)"
       >
         {{ column.id }}
       </DropdownMenuCheckboxItem>

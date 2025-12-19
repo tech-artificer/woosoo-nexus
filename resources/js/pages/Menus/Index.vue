@@ -46,8 +46,12 @@ const categoriesFromPage = (page && (page.props as any).categories) ? (page.prop
     
    <AppLayout :breadcrumbs="breadcrumbs">    
     <!-- <pre> {{ menus }} </pre> -->
-          <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
-                         <!-- Filters moved into Menus DataTable toolbar -->
+          <div class="space-y-6">
+                 <div>
+                     <h1 class="text-2xl font-bold tracking-tight">Menu Management</h1>
+                     <p class="text-muted-foreground">Manage menu items and availability</p>
+                 </div>
+                 <!-- Filters moved into Menus DataTable toolbar -->
                  <StatsCards :cards="(stats ?? [
                      { title: 'Total Menus', value: (menus || []).length, subtitle: 'All menu items', variant: 'primary' },
                      { title: 'Available', value: (menus || []).filter(m => m.is_available).length, subtitle: 'Currently available', variant: 'accent' },

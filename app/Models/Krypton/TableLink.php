@@ -4,13 +4,17 @@ namespace App\Models\Krypton;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * TableLink model for Krypton POS database (legacy system)
+ * 
+ * Read-only integration with Krypton POS `krypton_woosoo` database.
+ * POS tables do not include created_at/updated_at timestamps.
+ */
 class TableLink extends Model
 {
     protected $connection = 'pos';
     protected $table = 'table_links';
-
-    public $timestamps = false;
-
+    public $timestamps = false; // POS DB tables have no timestamp columns
 
     protected $fillable = [
         'order_id',
@@ -22,25 +26,17 @@ class TableLink extends Model
     ];
 
     public function createLinkTable() {
-        // During tests avoid calling external POS stored procedures.
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-            return collect([]);
-        }
-
-        $details = $this->toArray(); 
-
+        $details = $this->toArray();
         $numberOfParameters = count($details);
-        // Create an array of '?' strings, one for each parameter.
-        $placeholdersArray = array_fill(0, $numberOfParameters, '?');
-        // Join them with a comma and space to form the placeholder string.
-        $placeholders = implode(', ', $placeholdersArray);
-        // 2. Extract Values
-        // array_values() extracts all the values from the associative array
-        // and returns them as a new numerically indexed array.
+        $placeholders = implode(', ', array_fill(0, $numberOfParameters, '?'));
         $params = array_values($details);
 
-        // Now, call your fromQuery method with the generated placeholders and parameters
-        return TableLink::fromQuery('CALL create_link_table(' . $placeholders . ')', $params);
+        try {
+            return self::fromQuery('CALL create_link_table(' . $placeholders . ')', $params);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('POS create_link_table failed', ['order_id' => $this->order_id ?? null, 'error' => $e->getMessage()]);
+            return collect([]);
+        }
     }
 
 }

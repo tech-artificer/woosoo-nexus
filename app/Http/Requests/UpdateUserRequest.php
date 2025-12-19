@@ -6,9 +6,18 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateUserRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
-        return true;
+        $targetUser = $this->route('user');
+        $authUser = $this->user();
+        
+        // Admin or super-admin can update any user
+        if ($authUser?->hasAnyRole(['admin', 'super-admin'])) {
+            return true;
+        }
+        
+        // Users can only update their own profile
+        return $authUser?->id === $targetUser?->id;
     }
 
     public function rules()

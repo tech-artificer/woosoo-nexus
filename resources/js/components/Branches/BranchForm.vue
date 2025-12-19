@@ -90,7 +90,7 @@ watch(() => props.open, (newValue) => {
             id="name"
             v-model="form.name"
             placeholder="Enter branch name"
-            :class="{ 'border-red-500': form.errors.name }"
+            :class="form.errors.name ? 'border-red-500' : ''"
           />
           <p v-if="form.errors.name" class="text-sm text-red-500">
             {{ form.errors.name }}
@@ -103,7 +103,7 @@ watch(() => props.open, (newValue) => {
             id="location"
             v-model="form.location"
             placeholder="Enter branch location/address"
-            :class="{ 'border-red-500': form.errors.location }"
+            :class="form.errors.location ? 'border-red-500' : ''"
             rows="3"
           />
           <p v-if="form.errors.location" class="text-sm text-red-500">

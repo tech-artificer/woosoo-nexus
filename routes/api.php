@@ -48,33 +48,10 @@ Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId)
     PrintOrder::dispatch($order);
 });
 
-// Dispatch refill endpoint moved into controller: use OrderApiController::refill
-Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->middleware('auth:sanctum');
+// Device-only refill/printed endpoints moved under auth:device group below
+// (see group containing api_printer_routes and device endpoints).
 
-// Mark order as printed
-Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->middleware('auth:sanctum');
-
-Route::get('/order/{orderId}/print', function(Request $request, int $orderId) {
-    $order = DeviceOrder::where(['order_id' => $orderId])->first();
-
-    $items = $order->items()->with('menu')->orderBy('index')->get();
-    return [
-        'order' => $order->only([
-            'id',
-            'order_id',
-            'order_number',
-            'device_id',
-            'status',
-            'created_at',
-            'guest_count',
-        ]),
-        'tablename' => $order->table->name ?? null,
-        'items' => $items->map(fn($it) => [
-            'name' => $it->menu?->receipt_name ?? $it->menu?->name ?? null,
-            'quantity' => $it->quantity ?? null,
-        ])->values()->all(),
-    ];
-});
+// Print endpoint is device-only; moved under auth:device group below.
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
@@ -142,22 +119,30 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
 
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
-    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
-
 
     Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
     Route::get('/device-orders', [OrderApiController::class, 'index']);
     // Fetch a device order by its external order id (order_id)
     Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
-    // Printer API routes (device-authenticated)
-    // Load printer routes for authenticated devices (PrintEvent support)
-    require __DIR__ . '/api_printer_routes.php';
+    // Refill endpoint (device-authenticated) and alias for print-refill
+    Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->name('api.order.refill');
+    Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->name('api.order.print-refill');
     
     // Session endpoints for devices
     Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
     Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
-    });
+    
+    // Printer API routes (device-authenticated for branch isolation)
+    require __DIR__ . '/api_printer_routes.php';
+    
+    // Session endpoint used by all devices
+    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
+    
+    // Order print endpoints for devices
+    Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->name('api.order.printed');
+    Route::get('/order/{orderId}/print', [OrderApiController::class, 'print'])->name('api.order.print');
+});
 
 // Device API v1 (device-only endpoints)
 Route::prefix('v1')->middleware(['auth:device'])->group(function () {

@@ -22,4 +22,21 @@ return new class extends Migration
             });
         }
     }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        if (Schema::hasTable('device_orders')) {
+            Schema::table('device_orders', function (Blueprint $table) {
+                $columns = ['total', 'tax', 'subtotal', 'guest_count', 'discount', 'notes'];
+                foreach ($columns as $col) {
+                    if (Schema::hasColumn('device_orders', $col)) {
+                        $table->dropColumn($col);
+                    }
+                }
+            });
+        }
+    }
 };

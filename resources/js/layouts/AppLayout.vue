@@ -44,16 +44,3 @@ withDefaults(defineProps<Props>(), {
     </AppLayout>
 </template>
 
-
-<style scoped>
-.logout-flash {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #1e293b;
-    color: #fff;
-    padding: 12px 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-</style>

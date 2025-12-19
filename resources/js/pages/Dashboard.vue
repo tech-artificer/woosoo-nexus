@@ -86,10 +86,10 @@ onMounted(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
 
-        <div class="flex h-full flex-1 flex-col gap-4 rounded p-6">
-            <div class="flex flex-col gap-2">
-                <h1 class="text-2xl font-bold font-header text-woosoo-dark-gray">Overview</h1>
-                <p class=" font-body font-light text-woosoo-dark-gray">Welcome to the main dashboard</p>
+        <div class="space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Overview</h1>
+                <p class="text-muted-foreground">Welcome to the main dashboard</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card v-for="dashCard in dashCards" :key="dashCard.title" class="border-0">
@@ -110,7 +110,7 @@ onMounted(() => {
                 </Card>
             </div>
             
-             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <LineChart />
                 </div>
@@ -118,7 +118,6 @@ onMounted(() => {
                     <DonutChart />
                 </div>
             </div>
-    
         </div>
     </AppLayout>
 </template>
