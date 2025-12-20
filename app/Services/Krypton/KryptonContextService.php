@@ -10,6 +10,7 @@ use App\Models\Krypton\Terminal;
 use App\Models\Krypton\CashTraySession;
 use App\Models\Krypton\TerminalService;
 use App\Models\Krypton\Revenue;
+use App\Exceptions\SessionNotFoundException;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -85,13 +86,20 @@ class KryptonContextService
                     'sessionFlag' => $flag,
                 ];
 
+                // Enforce non-negotiable business rule: session_id MUST exist from Krypton
+                if (!$session) {
+                    throw new SessionNotFoundException(
+                        'No active POS session found. Transaction cannot proceed. Ensure POS system is running and a session is opened.'
+                    );
+                }
+
                 $data = [
                     'price_level_id' => $revenue?->price_level_id,
                     'tax_set_id' => $revenue?->tax_set_id,
                     'service_type_id' => $terminalService?->service_type_id,
                     'revenue_id' => $terminalService?->revenue_id,
                     'terminal_id' => $terminal?->id,
-                    'session_id' => $session?->id,
+                    'session_id' => $session->id,
                     'terminal_session_id' => $terminalSession?->id,
                     'employee_log_id' => $employeeLog?->id,
                     'cash_tray_session_id' => $cashTraySession?->id,

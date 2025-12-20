@@ -23,11 +23,8 @@ class SessionOrderValidationTest extends TestCase
             'table_id' => 1,
         ]);
 
-        // Create an inactive session in the POS (mapped to testing connection)
-        DB::connection('pos')->table('sessions')->insert([
-            'id' => 999,
-            'status' => 'CLOSED',
-        ]);
+        // Create an active Krypton session for order creation (required by business rule)
+        $sessionId = $this->createTestSession();
 
         $token = $device->createToken('test-token')->plainTextToken;
 
@@ -37,7 +34,7 @@ class SessionOrderValidationTest extends TestCase
             'tax' => 0.00,
             'discount' => 0.00,
             'total_amount' => 1.00,
-            'session_id' => 999,
+            'session_id' => $sessionId,
             'items' => [
                 [
                     'menu_id' => 1,
@@ -54,8 +51,7 @@ class SessionOrderValidationTest extends TestCase
             'Accept' => 'application/json',
         ])->postJson('/api/devices/create-order', $payload);
 
-        // Session is device-local; server should accept the order even if a
-        // POS session with the same id exists and is closed.
+        // Order creation should succeed with active Krypton session
         $response->assertStatus(201);
         $this->assertTrue($response->json('success'));
         $this->assertArrayHasKey('order', $response->json());
@@ -72,12 +68,15 @@ class SessionOrderValidationTest extends TestCase
             'table_id' => 2,
         ]);
 
-        // create a device order with a session that is closed
+        // Create an active Krypton session first
+        $sessionId = $this->createTestSession();
+
+        // create a device order with the active session
         $deviceOrder = \App\Models\DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 555,
+            'session_id' => $sessionId,
             'order_id' => 888,
             'order_number' => 'ORD-000888-888',
             'status' => \App\Enums\OrderStatus::COMPLETED->value,
@@ -86,12 +85,6 @@ class SessionOrderValidationTest extends TestCase
             'discount' => 0.00,
             'total' => 1.00,
             'guest_count' => 1,
-        ]);
-
-        // Insert closed POS session
-        DB::connection('pos')->table('sessions')->insert([
-            'id' => 555,
-            'status' => 'CLOSED',
         ]);
 
         $svc = app(\App\Services\PrintEventService::class);

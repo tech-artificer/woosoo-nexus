@@ -34,11 +34,13 @@ class OrderRefillTest extends TestCase
             'table_id' => 1,
         ]);
 
+        $sessionId = $this->createTestSession();
+
         $deviceOrder = DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 1001,
             'order_number' => 'ORD-1001-1001',
             'status' => OrderStatus::PENDING->value,

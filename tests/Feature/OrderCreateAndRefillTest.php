@@ -34,12 +34,14 @@ class OrderCreateAndRefillTest extends TestCase
             'table_id' => 1,
         ]);
 
+        $sessionId = $this->createTestSession();
+
         // Create a pre-existing device order (represents initial create-order)
         $deviceOrder = DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 1001,
             'order_number' => 'ORD-1001-1001',
             'status' => OrderStatus::CONFIRMED->value,

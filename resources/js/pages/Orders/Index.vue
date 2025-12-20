@@ -47,6 +47,9 @@ const tables = props.tables ?? []
 const localOrders = ref(Array.isArray(orders) ? [...orders] : [])
 const localOrderHistory = ref(Array.isArray(orderHistory) ? [...orderHistory] : [])
 
+// Track which order IDs have active print animations to prevent duplicate animations
+const animatedOrderIds = new Set<number>()
+
 // Test function to verify reactivity is working
 const testAddOrder = () => {
   const testOrder = {
@@ -161,11 +164,29 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
     // For live statuses, update or add to live orders
     if (liveStatuses.includes(incomingStatus)) {
       if (idx !== -1) {
+        // Check if order was just printed (is_printed changed from false to true)
+        const wasNotPrinted = !localOrders.value[idx].is_printed
+        const isNowPrinted = incoming.is_printed
+        const justPrinted = wasNotPrinted && isNowPrinted
+
         // Update existing order (create new array)
         localOrders.value = localOrders.value.map((o, i) => 
           i === idx ? { ...o, ...incoming } : o
         )
         console.log('Order updated:', incoming.order_number)
+
+        // Trigger animation if order was just printed
+        if (justPrinted && incoming.id && !animatedOrderIds.has(incoming.id)) {
+          animatedOrderIds.add(incoming.id)
+          const rowElement = document.querySelector(`[data-order-id="${incoming.id}"]`)
+          if (rowElement) {
+            rowElement.classList.add('print-highlight')
+            setTimeout(() => {
+              rowElement.classList.remove('print-highlight')
+              animatedOrderIds.delete(incoming.id)
+            }, 5000) // 5 second animation
+          }
+        }
       } else {
         // New order: add to top (create new array)
         localOrders.value = [incoming, ...localOrders.value]
@@ -325,6 +346,23 @@ onUnmounted(() => {
 });
 
 </script>
+
+<style scoped>
+@keyframes print-highlight {
+  0% {
+    border-left: 4px solid rgb(34, 197, 94);
+    background-color: rgba(34, 197, 94, 0.05);
+  }
+  100% {
+    border-left: 4px solid transparent;
+    background-color: transparent;
+  }
+}
+
+.print-highlight {
+  animation: print-highlight 5s ease-out;
+}
+</style>
 
 <template>
     <Head :title="title" :description="description" />

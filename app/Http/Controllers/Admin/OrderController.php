@@ -49,8 +49,18 @@ class OrderController extends Controller
             $session = Session::fromQuery('CALL get_latest_session_id()')->first();
         }
 
-        // Fallback session id for testing or missing POS session
-        $sessionId = $session?->id ?? $request->query('session_id') ?? 1;
+        // Get session_id from POS or use query parameter for testing
+        // No fallback to hardcoded 1; if no session available, this is a data integrity issue
+        $sessionId = $session?->id ?? $request->query('session_id');
+        
+        if (!$sessionId) {
+            // Return empty orders if no session is available (safer than showing random data)
+            return Inertia::render('Orders/IndexOrders', [
+                'orders' => [],
+                'stats' => ['totalOrders' => 0, 'liveOrders' => 0, 'completedOrders' => 0],
+                'activeOrders' => $activeOrders,
+            ]);
+        }
 
         // Apply optional query filters (status, device, table, search, date range)
         $filters = $request->only(['status', 'device_id', 'table_id', 'search', 'date_from', 'date_to']);

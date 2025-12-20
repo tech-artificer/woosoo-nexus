@@ -1,0 +1,63 @@
+name: CI - tests, lint, security
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: testing
+      LARAVEL_BYPASS_ENV_CHECK: '1'
+      APP_URL: 'http://localhost:3000'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Create required directories
+        run: |
+          mkdir -p bootstrap/cache
+          chmod -R 777 storage bootstrap/cache
+
+      - name: Install PHP deps
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy env and keygen
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Install Node deps
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint --if-present
+
+      - name: Build assets
+        run: npm run build --if-present
+
+      - name: Run PHP tests (Pest)
+        run: ./vendor/bin/pest
+
+      - name: Composer audit
+        run: composer audit || true
+
+      - name: NPM audit
+        run: npm audit --audit-level=moderate || true

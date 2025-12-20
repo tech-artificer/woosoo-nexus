@@ -5,6 +5,7 @@ namespace App\Actions\Order;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Illuminate\Http\Request;
 use App\Models\Krypton\Order;
+use App\Exceptions\SessionNotFoundException;
 
 class CreateOrder
 {
@@ -39,10 +40,16 @@ class CreateOrder
         
         try {
             $sessionId = $attr['session_id'] ?? null;
-            // Make test fallback robust: prefer provided terminal_session_id,
-            // otherwise use a sane default (1) to avoid NOT NULL constraint
-            // violations during device order creation.
-            $terminalSessionId = $attr['terminal_session_id'] ?? 1;
+            
+            // session_id is MANDATORY from Krypton - cannot be null
+            if (!$sessionId) {
+                throw new SessionNotFoundException(
+                    'session_id is required and must be fetched from Krypton POS.'
+                );
+            }
+
+            // terminal_session_id can be null if not available from POS context
+            $terminalSessionId = $attr['terminal_session_id'] ?? null;
             $dateTimeOpened = now(); // Current date and time
             $dateTimeClosed = null; // Order is open initially
             $revenueId = $attr['revenue_id'] ?? 1; // Default revenue center

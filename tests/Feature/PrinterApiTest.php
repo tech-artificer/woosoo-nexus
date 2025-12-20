@@ -25,6 +25,8 @@ class PrinterApiTest extends TestCase
         // token
         $token = $device->createToken('device-auth')->plainTextToken;
 
+        $sessionId = $this->createTestSession();
+
         // Create a device order
         $order = DeviceOrder::create([
             'order_id' => 999999,
@@ -34,7 +36,7 @@ class PrinterApiTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'terminal_session_id' => 1,
             'status' => 'confirmed',
             'is_printed' => false,
@@ -66,8 +68,10 @@ class PrinterApiTest extends TestCase
         $device = Device::create(['name' => 'test-device', 'ip_address' => '192.168.1.101', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
-        $order1 = DeviceOrder::create(['order_id' => 5001, 'device_id' => $device->id, 'guest_count' => 2, 'total' => 10, 'subtotal' => 10, 'is_printed' => 0, 'status' => 'confirmed', 'table_id' => 1, 'terminal_session_id' => 1, 'session_id' => 1]);
-        $order2 = DeviceOrder::create(['order_id' => 5002, 'device_id' => $device->id, 'guest_count' => 2, 'total' => 20, 'subtotal' => 20, 'is_printed' => 1, 'status' => 'confirmed', 'table_id' => 1, 'terminal_session_id' => 1, 'session_id' => 1]); // already printed
+        $sessionId = $this->createTestSession();
+
+        $order1 = DeviceOrder::create(['order_id' => 5001, 'device_id' => $device->id, 'guest_count' => 2, 'total' => 10, 'subtotal' => 10, 'is_printed' => 0, 'status' => 'confirmed', 'table_id' => 1, 'terminal_session_id' => 1, 'session_id' => $sessionId]);
+        $order2 = DeviceOrder::create(['order_id' => 5002, 'device_id' => $device->id, 'guest_count' => 2, 'total' => 20, 'subtotal' => 20, 'is_printed' => 1, 'status' => 'confirmed', 'table_id' => 1, 'terminal_session_id' => 1, 'session_id' => $sessionId]); // already printed
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/orders/printed/bulk', [

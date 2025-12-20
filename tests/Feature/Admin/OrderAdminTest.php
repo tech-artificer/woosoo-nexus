@@ -26,12 +26,15 @@ class OrderAdminTest extends TestCase
             'table_id' => 1,
         ]);
 
+        // Create an active Krypton session for the orders
+        $sessionId = $this->createTestSession();
+
         // Create two orders with different statuses
         $orderConfirmed = DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 2001,
             'order_number' => 'ORD-2001-2001',
             'status' => OrderStatus::CONFIRMED->value,
@@ -46,7 +49,7 @@ class OrderAdminTest extends TestCase
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 2002,
             'order_number' => 'ORD-2002-2002',
             'status' => OrderStatus::PENDING->value,
@@ -81,11 +84,14 @@ class OrderAdminTest extends TestCase
             'table_id' => 2,
         ]);
 
+        // Create an active Krypton session
+        $sessionId = $this->createTestSession();
+
         $orderA = DeviceOrder::create([
             'device_id' => $deviceA->id,
             'table_id' => $deviceA->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 3001,
             'order_number' => 'ORD-SEARCH-3001',
             'status' => OrderStatus::IN_PROGRESS->value,
@@ -121,11 +127,14 @@ class OrderAdminTest extends TestCase
             'table_id' => 3,
         ]);
 
+        // Create an active Krypton session
+        $sessionId = $this->createTestSession();
+
         $order1 = DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 3101,
             'order_number' => 'ORD-MULTI-3101',
             'status' => OrderStatus::CONFIRMED->value,
@@ -140,7 +149,7 @@ class OrderAdminTest extends TestCase
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 3102,
             'order_number' => 'ORD-MULTI-3102',
             'status' => OrderStatus::PENDING->value,
@@ -173,12 +182,15 @@ class OrderAdminTest extends TestCase
             'table_id' => 4,
         ]);
 
+        // Create an active Krypton session
+        $sessionId = $this->createTestSession();
+
         // Create two orders on different dates
         $older = DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 3201,
             'order_number' => 'ORD-DATE-3201',
             'status' => OrderStatus::CONFIRMED->value,
@@ -195,7 +207,7 @@ class OrderAdminTest extends TestCase
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 3202,
             'order_number' => 'ORD-DATE-3202',
             'status' => OrderStatus::CONFIRMED->value,
