@@ -4,34 +4,15 @@ import AppContentLayout from '@/layouts/AppContentLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
 import { Toaster } from '@/components/ui/sonner'
 import 'vue-sonner/style.css' 
-// import { watch } from 'vue';
-// import { usePage } from '@inertiajs/vue3';
-
 
 interface Props {
     breadcrumbs?: BreadcrumbItemType[];
 }
-// 🟢 Safe Typing for Page Props
-// interface PageProps {
-//     flash?: {
-//         success?: string;
-//     };
-// }
-
-// const page = usePage();
-
 
 withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
   
 });
-
-//  Watch for Flash Messages (Typed + Reactive)
-// watch(() => page.props.flash, (message) => {
-//     if (message) {
-//         toast.success(message, { duration: 3000 });
-//     }
-// });
 
 </script>
 

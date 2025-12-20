@@ -145,7 +145,7 @@ const openViewDialog = (order: any) => {
 
 <DropdownMenu>
   <DropdownMenuTrigger as-child>
-    <Button variant="ghost" class="h-8 w-8 p-0">
+    <Button variant="ghost" class="h-8 w-8 p-0" aria-label="Open order actions menu">
       <span class="sr-only">Open menu</span>
       <MoreHorizontal class="h-4 w-4" />
     </Button>
