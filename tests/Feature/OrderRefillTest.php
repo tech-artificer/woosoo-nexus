@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Mockery;
@@ -14,7 +15,15 @@ use App\Enums\OrderStatus;
 
 class OrderRefillTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Mock active Krypton session for all tests
+        $this->mockActiveKryptonSession();
+    }
 
     public function tearDown(): void
     {
@@ -34,11 +43,13 @@ class OrderRefillTest extends TestCase
             'table_id' => 1,
         ]);
 
+        $sessionId = $this->createTestSession();
+
         $deviceOrder = DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'order_id' => 1001,
             'order_number' => 'ORD-1001-1001',
             'status' => OrderStatus::PENDING->value,

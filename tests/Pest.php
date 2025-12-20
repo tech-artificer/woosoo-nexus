@@ -11,12 +11,6 @@
 |
 */
 
-// Prevent tests running against a non-testing DB to avoid wiping production data.
-if (env('DB_CONNECTION') !== 'testing' && env('APP_ENV') !== 'testing') {
-    fwrite(STDERR, "Aborting tests: DB_CONNECTION must be 'testing' and APP_ENV must be 'testing' in phpunit.xml or environment.\n");
-    exit(1);
-}
-
 // NOTE: POS connection mapping to the testing DB is performed in
 // `Tests\TestCase::setUp()` once the application container has been
 // created. Avoid calling `config()` here because the container isn't

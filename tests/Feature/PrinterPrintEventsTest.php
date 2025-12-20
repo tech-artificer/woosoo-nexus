@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
@@ -12,7 +13,15 @@ use Carbon\Carbon;
 
 class PrinterPrintEventsTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Mock active Krypton session for all tests
+        $this->mockActiveKryptonSession();
+    }
 
     public function test_heartbeat_sets_cache()
     {
@@ -39,6 +48,8 @@ class PrinterPrintEventsTest extends TestCase
         $branchA = \App\Models\Branch::create(['name' => 'A', 'location' => 'A']);
         $deviceA = Device::create(['name' => 'device-a', 'ip_address' => '1.2.3.4', 'branch_id' => $branchA->id]);
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 11111,
             'device_id' => $deviceA->id,
@@ -47,7 +58,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -71,6 +82,8 @@ class PrinterPrintEventsTest extends TestCase
         $device = Device::create(['name' => 'device-x', 'ip_address' => '1.2.3.5', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 22222,
             'device_id' => $device->id,
@@ -80,7 +93,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -122,6 +135,8 @@ class PrinterPrintEventsTest extends TestCase
         $branchA = \App\Models\Branch::create(['name' => 'A2', 'location' => 'A2']);
         $deviceA = Device::create(['name' => 'device-a2', 'ip_address' => '1.2.3.6', 'branch_id' => $branchA->id]);
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 33333,
             'device_id' => $deviceA->id,
@@ -131,7 +146,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -172,6 +187,8 @@ class PrinterPrintEventsTest extends TestCase
         $device = Device::create(['name' => 'device-limit', 'ip_address' => '127.0.0.2', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 44444,
             'device_id' => $device->id,
@@ -181,7 +198,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -227,6 +244,8 @@ class PrinterPrintEventsTest extends TestCase
         $branch = \App\Models\Branch::create(['name' => 'NoPrinter', 'location' => 'NP']);
         $device = Device::create(['name' => 'device-np', 'ip_address' => '127.0.0.5', 'branch_id' => $branch->id]);
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 55555,
             'device_id' => $device->id,
@@ -236,7 +255,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -257,6 +276,8 @@ class PrinterPrintEventsTest extends TestCase
         $branch = \App\Models\Branch::create(['name' => 'BadDate', 'location' => 'BD']);
         $device = Device::create(['name' => 'device-bd', 'ip_address' => '127.0.0.6', 'branch_id' => $branch->id]);
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 66666,
             'device_id' => $device->id,
@@ -266,7 +287,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -327,6 +348,8 @@ class PrinterPrintEventsTest extends TestCase
         $branch = \App\Models\Branch::create(['name' => 'TwiceFail', 'location' => 'TF']);
         $device = Device::create(['name' => 'device-tf', 'ip_address' => '127.0.0.9', 'branch_id' => $branch->id]);
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 88888,
             'device_id' => $device->id,
@@ -336,7 +359,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -362,6 +385,8 @@ class PrinterPrintEventsTest extends TestCase
         $branch = \App\Models\Branch::create(['name' => 'FailAfterAck', 'location' => 'FA']);
         $device = Device::create(['name' => 'device-fa', 'ip_address' => '127.0.0.10', 'branch_id' => $branch->id]);
 
+        $sessionId = $this->createTestSession();
+
         $order = DeviceOrder::create([
             'order_id' => 99999,
             'device_id' => $device->id,
@@ -371,7 +396,7 @@ class PrinterPrintEventsTest extends TestCase
             'subtotal' => 10,
             'table_id' => 1,
             'terminal_session_id' => 1,
-            'session_id' => 1,
+            'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);

@@ -96,6 +96,8 @@ abstract class TestCase extends BaseTestCase
                 $schema->create('sessions', function (Blueprint $table) {
                     $table->increments('id');
                     $table->string('status')->nullable();
+                    $table->dateTime('date_time_opened')->nullable();
+                    $table->dateTime('date_time_closed')->nullable();
                 });
             }
 
@@ -224,5 +226,34 @@ abstract class TestCase extends BaseTestCase
                 $table->softDeletes();
             });
         }
+    }
+
+    /**
+     * Helper: Create an active Krypton POS session for testing.
+     * This ensures tests have a valid session_id from the POS context.
+     *
+     * @param array $attributes
+     * @return int Session ID created
+     */
+    protected function createTestSession(array $attributes = []): int
+    {
+        $posSchema = Schema::connection('pos');
+        
+        // Ensure minimal required tables exist
+        if (!$posSchema->hasTable('sessions')) {
+            $posSchema->create('sessions', function (Blueprint $table) {
+                $table->increments('id');
+                $table->dateTime('date_time_opened')->nullable();
+                $table->dateTime('date_time_closed')->nullable();
+            });
+        }
+
+        // Insert a new active session
+        $sessionId = DB::connection('pos')->table('sessions')->insertGetId(array_merge([
+            'date_time_opened' => now(),
+            'date_time_closed' => null,  // Active (not closed)
+        ], $attributes));
+
+        return $sessionId;
     }
 }

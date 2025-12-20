@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import DataTableColumnHeader from '@/components/Orders/DataTableColumnHeader.vue'
 import DataTableRowActions from '@/components/Orders/DataTableRowActions.vue'
 import OrderStatusBadge from '@/components/Orders/OrderStatusBadge.vue'
+import PrintedBadge from '@/components/Orders/PrintedBadge.vue'
 import { formatCurrency } from '@/lib/utils';
 
 export const columns: ColumnDef<DeviceOrder, any>[] = [
@@ -133,9 +134,11 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     enableColumnFilter: false,
     enableSorting: false,
     cell: ({ row }) => {
-      return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, row.getValue('is_printed') ? 'Yes' : 'No'),
-      ])
+      return h(PrintedBadge, {
+        isPrinted: row.getValue('is_printed'),
+        printedAt: row.original.printed_at,
+        printerId: row.original.printed_by,
+      })
     }
   },  
   {

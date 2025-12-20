@@ -29,6 +29,7 @@ use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\BroadcastService;
 use App\Events\Order\OrderVoided;
+use App\Exceptions\SessionNotFoundException;
 
 use Illuminate\Support\Facades\Log;
 
@@ -100,15 +101,14 @@ class OrderService
             ]);
 
             // Create a new device order FIRST so we have device_order_id for items
+            // session_id must come from POS; terminal_session_id can fall back to null if not available
             $deviceOrder = $device->orders()->create([
                 'order_id' => $order->id,
                 'table_id' => $device->table_id,
-                // Ensure terminal_session_id never ends up NULL. Prefer the POS-provided
-                // value, then the merged attributes, fall back to 1 as a safety default.
-                'terminal_session_id' => $order->terminal_session_id ?? $this->attributes['terminal_session_id'] ?? 1,
+                'terminal_session_id' => $order->terminal_session_id ?? $this->attributes['terminal_session_id'],
                 'status' => OrderStatus::CONFIRMED,
                 'guest_count' => $order->guest_count,
-                'session_id' => $order->session_id ?? $this->attributes['session_id'] ?? null,
+                'session_id' => $order->session_id ?? $this->attributes['session_id'],  // Must be non-null from KryptonContextService
                 'total' => $this->attributes['total_amount'],
                 'subtotal' => $this->attributes['subtotal'],
                 'tax' => $this->attributes['tax'],
@@ -150,20 +150,19 @@ class OrderService
      */
     protected function getDefaultAttributes(): array
     {   
-        $contextService = new KryptonContextService();
+        $contextService = app(KryptonContextService::class);
         $defaults = $contextService->getData();
 
-        // Ensure a predictable set of default keys are always present so
-        // callers can rely on their existence (tests run with empty Krypton
-        // context often). Use sensible fallbacks where appropriate.
+        // session_id is MANDATORY from Krypton - no fallback to null or defaults allowed
+        // terminal_session_id, terminal_id, revenue_id have sensible fallbacks if missing from POS context
         $normalized = [
             'price_level_id' => $defaults['price_level_id'] ?? null,
             'tax_set_id' => $defaults['tax_set_id'] ?? null,
             'service_type_id' => $defaults['service_type_id'] ?? 1,
             'revenue_id' => $defaults['revenue_id'] ?? 1,
             'terminal_id' => $defaults['terminal_id'] ?? 1,
-            'session_id' => $defaults['session_id'] ?? null,
-            'terminal_session_id' => $defaults['terminal_session_id'] ?? 1,
+            'session_id' => $defaults['session_id'],  // REQUIRED - no fallback, exception thrown by KryptonContextService if missing
+            'terminal_session_id' => $defaults['terminal_session_id'] ?? null,
             'employee_log_id' => $defaults['employee_log_id'] ?? null,
             'cash_tray_session_id' => $defaults['cash_tray_session_id'] ?? null,
             'terminal_service_id' => $defaults['terminal_service_id'] ?? null,

@@ -9,6 +9,7 @@ use App\Models\DeviceOrder;
 use App\Events\Order\OrderCreated;
 use App\Events\PrintOrder;
 use App\Services\Krypton\OrderService;
+use App\Exceptions\SessionNotFoundException;
 use App\Enums\OrderStatus;
 
 use Mike42\Escpos\Printer;
@@ -32,8 +33,7 @@ class DeviceOrderApiController extends Controller
     {   
         // Validate the incoming request
         $validatedData = $request->validated();
-        // `session_id` is considered device-local; accept client-provided session IDs
-        // without consulting the POS/`sessions` table.
+        
         // Initialize errors array
         $errors = [];
         // Get the device from the incoming request
@@ -51,20 +51,28 @@ class DeviceOrderApiController extends Controller
                 ], 409);
             }
 
-            $order = app(OrderService::class)->processOrder($device, $validatedData);
+            try {
+                $order = app(OrderService::class)->processOrder($device, $validatedData);
 
-            OrderCreated::dispatch($order);
-            // PrintOrder::dispatch($order);
+                OrderCreated::dispatch($order);
+                // PrintOrder::dispatch($order);
 
-            // $this->printKitchen($order->order_id);
-            // app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));
-            // PrinterOrderJob::dispatch($order, 'cashier')->onQueue('cashier');
+                // $this->printKitchen($order->order_id);
+                // app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));
+                // PrinterOrderJob::dispatch($order, 'cashier')->onQueue('cashier');
 
-            return response()->json([
-                'success' => true,
-                'order' => new DeviceOrderResource($order),
-            ], 201);
-
+                return response()->json([
+                    'success' => true,
+                    'order' => new DeviceOrderResource($order),
+                ], 201);
+            } catch (SessionNotFoundException $e) {
+                // Transaction aborted: No active POS session
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'code' => 'SESSION_NOT_FOUND',
+                ], 503);
+            }
            
             $errors[] = 'There is already an order in progress for this device.';  
         }else{
