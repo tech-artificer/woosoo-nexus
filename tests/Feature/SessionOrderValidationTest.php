@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use App\Models\Device;
@@ -10,10 +11,12 @@ use App\Models\Branch;
 
 class SessionOrderValidationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
 
     public function test_order_rejected_for_inactive_session()
     {
+        // Mock active Krypton session for this test
+        $this->mockActiveKryptonSession();
         Branch::create(['name' => 'Main', 'location' => 'HQ']);
 
         $device = Device::create([
@@ -59,6 +62,9 @@ class SessionOrderValidationTest extends TestCase
 
     public function test_print_event_skipped_for_closed_session()
     {
+        // Mock active Krypton session for this test
+        $this->mockActiveKryptonSession();
+
         Branch::create(['name' => 'Main', 'location' => 'HQ']);
 
         $device = Device::create([
@@ -93,5 +99,49 @@ class SessionOrderValidationTest extends TestCase
         // Since sessions are device-local, print events should be created.
         $this->assertNotNull($res);
         $this->assertDatabaseHas('print_events', ['device_order_id' => $deviceOrder->id]);
+    }
+
+    public function test_order_creation_fails_without_active_krypton_session()
+    {
+        // Override the default mock to simulate missing session
+        $this->mockMissingKryptonSession();
+
+        Branch::create(['name' => 'Main', 'location' => 'HQ']);
+
+        $device = Device::create([
+            'name' => 'Device C',
+            'ip_address' => '192.168.1.12',
+            'is_active' => true,
+            'table_id' => 3,
+        ]);
+
+        $token = $device->createToken('test-token')->plainTextToken;
+
+        $payload = [
+            'guest_count' => 1,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total_amount' => 1.00,
+            'items' => [
+                [
+                    'menu_id' => 1,
+                    'name' => 'Test Item',
+                    'quantity' => 1,
+                    'price' => 1.00,
+                    'subtotal' => 1.00,
+                ]
+            ]
+        ];
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/devices/create-order', $payload);
+
+        // Should return 503 Service Unavailable when session is missing
+        $response->assertStatus(503);
+        $this->assertFalse($response->json('success'));
+        $this->assertStringContainsString('session', strtolower($response->json('message')));
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
@@ -12,7 +13,15 @@ use Carbon\Carbon;
 
 class PrinterPrintEventsTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Mock active Krypton session for all tests
+        $this->mockActiveKryptonSession();
+    }
 
     public function test_heartbeat_sets_cache()
     {

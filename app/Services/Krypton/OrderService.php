@@ -150,7 +150,7 @@ class OrderService
      */
     protected function getDefaultAttributes(): array
     {   
-        $contextService = new KryptonContextService();
+        $contextService = app(KryptonContextService::class);
         $defaults = $contextService->getData();
 
         // session_id is MANDATORY from Krypton - no fallback to null or defaults allowed

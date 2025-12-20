@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Device;
 use App\Models\Branch;
@@ -12,7 +13,15 @@ use App\Enums\OrderStatus;
 
 class DeviceCreateOrderConflictTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Mock active Krypton session for all tests
+        $this->mockActiveKryptonSession();
+    }
 
     public function test_device_cannot_create_order_when_existing_pending_or_confirmed_exists()
     {

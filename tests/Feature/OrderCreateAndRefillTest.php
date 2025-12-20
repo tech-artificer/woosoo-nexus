@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Mockery;
@@ -15,7 +16,15 @@ use App\Enums\OrderStatus;
 
 class OrderCreateAndRefillTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Mock active Krypton session for all tests
+        $this->mockActiveKryptonSession();
+    }
 
     public function tearDown(): void
     {
