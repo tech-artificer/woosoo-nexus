@@ -31,3 +31,5 @@ docker/
 /bootstrap/cache/*
 /certs
 /logs
+
+woosoo-workspace.code-workspace
