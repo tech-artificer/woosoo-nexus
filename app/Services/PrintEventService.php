@@ -68,6 +68,18 @@ class PrintEventService
             $evt->updated_at = Carbon::now()->utc();
             $evt->save();
 
+            // Propagate printed status to the associated device order
+            // so clients have a consistent source of truth on the order.
+            /** @var \App\Models\DeviceOrder|null $order */
+            $order = $evt->deviceOrder;
+            if ($order) {
+                // Do not overwrite existing printed_at if present; use latest ack time if empty
+                $order->is_printed = 1;
+                $order->printed_by = $printerId ?? $order->printed_by;
+                $order->printed_at = $order->printed_at ?: $ackAt;
+                $order->save();
+            }
+
             return ['evt' => $evt, 'was_updated' => true];
         });
 

@@ -14,7 +14,7 @@ import {
 
 import LineChart from '@/components/charts/LineChart.vue';
 import DonutChart from '@/components/charts/DonutChart.vue';
-
+import GrasshopperButton from '@/components/GrasshopperButton.vue';
 
 interface DashCards {
   title?: string;

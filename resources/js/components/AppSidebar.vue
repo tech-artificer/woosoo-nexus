@@ -12,7 +12,8 @@ import {
     UtensilsCrossed,  
     TrendingUp, 
     Split, 
-    Lock 
+    Lock, 
+    BookOpen 
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
@@ -50,6 +51,13 @@ const mainNavItems: NavItem[] = [
         title: 'Devices',
         href: '/devices',
         icon: MonitorSmartphone,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Manual',
+        href: '/manual',
+        icon: BookOpen,
         isActive: false,
         hasSubItems: false,
     },

@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\{
     MenuController,
     UserController,
     Device\DeviceController,
+    ManualController,
     AccessibilityController,
     RoleController,
     PermissionController,
@@ -93,6 +94,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/service-requests', [ServiceRequestController::class, 'index'])->name('service-requests.index');
         // Event logs viewer
         Route::get('/event-logs', [EventLogController::class, 'index'])->name('event-logs.index');
+
+        // Admin manual
+        Route::get('/manual', [ManualController::class, 'index'])->name('manual.index');
+        Route::get('/manual/{id}/edit', [ManualController::class, 'edit'])->name('manual.edit');
+        Route::put('/manual/{id}', [ManualController::class, 'update'])->name('manual.update');
+        Route::post('/manual/upload-image', [ManualController::class, 'uploadImage'])->name('manual.upload.image');
 
         // Reverb Service Management
         Route::prefix('reverb')->name('reverb.')->group(function () {

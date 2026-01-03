@@ -1,88 +1,170 @@
-Purpose: Help AI coding assistants become productive in woosoo-nexus. Focus on discoverable patterns, runnable commands, and concrete examples.
+<!-- Repository-specific Copilot instructions for woosoo-nexus -->
+# Woosoo Nexus — Integrated Restaurant POS + Admin Panel + Relay Printer App
+
+**Purpose:** Help AI agents become productive in woosoo-nexus monorepo. Focus on discoverable patterns, runnable commands, and concrete examples across three integrated products.
+
+---
 
 ## Quick Start
 
-A minimal set of commands to get a fresh developer environment running (PowerShell):
-
-```powershell
-composer install
-npm ci
-cp .env.example .env
-php artisan key:generate
-php artisan migrate --seed
-composer dev
-```
-
-Or as a one-liner:
+**All-in-one setup (PowerShell — recommended for full-stack work):**
 
 ```powershell
 composer install; npm ci; cp .env.example .env; php artisan key:generate; php artisan migrate --seed; composer dev
 ```
 
-## Architecture Overview
+**Individual commands if setting up in stages:**
 
-**Tech Stack**
-- Backend: Laravel 12 (PHP 8.2+), Sanctum auth, Scramble API docs
-- Frontend: Inertia.js + Vue 3 + TypeScript, Vite bundler, shadcn-vue components
-- Database: Dual MySQL connections - `mysql` (Laravel app data) and `pos` (legacy Krypton POS system)
-- Real-time: Laravel Reverb (WebSockets) + Pusher for broadcasting
-- Testing: Pest (PHPUnit wrapper) with in-memory SQLite
+```powershell
+composer install          # PHP dependencies
+npm ci                    # Frontend dependencies (exact versions)
+cp .env.example .env      # Create .env from template
+php artisan key:generate  # Generate APP_KEY
+php artisan migrate --seed  # Create DB schema + seed data
+composer dev              # Start all: HTTP server (8000), queue, Vite HMR (5173), Reverb (6001)
+```
 
-**Process Boundaries**
-- PHP process: HTTP requests, queues, scheduled tasks, domain logic
-- Node process: `print-service/index.js` (Express server on port 9100) - handles print jobs independently
-- Background workers: scheduler, queue, Reverb (installed as Windows services, see deployment notes below)
+**Verify setup worked:**
+- HTTP: Visit `http://127.0.0.1:8000` (should show login or admin dashboard)
+- Vite HMR: Check `http://127.0.0.1:5173` responds with Vite dev page
+- Queue listener: `composer dev` logs show queue processing
+- Reverb: See `php artisan reverb:start` output in terminal
 
-**Multi-Database Architecture**
-- `config/database.php` defines two MySQL connections:
-  - `mysql` (default): app data (users, devices, branches, etc.)
-  - `pos`: legacy Krypton POS database (`krypton_woosoo`) - read-only integration
-- Models in `app/Models/Krypton/*` use `protected $connection = 'pos'` to query POS data
-- Actions call POS stored procedures: e.g., `Order::fromQuery('CALL create_order(...)', $params)`
+---
+
+## Architecture Overview: Three Integrated Products
+
+### 1. **Admin Panel** (Laravel + Inertia.js + Vue 3 + TypeScript)
+- **What:** Web UI for restaurant staff (managers, operators) to manage orders, menus, users, devices, branches, and view reports
+- **Tech:** Laravel 12 HTTP server (port 8000) + Inertia (no separate API) + Vue 3 + TypeScript + Vite HMR (port 5173)
+- **Routes:** `routes/web.php` (Inertia pages)
+- **Controllers:** `app/Http/Controllers/Admin/*` — thin controllers returning `Inertia::render()`
+- **State:** Reactive (component-local with `useForm()` helpers), no global Vue store needed for most cases
+- **Real-time updates:** Broadcast events (e.g., PrintOrder, OrderUpdate) via Laravel Echo / Reverb (port 6001)
+
+### 2. **Tablet Ordering PWA** (`tablet-ordering-pwa/` — Nuxt 3)
+- **What:** Kiosk/SPA app for customers to place orders on in-store tablets (landscape layout)
+- **Tech:** Nuxt 3 (SSR disabled), Pinia state, Axios API client, Tailwind, PWA support
+- **Runs:** `npm run dev` from `tablet-ordering-pwa/` folder (expands to `nuxi dev --host 0.0.0.0`)
+- **API calls:** All via `useApi()` composable (injects device auth token)
+- **State:** Pinia stores with persist plugin (e.g., `menu-store`, `device`)
+- **Offline:** PWA service worker caches menus and order history; workbox rules in `nuxt.config.ts`
+
+### 3. **Relay Printer App** (`relay-device/` — Flutter)
+- **What:** Native mobile/tablet app that listens for print events (WebSocket + fallback polling) and prints to Bluetooth thermal printers
+- **Tech:** Flutter 3.9.2+, Dart, Riverpod state management, Sembast local DB
+- **Platforms:** Android, iOS, Windows, Linux, web (see `pubspec.yaml`)
+- **Key features:** WebSocket listener, ESC/POS printer control, durable offline queue, device registration
+- **Run:** `flutter pub get; flutter run -d <device>` from `relay-device/`
+
+**Database Architecture:**
+- `mysql` connection (default): App data (users, devices, menus, orders, branches, roles) — Laravel migrations in `database/migrations/*`
+- `pos` connection: Read-only Krypton legacy POS system (`krypton_woosoo` DB) — Models in `app/Models/Krypton/*` with `protected $connection = 'pos'`
+- Test: SQLite `:memory:` (configured in `phpunit.xml`)
+
+**Process Boundaries:**
+- PHP process: HTTP requests, domain logic, queues, scheduled tasks, WebSocket server (Reverb)
+- Node process: `print-service/index.js` (Express, port 9100) — independent print job handler
+- Flutter process: Relay device — autonomous listener/printer, syncs with backend via API + WebSocket
+
+**Real-time Communication:**
+- Reverb (port 6001): WebSocket server for broadcasting events (admin, device channels)
+- Channels: `device.{deviceId}`, `admin.orders`, `admin.print`, `admin.service-requests`, etc.
+- Frontend listeners: Laravel Echo in Vue (`resources/js/app.ts`) and Nuxt PWA (`tablet-ordering-pwa/plugins/echo.client.ts`)
+- Mobile: Relay device listens via Dart HTTP client (WebSocket library)
+
+---
 
 ## Key Files & Directories
 
 **Configuration & Tooling**
-- `composer.json` — scripts: `dev` (serve+queue+vite), `dev:ssr`, `test`
-- `package.json` — scripts: `dev`, `build`, `build:ssr` (SSR support via Inertia)
+- `composer.json` — scripts: `dev` (serve+queue+vite+reverb), `dev:ssr`, `test`
+- `package.json` — scripts: `dev` (Vite HMR), `build`, `build:ssr`, `format`, `lint`
 - `phpunit.xml` — test env (SQLite :memory:, `QUEUE_CONNECTION=sync`)
 - `vite.config.ts` — alias `@` to `resources/js`, Tailwind v4, Vue plugin
 - `tsconfig.json` — paths alias `@/*` to `resources/js/*`
 - `components.json` — shadcn-vue config (Tailwind v4, lucide icons)
+- `.env.example` → `.env` — must be set for local dev (DB_*, REVERB_*, VITE_REVERB_*, etc.)
 
-**Domain Structure**
-- `app/Actions/*` — lorisleiva/laravel-actions pattern (discrete, testable commands organized by domain: Device/, Order/, Pos/, Table/)
-- `app/Services/*` — business logic services (Krypton/, Reports/, BroadcastService, etc.)
-- `app/Repositories/Krypton/*` — data access for Krypton POS integration
+**Domain Structure (Admin/Backend)**
+- `app/Actions/*` — lorisleiva/laravel-actions pattern (discrete, testable commands: Device/, Order/, Pos/, Table/)
+- `app/Services/*` — business logic (Dashboard, Broadcast, Krypton/, Report, etc.)
+- `app/Repositories/Krypton/*` — data access for POS integration
 - `app/Jobs/*` — queued background jobs (BroadcastEventJob, ProcessOrderLogs, OrderCheckUpdate)
 - `app/Events/*` — broadcastable events (PrintOrder, PrintRefill, Order/*, ServiceRequest/*)
 - `app/Models/Krypton/*` — POS database models (Order, Menu, Terminal, etc.) with `connection = 'pos'`
 
-**Routes & Controllers**
-- `routes/web.php` — admin web routes (Inertia pages: dashboard, orders, menus, users, devices, branches, roles)
+**Routes & Controllers (Admin)**
+- `routes/web.php` — admin web routes (Inertia pages: Dashboard, Orders, Menus, Users, Devices, Branches, Roles)
 - `routes/api.php` — device API (v1, Sanctum auth), POS integration endpoints
 - `routes/channels.php` — broadcast channel authorization (device.{id}, admin.orders, admin.print, etc.)
-- `app/Http/Controllers/Admin/*` — web controllers using Inertia::render()
-- `app/Http/Controllers/Api/V1/*` — API controllers returning JSON
+- `app/Http/Controllers/Admin/*` — web controllers using `Inertia::render()`
+- `app/Http/Controllers/Api/V1/*` — API controllers returning JSON (device auth, order updates, confirmations)
 
-**Frontend**
+**Frontend (Admin Panel)**
 - `resources/js/app.ts` — Inertia + Vue setup, Axios config (CSRF), Laravel Echo init (Reverb)
-- `resources/js/pages/*` — Inertia page components (Dashboard, Orders, Menus, Users, Devices, Branches, Roles, etc.)
-- `resources/js/components/ui/*` — shadcn-vue components (via `npx shadcn-vue@latest add`)
+- `resources/js/pages/*` — Inertia page components (Dashboard, Orders, Menus, Users, Devices, Branches, Roles)
+- `resources/js/components/ui/*` — shadcn-vue components (Button, Dialog, Table, etc.)
 - `resources/js/composables/*` — Vue composables (useToast, useAppearance, useInitials, useReportColumns)
-- `resources/js/layouts/*` — app layouts
-- `resources/js/types/*` — TypeScript types
+- `resources/js/layouts/*` — app layouts (default, admin navigation)
+
+**Tablet Ordering PWA**
+- `tablet-ordering-pwa/nuxt.config.ts` — Nuxt 3 config, PWA settings, runtime env vars
+- `tablet-ordering-pwa/stores/*.ts` — Pinia stores (menu, device, cart, etc.)
+- `tablet-ordering-pwa/plugins/api.client.ts` — Axios setup with device auth header
+- `tablet-ordering-pwa/plugins/echo.client.ts` — Laravel Echo for real-time order updates
+- `tablet-ordering-pwa/composables/useApi.ts` — API wrapper composable
+- `tablet-ordering-pwa/pages/*` — Nuxt pages (kiosk mode, landing, menu browsing)
+- `tablet-ordering-pwa/public/manifest.json` — PWA manifest for offline support
+
+**Relay Printer App (Flutter)**
+- `relay-device/pubspec.yaml` — dependencies (flutter_riverpod, blue_thermal_printer, web_socket_channel, sembast)
+- `relay-device/lib/main.dart` — app entry, Riverpod setup, theme
+- `relay-device/lib/providers/*.dart` — Riverpod state providers (app_state, printer_connection, print_queue, device_config)
+- `relay-device/lib/services/*.dart` — business logic (WebSocket listener, printer control, device API client, queue persistence)
+- `relay-device/lib/models/*.dart` — data structures (PrintJob, DeviceConfig, ConnectionState)
+- `relay-device/lib/screens/*` — UI pages (home, settings, connection status)
+- `relay-device/android/`, `ios/`, `windows/`, `linux/` — platform-specific configurations
+
+**Testing**
+- `tests/Feature/*` — Feature tests using Pest (integration-like, RefreshDatabase)
+- `tests/Unit/*` — Unit tests (services, repositories)
+- `database/factories/*` — test data factories
+- `database/seeders/*` — seed scripts for seeding test/demo data
+
+**Print Service (Node.js)**
+- `print-service/index.js` — Express server (port 9100) that receives print jobs and executes OS print commands
+- Receives POST `/print` requests with ESC/POS data
+- Configurable for Linux `lp` command or Windows print handling
 
 
 ## Developer Workflows
 
 **Setup (Windows PowerShell)**
 ```powershell
+# Main app (Laravel + Vue)
+cd c:\laragon\www\woosoo-nexus
 composer install
 npm ci
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
+php artisan migrate --seed
+
+# OR—one-liner:
+composer install; npm ci; cp .env.example .env; php artisan key:generate; php artisan migrate --seed
+
+# Start all services
+composer dev
+
+# Tablet PWA
+cd tablet-ordering-pwa
+npm install
+npm run dev
+
+# Relay device (Flutter)
+cd relay-device
+flutter pub get
+flutter run -d <device>  # e.g., -d Windows, -d android-physical
 ```
 
 **Recommended .env variables (examples)**
@@ -112,65 +194,70 @@ DB_POS_PASSWORD=pos_pass
 # Reverb / WebSockets
 VITE_REVERB_HOST=127.0.0.1
 VITE_REVERB_PORT=6001
+
+# Tablet PWA
+MAIN_API_URL=http://127.0.0.1:8000
+NUXT_PUBLIC_ECHO_PUSHER_KEY=local
 ```
 
-**Local Development**
+**Local Development (Main App)**
 ```powershell
-# All-in-one: serve + queue + vite (recommended)
+# All-in-one: serve + queue + vite + reverb
 composer dev
-
-# SSR mode (includes pail logs + Inertia SSR)
-composer dev:ssr
 
 # Individual processes
 php artisan serve              # HTTP server (localhost:8000)
 php artisan queue:listen --tries=1
 npm run dev                    # Vite HMR (port 5173)
 php artisan reverb:start       # WebSockets (port 6001)
-node print-service/index.js    # Print service (port 9100)
+node print-service/index.js    # Print service (port 9100, optional for local)
+```
+
+**Tablet PWA Development**
+```powershell
+cd tablet-ordering-pwa
+npm run dev              # Vite dev server (port 3000 or see package.json)
+npm run build            # Production build
+npm run preview          # Preview built version
+```
+
+**Relay Device Development**
+```powershell
+cd relay-device
+
+# Windows Desktop
+flutter run -d windows
+
+# Android Physical Device (via USB)
+flutter run -d <device-id>
+
+# Android Emulator
+flutter emulators --launch <emulator-id>
+flutter run
+
+# Watch mode (auto-reload on changes)
+flutter run --debug
 ```
 
 **Canonical ports & scripts**
 
-- Laravel HTTP server (local): `8000` (`php artisan serve`) — canonical app URL: `http://127.0.0.1:8000`.
-- Vite dev server (HMR): commonly `5173`, but some package scripts override this (e.g., `--port 3000`). Always check the `dev` script in `package.json` for the authoritative port.
-- Reverb (WebSockets): `6001` (default for Reverb/Pusher local host).
-- Print service: `9100` (node print-service)
-
-Note: Ports and host values may be overridden via `package.json` scripts or `.env` values (e.g., `APP_URL`, `VITE_REVERB_*`). When CI health-checks fail, confirm the effective port by inspecting `npm run dev` output or `package.json` scripts.
-
+- **Laravel HTTP server (local):** `8000` (`php artisan serve`)
+- **Vite dev server (HMR):** `5173` (check `package.json` for override)
+- **Tablet PWA dev:** `3000` or `5173` (check `tablet-ordering-pwa/package.json`)
+- **Reverb (WebSockets):** `6001` (default)
+- **Print service:** `9100` (Node.js Express)
 
 **Testing**
 ```powershell
-composer test                  # config:clear + artisan test
-./vendor/bin/pest              # Direct Pest invocation
+# Main app (PHP/Pest)
+composer test              # config:clear + artisan test
+./vendor/bin/pest          # Direct Pest invocation
 ./vendor/bin/pest --filter=OrderServiceTest
-```
-- Feature tests in `tests/Feature/*` (uses RefreshDatabase)
-- Unit tests in `tests/Unit/*`
-- Test environment: SQLite :memory:, sync queue (see `phpunit.xml`)
 
-To reproduce tests locally:
-- The default CI/test suite uses the SQLite in-memory configuration defined in `phpunit.xml`. To run that locally, execute:
-
-```powershell
-./vendor/bin/pest
-```
-
-- To run feature tests against a local MySQL instance (closer to production), set up your local DB, copy `.env.example` to `.env`, update the DB_* variables, then run:
-
-```powershell
-php artisan migrate:fresh --seed
-./vendor/bin/pest
-```
-
-**Frontend**
-```powershell
-npm run dev           # Vite dev server with HMR
-npm run build         # Production build
-npm run build:ssr     # Build + SSR bundle
-npm run format        # Prettier
-npm run lint          # ESLint
+# Relay device (Flutter)
+cd relay-device
+flutter test               # Runs unit tests under test/
+flutter test --coverage    # Generate coverage report
 ```
 
 **Production Deployment (Windows)**
@@ -232,6 +319,17 @@ npm run lint          # ESLint
 - Test environment auto-configured in `phpunit.xml` (SQLite, sync queue, no Pulse/Telescope)
 - Example: `tests/Feature/DeviceTableTest.php`, `tests/Unit/OrderServiceTest.php`
 
+**Flutter/Dart Patterns** (Relay Device)
+- State management: Riverpod providers in `lib/providers/*.dart`
+- Service layer: Business logic in `lib/services/*.dart` (WebSocket listener, printer control, device API)
+- Models: Data structures in `lib/models/*.dart`
+- Persistence: Sembast for durable queue, SharedPreferences for simple config
+- Testing: Unit tests in `test/` (run with `flutter test`)
+- Hot reload: Supported in debug mode for rapid iteration
+- Platform channels: Android/iOS permissions handled via `permission_handler` package
+
+---
+
 ## Common Tasks & Examples
 
 **Adding a New Inertia Page**
@@ -274,6 +372,50 @@ npx shadcn-vue@latest add dialog
 - Components installed to `resources/js/components/ui/*`
 - Import: `import { Button } from '@/components/ui/button'`
 
+**Adding a Riverpod Provider (Flutter)**
+```dart
+// lib/providers/my_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final myDataProvider = FutureProvider<List<String>>((ref) async {
+  // Fetch data from API or local DB
+  return ['item1', 'item2'];
+});
+
+// Usage in widget
+Consumer(
+  builder: (context, ref, child) {
+    final data = ref.watch(myDataProvider);
+    return data.when(
+      data: (items) => ListView(children: items.map((e) => Text(e)).toList()),
+      loading: () => const CircularProgressIndicator(),
+      error: (err, stack) => Text('Error: $err'),
+    );
+  },
+)
+```
+
+**Adding a Nuxt PWA API Call (Tablet)**
+```ts
+// Use the useApi composable
+const api = useApi()
+const response = await api.get('/api/v1/menus')
+
+// Or configure in stores
+// tablet-ordering-pwa/stores/menu.ts
+export const useMenuStore = defineStore('menu', () => {
+  const items = ref([])
+  const loadMenus = async () => {
+    const api = useApi()
+    const { data } = await api.get('/api/v1/menus')
+    items.value = data
+  }
+  return { items, loadMenus }
+})
+```
+
+---
+
 ## Integration Points & External Dependencies
 
 **Laravel Packages**
@@ -284,7 +426,7 @@ npx shadcn-vue@latest add dialog
 - `laravel/pulse` — application monitoring (disabled in tests)
 - `lorisleiva/laravel-actions` — action pattern library
 
-**Frontend Libraries**
+**Frontend Libraries (Admin Panel)**
 - `@inertiajs/vue3` — SPA-like experience without building API
 - `@tanstack/vue-table` — data table components
 - `@vueuse/core` — Vue composition utilities
@@ -293,6 +435,23 @@ npx shadcn-vue@latest add dialog
 - `vue-sonner` — toast notifications
 - `date-fns` — date manipulation
 
+**Nuxt PWA Libraries (Tablet)**
+- `@nuxt/image` — optimized image loading
+- `@vite-pwa/nuxt` — PWA plugin (service worker, manifest)
+- `pinia` & `@pinia/nuxt` — state management with persist plugin
+- `axios` — HTTP client
+- `laravel-echo` — WebSocket client for real-time updates
+
+**Flutter/Dart Packages (Relay Device)**
+- `flutter_riverpod` — state management & dependency injection
+- `blue_thermal_printer` — Bluetooth thermal printer control (ESC/POS)
+- `web_socket_channel` — WebSocket client
+- `esc_pos_utils` — ESC/POS formatting utilities
+- `sembast` — embedded NoSQL DB for durable queue persistence
+- `shared_preferences` — simple key-value storage
+- `permission_handler` — Bluetooth & location permissions (Android/iOS)
+- `wakelock_plus` — prevent device sleep during printing
+
 **Database Connections**
 - `mysql` (default) — Laravel app database (`woosoo_api`)
 - `pos` — Krypton POS database (`krypton_woosoo`) - **read-only integration**
@@ -300,7 +459,8 @@ npx shadcn-vue@latest add dialog
 
 **Ports & Services**
 - `8000` — Laravel HTTP server (`php artisan serve`)
-- `5173` — Vite dev server (HMR)
+- `5173` — Vite dev server (HMR, main app)
+- `3000`–`5173` — Tablet PWA dev (check script)
 - `6001` — Reverb WebSocket server
 - `9100` — Print service (Node.js Express)
 
@@ -313,6 +473,9 @@ npx shadcn-vue@latest add dialog
 - **Tests fail**: Run `php artisan config:clear` before tests, check `phpunit.xml` env vars
 - **Vite build errors**: Clear cache (`rm -rf node_modules/.vite`), reinstall deps (`npm ci`)
   If you see errors related to `esbuild` native binaries (common on CI runners), run `npm run rebuild:esbuild --if-present` during CI `postinstall` or manually locally to rebuild the native binary.
+- **Flutter build issues**: Run `flutter clean` and `flutter pub get` before rebuilding; check platform-specific requirements (Android SDK, Xcode, etc.)
+- **Bluetooth permissions (Android)**: Ensure manifest permissions declared; runtime requests shown via `permission_handler` package
+- **WebSocket connection in relay device**: Check device network connectivity; fallback polling should activate if WebSocket fails
 
 **Debugging**
 ```powershell
@@ -335,6 +498,11 @@ php artisan cache:clear
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
+
+# Flutter
+flutter run -d <device> --verbose      # Verbose output
+flutter logs                           # Stream device logs
+flutter analyze                        # Code analysis (Dart)
 ```
 
 **Performance**
@@ -342,6 +510,7 @@ php artisan view:clear
 - Run `npm run build` for optimized frontend bundle
 - Queue heavy tasks (use `dispatch()` instead of synchronous execution)
 - Use `php artisan optimize` for config/route caching (production)
+- Flutter: Use release mode for performance testing (`flutter run --release`)
 
 ## Code Quality Guidelines
 

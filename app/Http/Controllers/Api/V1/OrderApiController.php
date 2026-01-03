@@ -12,6 +12,7 @@ use App\Events\PrintRefill;
 use App\Events\PrintOrder;
 use App\Events\Order\OrderPrinted;
 use App\Services\Krypton\KryptonContextService;
+use App\Services\PrintEventService;
 use Illuminate\Support\Facades\DB;
 
 class OrderApiController extends Controller
@@ -218,6 +219,23 @@ class OrderApiController extends Controller
 
         try {
             $created = CreateOrderedMenu::run($attrs);
+
+            // Persist a print event so polling printers can recover missed refill broadcasts
+            try {
+                $metaItems = collect($created)->map(fn($item) => [
+                    'menu_id' => $item->menu_id ?? null,
+                    'quantity' => $item->quantity ?? null,
+                    'name' => $item->name ?? null,
+                ])->values()->all();
+
+                app(PrintEventService::class)->createForOrder(
+                    $deviceOrder,
+                    'REFILL',
+                    ['items' => $metaItems]
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             try {
                 PrintRefill::dispatch($deviceOrder, $created);

@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+// import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Link } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
+import GrasshopperButton from '@/components/GrasshopperButton.vue'; 
 
 const page = usePage();
 
@@ -97,10 +98,13 @@ const submit = () => {
                                     </Label>
                                 </div>
 
-                                <Button type="submit"
-                                    class="mt-4 w-full bg-woosoo-accent hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark cursor-pointer"
-                                    :tabindex="4" :disabled="form.processing">
-                                    <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
+                                <Button
+                                    type="submit"
+                                    class="mt-4 w-full"
+                                    :tabindex="4"
+                                    :disabled="form.processing"
+                                >
+                                    <LoaderCircle v-if="form.processing" class="mr-2 h-4 w-4 animate-spin" />
                                     Log in
                                 </Button>
                             </div>
