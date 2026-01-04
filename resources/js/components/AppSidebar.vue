@@ -18,10 +18,14 @@ import {
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
+const hasZiggyRoute = (name: string) => {
+    const routes = (typeof window !== 'undefined' ? (window as any)?.Ziggy?.routes : undefined) ?? {};
+    return Object.prototype.hasOwnProperty.call(routes, name);
+};
+
 const routeOrFallback = (name: string, fallback: string) => {
-    if (typeof route !== 'function') {
-        return fallback;
-    }
+    if (typeof route !== 'function') return fallback;
+    if (!hasZiggyRoute(name)) return fallback;
     try {
         return route(name);
     } catch (error) {
