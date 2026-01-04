@@ -240,6 +240,22 @@ All paths lead to:
 
 ---
 
+## 📎 Additional References
+
+- Printer integration (primary): [docs/printer_readme.md](docs/printer_readme.md)
+- Printer API temporary manual (guest access, deprecated): [docs/printer_manual.md](docs/printer_manual.md)
+
+---
+
+## 🗄️ Archived Documentation
+
+- Historical reports and investigations: [docs/archive](docs/archive)
+- Tablet PWA historical docs: [tablet-ordering-pwa/docs/archive](tablet-ordering-pwa/docs/archive)
+- Relay device historical docs: [relay-device/docs/archive](relay-device/docs/archive)
+- Duplicate API docs removed (use [docs/API_MAP.md](docs/API_MAP.md) as the single source)
+
+---
+
 ## 📈 Success Indicators
 
 After reading the appropriate documentation, you should be able to:
