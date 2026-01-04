@@ -86,6 +86,15 @@ return [
             'engine' => null,
         ],
 
+        // Test-safe alias for legacy Krypton connection name used in some tests/models.
+        'krypton_woosoo' => [
+            'driver' => env('DB_KRYPTON_DRIVER', 'sqlite'),
+            'url' => env('DB_KRYPTON_URL'),
+            'database' => env('DB_KRYPTON_DATABASE', ':memory:'),
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_KRYPTON_FOREIGN_KEYS', false),
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
