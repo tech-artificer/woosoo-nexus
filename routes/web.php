@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\EventLogController;
 
 use App\Http\Controllers\Admin\Reports\{
     SalesController,
+    ReportController,
 };
 
   
@@ -154,11 +155,16 @@ Route::middleware(['auth'])->group(function () {
         })->name('pos.fill-order');
     });
     
-    // Route::prefix('reports')->group(function () {
-    //     Route::get('/sales', [SalesController::class, 'index'])->name('reports.sales'); 
-    //     // Route::get('{type}', [ReportController::class, 'index'])->name('reports.index'); 
-    //     // Route::get('{type}/export', [ReportController::class, 'export']); // CSV export
-    // });
+    // Reports
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/daily-sales', [ReportController::class, 'dailySales'])->name('daily-sales');
+        Route::get('/menu-items', [ReportController::class, 'menuItems'])->name('menu-items');
+        Route::get('/hourly-sales', [ReportController::class, 'hourlySales'])->name('hourly-sales');
+        Route::get('/guest-count', [ReportController::class, 'guestCount'])->name('guest-count');
+        Route::get('/print-audit', [ReportController::class, 'printAudit'])->name('print-audit');
+        Route::get('/order-status', [ReportController::class, 'orderStatus'])->name('order-status');
+        Route::get('/discount-tax', [ReportController::class, 'discountTax'])->name('discount-tax');
+    });
 
 });
 

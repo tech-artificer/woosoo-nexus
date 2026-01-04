@@ -53,7 +53,7 @@ return [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
             // 'host' => env('DB_HOST', '127.0.0.1'),
-            'host' => env('DB_HOST', ''),
+            'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
             'database' => env('DB_DATABASE', 'woosoo_api'),
             'username' => env('DB_USERNAME', 'root'),
@@ -73,7 +73,7 @@ return [
         'pos' => [
             'driver' => 'mysql',
             // 'host' => env('DB_POS_HOST', '127.0.0.1'),
-            'host' => env('DB_POS_HOST', ''),
+            'host' => env('DB_POS_HOST', '127.0.0.1'),
             'port' => env('DB_POS_PORT', '3306'),
             'database' => env('DB_POS_DATABASE', 'krypton_woosoo'),
             'username' => env('DB_POS_USERNAME', 'root'),

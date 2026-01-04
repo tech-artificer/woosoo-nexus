@@ -94,7 +94,13 @@ class DeviceController extends Controller
      */
     public function edit(Device $device)
     {
-        $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
+        // Get all assigned table IDs EXCEPT the one currently assigned to this device
+        // so the device's own table appears in the dropdown
+        $assignedTableIds = Device::active()
+            ->whereNotNull('table_id')
+            ->where('id', '!=', $device->id)
+            ->pluck('table_id');
+        
         $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
 
         return Inertia::render('Devices/Edit', [

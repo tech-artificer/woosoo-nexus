@@ -4,16 +4,17 @@ import NavMain from '@/components/NavMain.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { 
-    LayoutDashboard, 
-    ListOrdered, 
-    UserCog, 
-    MonitorSmartphone, 
-    UtensilsCrossed,  
-    TrendingUp, 
-    Split, 
-    Lock, 
-    BookOpen 
+import {
+    LayoutDashboard,
+    ListOrdered,
+    UserCog,
+    MonitorSmartphone,
+    UtensilsCrossed,
+    TrendingUp,
+    Split,
+    Lock,
+    BookOpen,
+    BarChart3
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
@@ -61,7 +62,23 @@ const mainNavItems: NavItem[] = [
         isActive: false,
         hasSubItems: false,
     },
-    
+    {
+        title: 'Reports',
+        href: '#',
+        icon: BarChart3,
+        isActive: false,
+        hasSubItems: true,
+        subItems: [
+            { title: 'Daily Sales', href: route('reports.daily-sales') },
+            { title: 'Menu Items', href: route('reports.menu-items') },
+            { title: 'Hourly Sales', href: route('reports.hourly-sales') },
+            { title: 'Guest Count', href: route('reports.guest-count') },
+            { title: 'Print Audit', href: route('reports.print-audit') },
+            { title: 'Order Status', href: route('reports.order-status') },
+            { title: 'Discount & Tax', href: route('reports.discount-tax') },
+        ],
+    },
+
 ];
 
 
@@ -72,18 +89,8 @@ const configNavItems: NavItem[] = [
         icon: Lock,
         isActive: false,
         hasSubItems: false,
-    }, 
+    },
 ];
-
-// const reportNavItems: NavItem[] = [
-//     {
-//         title: 'Sales Report',
-//         href: route('reports.sales'),
-//         icon: TrendingUp,
-//         isActive: false,
-//         hasSubItems: false,
-//     }, 
-// ];
 
 </script>
 
@@ -102,8 +109,7 @@ const configNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" title="Main"  />
-            <!-- <NavMain :items="reportNavItems" title="Reports" /> -->
+            <NavMain :items="mainNavItems" title="Main" />
         </SidebarContent>
         <SidebarFooter>
             <NavMain :items="configNavItems" title="Configuration" />

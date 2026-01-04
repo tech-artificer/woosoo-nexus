@@ -156,30 +156,18 @@ Route::prefix('v1')->middleware(['auth:device'])->group(function () {
 Route::middleware(['requestId','auth:sanctum'])->group(function () {
     Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
 });
-// Health endpoint — quick check for app DB and POS DB connectivity
-Route::get('/health', function () {
-    $status = [
-        'app' => true,
-        'mysql' => false,
-        'pos' => false,
-    ];
+// Health endpoint — check app DB, POS DB, queue, and services
+Route::get('/health', [\App\Http\Controllers\Api\HealthController::class, 'check']);
 
-    try {
-        DB::connection()->getPdo();
-        $status['mysql'] = true;
-    } catch (\Throwable $e) {
-        // keep false
-    }
-
-    try {
-        DB::connection('pos')->getPdo();
-        $status['pos'] = true;
-    } catch (\Throwable $e) {
-        // keep false
-    }
-
-    return \App\Http\Responses\ApiResponse::success($status, 'Health check');
+// Monitoring endpoints (Prometheus/observability)
+Route::prefix('monitoring')->group(function () {
+    Route::get('/metrics', [\App\Http\Controllers\Api\MonitoringController::class, 'metrics']);
+    Route::get('/live', [\App\Http\Controllers\Api\MonitoringController::class, 'live']);
+    Route::get('/ready', [\App\Http\Controllers\Api\MonitoringController::class, 'ready']);
 });
+
+// Event replay endpoint — get missed broadcast events for catch-up
+Route::get('/events/missing', [\App\Http\Controllers\Api\EventReplayController::class, 'missing']);
 
 // Debug endpoint: returns raw POS stored-proc rows and local Menu rows for a course
 Route::get('/debug/pos/menus/course', function (Request $request) {

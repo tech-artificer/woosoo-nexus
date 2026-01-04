@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RefillOrderRequest;
 use App\Models\DeviceOrder;
 use Illuminate\Http\Request;
 use App\Models\Krypton\TerminalSession;
@@ -147,12 +148,13 @@ class OrderApiController extends Controller
 
     /**
      * Persist refill items and dispatch print event.
+     * 
+     * Validates that items are refillable (meats/sides only).
      */
-    public function refill(Request $request, int $orderId)
+    public function refill(RefillOrderRequest $request, int $orderId)
     {
-        $request->validate([
-            'items' => 'required|array',
-        ]);
+        // RefillOrderRequest automatically validates items
+        $validatedData = $request->validated();
 
         $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
         if (! $deviceOrder) {
@@ -171,7 +173,7 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
-        $incomingItems = $request->input('items', []);
+        $incomingItems = $validatedData['items'] ?? [];
         $mappedItems = [];
 
         foreach ($incomingItems as $i => $it) {
