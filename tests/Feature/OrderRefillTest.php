@@ -31,7 +31,7 @@ class OrderRefillTest extends TestCase
             $table->increments('id');
             $table->string('name')->nullable();
         });
-        DB::connection('krypton_woosoo')->table('menu')->insert(['id' => 46, 'name' => 'Test Menu']);
+        DB::connection('krypton_woosoo')->table('menu')->insert(['id' => 46, 'name' => 'Classic Feast']);
     }
 
     public function tearDown(): void

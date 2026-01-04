@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 
 import type { ButtonVariants } from '@/components/ui/button'
-import type { Component, PropType } from 'vue'
+import type { Component } from 'vue'
 
 const props = defineProps<{
   variant?: ButtonVariants['variant']

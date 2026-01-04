@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
