@@ -5,13 +5,14 @@ import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 
 import type { ButtonVariants } from '@/components/ui/button'
+import type { Component, PropType } from 'vue'
 
 const props = defineProps<{
   variant?: ButtonVariants['variant']
   size?: ButtonVariants['size']
   loading?: boolean
   disabled?: boolean
-  icon?: boolean | object | Function
+  icon?: boolean | Component | (() => unknown)
   type?: 'button' | 'submit' | 'reset'
   class?: string
 }>()

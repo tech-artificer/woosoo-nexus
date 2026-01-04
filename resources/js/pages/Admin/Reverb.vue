@@ -43,10 +43,6 @@ const nssmPath = import.meta.env.VITE_NSSM_PATH ?? 'nssm'
 const serviceName = import.meta.env.VITE_REVERB_SERVICE_NAME ?? 'woosoo-reverb'
 const phpPath = import.meta.env.VITE_PHP_BIN_PATH ?? 'php'
 const projectPath = import.meta.env.VITE_PROJECT_PATH ?? '.'
-const reverbPort = import.meta.env.VITE_REVERB_PORT ?? 6001
-const reverbHost = import.meta.env.VITE_REVERB_HOST ?? '127.0.0.1'
-const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? 'http'
-
 const commands = {
     status: `${nssmPath} status ${serviceName}`,
     start: `${nssmPath} start ${serviceName}`,
