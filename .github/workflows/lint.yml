@@ -5,10 +5,7 @@ on:
     branches:
       - develop
       - main
-  pull_request:
-    branches:
-      - develop
-      - main
+      - staging
 
 permissions:
   contents: write
@@ -36,7 +33,7 @@ jobs:
         run: npm run format
 
       - name: Lint Frontend
-        run: npm run lint
+        run: npm run lint:check
 
       # - name: Commit Changes
       #   uses: stefanzweifel/git-auto-commit-action@v5

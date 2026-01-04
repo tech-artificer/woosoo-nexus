@@ -38,7 +38,9 @@ return new class extends Migration
 
             // Make session_id nullable
             Schema::table('order_update_logs', function (Blueprint $table) {
-                $table->unsignedBigInteger('session_id')->nullable()->change();
+                if(Schema::hasColumn('order_update_logs', 'session_id')) {
+                    $table->unsignedBigInteger('session_id')->nullable()->change();
+                }
             });
         }
     }

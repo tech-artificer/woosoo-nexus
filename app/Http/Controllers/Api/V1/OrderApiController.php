@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RefillOrderRequest;
 use App\Models\DeviceOrder;
 use Illuminate\Http\Request;
 use App\Models\Krypton\TerminalSession;
@@ -12,6 +13,7 @@ use App\Events\PrintRefill;
 use App\Events\PrintOrder;
 use App\Events\Order\OrderPrinted;
 use App\Services\Krypton\KryptonContextService;
+use App\Services\PrintEventService;
 use Illuminate\Support\Facades\DB;
 
 class OrderApiController extends Controller
@@ -146,12 +148,13 @@ class OrderApiController extends Controller
 
     /**
      * Persist refill items and dispatch print event.
+     * 
+     * Validates that items are refillable (meats/sides only).
      */
-    public function refill(Request $request, int $orderId)
+    public function refill(RefillOrderRequest $request, int $orderId)
     {
-        $request->validate([
-            'items' => 'required|array',
-        ]);
+        // RefillOrderRequest automatically validates items
+        $validatedData = $request->validated();
 
         $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
         if (! $deviceOrder) {
@@ -170,7 +173,7 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
-        $incomingItems = $request->input('items', []);
+        $incomingItems = $validatedData['items'] ?? [];
         $mappedItems = [];
 
         foreach ($incomingItems as $i => $it) {
@@ -218,6 +221,23 @@ class OrderApiController extends Controller
 
         try {
             $created = CreateOrderedMenu::run($attrs);
+
+            // Persist a print event so polling printers can recover missed refill broadcasts
+            try {
+                $metaItems = collect($created)->map(fn($item) => [
+                    'menu_id' => $item->menu_id ?? null,
+                    'quantity' => $item->quantity ?? null,
+                    'name' => $item->name ?? null,
+                ])->values()->all();
+
+                app(PrintEventService::class)->createForOrder(
+                    $deviceOrder,
+                    'REFILL',
+                    ['items' => $metaItems]
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             try {
                 PrintRefill::dispatch($deviceOrder, $created);

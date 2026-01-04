@@ -2,12 +2,6 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-// import Configuration from '@/components/configuration/Index.vue';
-
-// const page = usePage();
-
-// const roles = page.props.roles;
-// const permissions = page.props.permissions;
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -16,12 +10,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-
 defineProps<{
     title?: string;
     description?: string;
 }>()
-
 
 </script>
 
@@ -30,11 +22,8 @@ defineProps<{
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded p-6">
-           <!-- <pre>{{ roles }}</pre> -->
-            <!-- <pre>{{ permissions }}</pre> -->
-             <div class="flex flex-col gap-2">
-                <!-- <Configuration /> -->
-             </div>
+            <div class="flex flex-col gap-2">
+            </div>
         </div>
     </AppLayout>
 </template>

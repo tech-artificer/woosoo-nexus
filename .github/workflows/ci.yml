@@ -2,9 +2,7 @@ name: CI - tests, lint, security
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, staging ]
 
 jobs:
   build-and-test:
@@ -47,8 +45,8 @@ jobs:
       - name: Install Node deps
         run: npm ci
 
-      - name: Lint (eslint)
-        run: npm run lint --if-present
+      - name: Lint (eslint check)
+        run: npm run lint:check
 
       - name: Build assets
         run: npm run build --if-present

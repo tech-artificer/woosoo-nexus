@@ -53,7 +53,7 @@ return [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
             // 'host' => env('DB_HOST', '127.0.0.1'),
-            'host' => env('DB_HOST', ''),
+            'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
             'database' => env('DB_DATABASE', 'woosoo_api'),
             'username' => env('DB_USERNAME', 'root'),
@@ -73,7 +73,7 @@ return [
         'pos' => [
             'driver' => 'mysql',
             // 'host' => env('DB_POS_HOST', '127.0.0.1'),
-            'host' => env('DB_POS_HOST', ''),
+            'host' => env('DB_POS_HOST', '127.0.0.1'),
             'port' => env('DB_POS_PORT', '3306'),
             'database' => env('DB_POS_DATABASE', 'krypton_woosoo'),
             'username' => env('DB_POS_USERNAME', 'root'),
@@ -84,6 +84,15 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+        ],
+
+        // Test-safe alias for legacy Krypton connection name used in some tests/models.
+        'krypton_woosoo' => [
+            'driver' => env('DB_KRYPTON_DRIVER', 'sqlite'),
+            'url' => env('DB_KRYPTON_URL'),
+            'database' => env('DB_KRYPTON_DATABASE', ':memory:'),
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_KRYPTON_FOREIGN_KEYS', false),
         ],
 
         'mariadb' => [

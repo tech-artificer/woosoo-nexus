@@ -1,6 +1,5 @@
 <!-- resources/js/Pages/Menus/EditMenu.vue -->
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ref, reactive, watch, computed, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
