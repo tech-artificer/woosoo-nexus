@@ -2,9 +2,7 @@ name: PWA CI - tests + smoke
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, staging ]
 
 jobs:
   pwa:
