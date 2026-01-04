@@ -8,7 +8,9 @@
         "dev:monitor": "node ./bin/dev-monitor-platform.js",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
-        "lint": "eslint . --fix"
+        "lint": "eslint . --fix",
+        "lint:check": "eslint . --max-warnings=0",
+        "typecheck": "vue-tsc --noEmit"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",

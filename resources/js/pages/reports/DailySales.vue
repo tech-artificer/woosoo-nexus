@@ -2,8 +2,6 @@
 import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { DatePicker } from '@/components/ui/date-picker'
 import { LineChart } from '@/components/ui/chart-line'
 import { ref } from 'vue'
 import type { BreadcrumbItem } from '@/types'

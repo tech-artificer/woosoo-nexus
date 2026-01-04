@@ -3,7 +3,6 @@ import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ref } from 'vue'
 import type { BreadcrumbItem } from '@/types'
 
 interface PrintAuditData {

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
-import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -112,7 +111,7 @@ const uploadImage = () => {
         title: 'Success',
         description: 'Image uploaded successfully',
       })
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to upload image',
@@ -143,7 +142,6 @@ const setLink = () => {
     editor.value?.chain().focus().setLink({ href: url }).run()
   }
 }
-const unsetLink = () => editor.value?.chain().focus().unsetLink().run()
 
 // Live preview (convert HTML to markdown-style rendering)
 const previewHtml = computed(() => {

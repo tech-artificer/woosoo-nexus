@@ -18,6 +18,19 @@ import {
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
+const routeOrFallback = (name: string, fallback: string) => {
+    if (typeof route !== 'function') {
+        return fallback;
+    }
+    try {
+        return route(name);
+    } catch (error) {
+        // Keep the sidebar functional even when Ziggy’s route list is stale.
+        console.warn(`Ziggy route missing: ${name}`, error);
+        return fallback;
+    }
+};
+
 
 const mainNavItems: NavItem[] = [
     {
@@ -69,13 +82,13 @@ const mainNavItems: NavItem[] = [
         isActive: false,
         hasSubItems: true,
         subItems: [
-            { title: 'Daily Sales', href: route('reports.daily-sales') },
-            { title: 'Menu Items', href: route('reports.menu-items') },
-            { title: 'Hourly Sales', href: route('reports.hourly-sales') },
-            { title: 'Guest Count', href: route('reports.guest-count') },
-            { title: 'Print Audit', href: route('reports.print-audit') },
-            { title: 'Order Status', href: route('reports.order-status') },
-            { title: 'Discount & Tax', href: route('reports.discount-tax') },
+            { title: 'Daily Sales', href: routeOrFallback('reports.daily-sales', '/reports/daily-sales') },
+            { title: 'Menu Items', href: routeOrFallback('reports.menu-items', '/reports/menu-items') },
+            { title: 'Hourly Sales', href: routeOrFallback('reports.hourly-sales', '/reports/hourly-sales') },
+            { title: 'Guest Count', href: routeOrFallback('reports.guest-count', '/reports/guest-count') },
+            { title: 'Print Audit', href: routeOrFallback('reports.print-audit', '/reports/print-audit') },
+            { title: 'Order Status', href: routeOrFallback('reports.order-status', '/reports/order-status') },
+            { title: 'Discount & Tax', href: routeOrFallback('reports.discount-tax', '/reports/discount-tax') },
         ],
     },
 

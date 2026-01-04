@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { computed, h } from 'vue'
+import { computed } from 'vue'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 
@@ -19,8 +19,6 @@ const props = defineProps<{
 const variant = computed(() => (props.variant ?? 'default') as ButtonVariants['variant'])
 const size = computed(() => (props.size ?? 'default') as ButtonVariants['size'])
 const btnType = computed(() => (props.type ?? 'button') as 'button' | 'submit' | 'reset')
-
-const emit = defineEmits(['click'])
 
 const isIconSlot = computed(() => typeof props.icon === 'function' || typeof props.icon === 'object')
 
