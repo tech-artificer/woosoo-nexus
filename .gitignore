@@ -31,3 +31,16 @@ docker/
 /bootstrap/cache/*
 /certs
 /logs
+vite.log
+
+# Workspace files
+woosoo-workspace.code-workspace
+woosoo-nexus.code-workspace
+
+# Test coverage
+coverage/
+.phpunit.cache/
+
+# Local env files
+.env.*
+!.env.example

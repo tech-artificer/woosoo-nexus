@@ -49,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
         // Always return plain JSON (no "data" wrapper)
         JsonResource::withoutWrapping();
 
+        // Register broadcast event listener for event replay functionality
+        $this->registerBroadcastEventListener();
+
         try {
             // Share context-based sessions (from your Krypton service)
             Inertia::share(app(KryptonContextService::class)->getCurrentSessions());
@@ -127,4 +130,31 @@ class AppServiceProvider extends ServiceProvider
         // fallback: just prettify words
         return ucfirst(str_replace('.', ' ', $name));
     }
+
+    /**
+     * Register listener for broadcast events to enable event replay
+     */
+    private function registerBroadcastEventListener(): void
+    {
+        // Listen for all broadcast events and record them
+        try {
+            \Illuminate\Support\Facades\Event::listen('*', function ($eventName, $payload) {
+                // Only record events that are ShouldBroadcast
+                if (is_object($payload[0] ?? null) && method_exists($payload[0], 'broadcastOn')) {
+                    $event = $payload[0];
+                    $channels = $event->broadcastOn();
+                    $channel = $channels[0]?->name ?? 'unknown';
+                    $eventClass = class_basename($event);
+                    $eventPayload = method_exists($event, 'broadcastWith')
+                        ? $event->broadcastWith()
+                        : [];
+                    
+                    \App\Models\BroadcastEvent::record($channel, $eventClass, $eventPayload);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning("Failed to register broadcast event listener: " . $e->getMessage());
+        }
+    }
 }
+
