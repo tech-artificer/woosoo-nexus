@@ -40,3 +40,7 @@ woosoo-nexus.code-workspace
 # Test coverage
 coverage/
 .phpunit.cache/
+
+# Local env files
+.env.*
+!.env.example

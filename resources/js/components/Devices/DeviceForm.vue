@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable vue/valid-v-for */
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed } from 'vue'
 import axios from 'axios'
 import { useForm } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
-    SelectGroup,
     SelectItem,
     SelectLabel,
     SelectTrigger,

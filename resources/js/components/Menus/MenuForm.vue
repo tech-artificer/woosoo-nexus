@@ -1,9 +1,9 @@
 <!-- resources/js/Pages/Menus/EditMenu.vue -->
 <script setup lang="ts">
-import { ref, reactive, watch, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
-import { Image, Pencil } from 'lucide-vue-next';
+import { Image } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';

@@ -16,7 +16,7 @@ import {
   getSortedRowModel,  
   useVueTable,
 } from '@tanstack/vue-table'
-import { ref, computed, toRef } from 'vue'
+import { ref, computed } from 'vue'
 import { valueUpdater } from '@/lib/utils'
 import {
   Table,

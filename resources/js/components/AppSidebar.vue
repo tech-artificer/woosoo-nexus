@@ -9,8 +9,6 @@ import {
     UserCog,
     MonitorSmartphone,
     UtensilsCrossed,
-    TrendingUp,
-    Split,
     Lock,
     BookOpen,
     BarChart3
