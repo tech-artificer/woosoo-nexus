@@ -158,6 +158,12 @@ Route::middleware(['auth'])->group(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 
+// Public routes for relay device APK downloads
+Route::get('/relay-device/download', [\App\Http\Controllers\RelayDeviceController::class, 'downloadApk'])
+    ->name('relay-device.download');
+Route::get('/relay-device/info', [\App\Http\Controllers\RelayDeviceController::class, 'apkInfo'])
+    ->name('relay-device.info');
+
 // Dev-only helper route: unauthenticated generator for quick local testing
 if (app()->environment(['local', 'development']) || env('APP_DEBUG')) {
     // GET avoids CSRF middleware so it's easy to call from curl/browser during local testing

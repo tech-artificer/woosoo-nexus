@@ -31,3 +31,6 @@ docker/
 /bootstrap/cache/*
 /certs
 /logs
+# APK files (build artifacts)
+*.apk
+/storage/app/public/relay-device/*.apk
