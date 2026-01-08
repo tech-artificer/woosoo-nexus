@@ -51,8 +51,16 @@ class RelayDeviceController extends Controller
         }
 
         $fullPath = Storage::disk('public')->path($apkPath);
-        $fileSize = filesize($fullPath);
-        $lastModified = filemtime($fullPath);
+        $fileSize = @filesize($fullPath);
+        $lastModified = @filemtime($fullPath);
+        
+        if ($fileSize === false || $lastModified === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to read APK file information',
+                'available' => false,
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,

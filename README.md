@@ -249,8 +249,56 @@ Comprehensive documentation available in the `docs/` directory:
 - **[API Map](docs/API_MAP.md)** - API endpoint reference
 - **[Admin Manual](docs/admin_manual.md)** - Administrator guide
 - **[Printer Manual](docs/printer_manual.md)** - Printer setup and usage
+- **[Relay Device APK](storage/app/public/relay-device/README.md)** - APK deployment guide
 - **[Roles Implementation](docs/ROLES_IMPLEMENTATION_COMPLETE.md)** - Roles and permissions
 - **[Branch CRUD](docs/BRANCH_CRUD_IMPLEMENTATION.md)** - Example CRUD implementation
+
+## Relay Device APK Deployment
+
+The relay-device Android application can be downloaded directly from the woosoo-nexus server.
+
+### Endpoints
+
+**Download APK:**
+```
+GET /relay-device/download
+```
+Downloads the latest relay-device APK file for Android installation.
+
+**APK Information:**
+```
+GET /relay-device/info
+```
+Returns JSON with APK availability, file size, and last modified date.
+
+### Deployment
+
+1. **Build the APK** (from tech-artificer/relay-device repository):
+   ```bash
+   cd relay-device
+   flutter build apk --release
+   ```
+
+2. **Deploy to woosoo-nexus**:
+   ```bash
+   cp relay-device/build/app/outputs/flutter-apk/app-release.apk \
+      woosoo-nexus/storage/app/public/relay-device/relay-device.apk
+   ```
+
+3. **Ensure storage link**:
+   ```bash
+   cd woosoo-nexus
+   php artisan storage:link
+   ```
+
+### Installation
+
+Users can install the relay-device app by:
+- Navigating to `https://your-domain.com/relay-device/download` in their Android browser
+- Scanning a QR code pointing to the download URL
+- Using ADB: `adb install relay-device.apk`
+
+For detailed deployment instructions, security considerations, and CI/CD integration, see [storage/app/public/relay-device/README.md](storage/app/public/relay-device/README.md).
 
 ## Production Deployment
 
