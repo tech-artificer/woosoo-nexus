@@ -131,7 +131,7 @@ class OrderRefillTest extends TestCase
 
         // Verify local device_order_items persisted (ordered_menu_id should equal menu_id)
         $this->assertDatabaseHas('device_order_items', [
-            'order_id' => $deviceOrder->id,
+            'order_id' => $deviceOrder->order_id,
             'menu_id' => 46,
             'ordered_menu_id' => 46,
             'quantity' => 2,
