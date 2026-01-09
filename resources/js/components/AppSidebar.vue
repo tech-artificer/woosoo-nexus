@@ -82,7 +82,7 @@ const mainNavItems: NavItem[] = [
         icon: BarChart3,
         isActive: false,
         hasSubItems: true,
-        subItems: [
+        items: [
             { title: 'Daily Sales', href: routeOrFallback('reports.daily-sales', '/reports/daily-sales') },
             { title: 'Menu Items', href: routeOrFallback('reports.menu-items', '/reports/menu-items') },
             { title: 'Hourly Sales', href: routeOrFallback('reports.hourly-sales', '/reports/hourly-sales') },
