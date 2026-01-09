@@ -113,7 +113,9 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     // allow both GET and POST for backward compatibility, and require auth:device
     Route::match(['get','post'], 'device/table', [DeviceApiController::class, 'getTableByIp'])
         ->name('device.table');
-    Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+    // Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+    // ↑ Removed: refresh endpoint creates circular dependency with expired tokens (401 trying to refresh expired token)
+    // Tablets now use IP-based /api/devices/login (no auth required) for re-authentication
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
     Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
 

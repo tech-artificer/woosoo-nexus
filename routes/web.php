@@ -16,7 +16,8 @@ use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
     BranchController,
-    ReverbController
+    ReverbController,
+    MonitoringController
 };
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\EventLogController;
@@ -164,6 +165,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/print-audit', [ReportController::class, 'printAudit'])->name('print-audit');
         Route::get('/order-status', [ReportController::class, 'orderStatus'])->name('order-status');
         Route::get('/discount-tax', [ReportController::class, 'discountTax'])->name('discount-tax');
+    });
+
+    // Monitoring
+    Route::prefix('monitoring')->name('monitoring.')->group(function () {
+        Route::get('/', [MonitoringController::class, 'index'])->name('index');
+        Route::get('/metrics', [MonitoringController::class, 'metrics'])->name('metrics');
+        Route::post('/purge-print-events', [MonitoringController::class, 'purgePrintEvents'])->name('purge-print-events');
     });
 
 });

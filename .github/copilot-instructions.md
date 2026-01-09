@@ -62,6 +62,42 @@ composer dev              # Start all: HTTP server (8000), queue, Vite HMR (5173
 - `pos` connection: Read-only Krypton legacy POS system (`krypton_woosoo` DB) — Models in `app/Models/Krypton/*` with `protected $connection = 'pos'`
 - Test: SQLite `:memory:` (configured in `phpunit.xml`)
 
+## POS Transaction Safety & Order Contracts (CRITICAL)
+
+**⚠️ POS-First Principle: Krypton database is the authoritative source of truth.** All writes to `pos` (krypton_woosoo) are permanent and NOT rolled back by local transaction failures. Order creation and refills must follow this contract strictly.
+
+**Order Creation Flow** ([app/Services/Krypton/OrderService.php](app/Services/Krypton/OrderService.php#L79), [app/Http/Controllers/Api/V1/DeviceOrderApiController.php](app/Http/Controllers/Api/V1/DeviceOrderApiController.php))
+1. Tablet device calls `/api/v1/device-orders` → `OrderService::processOrder()`
+2. Inside `DB::transaction` (default/app connection):
+   - `CreateOrder::run()` → calls POS `create_order()` stored proc on `pos` connection (NOT rolled back)
+   - `CreateTableOrder::run()` → calls POS `create_table_order()` stored proc (NOT rolled back)
+   - `CreateOrderCheck::run()` → calls POS `create_order_check()` stored proc (NOT rolled back)
+   - `CreateOrderedMenu::run()` → calls POS `create_ordered_menu()` stored proc per item (NOT rolled back)
+   - Inserts local `device_order` + `device_order_items` rows (rolls back if error)
+3. On local success: `DB::afterCommit()` triggers print event + broadcasts to printers/admin
+4. **If local fails after POS succeeds:** POS data persists, local rolls back. Return error; POS is source of truth.
+
+**Refill Flow** ([app/Http/Controllers/Api/V1/OrderApiController.php#L154](app/Http/Controllers/Api/V1/OrderApiController.php#L154), [app/Actions/Order/CreateOrderedMenu.php](app/Actions/Order/CreateOrderedMenu.php#L17))
+- Append-only meats/sides items to an existing order
+- **Validation in [RefillOrderRequest](app/Http/Requests/RefillOrderRequest.php):** confirms items are refillable (category check against Krypton menus)
+- **Execution:**
+  1. Per-item: `CreateOrderedMenu::run()` → POS `create_ordered_menu()` stored proc (NOT rolled back)
+  2. Inside local transaction: insert `device_order_items` rows with up to 3 retries on transient failure
+  3. On local success: `DB::afterCommit()` triggers print event + broadcast
+  4. **If local fails after all 3 retries:** POS ordered_menus exist, local inserts fail; return error (POS is source of truth)
+
+**Never:**
+- Reorder POS stored proc calls or change connection from `pos` to `mysql`
+- Add `DB::transaction` wrappers around individual POS calls (breaks atomicity semantics)
+- Attempt to roll back POS writes on local failure
+- Alter refill validation rules without explicit sign-off from ops/product
+
+**Do:**
+- Keep POS calls in current order: order → table_order → order_check → ordered_menus
+- Wrap only local `device_order_items` inserts in a default transaction
+- Use `DB::afterCommit()` for print/broadcast so notifications fire only after local persistence
+- Log refill attempts (POS success + local success/failure) for drift detection if extended later
+
 **Process Boundaries:**
 - PHP process: HTTP requests, domain logic, queues, scheduled tasks, WebSocket server (Reverb)
 - Node process: `print-service/index.js` (Express, port 9100) — independent print job handler

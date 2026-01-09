@@ -32,7 +32,10 @@ class RefillOrderRequest extends FormRequest
         return [
             'items' => ['required', 'array', 'min:1'],
             'items.*.name' => ['required', 'string', 'max:255'],
-            'items.*.menu_id' => ['nullable', 'integer', 'exists:krypton_woosoo.menu,id'],
+            // Remove 'exists' validation - menu validation is handled in withValidator() with proper POS connection
+            // This allows package indicators (46, 47, 48, 49) which don't exist in menus table
+            'items.*.menu_id' => ['nullable', 'integer'],
+            'items.*.price' => ['nullable', 'numeric', 'min:0'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:50'],
             'items.*.index' => ['nullable', 'integer', 'min:1', 'max:20'],
             'items.*.seat_number' => ['nullable', 'integer', 'min:1', 'max:20'],
@@ -51,7 +54,6 @@ class RefillOrderRequest extends FormRequest
             'items.min' => 'At least one refill item is required.',
             'items.*.quantity.min' => 'Item quantity must be at least 1.',
             'items.*.quantity.max' => 'Item quantity cannot exceed 50.',
-            'items.*.menu_id.exists' => 'One or more menu items do not exist in the POS system.',
         ];
     }
 

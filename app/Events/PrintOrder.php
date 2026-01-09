@@ -19,7 +19,8 @@ class PrintOrder implements ShouldBroadcastNow
      */
     public function __construct(DeviceOrder $deviceOrder)
     {
-        $this->deviceOrder = $deviceOrder;
+        // Eager-load menu relationships to prevent N+1 queries in broadcastWith()
+        $this->deviceOrder = $deviceOrder->loadMissing(['items.menu', 'table']);
     }
 
     /**
@@ -51,7 +52,7 @@ class PrintOrder implements ShouldBroadcastNow
                 'printed_by',
             ]),
             'tablename' => $this->deviceOrder->table?->name ?? null,
-            'items' => $this->deviceOrder->items()->map(fn ($item) => [
+            'items' => $this->deviceOrder->items->map(fn ($item) => [
                 'id' => $item->id,
                 'menu_id' => $item->menu_id,
                 'name' => $item->menu?->receipt_name ?? $item->menu?->name ?? null,

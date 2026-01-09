@@ -38,7 +38,8 @@
     "[php]": {
       "editor.defaultFormatter": "esbenp.prettier-php",
       "editor.formatOnSave": true
-    }
+    },
+    "java.configuration.updateBuildConfiguration": "interactive"
   },
   "extensions": {
     "recommendations": [

@@ -90,6 +90,9 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
+        // Eager-load relationships to prevent N+1 queries
+        $order->loadMissing(['items.menu', 'table', 'device']);
+
         return response()->json([
             'success' => true,
             'order' => $order
@@ -101,7 +104,7 @@ class OrderApiController extends Controller
      */
     public function showByExternalId(Request $request, string $orderId)
     {
-        $order = DeviceOrder::where(['order_id' => $orderId])->first();
+        $order = DeviceOrder::with(['items.menu', 'table', 'device'])->where(['order_id' => $orderId])->first();
         if (! $order) {
             return response()->json([ 'success' => false, 'message' => 'Order not found' ], 404);
         }
@@ -220,29 +223,110 @@ class OrderApiController extends Controller
         ];
 
         try {
+            // Run POS-side inserts only. Controller will mirror local rows and handle retries.
+            $attrs['mirror_local'] = false;
             $created = CreateOrderedMenu::run($attrs);
 
-            // Persist a print event so polling printers can recover missed refill broadcasts
-            try {
-                $metaItems = collect($created)->map(fn($item) => [
-                    'menu_id' => $item->menu_id ?? null,
-                    'quantity' => $item->quantity ?? null,
-                    'name' => $item->name ?? null,
-                ])->values()->all();
+            // Normalize created items (POS objects or arrays) for meta and local mirroring.
+            $posItems = collect($created)->map(function ($it) {
+                // $it may be an object (POS model/stdClass) or array
+                if (is_array($it)) return (object) $it;
+                return $it;
+            })->values()->all();
 
-                app(PrintEventService::class)->createForOrder(
-                    $deviceOrder,
-                    'REFILL',
-                    ['items' => $metaItems]
-                );
-            } catch (\Throwable $e) {
-                report($e);
+            // Load menu names for broadcast. Batch-load all menus to prevent N+1 queries.
+            $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
+            $menuNames = \App\Models\Krypton\Menu::whereIn('id', $menuIds)
+                ->pluck('receipt_name', 'id');
+            
+            $metaItems = collect($posItems)->map(function($item) use ($menuNames) {
+                $menuId = $item->menu_id ?? ($item->id ?? null);
+                $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
+                
+                return [
+                    'menu_id' => $menuId,
+                    'quantity' => $item->quantity ?? 1,
+                    'name' => $menuName ?? "Menu #{$menuId}",
+                ];
+            })->values()->all();
+
+            // Mirror POS rows into local device_order_items with up to 3 retries.
+            // POS-first contract: if POS succeeded, local mirror MUST succeed (with retries).
+            $maxAttempts = 3;
+
+            // Build all payloads before transaction to minimize transaction duration.
+            $localPayloads = [];
+            foreach ($posItems as $pos) {
+                $menuId = $pos->menu_id ?? ($pos->id ?? null);
+                $quantity = $pos->quantity ?? 1;
+                $price = $pos->price ?? 0.00;
+                $subtotal = $pos->sub_total ?? ($pos->subtotal ?? ($price * $quantity));
+                $tax = $pos->tax ?? 0.00;
+                $total = $pos->total ?? $subtotal;
+
+                $localPayloads[] = [
+                    'order_id' => $deviceOrder->id,
+                    'ordered_menu_id' => $menuId,
+                    'menu_id' => $menuId,
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    'subtotal' => $subtotal,
+                    'tax' => $tax,
+                    'total' => $total,
+                    'notes' => $pos->note ?? null,
+                    'seat_number' => $pos->seat_number ?? 1,
+                    'index' => $pos->index ?? 1,
+                ];
             }
 
-            try {
-                PrintRefill::dispatch($deviceOrder, $created);
-            } catch (\Throwable $e) {
-                report($e);
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                try {
+                    DB::transaction(function () use ($deviceOrder, $posItems, $metaItems, $localPayloads) {
+                        // Batch insert all payloads in one query.
+                        if (! empty($localPayloads)) {
+                            \App\Models\DeviceOrderItems::query()->insert($localPayloads);
+                        }
+
+                        // After successful local transaction, schedule print/broadcast.
+                        DB::afterCommit(function () use ($deviceOrder, $metaItems, $posItems) {
+                            try {
+                                app(PrintEventService::class)->createForOrder(
+                                    $deviceOrder,
+                                    'REFILL',
+                                    ['items' => $metaItems]
+                                );
+                            } catch (\Throwable $e) {
+                                report($e);
+                            }
+
+                            try {
+                                PrintRefill::dispatch($deviceOrder, $posItems);
+                            } catch (\Throwable $e) {
+                                report($e);
+                            }
+                        });
+                    });
+
+                    // Success — break retry loop
+                    break;
+                } catch (\Throwable $e) {
+                    if ($attempt >= $maxAttempts) {
+                        \Illuminate\Support\Facades\Log::error('Refill local mirror failed after max retries', [
+                            'order_id' => $orderId,
+                            'device_order_id' => $deviceOrder->id,
+                            'attempt' => $attempt,
+                            'error' => $e->getMessage(),
+                        ]);
+                        throw $e;
+                    }
+                    // Log retry attempt (no sleep; immediate retry)
+                    \Illuminate\Support\Facades\Log::warning('Refill local mirror retry', [
+                        'order_id' => $orderId,
+                        'device_order_id' => $deviceOrder->id,
+                        'attempt' => $attempt,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             return response()->json(['success' => true, 'created' => $created]);
