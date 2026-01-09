@@ -222,25 +222,32 @@ class OrderApiController extends Controller
             'items' => $mappedItems,
         ];
 
+        // Run POS-side inserts. Controller handles local mirroring and retries.
+        $attrs['mirror_local'] = false;
+        $created = CreateOrderedMenu::run($attrs);
+
+        // Normalize created items: POS returns raw ordered_menu records.
+        // Extract them into objects for consistent handling.
+        $posItems = collect($created)->map(function ($it) {
+            if (is_array($it)) return (object) $it;
+            return $it;
+        })->values()->all();
+
+        // Guard: if no items created in POS, nothing to mirror locally
+        if (empty($posItems)) {
+            return response()->json(['success' => true, 'created' => []]);
+        }
+
         try {
-            // Run POS-side inserts only. Controller will mirror local rows and handle retries.
-            $attrs['mirror_local'] = false;
-            $created = CreateOrderedMenu::run($attrs);
-
-            // Normalize created items (POS objects or arrays) for meta and local mirroring.
-            $posItems = collect($created)->map(function ($it) {
-                // $it may be an object (POS model/stdClass) or array
-                if (is_array($it)) return (object) $it;
-                return $it;
-            })->values()->all();
-
-            // Load menu names for broadcast. Batch-load all menus to prevent N+1 queries.
+            // Build metadata for broadcast (menu names, quantities).
+            // Batch-load menu names to prevent N+1 queries.
             $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
-            $menuNames = \App\Models\Krypton\Menu::whereIn('id', $menuIds)
-                ->pluck('receipt_name', 'id');
+            $menuNames = !empty($menuIds)
+                ? \App\Models\Krypton\Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id')
+                : collect();
             
             $metaItems = collect($posItems)->map(function($item) use ($menuNames) {
-                $menuId = $item->menu_id ?? ($item->id ?? null);
+                $menuId = $item->menu_id;
                 $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
                 
                 return [
@@ -250,14 +257,11 @@ class OrderApiController extends Controller
                 ];
             })->values()->all();
 
-            // Mirror POS rows into local device_order_items with up to 3 retries.
-            // POS-first contract: if POS succeeded, local mirror MUST succeed (with retries).
-            $maxAttempts = 3;
-
-            // Build all payloads before transaction to minimize transaction duration.
+            // Build local payload for each POS item.
+            // Each payload mirrors a POS ordered_menu into local device_order_items.
             $localPayloads = [];
             foreach ($posItems as $pos) {
-                $menuId = $pos->menu_id ?? ($pos->id ?? null);
+                $menuId = $pos->menu_id;
                 $quantity = $pos->quantity ?? 1;
                 $price = $pos->price ?? 0.00;
                 $subtotal = $pos->sub_total ?? ($pos->subtotal ?? ($price * $quantity));
@@ -266,8 +270,8 @@ class OrderApiController extends Controller
 
                 $localPayloads[] = [
                     'order_id' => $deviceOrder->id,
-                    'ordered_menu_id' => $menuId,
-                    'menu_id' => $menuId,
+                    'ordered_menu_id' => $pos->id,  // POS ordered_menu record ID
+                    'menu_id' => $menuId,            // FK to menus table
                     'quantity' => $quantity,
                     'price' => $price,
                     'subtotal' => $subtotal,
@@ -279,11 +283,17 @@ class OrderApiController extends Controller
                 ];
             }
 
+            // Mirror POS rows into local device_order_items with retry logic.
+            // POS-first contract: if POS succeeded, local mirror MUST succeed (with retries).
+            // After local success, dispatch print/broadcast events.
+            $maxAttempts = 3;
+            $attempt = 0;
+
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 try {
                     DB::transaction(function () use ($deviceOrder, $posItems, $metaItems, $localPayloads) {
                         // Batch insert all payloads in one query.
-                        if (! empty($localPayloads)) {
+                        if (!empty($localPayloads)) {
                             \App\Models\DeviceOrderItems::query()->insert($localPayloads);
                         }
 
