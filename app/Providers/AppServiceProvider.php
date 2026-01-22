@@ -3,8 +3,6 @@
 namespace App\Providers;
 
 use App\Models\User;
-use App\Models\OrderUpdateLog;
-use App\Observers\OrderUpdateLogObserver;
 use App\Services\Krypton\KryptonContextService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -72,9 +70,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewPulse', fn (User $user) => $user->is_admin);
         // Backwards-compatible shorthand used by middleware: `can:admin`
         Gate::define('admin', fn (User $user) => $user->is_admin);
-
-        // 🔹 Observers
-        OrderUpdateLog::observe(OrderUpdateLogObserver::class);
     }
 
     /**

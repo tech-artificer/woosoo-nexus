@@ -41,6 +41,33 @@ Route::get('/device/ip', function (Request $request) {
     ]);
 });
 
+// Lookup device by IP for auto-registration flow
+Route::get('/device/lookup-by-ip', function (Request $request) {
+    $ip = $request->ip();
+
+    $device = \App\Models\Device::where('ip_address', $ip)
+        ->orWhere('last_known_ip', $ip)
+        ->first();
+
+    if (!$device) {
+        return response()->json([
+            'found' => false,
+            'ip' => $ip,
+            'message' => 'No device found for this IP'
+        ]);
+    }
+
+    return response()->json([
+        'found' => true,
+        'ip' => $ip,
+        'device' => [
+            'id' => $device->id,
+            'name' => $device->name,
+            'registration_code' => $device->registration_code,
+        ]
+    ]);
+});
+
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 
 Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId) {

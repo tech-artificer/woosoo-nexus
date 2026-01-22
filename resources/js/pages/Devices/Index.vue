@@ -59,6 +59,10 @@ const statusFilter = ref('')
 
 const originalDevices = computed(() => devices.value ?? [])
 
+const downloadReleaseUrl = computed(() => route('devices.download-apk', { channel: 'release' }))
+const downloadDebugUrl = computed(() => route('devices.download-apk', { channel: 'debug' }))
+const downloadCertificateUrl = computed(() => route('devices.download-certificate'))
+
 const hasGeneratedCodes = computed(() => {
     // Check if codes exist (either newly generated or from server)
     return newCodes.value.length > 0 || (registrationCodes.value?.length ?? 0) > 0
@@ -168,6 +172,20 @@ function exportCSV() {
                 </TabsList>
                 <TabsContent value="devices" class="p-2">
                                 <!-- Filters moved into Devices DataTable toolbar -->
+                    <div class="flex flex-wrap justify-end gap-3 mb-3">
+                        <Button as-child>
+                            <a :href="downloadReleaseUrl" download>Download Printer APK (Release)</a>
+                        </Button>
+                        <Button variant="secondary" as-child>
+                            <a :href="downloadDebugUrl" download>Download Printer APK (Debug)</a>
+                        </Button>
+                        <Button variant="outline" as-child>
+                            <a :href="downloadCertificateUrl" download>Download CA Certificate</a>
+                        </Button>
+                    </div>
+                    <div class="text-sm text-muted-foreground mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                        <strong>SSL Certificate Setup:</strong> Download <code class="bg-white px-2 py-1 rounded">woosoo-ca.pem</code> and install on your device to enable secure WebSocket connections. On Android: Settings → Security → Install from SD card.
+                    </div>
                     <StatsCards :cards="(stats ?? [
                         { title: 'Total Devices', value: (devices || []).length, subtitle: 'Registered devices', variant: 'primary' },
                         { title: 'Registration Codes', value: registrationCodes?.length ?? 0, subtitle: 'Available codes', variant: 'accent' },

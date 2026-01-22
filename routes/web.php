@@ -81,6 +81,13 @@ Route::middleware(['auth'])->group(function () {
             Route::post('bulk-restore', [BranchController::class, 'bulkRestore'])->name('bulk-restore');
         });
 
+        Route::get('/devices/download-apk/{channel?}', [DeviceController::class, 'downloadApk'])
+            ->where('channel', 'release|debug')
+            ->name('devices.download-apk');
+
+        Route::get('/devices/download-certificate', [DeviceController::class, 'downloadCertificate'])
+            ->name('devices.download-certificate');
+
         Route::resource('/devices', DeviceController::class);
         Route::prefix('devices')->name('devices.')->group(function () {
             Route::get('trashed', [DeviceController::class, 'trashed'])->name('trashed');

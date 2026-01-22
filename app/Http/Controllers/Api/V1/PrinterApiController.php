@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Http\Requests\AckPrintEventRequest;
 use App\Http\Requests\FailPrintEventRequest;
 use Illuminate\Support\Facades\Cache;
@@ -84,8 +85,18 @@ class PrinterApiController extends Controller
         $since = $request->input('since');
         $limit = min((int)$request->input('limit', 100), 200);
 
-        // Do not require a canonical TerminalSession in POS. Treat session_id as
-        // an opaque device-local identifier; if provided, we'll filter by it below.
+        // If no session_id provided, fetch the latest open session from Krypton POS
+        if (!$sessionId) {
+            try {
+                $result = \DB::connection('pos')->select('CALL get_latest_session_id()');
+                if (!empty($result)) {
+                    $sessionId = $result[0]->session_id ?? $result[0]->id ?? null;
+                    Log::info('Auto-fetched latest session from Krypton', ['session_id' => $sessionId]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to fetch latest session from Krypton', ['error' => $e->getMessage()]);
+            }
+        }
 
         $ordersQuery = DeviceOrder::where('session_id', $sessionId)
             ->where('is_printed', 0)
@@ -200,6 +211,14 @@ class PrinterApiController extends Controller
 
             $device = Auth::user();
 
+            Log::info("Printer polling for events", [
+                'device_id' => $device?->id,
+                'device_name' => $device?->name,
+                'since' => $since,
+                'session_id' => $request->input('session_id'),
+                'limit' => $limit
+            ]);
+
             $eventsQuery = PrintEvent::where('is_acknowledged', false)
                 ->when($since, fn($q) => $q->where('created_at', '>', $since))
                 ->with(['deviceOrder', 'deviceOrder.items'])
@@ -216,6 +235,12 @@ class PrinterApiController extends Controller
             }
 
             $events = $eventsQuery->limit($limit)->get();
+
+            Log::info("Returning print events to printer", [
+                'device_id' => $device?->id,
+                'count' => $events->count(),
+                'event_ids' => $events->pluck('id')->toArray()
+            ]);
 
             $payload = $events->map(function ($e) {
                 return [

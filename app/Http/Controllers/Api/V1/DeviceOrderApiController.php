@@ -35,7 +35,7 @@ class DeviceOrderApiController extends Controller
         if( $device && $device->table_id) {
 
             // Ensure there is no existing PENDING or CONFIRMED order for this device before creating a new one.
-            $existing = $device->orders()->whereIn('status', [OrderStatus::CONFIRMED->value, OrderStatus::PENDING->value])->latest()->first();
+            $existing = $device->orders()->whereIn('status', [OrderStatus::CONFIRMED->value, OrderStatus::PENDING->value])->lockForUpdate()->latest()->first();
             if ($existing) {
                 return response()->json([
                     'success' => false,

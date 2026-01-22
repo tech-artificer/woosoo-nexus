@@ -9,8 +9,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('orders:process-logs')->everyFiveSeconds();
-
 // Purge acknowledged print_events daily (they're transient; device_order.is_printed is source of truth)
 Schedule::call(function () {
     $deleted = \App\Models\PrintEvent::where('is_acknowledged', true)

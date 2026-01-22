@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\PrintEvent;
 use App\Models\DeviceOrder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class PrintEventService
@@ -16,11 +17,33 @@ class PrintEventService
     {
         // Treat `session_id` as device-local. Do not consult POS sessions here.
         // Always create print events for device orders; session scoping is handled client-side.
-        return PrintEvent::create([
+
+        Log::info("Creating print event", [
+            'device_order_id' => $deviceOrder->id,
+            'order_id' => $deviceOrder->order_id,
+            'event_type' => $eventType,
+            'branch_id' => $deviceOrder->branch_id
+        ]);
+
+        $event = PrintEvent::create([
             'device_order_id' => $deviceOrder->id,
             'event_type' => $eventType,
             'meta' => $meta,
         ]);
+
+        if (!$event) {
+            Log::error("Failed to create print event", [
+                'device_order_id' => $deviceOrder->id,
+                'event_type' => $eventType
+            ]);
+        } else {
+            Log::info("Print event created successfully", [
+                'print_event_id' => $event->id,
+                'device_order_id' => $deviceOrder->id
+            ]);
+        }
+
+        return $event;
     }
 
     /**

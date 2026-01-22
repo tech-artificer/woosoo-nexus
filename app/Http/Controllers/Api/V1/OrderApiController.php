@@ -269,7 +269,7 @@ class OrderApiController extends Controller
                 $total = $pos->total ?? $subtotal;
 
                 $localPayloads[] = [
-                    'order_id' => $deviceOrder->id,
+                    'order_id' => $deviceOrder->order_id,
                     'ordered_menu_id' => $pos->id,  // POS ordered_menu record ID
                     'menu_id' => $menuId,            // FK to menus table
                     'quantity' => $quantity,
