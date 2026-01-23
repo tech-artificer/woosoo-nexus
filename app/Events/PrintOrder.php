@@ -13,7 +13,7 @@ class PrintOrder implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $deviceOrder;
+    public DeviceOrder $deviceOrder;
     /**
      * Create a new event instance.
      */
@@ -38,6 +38,14 @@ class PrintOrder implements ShouldBroadcastNow
     public function broadcastWith() : array
     {
         return [
+            'print_event_id' => $this->deviceOrder->printEvent?->id,
+            'device_id' => $this->deviceOrder->device_id,
+            'order_id' => $this->deviceOrder->order_id,
+            'session_id' => $this->deviceOrder->session_id,
+            'print_type' => 'INITIAL',
+            'refill_number' => null,
+            'tablename' => $this->deviceOrder->table?->name,
+            'created_at' => $this->deviceOrder->created_at->toIso8601String(),
             'order' => $this->deviceOrder->only([
                 'id',
                 'order_id',
@@ -51,7 +59,6 @@ class PrintOrder implements ShouldBroadcastNow
                 'printed_at',
                 'printed_by',
             ]),
-            'tablename' => $this->deviceOrder->table?->name ?? null,
             'items' => $this->deviceOrder->items->map(fn ($item) => [
                 'id' => $item->id,
                 'menu_id' => $item->menu_id,

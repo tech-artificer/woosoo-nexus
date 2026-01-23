@@ -11,6 +11,9 @@ Route::post('/printer/print-events/{id}/ack', [PrinterApiController::class, 'ack
 Route::post('/printer/print-events/{id}/failed', [PrinterApiController::class, 'failPrintEvent']);
 Route::post('/printer/heartbeat', [PrinterApiController::class, 'heartbeat']);
 
+// Alias route for print-events endpoint (legacy clients)
+Route::get('/print-events/unprinted', [PrinterApiController::class, 'getUnprintedEvents']);
+
 // Backwards-compatibility: legacy clients use plural '/orders' paths
 Route::post('/orders/{orderId}/printed', [PrinterApiController::class, 'markPrinted']);
 Route::post('/orders/printed/bulk', [PrinterApiController::class, 'markPrintedBulk']);

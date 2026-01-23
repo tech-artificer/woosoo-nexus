@@ -273,7 +273,15 @@ class PrinterApiController extends Controller
          */
         public function ackPrintEvent(AckPrintEventRequest $request, int $id)
         {
+                $device = Auth::user();
+                if (!$device) {
+                    return response()->json(['success' => false, 'message' => 'Unauthenticated device'], 401);
+                }
+
                 $printerId = $request->input('printer_id');
+                $printerName = $request->input('printer_name');
+                $bluetoothAddress = $request->input('bluetooth_address');
+                $appVersion = $request->input('app_version');
                 $printedAt = $request->input('printed_at');
 
                 try {
@@ -285,7 +293,27 @@ class PrinterApiController extends Controller
                 // authorize device for this event
                 $this->authorizeDeviceForEvent($evt);
 
-                $res = $this->printEventService->ack($id, $printerId, $printedAt);
+                // Check idempotency: if already acknowledged, return success with was_updated=false
+                if ($evt->is_acknowledged) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Already acknowledged',
+                        'data' => [
+                            'id' => $evt->id,
+                            'was_updated' => false,
+                            'acknowledged_by' => $evt->acknowledgedByDevice?->name,
+                        ],
+                    ]);
+                }
+
+                $res = $this->printEventService->ack($id, $printerId, $printedAt, $device->id, $printerName);
+
+                // Update device heartbeat
+                $device->last_seen_at = now();
+                if ($appVersion) {
+                    $device->app_version = $appVersion;
+                }
+                $device->save();
 
                 return response()->json([
                     'success' => true,
@@ -293,6 +321,7 @@ class PrinterApiController extends Controller
                     'data' => [
                         'id' => $res['print_event']->id,
                         'was_updated' => $res['was_updated'],
+                        'acknowledged_by' => $res['print_event']->acknowledgedByDevice?->name ?? $device->name,
                     ],
                 ]);
         }
@@ -302,6 +331,14 @@ class PrinterApiController extends Controller
          */
         public function failPrintEvent(FailPrintEventRequest $request, int $id)
         {
+                $device = Auth::user();
+                if (!$device) {
+                    return response()->json(['success' => false, 'message' => 'Unauthenticated device'], 401);
+                }
+
+                $error = $request->input('error');
+                $appVersion = $request->input('app_version');
+
                 try {
                     $evt = $this->printEventService->getById($id);
                 } catch (\Throwable $e) {
@@ -310,7 +347,28 @@ class PrinterApiController extends Controller
 
                 $this->authorizeDeviceForEvent($evt);
 
-                $res = $this->printEventService->fail($id, $request->input('error'));
+                // Check idempotency: if already acknowledged, return success with was_updated=false
+                if ($evt->is_acknowledged) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Already acknowledged',
+                        'data' => [
+                            'id' => $evt->id,
+                            'attempts' => $evt->attempts,
+                            'was_updated' => false,
+                            'acknowledged_by' => $evt->acknowledgedByDevice?->name,
+                        ],
+                    ]);
+                }
+
+                $res = $this->printEventService->fail($id, $error, $device->id);
+
+                // Update device heartbeat
+                $device->last_seen_at = now();
+                if ($appVersion) {
+                    $device->app_version = $appVersion;
+                }
+                $device->save();
 
                 return response()->json([
                     'success' => true,
@@ -319,6 +377,7 @@ class PrinterApiController extends Controller
                         'id' => $res['print_event']->id,
                         'attempts' => $res['print_event']->attempts,
                         'was_updated' => $res['was_updated'],
+                        'acknowledged_by' => $res['print_event']->acknowledgedByDevice?->name ?? $device->name,
                     ],
                 ]);
         }
@@ -348,13 +407,35 @@ class PrinterApiController extends Controller
 
     public function heartbeat(PrinterHeartbeatRequest $request)
     {
+        $device = Auth::user();  // Authenticated device from token
+        
+        // Validate device_id mismatch (if provided in payload)
+        if ($request->filled('device_id') && $request->input('device_id') !== $device->id) {
+            abort(403, 'Device ID mismatch');
+        }
+        
+        // Update Device model (persistent storage)
+        $device->last_seen_at = now();
+        
+        if ($request->filled('app_version')) {
+            $device->app_version = $request->input('app_version');
+        }
+        
+        if ($request->filled('status')) {
+            $device->status = $request->input('status');
+        }
+        
+        $device->save();
+        
+        // Keep cache for real-time dashboard (ephemeral)
         $printerId = $request->input('printer_id');
         Cache::put("printer:heartbeat:{$printerId}", [
+            'device_id' => $device->id,
             'printer_id' => $printerId,
             'printer_name' => $request->input('printer_name'),
             'bluetooth_address' => $request->input('bluetooth_address'),
-            'app_version' => $request->input('app_version'),
             'session_id' => $request->input('session_id'),
+            'last_print_event_id' => $request->input('last_print_event_id'),
             'last_printed_order_id' => $request->input('last_printed_order_id'),
             'last_seen' => now(),
         ], now()->addMinutes(2));
@@ -367,6 +448,8 @@ class PrinterApiController extends Controller
             'data' => [
                 'server_time' => now()->toIso8601String(),
                 'session_active' => $sessionActive,
+                'device_id' => $device->id,
+                'status' => $device->status,
             ],
         ]);
     }

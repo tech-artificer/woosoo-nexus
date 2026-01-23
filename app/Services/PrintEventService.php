@@ -63,10 +63,10 @@ class PrintEventService
      * @param string|null $printedAt
      * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
      */
-    public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null): array
+    public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null, ?int $acknowledgedByDeviceId = null, ?string $printerName = null): array
     {
         $ackAt = $printedAt ? Carbon::parse($printedAt)->utc() : Carbon::now()->utc();
-        $result = DB::transaction(function () use ($printEventId, $printerId, $ackAt) {
+        $result = DB::transaction(function () use ($printEventId, $printerId, $ackAt, $acknowledgedByDeviceId, $printerName) {
             // Lock the row to avoid race conditions when multiple workers
             // acknowledge/fail the same print event concurrently.
             $evt = PrintEvent::where('id', $printEventId)->lockForUpdate()->first();
@@ -85,6 +85,12 @@ class PrintEventService
             $evt->acknowledged_at = $ackAt;
             if ($printerId !== null) {
                 $evt->printer_id = $printerId;
+            }
+            if ($printerName !== null) {
+                $evt->printer_name = $printerName;
+            }
+            if ($acknowledgedByDeviceId !== null) {
+                $evt->acknowledged_by_device_id = $acknowledgedByDeviceId;
             }
 
             $evt->attempts = (int) ($evt->attempts ?? 0) + 1;
@@ -117,11 +123,12 @@ class PrintEventService
      *
      * @param int $printEventId
      * @param string|null $error
+     * @param int|null $acknowledgedByDeviceId
      * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
      */
-    public function fail(int $printEventId, ?string $error = null): array
+    public function fail(int $printEventId, ?string $error = null, ?int $acknowledgedByDeviceId = null): array
     {
-        $result = DB::transaction(function () use ($printEventId, $error) {
+        $result = DB::transaction(function () use ($printEventId, $error, $acknowledgedByDeviceId) {
             $evt = PrintEvent::where('id', $printEventId)->lockForUpdate()->first();
 
             if (! $evt) {
@@ -135,6 +142,9 @@ class PrintEventService
 
             $evt->attempts = (int) ($evt->attempts ?? 0) + 1;
             $evt->last_error = $error;
+            if ($acknowledgedByDeviceId !== null) {
+                $evt->acknowledged_by_device_id = $acknowledgedByDeviceId;
+            }
             $evt->updated_at = Carbon::now()->utc();
             $evt->save();
 

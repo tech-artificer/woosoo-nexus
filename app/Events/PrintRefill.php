@@ -13,8 +13,8 @@ class PrintRefill implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $deviceOrder;
-    public $items;
+    public ?DeviceOrder $deviceOrder;
+    public array $items;
 
     public function __construct(DeviceOrder $deviceOrder = null, array $items = [])
     {
@@ -49,8 +49,15 @@ class PrintRefill implements ShouldBroadcastNow
         ])->values()->all();
 
         return [
+            'print_event_id' => $this->deviceOrder?->printEvent?->id,
+            'device_id' => $this->deviceOrder?->device_id,
+            'order_id' => $this->deviceOrder?->order_id,
+            'session_id' => $this->deviceOrder?->session_id,
+            'print_type' => 'REFILL',
+            'refill_number' => $this->deviceOrder?->refill_number,
+            'tablename' => $this->deviceOrder?->table->name,
+            'created_at' => $this->deviceOrder?->created_at->toIso8601String(),
             'order' => $orderPayload,
-            'tablename' => $this->deviceOrder?->table->name ?? null,
             'items' => $items,
         ];
     }
