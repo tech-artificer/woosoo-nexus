@@ -31,10 +31,21 @@ class CreateOrderedMenu
             $seatNumber = $item['seat_number'] ?? 1;
             $index = $item['index'] ?? ($key + 1);
             $note = $item['note'] ?? '';
-            // Avoid touching the external POS `menus` table during tests.
+            
+            // Package indicators (46, 47, 48, 49) are POS context markers, not actual menus.
+            // Skip lookup for package indicators or when price is already provided.
+            $isPackageIndicator = in_array($menuId, [46, 47, 48, 49]);
             $menuModel = null;
+            
             if (! (app()->environment('testing') || env('APP_ENV') === 'testing')) {
-                $menuModel = Menu::find($menuId);
+                if (!$isPackageIndicator && !isset($item['price'])) {
+                    try {
+                        $menuModel = Menu::find($menuId);
+                    } catch (\Throwable $e) {
+                        report($e);
+                        $menuModel = null;
+                    }
+                }
             }
 
             $price = $item['price'] ?? ($menuModel->price ?? 0.00);
@@ -51,7 +62,9 @@ class CreateOrderedMenu
             $orderedMenu = $this->createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId);
 
             $local = null;
-            if (!empty($attr['device_order_id'])) {
+            // Allow callers to opt-out of creating local mirror rows.
+            $mirrorLocal = $attr['mirror_local'] ?? true;
+            if ($mirrorLocal && !empty($attr['device_order_id'])) {
                 $localPayload = [
                     'order_id' => $attr['device_order_id'],
                     // Store the package/menu id as ordered_menu_id (package_id),
@@ -71,10 +84,15 @@ class CreateOrderedMenu
                 $local = DeviceOrderItems::create($localPayload);
             }
 
-            $created[] = [
-                'pos' => (array) $orderedMenu,
-                'local' => $local ? $local->toArray() : null,
-            ];
+            if ($mirrorLocal) {
+                $created[] = [
+                    'pos' => (array) $orderedMenu,
+                    'local' => $local ? $local->toArray() : null,
+                ];
+            } else {
+                // Return the POS object directly when caller will mirror local items.
+                $created[] = $orderedMenu;
+            }
         }
 
         return $created;
@@ -82,10 +100,10 @@ class CreateOrderedMenu
 
     protected function createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId)
     {
-        // During tests avoid querying the POS `menus` table or calling
-        // stored procedures. Provide sensible defaults for the menu
-        // attributes required by the stored-proc parameters and returned
-        // result shape.
+        // Package indicators (46, 47, 48, 49) are POS context markers, not actual menu records.
+        // For these, use stub menu data without querying the menus table.
+        $isPackageIndicator = in_array($menuId, [46, 47, 48, 49]);
+        
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
             $menu = (object) [
                 'name' => 'Menu ' . $menuId,
@@ -94,8 +112,29 @@ class CreateOrderedMenu
                 'description' => '',
                 'is_for_kitchen_display' => true,
             ];
+        } elseif ($isPackageIndicator) {
+            // Package indicator - use stub without querying database
+            $menu = (object) [
+                'name' => 'Package ' . $menuId,
+                'receipt_name' => 'Package ' . $menuId,
+                'kitchen_name' => 'Package ' . $menuId,
+                'description' => '',
+                'is_for_kitchen_display' => true,
+            ];
         } else {
-            $menu = Menu::findOrFail($menuId);
+            try {
+                $menu = Menu::findOrFail($menuId);
+            } catch (\Throwable $e) {
+                // If menu not found in POS DB, create stub with menu ID
+                report($e);
+                $menu = (object) [
+                    'name' => 'Menu ' . $menuId,
+                    'receipt_name' => 'Menu ' . $menuId,
+                    'kitchen_name' => 'Menu ' . $menuId,
+                    'description' => '',
+                    'is_for_kitchen_display' => true,
+                ];
+            }
         }
         $totalItemPrice = round($unitPrice * $quantity, 2);
         $taxAmount = round($totalItemPrice * 0.10, 2);
@@ -158,7 +197,7 @@ class CreateOrderedMenu
         $placeholders = implode(', ', array_fill(0, count($params), '?'));
         // If running tests, do not call the POS stored procedure. Return
         // a lightweight object with the expected attributes so calling
-        // code can read `price`, `sub_total`, `tax`, and `note` safely.
+        // code can read `price`, `sub_total`, `tax`, `note`, and `name` safely.
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
             $fake = new \stdClass();
             $fake->id = $menuId;
@@ -166,6 +205,12 @@ class CreateOrderedMenu
             $fake->sub_total = $subTotal;
             $fake->tax = $taxAmount;
             $fake->note = $note;
+            $fake->name = 'Menu ' . $menuId; // Ensure name is always present for broadcasts
+            $fake->receipt_name = 'Menu ' . $menuId;
+            $fake->menu_id = $menuId;
+            $fake->quantity = $quantity;
+            $fake->seat_number = $seatNumber;
+            $fake->index = $index;
             return $fake;
         }
 

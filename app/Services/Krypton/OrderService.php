@@ -29,6 +29,7 @@ use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\BroadcastService;
 use App\Events\Order\OrderVoided;
+use App\Events\PrintOrder;
 use App\Exceptions\SessionNotFoundException;
 
 use Illuminate\Support\Facades\Log;
@@ -75,8 +76,9 @@ class OrderService
 
         $this->attributes = $attributes;
 
-        return DB::transaction(function () use ($device) {
-            // Create a new order using the provided attributes
+        try {
+            return DB::transaction(function () use ($device) {
+                // Create a new order using the provided attributes
 
             $order = CreateOrder::run($this->attributes);
 
@@ -128,13 +130,28 @@ class OrderService
             DB::afterCommit(function () use ($deviceOrder) {
                 try {
                     app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                    // Dispatch PrintOrder broadcast so relay devices receive the print job
+                    PrintOrder::dispatch($deviceOrder);
                 } catch (\Throwable $e) {
                     report($e);
                 }
             });
 
             return $deviceOrder;
-        });
+            });
+        } catch (\Throwable $e) {
+            // CRITICAL: POS writes have already succeeded and are NOT rolled back.
+            // Local transaction failure leaves POS order orphaned.
+            \Illuminate\Support\Facades\Log::error('Order creation local transaction failed after POS success', [
+                'order_id' => $order->id ?? null,
+                'device_id' => $device->id,
+                'table_id' => $device->table_id,
+                'session_id' => $this->attributes['session_id'] ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     protected function updateAttributes($array = []) {

@@ -94,7 +94,13 @@ class DeviceController extends Controller
      */
     public function edit(Device $device)
     {
-        $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
+        // Get all assigned table IDs EXCEPT the one currently assigned to this device
+        // so the device's own table appears in the dropdown
+        $assignedTableIds = Device::active()
+            ->whereNotNull('table_id')
+            ->where('id', '!=', $device->id)
+            ->pluck('table_id');
+        
         $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
 
         return Inertia::render('Devices/Edit', [
@@ -159,6 +165,57 @@ class DeviceController extends Controller
         return redirect()
             ->route('devices.index')
             ->with('success', 'Device restored.');
+    }
+
+    /**
+     * Download the printer APK (release or debug) from storage.
+     */
+    public function downloadApk(string $channel = 'release')
+    {
+        $channel = $channel === 'debug' ? 'debug' : 'release';
+        $filename = $channel === 'release' ? 'app-release.apk' : 'app-debug.apk';
+        $path = storage_path("app/public/printer-app/{$channel}/{$filename}");
+
+        if (! file_exists($path)) {
+            return redirect()
+                ->route('devices.index')
+                ->with('error', "{$filename} not found. Upload it to storage/app/public/printer-app/{$channel}/.");
+        }
+
+        return response()->download($path, "printer-app-{$channel}.apk", [
+            'Content-Type' => 'application/vnd.android.package-archive',
+        ]);
+    }
+
+    /**
+     * Download the mkcert CA certificate for Flutter app SSL/TLS validation.
+     * 
+     * Industry standard: Serve CA certificates with application/x-x509-ca-cert MIME type.
+     * This is the standard Android expects for certificate installation.
+     * This certificate allows Flutter apps to validate HTTPS connections against the self-signed mkcert CA.
+     * Android installation: Settings → Security → Install from SD card.
+     */
+    public function downloadCertificate()
+    {
+        // Prefer DER (better Android install UX); fall back to PEM if missing
+        $derPath = storage_path('app/public/certificates/woosoo-ca.der');
+        $pemPath = storage_path('app/public/certificates/CAROOT.pem');
+
+        if (file_exists($derPath)) {
+            return response()->download($derPath, 'woosoo-ca.crt', [
+                'Content-Type' => 'application/x-x509-ca-cert',
+            ]);
+        }
+
+        if (file_exists($pemPath)) {
+            return response()->download($pemPath, 'woosoo-ca.crt', [
+                'Content-Type' => 'application/x-x509-ca-cert',
+            ]);
+        }
+
+        return redirect()
+            ->route('devices.index')
+            ->with('error', 'CA certificate not found. Contact system administrator.');
     }
 
     /**

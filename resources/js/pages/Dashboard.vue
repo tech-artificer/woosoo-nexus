@@ -15,7 +15,6 @@ import {
 import LineChart from '@/components/charts/LineChart.vue';
 import DonutChart from '@/components/charts/DonutChart.vue';
 
-
 interface DashCards {
   title?: string;
   value?: string | number;

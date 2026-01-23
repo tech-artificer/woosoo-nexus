@@ -21,18 +21,22 @@ class Device extends Authenticatable
 
     protected $fillable = [
         'id',
-        'device_uuid',
         'branch_id',
         'name',
         'table_id',
         'is_active',
+        'status',
         'app_version',
         'ip_address',
         'last_ip_address',
         'last_seen_at',
     ];
 
-     protected $hidden = [
+    protected $guarded = [
+        'device_uuid', // Immutable: assigned at creation, never changes
+    ];
+
+    protected $hidden = [
         'created_at',
         'updated_at',
         'deleted_at',
@@ -41,19 +45,21 @@ class Device extends Authenticatable
     protected $casts = [
       'table_id' => 'integer',
       'is_active' => 'boolean',
+      'last_seen_at' => 'datetime',
     ];
 
     /**
-     * Called when the model is being instantiated.
-     * It is used to set the UUID automatically when creating a new device.
-     * @return void
+     * B2: Device identity immutability enforcement.
+     * Called after the model is instantiated.
+     * device_uuid is assigned once at creation and never updated.
      * 
-     * @var array
+     * @return void
      */
-    protected static function boot()
+    protected static function booted()
     {
-        parent::boot();
+        parent::booted();
 
+        // Assign UUID on creation if not already set
         static::creating(function ($model) {
             if (empty($model->device_uuid)) {
                 $model->device_uuid = (string) Str::uuid();
@@ -61,6 +67,13 @@ class Device extends Authenticatable
 
             if (empty($model->branch_id)) {
                 $model->branch_id = Branch::first()->id;
+            }
+        });
+
+        // Prevent device_uuid from being modified after creation (immutability guard)
+        static::updating(function ($model) {
+            if ($model->isDirty('device_uuid')) {
+                throw new \Exception('Device UUID is immutable and cannot be modified after creation.');
             }
         });
     }

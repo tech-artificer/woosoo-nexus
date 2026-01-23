@@ -41,6 +41,33 @@ Route::get('/device/ip', function (Request $request) {
     ]);
 });
 
+// Lookup device by IP for auto-registration flow
+Route::get('/device/lookup-by-ip', function (Request $request) {
+    $ip = $request->ip();
+
+    $device = \App\Models\Device::where('ip_address', $ip)
+        ->orWhere('last_known_ip', $ip)
+        ->first();
+
+    if (!$device) {
+        return response()->json([
+            'found' => false,
+            'ip' => $ip,
+            'message' => 'No device found for this IP'
+        ]);
+    }
+
+    return response()->json([
+        'found' => true,
+        'ip' => $ip,
+        'device' => [
+            'id' => $device->id,
+            'name' => $device->name,
+            'registration_code' => $device->registration_code,
+        ]
+    ]);
+});
+
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 
 Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId) {
@@ -113,7 +140,9 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     // allow both GET and POST for backward compatibility, and require auth:device
     Route::match(['get','post'], 'device/table', [DeviceApiController::class, 'getTableByIp'])
         ->name('device.table');
-    Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+    // Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+    // ↑ Removed: refresh endpoint creates circular dependency with expired tokens (401 trying to refresh expired token)
+    // Tablets now use IP-based /api/devices/login (no auth required) for re-authentication
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
     Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
 
@@ -156,30 +185,18 @@ Route::prefix('v1')->middleware(['auth:device'])->group(function () {
 Route::middleware(['requestId','auth:sanctum'])->group(function () {
     Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
 });
-// Health endpoint — quick check for app DB and POS DB connectivity
-Route::get('/health', function () {
-    $status = [
-        'app' => true,
-        'mysql' => false,
-        'pos' => false,
-    ];
+// Health endpoint — check app DB, POS DB, queue, and services
+Route::get('/health', [\App\Http\Controllers\Api\HealthController::class, 'check']);
 
-    try {
-        DB::connection()->getPdo();
-        $status['mysql'] = true;
-    } catch (\Throwable $e) {
-        // keep false
-    }
-
-    try {
-        DB::connection('pos')->getPdo();
-        $status['pos'] = true;
-    } catch (\Throwable $e) {
-        // keep false
-    }
-
-    return \App\Http\Responses\ApiResponse::success($status, 'Health check');
+// Monitoring endpoints (Prometheus/observability)
+Route::prefix('monitoring')->group(function () {
+    Route::get('/metrics', [\App\Http\Controllers\Api\MonitoringController::class, 'metrics']);
+    Route::get('/live', [\App\Http\Controllers\Api\MonitoringController::class, 'live']);
+    Route::get('/ready', [\App\Http\Controllers\Api\MonitoringController::class, 'ready']);
 });
+
+// Event replay endpoint — get missed broadcast events for catch-up
+Route::get('/events/missing', [\App\Http\Controllers\Api\EventReplayController::class, 'missing']);
 
 // Debug endpoint: returns raw POS stored-proc rows and local Menu rows for a course
 Route::get('/debug/pos/menus/course', function (Request $request) {

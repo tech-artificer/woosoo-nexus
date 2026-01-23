@@ -90,7 +90,7 @@ class DeviceAuthApiController extends Controller
 
         $token = $device->createToken(
             name: 'device-auth',
-            expiresAt: now()->addDays(7)
+            expiresAt: now()->addDays(30)
         )->plainTextToken;
 
         return response()->json([
@@ -98,7 +98,7 @@ class DeviceAuthApiController extends Controller
             'token' => $token,
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
-            'expires_at' => now()->addDays(7)->toDateTimeString(),
+            'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ipToUse,
         ], 201);
     }
@@ -139,7 +139,7 @@ class DeviceAuthApiController extends Controller
          // Create token with device info
         $token = $device->createToken(
             name: 'device-auth',
-            expiresAt: now()->addDays(7)
+            expiresAt: now()->addDays(30)
         )->plainTextToken;
         
         return response()->json([
@@ -147,7 +147,7 @@ class DeviceAuthApiController extends Controller
             'token' => $token,
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
-            'expires_at' => now()->addDays(7)->toDateTimeString(),
+            'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ip,
         ]);
     }
