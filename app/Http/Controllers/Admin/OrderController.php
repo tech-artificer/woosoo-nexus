@@ -21,6 +21,7 @@ use App\Services\Krypton\OrderService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rules\Enum as EnumRule;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderCompleted as OrderCompletedEvent;
@@ -192,9 +193,27 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(int $id)
     {
-        //
+        $order = DeviceOrder::with([
+            'device',
+            'table',
+            'order.orderCheck',
+            'items' => function ($query) {
+                $query->orderBy('created_at', 'asc');
+            },
+            'items.menu',
+            'serviceRequests',
+            'printEvents' => function ($query) {
+                $query->orderBy('created_at', 'asc');
+            },
+        ])->findOrFail($id);
+
+        Gate::authorize('view', $order);
+
+        return response()->json([
+            'order' => new \App\Http\Resources\DeviceOrderResource($order),
+        ]);
     }
 
     /**

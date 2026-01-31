@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Models\DeviceOrder;
+use App\Policies\DeviceOrderPolicy;
 use App\Services\Krypton\KryptonContextService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -67,6 +69,7 @@ class AppServiceProvider extends ServiceProvider
             });
 
         // 🔹 Gates
+        Gate::policy(DeviceOrder::class, DeviceOrderPolicy::class);
         Gate::define('viewPulse', fn (User $user) => $user->is_admin);
         // Backwards-compatible shorthand used by middleware: `can:admin`
         Gate::define('admin', fn (User $user) => $user->is_admin);

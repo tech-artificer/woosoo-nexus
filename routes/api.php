@@ -43,11 +43,12 @@ Route::get('/device/ip', function (Request $request) {
 
 // Lookup device by IP for auto-registration flow
 Route::get('/device/lookup-by-ip', function (Request $request) {
-    $ip = $request->ip();
+    // Get real client IP (handle nginx proxy with X-Forwarded-For)
+    $ip = $request->header('X-Forwarded-For') 
+        ? explode(',', $request->header('X-Forwarded-For'))[0]
+        : $request->ip();
 
-    $device = \App\Models\Device::where('ip_address', $ip)
-        ->orWhere('last_known_ip', $ip)
-        ->first();
+    $device = \App\Models\Device::where('ip_address', $ip)->first();
 
     if (!$device) {
         return response()->json([
@@ -57,9 +58,18 @@ Route::get('/device/lookup-by-ip', function (Request $request) {
         ]);
     }
 
+    // Create or reuse Sanctum token for device authentication
+    // Token name includes device ID and timestamp for audit trail
+    $tokenName = "relay-device-{$device->id}-" . now()->timestamp;
+    $token = $device->createToken($tokenName)->plainTextToken;
+
     return response()->json([
         'found' => true,
         'ip' => $ip,
+        'device_id' => $device->id,
+        'auth_token' => $token,
+        'printer_name' => $device->printer_name,
+        'bluetooth_address' => $device->bluetooth_address,
         'device' => [
             'id' => $device->id,
             'name' => $device->name,
@@ -83,10 +93,26 @@ Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId)
 Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
     Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+    
+    // RELAY DEVICE ENDPOINTS - GUEST ACCESS (No auth required for emergency printing)
+    Route::get('/devices/latest-session', [TerminalSessionApiController::class, 'getLatestSession'])->name('api.devices.latest.session');
+    Route::get('/session/latest', [TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
+    Route::get('/device-orders/unprinted', [OrderApiController::class, 'getUnprintedEvents'])->name('api.device.orders.unprinted');
+    Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->name('api.order.printed');
+    
+    // Printer API routes (guest for relay device emergency mode)
+    require __DIR__ . '/api_printer_routes.php';
+});
+
+Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(function () {
+    Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
+    Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
 });
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'api'])->group(function () {
-    Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
+    Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])
+        ->middleware(\App\Http\Middleware\ThrottleByDevice::class . ':10,1')
+        ->name('api.devices.register');
     Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
     Route::get('/menus/with-modifiers', [BrowseMenuApiController::class, 'getMenusWithModifiers'])->name('api.menus.with.modifiers');
     Route::get('/menus/modifier-groups', [BrowseMenuApiController::class, 'getAllModifierGroups'])->name('api.menus.modifier-groups');
@@ -144,7 +170,9 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     // ↑ Removed: refresh endpoint creates circular dependency with expired tokens (401 trying to refresh expired token)
     // Tablets now use IP-based /api/devices/login (no auth required) for re-authentication
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
-    Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
+    Route::post('/devices/create-order', DeviceOrderApiController::class)
+        ->middleware(\App\Http\Middleware\ThrottleByDevice::class . ':100,1')
+        ->name('api.devices.create.order');
 
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
@@ -162,14 +190,6 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
     Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
     
-    // Printer API routes (device-authenticated for branch isolation)
-    require __DIR__ . '/api_printer_routes.php';
-    
-    // Session endpoint used by all devices
-    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
-    
-    // Order print endpoints for devices
-    Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->name('api.order.printed');
     Route::get('/order/{orderId}/print', [OrderApiController::class, 'print'])->name('api.order.print');
 });
 

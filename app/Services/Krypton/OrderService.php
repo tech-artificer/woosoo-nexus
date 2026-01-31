@@ -67,6 +67,8 @@ class OrderService
         // Defensive: strip legacy payload keys that should not be persisted
         // directly on the `device_orders` table. `items` belong in
         // `device_order_items` and `meta` is exposed via an accessor.
+        // IMPORTANT: Store items before unsetting for CreateOrderedMenu later
+        $orderItems = $attributes['items'] ?? [];
         if (isset($attributes['items'])) {
             unset($attributes['items']);
         }
@@ -77,8 +79,10 @@ class OrderService
         $this->attributes = $attributes;
 
         try {
-            return DB::transaction(function () use ($device) {
-                // Create a new order using the provided attributes
+            // NOTE: Transaction management moved to controller layer.
+            // Callers MUST wrap this method in DB::transaction() to ensure atomicity.
+            // This prevents nested transaction issues and gives controllers full
+            // control over the transaction scope (e.g., combining order checks + creation).
 
             $order = CreateOrder::run($this->attributes);
 
@@ -97,7 +101,7 @@ class OrderService
 
             // Create an order check
             $orderCheck = CreateOrderCheck::run($this->attributes);
-            // 
+            //
             $this->updateAttributes([
                 'order_check_id' => $orderCheck->id,
             ]);
@@ -120,13 +124,17 @@ class OrderService
             // Add device_order_id so CreateOrderedMenu can save to device_order_items
             $this->updateAttributes([
                 'device_order_id' => $deviceOrder->id,
+                'items' => $orderItems, // Restore items array for CreateOrderedMenu
             ]);
 
             // Create ordered menus (both POS and local device_order_items)
             $orderedMenus = CreateOrderedMenu::run($this->attributes);
 
             // Schedule creation of a PrintEvent after the database transaction commits.
-            // This ensures we don't create print events while the order transaction is still open.
+            // NOTE: POS writes (krypton_woosoo) and local writes (woosoo_api)
+            // live in separate databases, so cross-db rollback is not possible.
+            // Print events remain fire-and-forget after commit to avoid
+            // coupling local print state to POS transaction scope.
             DB::afterCommit(function () use ($deviceOrder) {
                 try {
                     app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
@@ -138,7 +146,6 @@ class OrderService
             });
 
             return $deviceOrder;
-            });
         } catch (\Throwable $e) {
             // CRITICAL: POS writes have already succeeded and are NOT rolled back.
             // Local transaction failure leaves POS order orphaned.

@@ -95,7 +95,7 @@ class OrderApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'order' => $order
+            'order' => new \App\Http\Resources\DeviceOrderResource($order)
         ]);
     }
 
@@ -121,7 +121,7 @@ class OrderApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'order' => $order,
+            'order' => new \App\Http\Resources\DeviceOrderResource($order),
         ]);
     }
 
@@ -210,7 +210,7 @@ class OrderApiController extends Controller
             ];
         }
 
-        $kctx = new KryptonContextService();
+        $kctx = app(KryptonContextService::class);
         $kdata = $kctx->getData();
 
         $attrs = [
@@ -242,13 +242,25 @@ class OrderApiController extends Controller
             // Build metadata for broadcast (menu names, quantities).
             // Batch-load menu names to prevent N+1 queries.
             $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
+            \Log::info('Refill menu IDs extracted', ['menu_ids' => $menuIds]);
+            
             $menuNames = !empty($menuIds)
                 ? \App\Models\Krypton\Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id')
                 : collect();
             
+            \Log::info('Refill menu names loaded', ['menu_names' => $menuNames->toArray()]);
+            
             $metaItems = collect($posItems)->map(function($item) use ($menuNames) {
                 $menuId = $item->menu_id;
                 $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
+                
+                \Log::info('Refill item mapping', [
+                    'menu_id' => $menuId,
+                    'item_name' => $item->name ?? null,
+                    'item_receipt_name' => $item->receipt_name ?? null,
+                    'lookup_name' => $menuNames->get($menuId),
+                    'final_name' => $menuName ?? "Menu #{$menuId}",
+                ]);
                 
                 return [
                     'menu_id' => $menuId,
@@ -256,6 +268,8 @@ class OrderApiController extends Controller
                     'name' => $menuName ?? "Menu #{$menuId}",
                 ];
             })->values()->all();
+            
+            \Log::info('Refill metaItems constructed', ['meta_items' => $metaItems]);
 
             // Build local payload for each POS item.
             // Each payload mirrors a POS ordered_menu into local device_order_items.
@@ -263,13 +277,13 @@ class OrderApiController extends Controller
             foreach ($posItems as $pos) {
                 $menuId = $pos->menu_id;
                 $quantity = $pos->quantity ?? 1;
-                $price = $pos->price ?? 0.00;
+                $price = $pos->price ?? ($pos->unit_price ?? 0.00);
                 $subtotal = $pos->sub_total ?? ($pos->subtotal ?? ($price * $quantity));
                 $tax = $pos->tax ?? 0.00;
                 $total = $pos->total ?? $subtotal;
 
                 $localPayloads[] = [
-                    'order_id' => $deviceOrder->order_id,
+                    'order_id' => $deviceOrder->id,      // FK to device_orders.id
                     'ordered_menu_id' => $pos->id,  // POS ordered_menu record ID
                     'menu_id' => $menuId,            // FK to menus table
                     'quantity' => $quantity,
@@ -280,6 +294,7 @@ class OrderApiController extends Controller
                     'notes' => $pos->note ?? null,
                     'seat_number' => $pos->seat_number ?? 1,
                     'index' => $pos->index ?? 1,
+                    // Note: is_refill column removed - table doesn't have it
                 ];
             }
 

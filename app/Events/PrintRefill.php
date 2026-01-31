@@ -2,21 +2,22 @@
 
 namespace App\Events;
 
+use App\Models\DeviceOrder;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\DeviceOrder;
 
 class PrintRefill implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public ?DeviceOrder $deviceOrder;
+
     public array $items;
 
-    public function __construct(DeviceOrder $deviceOrder = null, array $items = [])
+    public function __construct(?DeviceOrder $deviceOrder = null, array $items = [])
     {
         $this->deviceOrder = $deviceOrder;
         $this->items = $items;
@@ -24,7 +25,7 @@ class PrintRefill implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [ new Channel('admin.print') ];
+        return [new Channel('admin.print')];
     }
 
     public function broadcastWith(): array
@@ -43,7 +44,7 @@ class PrintRefill implements ShouldBroadcastNow
         }
 
         // Ensure items are trimmed down to name/quantity only
-        $items = collect($this->items ?? [])->map(fn($it) => [
+        $items = collect($this->items ?? [])->map(fn ($it) => [
             'name' => $it['name'] ?? ($it->name ?? null),
             'quantity' => $it['quantity'] ?? ($it->quantity ?? null),
         ])->values()->all();
@@ -55,8 +56,8 @@ class PrintRefill implements ShouldBroadcastNow
             'session_id' => $this->deviceOrder?->session_id,
             'print_type' => 'REFILL',
             'refill_number' => $this->deviceOrder?->refill_number,
-            'tablename' => $this->deviceOrder?->table->name,
-            'created_at' => $this->deviceOrder?->created_at->toIso8601String(),
+            'tablename' => $this->deviceOrder?->table?->name,
+            'created_at' => ($this->deviceOrder?->created_at instanceof \DateTimeInterface) ? $this->deviceOrder->created_at->format(DATE_ATOM) : null,
             'order' => $orderPayload,
             'items' => $items,
         ];

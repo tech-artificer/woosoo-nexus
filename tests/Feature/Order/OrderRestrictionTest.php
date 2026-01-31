@@ -3,13 +3,13 @@
 namespace Tests\Feature\Order;
 
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 use App\Models\Device;
 use App\Models\Branch;
-use App\Models\Table;
 use App\Models\DeviceOrder;
-use App\Models\DeviceOrderItem;
-use Database\Seeders\TestPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use App\Enums\OrderStatus;
 
 /**
  * Test order restriction enforcement:
@@ -19,23 +19,36 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  */
 class OrderRestrictionTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
 
     protected Device $device;
     protected Branch $branch;
-    protected Table $table;
+    protected int $tableId;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->mockActiveKryptonSession();
         
         // Create test fixtures
-        $this->branch = Branch::factory()->create();
-        $this->table = Table::factory()->for($this->branch)->create();
-        $this->device = Device::factory()
-            ->for($this->branch)
-            ->for($this->table)
-            ->create(['name' => 'Test Device']);
+        $this->branch = Branch::create(['name' => 'Main', 'location' => 'HQ']);
+        $this->tableId = 100;
+        $this->device = Device::create([
+            'name' => 'Test Device',
+            'ip_address' => '192.168.10.10',
+            'is_active' => true,
+            'table_id' => $this->tableId,
+            'branch_id' => $this->branch->id,
+        ]);
+
+        // Ensure a menu item exists on the POS connection for refill validation
+        DB::connection('pos')->table('menus')->insert([
+            'id' => 46,
+            'name' => 'Beef',
+            'receipt_name' => 'Beef',
+            'price' => 100.00,
+        ]);
     }
 
     /**
@@ -44,20 +57,42 @@ class OrderRestrictionTest extends TestCase
     public function test_cannot_create_duplicate_order_when_pending()
     {
         // Create first order
-        $firstOrder = DeviceOrder::factory()
-            ->for($this->device)
-            ->for($this->table)
-            ->for($this->branch)
-            ->pending()
-            ->create(['order_id' => 1001]);
+        $firstOrder = DeviceOrder::create([
+            'device_id' => $this->device->id,
+            'table_id' => $this->tableId,
+            'terminal_session_id' => 1,
+            'session_id' => $this->createTestSession(),
+            'order_id' => 1001,
+            'status' => OrderStatus::PENDING->value,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total' => 1.00,
+            'guest_count' => 1,
+        ]);
 
         // Try to create second order
-        $response = $this->actingAs($this->device, 'sanctum')
-            ->postJson('/api/devices/create-order', [
-                'package_id' => 1,
-                'guest_count' => 4,
-                'table_id' => $this->table->id,
-                'items' => [],
+        $token = $this->device->createToken('test-token')->plainTextToken;
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/devices/create-order', [
+                'guest_count' => 1,
+                'subtotal' => 1.00,
+                'tax' => 0.00,
+                'discount' => 0.00,
+                'total_amount' => 1.00,
+                'items' => [
+                    [
+                        'menu_id' => 1,
+                        'name' => 'Test Item',
+                        'quantity' => 1,
+                        'price' => 1.00,
+                        'subtotal' => 1.00,
+                        'tax' => 0.00,
+                        'discount' => 0.00,
+                    ]
+                ],
             ]);
 
         // Should be rejected with 409 Conflict
@@ -76,20 +111,42 @@ class OrderRestrictionTest extends TestCase
     public function test_cannot_create_duplicate_order_when_confirmed()
     {
         // Create confirmed order
-        $confirmedOrder = DeviceOrder::factory()
-            ->for($this->device)
-            ->for($this->table)
-            ->for($this->branch)
-            ->confirmed()
-            ->create(['order_id' => 1002]);
+        $confirmedOrder = DeviceOrder::create([
+            'device_id' => $this->device->id,
+            'table_id' => $this->tableId,
+            'terminal_session_id' => 1,
+            'session_id' => $this->createTestSession(),
+            'order_id' => 1002,
+            'status' => OrderStatus::CONFIRMED->value,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total' => 1.00,
+            'guest_count' => 1,
+        ]);
 
         // Try to create second order
-        $response = $this->actingAs($this->device, 'sanctum')
-            ->postJson('/api/devices/create-order', [
-                'package_id' => 1,
-                'guest_count' => 4,
-                'table_id' => $this->table->id,
-                'items' => [],
+        $token = $this->device->createToken('test-token')->plainTextToken;
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/devices/create-order', [
+                'guest_count' => 1,
+                'subtotal' => 1.00,
+                'tax' => 0.00,
+                'discount' => 0.00,
+                'total_amount' => 1.00,
+                'items' => [
+                    [
+                        'menu_id' => 1,
+                        'name' => 'Test Item',
+                        'quantity' => 1,
+                        'price' => 1.00,
+                        'subtotal' => 1.00,
+                        'tax' => 0.00,
+                        'discount' => 0.00,
+                    ]
+                ],
             ]);
 
         // Should be rejected with 409 Conflict
@@ -104,12 +161,19 @@ class OrderRestrictionTest extends TestCase
     public function test_can_create_new_order_after_previous_completed()
     {
         // Create completed order
-        DeviceOrder::factory()
-            ->for($this->device)
-            ->for($this->table)
-            ->for($this->branch)
-            ->completed()
-            ->create(['order_id' => 1003]);
+        DeviceOrder::create([
+            'device_id' => $this->device->id,
+            'table_id' => $this->tableId,
+            'terminal_session_id' => 1,
+            'session_id' => $this->createTestSession(),
+            'order_id' => 1003,
+            'status' => OrderStatus::COMPLETED->value,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total' => 1.00,
+            'guest_count' => 1,
+        ]);
 
         // Should be able to create a new order
         // (Note: In reality this would require POS integration; this test documents the intent)
@@ -123,16 +187,26 @@ class OrderRestrictionTest extends TestCase
     public function test_refill_rejects_non_meat_non_side_items()
     {
         // Create existing order
-        $order = DeviceOrder::factory()
-            ->for($this->device)
-            ->for($this->table)
-            ->for($this->branch)
-            ->confirmed()
-            ->create(['order_id' => 1004]);
+        $order = DeviceOrder::create([
+            'device_id' => $this->device->id,
+            'table_id' => $this->tableId,
+            'terminal_session_id' => 1,
+            'session_id' => $this->createTestSession(),
+            'order_id' => 1004,
+            'status' => OrderStatus::CONFIRMED->value,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total' => 1.00,
+            'guest_count' => 1,
+        ]);
 
         // Try to refill with dessert (should fail)
-        $response = $this->actingAs($this->device, 'sanctum')
-            ->postJson('/api/order/1004/refill', [
+        $token = $this->device->createToken('test-token')->plainTextToken;
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/order/1004/refill', [
                 'items' => [
                     [
                         'name' => 'Brownie Sundae', // Dessert, not allowed
@@ -173,21 +247,33 @@ class OrderRestrictionTest extends TestCase
     public function test_refill_blocked_by_session_mismatch()
     {
         // Create order with session ID
-        $order = DeviceOrder::factory()
-            ->for($this->device)
-            ->for($this->table)
-            ->for($this->branch)
-            ->confirmed()
-            ->create([
-                'order_id' => 1005,
-                'session_id' => 'valid-session-123',
-            ]);
+        $order = DeviceOrder::create([
+            'device_id' => $this->device->id,
+            'table_id' => $this->tableId,
+            'terminal_session_id' => 1,
+            'session_id' => 'valid-session-123',
+            'order_id' => 1005,
+            'status' => OrderStatus::CONFIRMED->value,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total' => 1.00,
+            'guest_count' => 1,
+        ]);
 
         // Try to refill with wrong session ID
-        $response = $this->actingAs($this->device, 'sanctum')
-            ->postJson('/api/order/1005/refill', [
-                'items' => [['name' => 'Beef', 'quantity' => 2]],
-                'session_id' => 'wrong-session-456',
+        $token = $this->device->createToken('test-token')->plainTextToken;
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/order/1005/refill', [
+                'items' => [[
+                    'menu_id' => 46,
+                    'name' => 'Beef',
+                    'quantity' => 2,
+                    'price' => 100.00,
+                ]],
+            'session_id' => 'wrong-session-456',
             ]);
 
         // Should reject with 403 Forbidden
@@ -202,23 +288,42 @@ class OrderRestrictionTest extends TestCase
     public function test_refill_blocked_by_device_branch_mismatch()
     {
         // Create order for device in branch A
-        $order = DeviceOrder::factory()
-            ->for($this->device)
-            ->for($this->table)
-            ->for($this->branch)
-            ->confirmed()
-            ->create(['order_id' => 1006]);
+        $order = DeviceOrder::create([
+            'device_id' => $this->device->id,
+            'table_id' => $this->tableId,
+            'terminal_session_id' => 1,
+            'session_id' => 'session-1006',
+            'order_id' => 1006,
+            'status' => OrderStatus::CONFIRMED->value,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total' => 1.00,
+            'guest_count' => 1,
+        ]);
 
         // Create device in different branch
-        $otherBranch = Branch::factory()->create();
-        $otherDevice = Device::factory()
-            ->for($otherBranch)
-            ->create();
+        $otherBranch = Branch::create(['name' => 'Other', 'location' => 'HQ-2']);
+        $otherDevice = Device::create([
+            'name' => 'Other Device',
+            'ip_address' => '192.168.10.20',
+            'is_active' => true,
+            'table_id' => 200,
+            'branch_id' => $otherBranch->id,
+        ]);
 
         // Try to refill order from branch A using device from branch B
-        $response = $this->actingAs($otherDevice, 'sanctum')
-            ->postJson('/api/order/1006/refill', [
-                'items' => [['name' => 'Beef', 'quantity' => 2]],
+        $token = $otherDevice->createToken('other-token')->plainTextToken;
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/order/1006/refill', [
+                'items' => [[
+                    'menu_id' => 46,
+                    'name' => 'Beef',
+                    'quantity' => 2,
+                    'price' => 100.00,
+                ]],
                 'session_id' => $order->session_id,
             ]);
 

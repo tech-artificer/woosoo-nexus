@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\PrintEvent;
 use App\Models\DeviceOrder;
+use App\Models\PrintEvent;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class PrintEventService
 {
@@ -18,11 +18,11 @@ class PrintEventService
         // Treat `session_id` as device-local. Do not consult POS sessions here.
         // Always create print events for device orders; session scoping is handled client-side.
 
-        Log::info("Creating print event", [
+        Log::info('Creating print event', [
             'device_order_id' => $deviceOrder->id,
             'order_id' => $deviceOrder->order_id,
             'event_type' => $eventType,
-            'branch_id' => $deviceOrder->branch_id
+            'branch_id' => $deviceOrder->branch_id,
         ]);
 
         $event = PrintEvent::create([
@@ -31,15 +31,15 @@ class PrintEventService
             'meta' => $meta,
         ]);
 
-        if (!$event) {
-            Log::error("Failed to create print event", [
+        if (! $event) {
+            Log::error('Failed to create print event', [
                 'device_order_id' => $deviceOrder->id,
-                'event_type' => $eventType
+                'event_type' => $eventType,
             ]);
         } else {
-            Log::info("Print event created successfully", [
+            Log::info('Print event created successfully', [
                 'print_event_id' => $event->id,
-                'device_order_id' => $deviceOrder->id
+                'device_order_id' => $deviceOrder->id,
             ]);
         }
 
@@ -58,9 +58,6 @@ class PrintEventService
      * Acknowledge a PrintEvent in a concurrency-safe manner.
      * Performs a conditional update so multiple acks don't overwrite each other.
      *
-     * @param int $printEventId
-     * @param string|null $printerId
-     * @param string|null $printedAt
      * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
      */
     public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null, ?int $acknowledgedByDeviceId = null, ?string $printerName = null): array
@@ -121,9 +118,6 @@ class PrintEventService
     /**
      * Mark a PrintEvent as failed (increment attempts and store the error).
      *
-     * @param int $printEventId
-     * @param string|null $error
-     * @param int|null $acknowledgedByDeviceId
      * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
      */
     public function fail(int $printEventId, ?string $error = null, ?int $acknowledgedByDeviceId = null): array

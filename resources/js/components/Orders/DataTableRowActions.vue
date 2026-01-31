@@ -25,6 +25,7 @@ import { ref, computed } from 'vue'
 import type { DeviceOrder } from '@/types/models';
 import { toast } from 'vue-sonner'
 import KitchenTicket from '@/components/KitchenTicket.vue'
+import OrderDetails from '@/components/Orders/OrderDetails.vue'
 
 interface DataTableRowActionsProps {
   row: Row<DeviceOrder>
@@ -43,6 +44,8 @@ const posDialogOrderId = ref<number | string | null>(null);
 const posDialogSessionId = ref<number | null>(null);
 const showViewDialog = ref(false);
 const viewDialogOrder = ref<any | null>(null);
+const viewDialogLoading = ref(false);
+const viewDialogError = ref<string | null>(null);
 // control sheet open state
 // const isSheetOpen = ref(false)
 
@@ -135,8 +138,37 @@ const posFillDo = (isVoided: boolean) => {
 }
 
 const openViewDialog = (order: any) => {
-  viewDialogOrder.value = order
   showViewDialog.value = true
+  viewDialogOrder.value = null
+  viewDialogError.value = null
+  viewDialogLoading.value = true
+
+  const orderId = order?.id
+  if (!orderId) {
+    viewDialogError.value = 'Missing order id.'
+    viewDialogLoading.value = false
+    return
+  }
+
+  // Use Inertia router for authenticated requests (includes CSRF token)
+  router.get(`/orders/${orderId}`, {}, {
+    preserveState: true,
+    preserveScroll: true,
+    only: ['order'], // Partial reload
+    onSuccess: (page: any) => {
+      viewDialogOrder.value = page.props?.order ?? null
+      if (!viewDialogOrder.value) {
+        viewDialogError.value = 'Order data not found in response.'
+      }
+    },
+    onError: (errors: any) => {
+      console.warn('Failed to fetch order details', errors)
+      viewDialogError.value = 'Failed to load order details.'
+    },
+    onFinish: () => {
+      viewDialogLoading.value = false
+    }
+  })
 }
 
 </script>
@@ -163,7 +195,7 @@ const openViewDialog = (order: any) => {
       Trigger POS Test Update
     </DropdownMenuItem>
     <DropdownMenuItem @click.prevent="openViewDialog(computedOrder)">
-      View Order
+      View Details
     </DropdownMenuItem>
     <DropdownMenuSeparator />
     <DropdownMenuItem @click="voidOrder">
@@ -174,32 +206,14 @@ const openViewDialog = (order: any) => {
 
 <!-- View Order dialog -->
 <Dialog v-model:open="showViewDialog">
-  <DialogContent class="max-w-lg">
+  <DialogContent class="max-w-4xl">
     <DialogHeader>
       <DialogTitle>Order Details</DialogTitle>
-      <DialogDescription>View device order metadata and items</DialogDescription>
+      <DialogDescription>Full order details, items, and refill history</DialogDescription>
     </DialogHeader>
 
-    <div class="mt-4 space-y-3 text-sm">
-      <div><strong>Order #:</strong> {{ viewDialogOrder?.order_number }}</div>
-      <div><strong>Status:</strong> {{ viewDialogOrder?.status }}</div>
-      <div><strong>Guests:</strong> {{ viewDialogOrder?.guest_count }}</div>
-      <div><strong>Created:</strong> {{ viewDialogOrder?.created_at }}</div>
-      <div><strong>Subtotal:</strong> {{ viewDialogOrder?.subtotal ?? viewDialogOrder?.meta?.order_check?.subtotal ?? '-' }}</div>
-      <div><strong>Total:</strong> {{ viewDialogOrder?.total ?? viewDialogOrder?.meta?.order_check?.total_amount ?? '-' }}</div>
-    </div>
-
     <div class="mt-4">
-      <p class="text-sm font-medium">Items</p>
-      <div class="mt-2 divide-y">
-        <div v-for="(it, idx) in (viewDialogOrder?.items || [])" :key="idx" class="py-2">
-          <div class="flex justify-between">
-            <div class="text-sm">{{ it.name }}</div>
-            <div class="text-sm">Qty: {{ it.quantity }}</div>
-          </div>
-          <div class="text-xs text-muted-foreground">Price: {{ it.price ?? it.unit_price ?? '-' }} | Note: {{ it.note || '-' }}</div>
-        </div>
-      </div>
+      <OrderDetails :order="viewDialogOrder" :loading="viewDialogLoading" :error="viewDialogError" />
     </div>
 
     <DialogFooter class="mt-4">

@@ -32,6 +32,14 @@ class OrderRefillTest extends TestCase
             $table->string('name')->nullable();
         });
         DB::connection('krypton_woosoo')->table('menu')->insert(['id' => 46, 'name' => 'Classic Feast']);
+
+        // Ensure POS menu exists for refill validation
+        DB::connection('pos')->table('menus')->insert([
+            'id' => 46,
+            'name' => 'Classic Feast',
+            'receipt_name' => 'Classic Feast',
+            'price' => 399.00,
+        ]);
     }
 
     public function tearDown(): void
@@ -103,6 +111,12 @@ class OrderRefillTest extends TestCase
             }
 
             return $realDb->connection($name);
+        });
+        DB::shouldReceive('transaction')->andReturnUsing(function ($callback) {
+            return $callback();
+        });
+        DB::shouldReceive('afterCommit')->andReturnUsing(function ($callback) {
+            $callback();
         });
 
         // Authenticate as device using token

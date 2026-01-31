@@ -94,14 +94,38 @@ class RefillOrderRequest extends FormRequest
                     continue;
                 }
                 
-                // Validate that item is in refillable categories (meats/sides)
-                $refillableCategories = ['meats', 'sides']; // Adjust based on your POS category names
-                $category = strtolower(trim($menu->category ?? ''));
-                
-                if (!empty($category) && !in_array($category, $refillableCategories, true)) {
+                // Validate that item is in refillable groups (meats/sides only)
+                // Check menu_group, not menu_category
+                try {
+                    $menu->load('group');
+                    
+                    // Refillable groups include: Meats, Sides, and specific meat types
+                    $refillableGroups = [
+                        'meats', 'sides', 'meat', 'side',
+                        'meat beef', 'meat chicken', 'meat pork', 'meat seafood',
+                        'pork', 'beef', 'chicken', 'seafood',
+                        'vegetable', 'salad', // Add sides-like items
+                    ];
+                    
+                    $groupName = $menu->group ? strtolower(trim($menu->group->name ?? '')) : '';
+                    
+                    if (!empty($groupName) && !in_array($groupName, $refillableGroups, true)) {
+                        $validator->errors()->add(
+                            "items.{$index}.name",
+                            "Item '{$name}' is not available for refill (only meats and sides can be refilled)."
+                        );
+                    } elseif (empty($groupName)) {
+                        // If no group assigned, reject for safety
+                        $validator->errors()->add(
+                            "items.{$index}.name",
+                            "Item '{$name}' has no menu group and cannot be refilled."
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('Refill validation error', ['error' => $e->getMessage(), 'item' => $name]);
                     $validator->errors()->add(
                         "items.{$index}.name",
-                        "Item '{$name}' is not available for refill (only meats and sides can be refilled)."
+                        "Unable to verify refill eligibility for '{$name}'."
                     );
                 }
             }

@@ -29,24 +29,11 @@ return [
     'servers' => [
 
         'reverb' => [
-            'host' => env('REVERB_SERVER_HOST', 'http://127.0.0.1'),
+            'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
             'port' => env('REVERB_SERVER_PORT', 6001),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
-            'options' => [
-                'tls' => [
-                    // Use mkcert-generated certificates for local LAN WSS
-                    'local_cert' => env('REVERB_TLS_CERT'),
-                    'local_pk' => env('REVERB_TLS_KEY'),
-                    'passphrase' => env('REVERB_TLS_PASSPHRASE'),
-                    // Allow self-signed CA since mkcert is used locally
-                    'allow_self_signed' => env('REVERB_TLS_ALLOW_SELF_SIGNED', true),
-                    // Disable peer verification for local development
-                    'verify_peer' => env('REVERB_TLS_VERIFY_PEER', false),
-                    // Optional: provide CA file to improve trust chain
-                    'cafile' => env('REVERB_TLS_CAFILE'),
-                ],
-            ],
+            'options' => [],
             'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 10_000),
             'scaling' => [
                 'enabled' => env('REVERB_SCALING_ENABLED', false),
@@ -95,8 +82,8 @@ return [
                 'options' => [
                     'host' => env('REVERB_HOST'),
                     'port' => env('REVERB_PORT', 6001),
-                    'scheme' => env('REVERB_SCHEME', 'https'),
-                    'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                    'scheme' => env('REVERB_SCHEME', 'http'),
+                    'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
                 ],
                 'allowed_origins' => ['*'],
                 'capacity' => null,

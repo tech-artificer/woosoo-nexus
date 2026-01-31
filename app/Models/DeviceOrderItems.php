@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 use App\Models\Krypton\Menu;
 use App\Enums\ItemStatus;
 
@@ -20,7 +21,13 @@ class DeviceOrderItems extends Model
         'discount' => 'decimal:4',
         'total' => 'decimal:4',
         'status' => ItemStatus::class,
+        'is_refill' => 'boolean',
     ];
+
+    public function scopeRefills(Builder $query): Builder
+    {
+        return $query->where('is_refill', true);
+    }
 
     public function device_order()
     {

@@ -16,7 +16,7 @@ class HealthController
     {
         $health = [
             'status' => 'ok',
-            'timestamp' => now()->iso8601(),
+            'timestamp' => now()->toIso8601String(),
             'app_version' => config('app.version', '1.0.0'),
             'services' => [],
         ];

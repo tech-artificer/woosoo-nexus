@@ -1,24 +1,27 @@
-# Woosoo Server Management Scripts
+# Woosoo Nexus Service Management Scripts
 
 All scripts must be run as **Administrator** (right-click PowerShell → "Run as Administrator").
 
 ---
 
-## Quick Reference
+## Quick Start (9 Operational Scripts - Consolidated)
 
-**Common tasks:**
+**First-time setup (6 steps):**
 ```powershell
-.\restart-nginx.ps1          # Restart nginx only (after nginx.conf changes)
-.\restart-for-lan.ps1        # Restart ALL services (nginx + PHP-FPM + Reverb)
-.\check-services.ps1         # Check status of all services
+cd scripts/
+.\setup-prerequisites.ps1                     # Install OpenSSL, mkcert
+.\setup-firewall.ps1                          # Open Windows Firewall ports
+.\setup-php-config.ps1                        # Configure PHP settings  
+.\setup-local-domains.ps1 -ServerIP 127.0.0.1  # Add hosts file entries
+.\services-setup.ps1 -Mode install            # Install Windows services
+.\services-manager.ps1 -Action start          # Start all services
 ```
 
-**First-time setup:**
+**Daily operations (3 main tasks):**
 ```powershell
-.\setup-prerequisites.ps1    # Install OpenSSL, mkcert
-.\setup-firewall.ps1         # Open ports in Windows Firewall
-.\install-services.ps1       # Install Windows services
-.\start-production.ps1       # Start all services
+.\check-services.ps1                          # Health check (all services)
+.\services-manager.ps1 -Action restart        # Restart all (nginx → PHP-FPM → Reverb)
+.\restart-nginx.ps1                           # Restart nginx only (after config changes)
 ```
 
 ---
@@ -260,15 +263,15 @@ Get-Content "C:\laragon\www\woosoo\logs\nginx\stderr.txt" -Tail 20
 ### Services won't start
 1. Check Administrator access: `([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")`
 2. Check ports are free: `netstat -ano | Select-String ":443|:9000|:6001"`
-3. Check logs: `Get-Content "C:\laragon\www\woosoo\logs\nginx\error.log" -Tail 30`
+3. Check logs: `Get-Content "C:\laragon\www\project-woosoo\logs\nginx\error.log" -Tail 30`
 
 ### HTTPS not working
-1. Check certificates exist: `ls C:\laragon\www\woosoo\certs\`
-2. Check nginx config: `"C:\laragon\www\woosoo\bin\nginx\nginx.exe" -t`
+1. Check certificates exist: `ls C:\laragon\www\project-woosoo\certs\`
+2. Check nginx config: `"C:\laragon\www\project-woosoo\bin\nginx\nginx.exe" -t`
 3. Check hosts file: Add `127.0.0.1 admin.woosoo.local` to `C:\Windows\System32\drivers\etc\hosts`
 
 ### Services keep crashing
-1. Check error logs: `Get-Content "C:\laragon\www\woosoo\logs\php\error.log" -Tail 30`
+1. Check error logs: `Get-Content "C:\laragon\www\project-woosoo\logs\php\error.log" -Tail 30`
 2. Check MySQL connection: `Test-NetConnection -ComputerName 127.0.0.1 -Port 3306`
 3. Check disk space: `Get-Volume C`
 
@@ -317,7 +320,7 @@ C:\laragon\www\woosoo\apps\woosoo-nexus\storage\logs\laravel.log
 ## Getting Help
 
 1. **Check the guide:** [PRODUCTION_DEPLOYMENT_GUIDE.md](../docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
-2. **View logs:** `Get-Content "C:\laragon\www\woosoo\logs\*\*.log" -Tail 50`
+2. **View logs:** `Get-Content "C:\laragon\www\project-woosoo\logs\*\*.log" -Tail 50`
 3. **Manual check:** `.\check-services.ps1`
 4. **Reinstall:** Remove services with `nssm remove` and run `.\install-services.ps1` again
 
