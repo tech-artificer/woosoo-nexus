@@ -137,9 +137,15 @@ class OrderService
             // coupling local print state to POS transaction scope.
             DB::afterCommit(function () use ($deviceOrder) {
                 try {
-                    app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
-                    // Dispatch PrintOrder broadcast so relay devices receive the print job
-                    PrintOrder::dispatch($deviceOrder);
+                    // PHASE 2 FIX (C1): Wrap PrintEvent::create() + broadcast in transaction
+                    // to ensure printEvent relation is committed before broadcast reads it
+                    DB::transaction(function () use ($deviceOrder) {
+                        app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                        // Reload to pick up printEvent relation
+                        $deviceOrder->refresh();
+                        // Dispatch PrintOrder broadcast so relay devices receive the print job
+                        PrintOrder::dispatch($deviceOrder);
+                    });
                 } catch (\Throwable $e) {
                     report($e);
                 }

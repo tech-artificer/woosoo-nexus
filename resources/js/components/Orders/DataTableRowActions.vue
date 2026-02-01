@@ -150,25 +150,33 @@ const openViewDialog = (order: any) => {
     return
   }
 
-  // Use Inertia router for authenticated requests (includes CSRF token)
-  router.get(`/orders/${orderId}`, {}, {
-    preserveState: true,
-    preserveScroll: true,
-    only: ['order'], // Partial reload
-    onSuccess: (page: any) => {
-      viewDialogOrder.value = page.props?.order ?? null
+  // Use fetch for JSON API endpoint
+  fetch(`/orders/${orderId}`, {
+    credentials: 'same-origin',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Accept': 'application/json'
+    }
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      return response.json()
+    })
+    .then(data => {
+      viewDialogOrder.value = data?.order ?? null
       if (!viewDialogOrder.value) {
         viewDialogError.value = 'Order data not found in response.'
       }
-    },
-    onError: (errors: any) => {
-      console.warn('Failed to fetch order details', errors)
-      viewDialogError.value = 'Failed to load order details.'
-    },
-    onFinish: () => {
+    })
+    .catch(error => {
+      console.warn('Failed to fetch order details', error)
+      viewDialogError.value = `Failed to load order details: ${error.message}`
+    })
+    .finally(() => {
       viewDialogLoading.value = false
-    }
-  })
+    })
 }
 
 </script>

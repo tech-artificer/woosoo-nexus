@@ -43,7 +43,7 @@ class PrintEventBroadcastContractTest extends TestCase
         ]);
         
         $deviceOrder->refresh();
-        $deviceOrder->setRelation('printEvent', $printEvent);
+        // PHASE 2: Removed setRelation('printEvent') hack - test now proves real production behavior
 
         // Act: Create broadcast event
         $event = new PrintOrder($deviceOrder);
@@ -100,7 +100,7 @@ class PrintEventBroadcastContractTest extends TestCase
         ]);
         
         $deviceOrder->refresh();
-        $deviceOrder->setRelation('printEvent', $printEvent);
+        // PHASE 2: Removed setRelation('printEvent') hack - test now proves real production behavior
 
         $items = [
             ['name' => 'Beef Brisket', 'quantity' => 2],
@@ -154,7 +154,7 @@ class PrintEventBroadcastContractTest extends TestCase
         $printEvent = PrintEvent::factory()->create(['device_order_id' => $deviceOrder->id]);
         
         $deviceOrder->refresh();
-        $deviceOrder->setRelation('printEvent', $printEvent);
+        // PHASE 2: Removed setRelation('printEvent') hack - test now proves real production behavior
 
         // Act: Get broadcast channels
         $printOrderEvent = new PrintOrder($deviceOrder);
@@ -182,7 +182,7 @@ class PrintEventBroadcastContractTest extends TestCase
         $printEvent = PrintEvent::factory()->create(['device_order_id' => $deviceOrder->id]);
         
         $deviceOrder->refresh();
-        $deviceOrder->setRelation('printEvent', $printEvent);
+        // PHASE 2: Removed setRelation('printEvent') hack - test now proves real production behavior
 
         // Act: Get broadcast event names
         $printOrderEvent = new PrintOrder($deviceOrder);
@@ -203,7 +203,7 @@ class PrintEventBroadcastContractTest extends TestCase
         $printEvent = PrintEvent::factory()->create(['device_order_id' => $deviceOrder->id]);
         
         $deviceOrder->refresh();
-        $deviceOrder->setRelation('printEvent', $printEvent);
+        // PHASE 2: Removed setRelation('printEvent') hack - test now proves real production behavior
 
         // Act: Create broadcast event
         $event = new PrintOrder($deviceOrder);

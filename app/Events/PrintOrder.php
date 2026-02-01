@@ -45,6 +45,8 @@ class PrintOrder implements ShouldBroadcastNow
             'print_type' => 'INITIAL',
             'refill_number' => null,
             'tablename' => $this->deviceOrder->table?->name,
+            'guest_count' => $this->deviceOrder->guest_count,
+            'order_number' => $this->deviceOrder->order_number,
             'created_at' => $this->deviceOrder->created_at->toIso8601String(),
             'order' => $this->deviceOrder->only([
                 'id',

@@ -18,8 +18,8 @@ use App\Services\PrintEventService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class PrinterApiController extends Controller
 {
@@ -226,7 +226,7 @@ class PrinterApiController extends Controller
 
         $eventsQuery = PrintEvent::where('is_acknowledged', false)
             ->when($since, fn ($q) => $q->where('created_at', '>', $since))
-            ->with(['deviceOrder', 'deviceOrder.items.menu'])
+            ->with(['deviceOrder', 'deviceOrder.items.menu', 'deviceOrder.table'])
             ->orderBy('created_at', 'asc');
 
         // Restrict to events for the same branch as the authenticated device
@@ -260,6 +260,9 @@ class PrinterApiController extends Controller
                 'print_type' => $e->event_type,
                 'meta' => $e->meta,
                 'created_at' => $e->created_at instanceof \DateTimeInterface ? $e->created_at->format(DATE_ATOM) : null,
+                'tablename' => $e->deviceOrder?->table?->name ?? null,
+                'guest_count' => $e->deviceOrder?->guest_count ?? null,
+                'order_number' => $e->deviceOrder?->order_number ?? null,
                 'order' => $e->deviceOrder ? [
                     'id' => $e->deviceOrder->id,
                     'order_id' => $e->deviceOrder->order_id,
@@ -267,6 +270,8 @@ class PrinterApiController extends Controller
                     'device_id' => $e->deviceOrder->device_id,
                     'status' => $e->deviceOrder->status,
                     'total' => $e->deviceOrder->total,
+                    'guest_count' => $e->deviceOrder->guest_count,
+                    'created_at' => $e->deviceOrder->created_at instanceof \DateTimeInterface ? $e->deviceOrder->created_at->format(DATE_ATOM) : null,
                 ] : null,
                 'items' => $e->deviceOrder?->items?->map(fn ($it) => [
                     'id' => $it->id,
@@ -291,8 +296,19 @@ class PrinterApiController extends Controller
      */
     public function ackPrintEvent(AckPrintEventRequest $request, int $id)
     {
+        Log::info("[ACK] Received request for print_event_id=$id", [
+            'ip' => $request->ip(),
+            'payload' => $request->all(),
+        ]);
+
         // Optional auth for relay device emergency mode
         $device = Auth::guard('device')->user();
+        
+        Log::info("[ACK] Device auth status", [
+            'authenticated' => $device !== null,
+            'device_id' => $device?->id,
+            'device_name' => $device?->name,
+        ]);
 
         $printerId = $request->input('printer_id');
         $printerName = $request->input('printer_name');
@@ -302,15 +318,32 @@ class PrinterApiController extends Controller
 
         try {
             $evt = $this->printEventService->getById($id);
+            Log::info("[ACK] PrintEvent found", [
+                'print_event_id' => $evt->id,
+                'order_id' => $evt->device_order_id,
+                'already_acked' => $evt->is_acknowledged,
+            ]);
         } catch (\Throwable $e) {
+            Log::error("[ACK] PrintEvent not found: $id", ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Event not found'], 404);
         }
 
         // Authorize device for this event (passes device for branch check)
-        $this->authorizeDeviceForEvent($evt, $device);
+        try {
+            $this->authorizeDeviceForEvent($evt, $device);
+            Log::info("[ACK] Authorization passed");
+        } catch (\Throwable $e) {
+            Log::error("[ACK] Authorization failed", [
+                'print_event_id' => $id,
+                'device_id' => $device?->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         // Check idempotency: if already acknowledged, return success with was_updated=false
         if ($evt->is_acknowledged) {
+            Log::info("[ACK] Already acknowledged, returning success");
             return response()->json([
                 'success' => true,
                 'message' => 'Already acknowledged',
@@ -323,6 +356,9 @@ class PrinterApiController extends Controller
         }
 
         $res = $this->printEventService->ack($id, $printerId, $printedAt, $device?->id, $printerName);
+        Log::info("[ACK] Successfully acknowledged print_event_id=$id", [
+            'was_updated' => $res['was_updated'],
+        ]);
 
         // Update device heartbeat (only if authenticated)
         if ($device) {
@@ -330,6 +366,7 @@ class PrinterApiController extends Controller
             if ($appVersion) {
                 $device->app_version = $appVersion;
             }
+            /** @var \App\Models\Device $device */
             $device->save();
         }
 
@@ -378,13 +415,14 @@ class PrinterApiController extends Controller
             ]);
         }
 
-        $res = $this->printEventService->fail($id, $error, $device->id);
+        $res = $this->printEventService->fail($id, $error, $device?->id);
 
         // Update device heartbeat
         $device->last_seen_at = now();
         if ($appVersion) {
             $device->app_version = $appVersion;
         }
+        /** @var \App\Models\Device $device */
         $device->save();
 
         return response()->json([

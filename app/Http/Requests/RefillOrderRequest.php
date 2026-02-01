@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 use App\Models\Krypton\Menu as KryptonMenu;
 
 /**
@@ -122,7 +123,7 @@ class RefillOrderRequest extends FormRequest
                         );
                     }
                 } catch (\Throwable $e) {
-                    \Log::error('Refill validation error', ['error' => $e->getMessage(), 'item' => $name]);
+                    Log::error('Refill validation error', ['error' => $e->getMessage(), 'item' => $name]);
                     $validator->errors()->add(
                         "items.{$index}.name",
                         "Unable to verify refill eligibility for '{$name}'."

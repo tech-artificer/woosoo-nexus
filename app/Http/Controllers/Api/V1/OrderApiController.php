@@ -15,6 +15,7 @@ use App\Events\Order\OrderPrinted;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\PrintEventService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderApiController extends Controller
 {
@@ -156,6 +157,12 @@ class OrderApiController extends Controller
      */
     public function refill(RefillOrderRequest $request, int $orderId)
     {
+        Log::info("[REFILL] Received refill request", [
+            'order_id' => $orderId,
+            'ip' => $request->ip(),
+            'items_count' => count($request->input('items', [])),
+        ]);
+
         // RefillOrderRequest automatically validates items
         $validatedData = $request->validated();
 
@@ -242,19 +249,19 @@ class OrderApiController extends Controller
             // Build metadata for broadcast (menu names, quantities).
             // Batch-load menu names to prevent N+1 queries.
             $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
-            \Log::info('Refill menu IDs extracted', ['menu_ids' => $menuIds]);
+            Log::info('Refill menu IDs extracted', ['menu_ids' => $menuIds]);
             
             $menuNames = !empty($menuIds)
                 ? \App\Models\Krypton\Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id')
                 : collect();
             
-            \Log::info('Refill menu names loaded', ['menu_names' => $menuNames->toArray()]);
+            Log::info('Refill menu names loaded', ['menu_names' => $menuNames->all()]);
             
             $metaItems = collect($posItems)->map(function($item) use ($menuNames) {
                 $menuId = $item->menu_id;
                 $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
                 
-                \Log::info('Refill item mapping', [
+                Log::info('Refill item mapping', [
                     'menu_id' => $menuId,
                     'item_name' => $item->name ?? null,
                     'item_receipt_name' => $item->receipt_name ?? null,
@@ -269,7 +276,7 @@ class OrderApiController extends Controller
                 ];
             })->values()->all();
             
-            \Log::info('Refill metaItems constructed', ['meta_items' => $metaItems]);
+            Log::info('Refill metaItems constructed', ['meta_items' => $metaItems]);
 
             // Build local payload for each POS item.
             // Each payload mirrors a POS ordered_menu into local device_order_items.
@@ -315,17 +322,17 @@ class OrderApiController extends Controller
                         // After successful local transaction, schedule print/broadcast.
                         DB::afterCommit(function () use ($deviceOrder, $metaItems, $posItems) {
                             try {
-                                app(PrintEventService::class)->createForOrder(
-                                    $deviceOrder,
-                                    'REFILL',
-                                    ['items' => $metaItems]
-                                );
-                            } catch (\Throwable $e) {
-                                report($e);
-                            }
-
-                            try {
-                                PrintRefill::dispatch($deviceOrder, $posItems);
+                                // PHASE 2 FIX (C1): Wrap PrintEvent::create() + broadcast in transaction
+                                DB::transaction(function () use ($deviceOrder, $metaItems, $posItems) {
+                                    app(PrintEventService::class)->createForOrder(
+                                        $deviceOrder,
+                                        'REFILL',
+                                        ['items' => $metaItems]
+                                    );
+                                    // Reload to pick up printEvent relation
+                                    $deviceOrder->refresh();
+                                    PrintRefill::dispatch($deviceOrder, $posItems);
+                                });
                             } catch (\Throwable $e) {
                                 report($e);
                             }

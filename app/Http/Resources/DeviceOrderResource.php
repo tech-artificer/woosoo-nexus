@@ -46,6 +46,8 @@ class DeviceOrderResource extends BaseResource
             'is_printed' => $this->is_printed ?? false,
             'printed_at' => $this->printed_at?->toIso8601String(),
             'printed_by' => $this->printed_by ?? null,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
             'items' => collect($this->items)->map(function ($it) use ($isTesting) {
                 $menuName = null;
                 if (! $isTesting) {
@@ -59,13 +61,23 @@ class DeviceOrderResource extends BaseResource
                 return [
                     'id' => $it->id,
                     'menu_id' => $it->menu_id,
+                    'menu' => ! $isTesting ? [
+                        'id' => $it->menu?->id ?? null,
+                        'name' => $it->menu?->name ?? null,
+                        'receipt_name' => $it->menu?->receipt_name ?? null,
+                    ] : null,
                     'name' => $menuName,
                     'status' => $it->status,
                     'quantity' => $it->quantity ?? null,
                     'price' => $it->price ?? null,
                     'subtotal' => $it->subtotal ?? null,
+                    'tax' => $it->tax ?? null,
+                    'total' => $it->total ?? null,
+                    'notes' => $it->notes ?? null,
                     'note' => $it->notes ?? null,
+                    'is_refill' => $it->is_refill ?? false,
                     'printed' => $it->is_printed ?? false,
+                    'created_at' => $it->created_at?->toIso8601String(),
                 ];
             })->values()->all(),
             'print_events' => $this->whenLoaded('printEvents', function () {
