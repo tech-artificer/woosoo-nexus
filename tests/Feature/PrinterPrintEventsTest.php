@@ -42,6 +42,276 @@ class PrinterPrintEventsTest extends TestCase
         $this->assertTrue(Cache::has('printer:heartbeat:PR1'));
     }
 
+    public function test_heartbeat_updates_device_last_seen_at()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.2', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $before = now()->subMinutes(5);
+        $device->update(['last_seen_at' => $before]);
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/printer/heartbeat', [
+                'printer_id' => 'PR2',
+                'printer_name' => 'Test Printer',
+            ])
+            ->assertStatus(200);
+
+        $device->refresh();
+        $this->assertNotNull($device->last_seen_at);
+        $this->assertTrue($device->last_seen_at->isAfter($before));
+    }
+
+    public function test_heartbeat_updates_device_app_version()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.3', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/printer/heartbeat', [
+                'printer_id' => 'PR3',
+                'app_version' => '2.5.0',
+            ])
+            ->assertStatus(200);
+
+        $device->refresh();
+        $this->assertEquals('2.5.0', $device->app_version);
+    }
+
+    public function test_heartbeat_updates_device_status()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.4', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/printer/heartbeat', [
+                'printer_id' => 'PR4',
+                'status' => 'printer_connected',
+            ])
+            ->assertStatus(200);
+
+        $device->refresh();
+        $this->assertEquals('printer_connected', $device->status);
+    }
+
+    public function test_heartbeat_rejects_device_id_mismatch()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.5', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/printer/heartbeat', [
+                'device_id' => 99999,  // Wrong device ID
+                'printer_id' => 'PR5',
+            ])
+            ->assertStatus(403);
+    }
+
+    public function test_heartbeat_rejects_invalid_status()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.6', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/printer/heartbeat', [
+                'printer_id' => 'PR6',
+                'status' => 'invalid_status',  // Not in enum
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('status');
+    }
+
+    public function test_heartbeat_requires_authentication()
+    {
+        $this->postJson('/api/printer/heartbeat', [
+            'printer_id' => 'PR7',
+        ])
+        ->assertStatus(401);
+    }
+
+    public function test_admin_can_query_online_devices_by_last_seen_at()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        
+        // Online device (seen recently)
+        $onlineDevice = Device::create([
+            'name' => 'online-device',
+            'ip_address' => '127.0.0.7',
+            'branch_id' => $branch->id,
+            'last_seen_at' => now(),
+        ]);
+        
+        // Offline device (not seen in 5 minutes)
+        $offlineDevice = Device::create([
+            'name' => 'offline-device',
+            'ip_address' => '127.0.0.8',
+            'branch_id' => $branch->id,
+            'last_seen_at' => now()->subMinutes(5),
+        ]);
+
+        // Query for devices seen in last 2 minutes
+        $onlineDevices = Device::where('last_seen_at', '>=', now()->subMinutes(2))->get();
+        
+        $this->assertTrue($onlineDevices->contains($onlineDevice));
+        $this->assertFalse($onlineDevices->contains($offlineDevice));
+    }
+
+    public function test_polling_returns_only_unacked_events()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'PollBranch', 'location' => 'P']);
+        $device = Device::create(['name' => 'device-poll', 'ip_address' => '127.0.0.11', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 12121,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 2,
+            'total' => 20,
+            'subtotal' => 20,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $order->branch_id = $device->branch_id;
+        $order->save();
+
+        $acked = PrintEvent::factory()->create([
+            'device_order_id' => $order->id,
+            'is_acknowledged' => true,
+        ]);
+        $unacked = PrintEvent::factory()->create([
+            'device_order_id' => $order->id,
+            'is_acknowledged' => false,
+        ]);
+
+        $resp = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/printer/unprinted-events');
+
+        $resp->assertStatus(200)->assertJsonPath('count', 1);
+        $eventIds = collect($resp->json('events'))->pluck('id')->all();
+        $this->assertContains($unacked->id, $eventIds);
+        $this->assertNotContains($acked->id, $eventIds);
+    }
+
+    public function test_polling_respects_since_parameter()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'SinceBranch', 'location' => 'S']);
+        $device = Device::create(['name' => 'device-since', 'ip_address' => '127.0.0.12', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 13131,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $order->branch_id = $device->branch_id;
+        $order->save();
+
+        $base = Carbon::parse('2026-01-01 11:00:00', 'UTC');
+        $oldEvent = PrintEvent::factory()->create([
+            'device_order_id' => $order->id,
+            'is_acknowledged' => false,
+            'created_at' => $base->copy()->subHour(),
+        ]);
+        $newEvent = PrintEvent::factory()->create([
+            'device_order_id' => $order->id,
+            'is_acknowledged' => false,
+            'created_at' => $base->copy()->addHour(),
+        ]);
+
+        $resp = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/printer/unprinted-events?since=2026-01-01%2011:00:00');
+
+        $resp->assertStatus(200)->assertJsonPath('count', 1);
+        $eventIds = collect($resp->json('events'))->pluck('id')->all();
+        $this->assertNotContains($oldEvent->id, $eventIds);
+        $this->assertContains($newEvent->id, $eventIds);
+    }
+
+    public function test_polling_alias_route_works()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'AliasBranch', 'location' => 'A']);
+        $device = Device::create(['name' => 'device-alias', 'ip_address' => '127.0.0.13', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 14141,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $order->branch_id = $device->branch_id;
+        $order->save();
+
+        $evt = PrintEvent::factory()->create([
+            'device_order_id' => $order->id,
+            'is_acknowledged' => false,
+        ]);
+
+        $primary = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/printer/unprinted-events');
+
+        $alias = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/print-events/unprinted');
+
+        $primary->assertStatus(200);
+        $alias->assertStatus(200);
+        $primaryIds = collect($primary->json('events'))->pluck('id')->all();
+        $aliasIds = collect($alias->json('events'))->pluck('id')->all();
+        $this->assertEqualsCanonicalizing($primaryIds, $aliasIds);
+        $this->assertContains($evt->id, $aliasIds);
+    }
+
+    public function test_polling_requires_device_token()
+    {
+        $this->getJson('/api/printer/unprinted-events')
+            ->assertStatus(401);
+    }
+
+    public function test_device_uuid_immutable()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'UuidBranch', 'location' => 'U']);
+        $device = Device::create(['name' => 'device-uuid', 'ip_address' => '127.0.0.14', 'branch_id' => $branch->id]);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Device UUID is immutable');
+
+        $device->device_uuid = '00000000-0000-0000-0000-000000000000';
+        $device->save();
+    }
+
     public function test_ack_forbidden_for_wrong_device_branch()
     {
         // Branch A with order/event

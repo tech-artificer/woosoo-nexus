@@ -44,19 +44,26 @@ const categoriesFromPage = (page && (page.props as any).categories) ? (page.prop
 <template>
     <Head :title="title" :description="description" />
     
-   <AppLayout :breadcrumbs="breadcrumbs">    
-    <!-- <pre> {{ menus }} </pre> -->
-          <div class="space-y-6">
-                 <div>
-                     <h1 class="text-2xl font-bold tracking-tight">Menu Management</h1>
-                     <p class="text-muted-foreground">Manage menu items and availability</p>
-                 </div>
-                 <!-- Filters moved into Menus DataTable toolbar -->
-                 <StatsCards :cards="(stats ?? [
-                     { title: 'Total Menus', value: (menus || []).length, subtitle: 'All menu items', variant: 'primary' },
-                     { title: 'Available', value: (menus || []).filter(m => m.is_available).length, subtitle: 'Currently available', variant: 'accent' },
-                 ])" />
-                 <DataTable :data="menus" :columns="columns" />
-          </div>
+   <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex h-full flex-1 flex-col gap-6">
+            <!-- Header Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h1 class="text-2xl font-semibold text-gray-900">Menu Management</h1>
+                <p class="text-sm text-gray-500 mt-1">Manage menu items and availability</p>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <StatsCards :cards="(stats ?? [
+                    { title: 'Total Menus', value: (menus || []).length, subtitle: 'All menu items', variant: 'primary' },
+                    { title: 'Available', value: (menus || []).filter(m => m.is_available).length, subtitle: 'Currently available', variant: 'accent' },
+                ])" />
+            </div>
+
+            <!-- Menu Table Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <DataTable :data="menus" :columns="columns" />
+            </div>
+        </div>
     </AppLayout>
 </template>

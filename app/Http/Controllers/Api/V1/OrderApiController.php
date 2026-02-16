@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RefillOrderRequest;
 use App\Models\DeviceOrder;
 use Illuminate\Http\Request;
 use App\Models\Krypton\TerminalSession;
@@ -12,7 +13,9 @@ use App\Events\PrintRefill;
 use App\Events\PrintOrder;
 use App\Events\Order\OrderPrinted;
 use App\Services\Krypton\KryptonContextService;
+use App\Services\PrintEventService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderApiController extends Controller
 {
@@ -88,9 +91,12 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
+        // Eager-load relationships to prevent N+1 queries
+        $order->loadMissing(['items.menu', 'table', 'device']);
+
         return response()->json([
             'success' => true,
-            'order' => $order
+            'order' => new \App\Http\Resources\DeviceOrderResource($order)
         ]);
     }
 
@@ -99,7 +105,7 @@ class OrderApiController extends Controller
      */
     public function showByExternalId(Request $request, string $orderId)
     {
-        $order = DeviceOrder::where(['order_id' => $orderId])->first();
+        $order = DeviceOrder::with(['items.menu', 'table', 'device'])->where(['order_id' => $orderId])->first();
         if (! $order) {
             return response()->json([ 'success' => false, 'message' => 'Order not found' ], 404);
         }
@@ -116,7 +122,7 @@ class OrderApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'order' => $order,
+            'order' => new \App\Http\Resources\DeviceOrderResource($order),
         ]);
     }
 
@@ -146,12 +152,19 @@ class OrderApiController extends Controller
 
     /**
      * Persist refill items and dispatch print event.
+     * 
+     * Validates that items are refillable (meats/sides only).
      */
-    public function refill(Request $request, int $orderId)
+    public function refill(RefillOrderRequest $request, int $orderId)
     {
-        $request->validate([
-            'items' => 'required|array',
+        Log::info("[REFILL] Received refill request", [
+            'order_id' => $orderId,
+            'ip' => $request->ip(),
+            'items_count' => count($request->input('items', [])),
         ]);
+
+        // RefillOrderRequest automatically validates items
+        $validatedData = $request->validated();
 
         $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
         if (! $deviceOrder) {
@@ -170,7 +183,7 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
-        $incomingItems = $request->input('items', []);
+        $incomingItems = $validatedData['items'] ?? [];
         $mappedItems = [];
 
         foreach ($incomingItems as $i => $it) {
@@ -204,7 +217,7 @@ class OrderApiController extends Controller
             ];
         }
 
-        $kctx = new KryptonContextService();
+        $kctx = app(KryptonContextService::class);
         $kdata = $kctx->getData();
 
         $attrs = [
@@ -216,13 +229,136 @@ class OrderApiController extends Controller
             'items' => $mappedItems,
         ];
 
-        try {
-            $created = CreateOrderedMenu::run($attrs);
+        // Run POS-side inserts. Controller handles local mirroring and retries.
+        $attrs['mirror_local'] = false;
+        $created = CreateOrderedMenu::run($attrs);
 
-            try {
-                PrintRefill::dispatch($deviceOrder, $created);
-            } catch (\Throwable $e) {
-                report($e);
+        // Normalize created items: POS returns raw ordered_menu records.
+        // Extract them into objects for consistent handling.
+        $posItems = collect($created)->map(function ($it) {
+            if (is_array($it)) return (object) $it;
+            return $it;
+        })->values()->all();
+
+        // Guard: if no items created in POS, nothing to mirror locally
+        if (empty($posItems)) {
+            return response()->json(['success' => true, 'created' => []]);
+        }
+
+        try {
+            // Build metadata for broadcast (menu names, quantities).
+            // Batch-load menu names to prevent N+1 queries.
+            $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
+            Log::info('Refill menu IDs extracted', ['menu_ids' => $menuIds]);
+            
+            $menuNames = !empty($menuIds)
+                ? \App\Models\Krypton\Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id')
+                : collect();
+            
+            Log::info('Refill menu names loaded', ['menu_names' => $menuNames->all()]);
+            
+            $metaItems = collect($posItems)->map(function($item) use ($menuNames) {
+                $menuId = $item->menu_id;
+                $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
+                
+                Log::info('Refill item mapping', [
+                    'menu_id' => $menuId,
+                    'item_name' => $item->name ?? null,
+                    'item_receipt_name' => $item->receipt_name ?? null,
+                    'lookup_name' => $menuNames->get($menuId),
+                    'final_name' => $menuName ?? "Menu #{$menuId}",
+                ]);
+                
+                return [
+                    'menu_id' => $menuId,
+                    'quantity' => $item->quantity ?? 1,
+                    'name' => $menuName ?? "Menu #{$menuId}",
+                ];
+            })->values()->all();
+            
+            Log::info('Refill metaItems constructed', ['meta_items' => $metaItems]);
+
+            // Build local payload for each POS item.
+            // Each payload mirrors a POS ordered_menu into local device_order_items.
+            $localPayloads = [];
+            foreach ($posItems as $pos) {
+                $menuId = $pos->menu_id;
+                $quantity = $pos->quantity ?? 1;
+                $price = $pos->price ?? ($pos->unit_price ?? 0.00);
+                $subtotal = $pos->sub_total ?? ($pos->subtotal ?? ($price * $quantity));
+                $tax = $pos->tax ?? 0.00;
+                $total = $pos->total ?? $subtotal;
+
+                $localPayloads[] = [
+                    'order_id' => $deviceOrder->id,      // FK to device_orders.id
+                    'ordered_menu_id' => $pos->id,  // POS ordered_menu record ID
+                    'menu_id' => $menuId,            // FK to menus table
+                    'quantity' => $quantity,
+                    'price' => $price,
+                    'subtotal' => $subtotal,
+                    'tax' => $tax,
+                    'total' => $total,
+                    'notes' => $pos->note ?? null,
+                    'seat_number' => $pos->seat_number ?? 1,
+                    'index' => $pos->index ?? 1,
+                    // Note: is_refill column removed - table doesn't have it
+                ];
+            }
+
+            // Mirror POS rows into local device_order_items with retry logic.
+            // POS-first contract: if POS succeeded, local mirror MUST succeed (with retries).
+            // After local success, dispatch print/broadcast events.
+            $maxAttempts = 3;
+            $attempt = 0;
+
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                try {
+                    DB::transaction(function () use ($deviceOrder, $posItems, $metaItems, $localPayloads) {
+                        // Batch insert all payloads in one query.
+                        if (!empty($localPayloads)) {
+                            \App\Models\DeviceOrderItems::query()->insert($localPayloads);
+                        }
+
+                        // After successful local transaction, schedule print/broadcast.
+                        DB::afterCommit(function () use ($deviceOrder, $metaItems, $posItems) {
+                            try {
+                                // PHASE 2 FIX (C1): Wrap PrintEvent::create() + broadcast in transaction
+                                DB::transaction(function () use ($deviceOrder, $metaItems, $posItems) {
+                                    app(PrintEventService::class)->createForOrder(
+                                        $deviceOrder,
+                                        'REFILL',
+                                        ['items' => $metaItems]
+                                    );
+                                    // Reload to pick up printEvent relation
+                                    $deviceOrder->refresh();
+                                    PrintRefill::dispatch($deviceOrder, $posItems);
+                                });
+                            } catch (\Throwable $e) {
+                                report($e);
+                            }
+                        });
+                    });
+
+                    // Success — break retry loop
+                    break;
+                } catch (\Throwable $e) {
+                    if ($attempt >= $maxAttempts) {
+                        \Illuminate\Support\Facades\Log::error('Refill local mirror failed after max retries', [
+                            'order_id' => $orderId,
+                            'device_order_id' => $deviceOrder->id,
+                            'attempt' => $attempt,
+                            'error' => $e->getMessage(),
+                        ]);
+                        throw $e;
+                    }
+                    // Log retry attempt (no sleep; immediate retry)
+                    \Illuminate\Support\Facades\Log::warning('Refill local mirror retry', [
+                        'order_id' => $orderId,
+                        'device_order_id' => $deviceOrder->id,
+                        'attempt' => $attempt,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             return response()->json(['success' => true, 'created' => $created]);

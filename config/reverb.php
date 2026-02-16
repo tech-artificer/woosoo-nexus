@@ -29,13 +29,11 @@ return [
     'servers' => [
 
         'reverb' => [
-            'host' => env('REVERB_SERVER_HOST', 'http://127.0.0.1'),
+            'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
             'port' => env('REVERB_SERVER_PORT', 6001),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
-            'options' => [
-                'tls' => [],
-            ],
+            'options' => [],
             'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 10_000),
             'scaling' => [
                 'enabled' => env('REVERB_SCALING_ENABLED', false),
@@ -84,8 +82,8 @@ return [
                 'options' => [
                     'host' => env('REVERB_HOST'),
                     'port' => env('REVERB_PORT', 6001),
-                    'scheme' => env('REVERB_SCHEME', 'https'),
-                    'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                    'scheme' => env('REVERB_SCHEME', 'http'),
+                    'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
                 ],
                 'allowed_origins' => ['*'],
                 'capacity' => null,

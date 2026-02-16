@@ -25,6 +25,7 @@ import { ref, computed } from 'vue'
 import type { DeviceOrder } from '@/types/models';
 import { toast } from 'vue-sonner'
 import KitchenTicket from '@/components/KitchenTicket.vue'
+import OrderDetails from '@/components/Orders/OrderDetails.vue'
 
 interface DataTableRowActionsProps {
   row: Row<DeviceOrder>
@@ -43,6 +44,8 @@ const posDialogOrderId = ref<number | string | null>(null);
 const posDialogSessionId = ref<number | null>(null);
 const showViewDialog = ref(false);
 const viewDialogOrder = ref<any | null>(null);
+const viewDialogLoading = ref(false);
+const viewDialogError = ref<string | null>(null);
 // control sheet open state
 // const isSheetOpen = ref(false)
 
@@ -135,8 +138,45 @@ const posFillDo = (isVoided: boolean) => {
 }
 
 const openViewDialog = (order: any) => {
-  viewDialogOrder.value = order
   showViewDialog.value = true
+  viewDialogOrder.value = null
+  viewDialogError.value = null
+  viewDialogLoading.value = true
+
+  const orderId = order?.id
+  if (!orderId) {
+    viewDialogError.value = 'Missing order id.'
+    viewDialogLoading.value = false
+    return
+  }
+
+  // Use fetch for JSON API endpoint
+  fetch(`/orders/${orderId}`, {
+    credentials: 'same-origin',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Accept': 'application/json'
+    }
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      return response.json()
+    })
+    .then(data => {
+      viewDialogOrder.value = data?.order ?? null
+      if (!viewDialogOrder.value) {
+        viewDialogError.value = 'Order data not found in response.'
+      }
+    })
+    .catch(error => {
+      console.warn('Failed to fetch order details', error)
+      viewDialogError.value = `Failed to load order details: ${error.message}`
+    })
+    .finally(() => {
+      viewDialogLoading.value = false
+    })
 }
 
 </script>
@@ -145,7 +185,7 @@ const openViewDialog = (order: any) => {
 
 <DropdownMenu>
   <DropdownMenuTrigger as-child>
-    <Button variant="ghost" class="h-8 w-8 p-0">
+    <Button variant="ghost" class="h-8 w-8 p-0" aria-label="Open order actions menu">
       <span class="sr-only">Open menu</span>
       <MoreHorizontal class="h-4 w-4" />
     </Button>
@@ -163,7 +203,7 @@ const openViewDialog = (order: any) => {
       Trigger POS Test Update
     </DropdownMenuItem>
     <DropdownMenuItem @click.prevent="openViewDialog(computedOrder)">
-      View Order
+      View Details
     </DropdownMenuItem>
     <DropdownMenuSeparator />
     <DropdownMenuItem @click="voidOrder">
@@ -174,32 +214,14 @@ const openViewDialog = (order: any) => {
 
 <!-- View Order dialog -->
 <Dialog v-model:open="showViewDialog">
-  <DialogContent class="max-w-lg">
+  <DialogContent class="max-w-4xl">
     <DialogHeader>
       <DialogTitle>Order Details</DialogTitle>
-      <DialogDescription>View device order metadata and items</DialogDescription>
+      <DialogDescription>Full order details, items, and refill history</DialogDescription>
     </DialogHeader>
 
-    <div class="mt-4 space-y-3 text-sm">
-      <div><strong>Order #:</strong> {{ viewDialogOrder?.order_number }}</div>
-      <div><strong>Status:</strong> {{ viewDialogOrder?.status }}</div>
-      <div><strong>Guests:</strong> {{ viewDialogOrder?.guest_count }}</div>
-      <div><strong>Created:</strong> {{ viewDialogOrder?.created_at }}</div>
-      <div><strong>Subtotal:</strong> {{ viewDialogOrder?.subtotal ?? viewDialogOrder?.meta?.order_check?.subtotal ?? '-' }}</div>
-      <div><strong>Total:</strong> {{ viewDialogOrder?.total ?? viewDialogOrder?.meta?.order_check?.total_amount ?? '-' }}</div>
-    </div>
-
     <div class="mt-4">
-      <p class="text-sm font-medium">Items</p>
-      <div class="mt-2 divide-y">
-        <div v-for="(it, idx) in (viewDialogOrder?.items || [])" :key="idx" class="py-2">
-          <div class="flex justify-between">
-            <div class="text-sm">{{ it.name }}</div>
-            <div class="text-sm">Qty: {{ it.quantity }}</div>
-          </div>
-          <div class="text-xs text-muted-foreground">Price: {{ it.price ?? it.unit_price ?? '-' }} | Note: {{ it.note || '-' }}</div>
-        </div>
-      </div>
+      <OrderDetails :order="viewDialogOrder" :loading="viewDialogLoading" :error="viewDialogError" />
     </div>
 
     <DialogFooter class="mt-4">

@@ -11,17 +11,20 @@ use App\Http\Controllers\Admin\{
     MenuController,
     UserController,
     Device\DeviceController,
+    ManualController,
     AccessibilityController,
     RoleController,
     PermissionController,
     BranchController,
-    ReverbController
+    ReverbController,
+    MonitoringController
 };
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\EventLogController;
 
 use App\Http\Controllers\Admin\Reports\{
     SalesController,
+    ReportController,
 };
 
   
@@ -42,6 +45,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['can:admin'])->group(function () {
         // Orders
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
         Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
@@ -78,6 +82,13 @@ Route::middleware(['auth'])->group(function () {
             Route::post('bulk-restore', [BranchController::class, 'bulkRestore'])->name('bulk-restore');
         });
 
+        Route::get('/devices/download-apk/{channel?}', [DeviceController::class, 'downloadApk'])
+            ->where('channel', 'release|debug')
+            ->name('devices.download-apk');
+
+        Route::get('/devices/download-certificate', [DeviceController::class, 'downloadCertificate'])
+            ->name('devices.download-certificate');
+
         Route::resource('/devices', DeviceController::class);
         Route::prefix('devices')->name('devices.')->group(function () {
             Route::get('trashed', [DeviceController::class, 'trashed'])->name('trashed');
@@ -93,6 +104,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/service-requests', [ServiceRequestController::class, 'index'])->name('service-requests.index');
         // Event logs viewer
         Route::get('/event-logs', [EventLogController::class, 'index'])->name('event-logs.index');
+
+        // Admin manual
+        Route::get('/manual', [ManualController::class, 'index'])->name('manual.index');
+        Route::get('/manual/{id}/edit', [ManualController::class, 'edit'])->name('manual.edit');
+        Route::put('/manual/{id}', [ManualController::class, 'update'])->name('manual.update');
+        Route::post('/manual/upload-image', [ManualController::class, 'uploadImage'])->name('manual.upload.image');
 
         // Reverb Service Management
         Route::prefix('reverb')->name('reverb.')->group(function () {
@@ -145,13 +162,25 @@ Route::middleware(['auth'])->group(function () {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
             }
         })->name('pos.fill-order');
+
+        // Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/daily-sales', [ReportController::class, 'dailySales'])->name('daily-sales');
+            Route::get('/menu-items', [ReportController::class, 'menuItems'])->name('menu-items');
+            Route::get('/hourly-sales', [ReportController::class, 'hourlySales'])->name('hourly-sales');
+            Route::get('/guest-count', [ReportController::class, 'guestCount'])->name('guest-count');
+            Route::get('/print-audit', [ReportController::class, 'printAudit'])->name('print-audit');
+            Route::get('/order-status', [ReportController::class, 'orderStatus'])->name('order-status');
+            Route::get('/discount-tax', [ReportController::class, 'discountTax'])->name('discount-tax');
+        });
     });
-    
-    // Route::prefix('reports')->group(function () {
-    //     Route::get('/sales', [SalesController::class, 'index'])->name('reports.sales'); 
-    //     // Route::get('{type}', [ReportController::class, 'index'])->name('reports.index'); 
-    //     // Route::get('{type}/export', [ReportController::class, 'export']); // CSV export
-    // });
+
+    // Monitoring
+    Route::prefix('monitoring')->name('monitoring.')->group(function () {
+        Route::get('/', [MonitoringController::class, 'index'])->name('index');
+        Route::get('/metrics', [MonitoringController::class, 'metrics'])->name('metrics');
+        Route::post('/purge-print-events', [MonitoringController::class, 'purgePrintEvents'])->name('purge-print-events');
+    });
 
 });
 

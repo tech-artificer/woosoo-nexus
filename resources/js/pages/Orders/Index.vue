@@ -39,9 +39,14 @@ const props = defineProps<OrdersPageProps>()
 
 const orders = props.orders ?? []
 const orderHistory = props.orderHistory ?? []
-const stats = props.stats ?? null
 const devices = props.devices ?? []
 const tables = props.tables ?? []
+
+// Computed stats cards
+const statsCards = [
+  { title: 'Live Orders', value: orders.length ?? 0, subtitle: 'Pending and in-progress', variant: 'primary' as const },
+  { title: 'Order History', value: orderHistory.length ?? 0, subtitle: 'Completed/voided', variant: 'default' as const },
+]
 
 // Keep a reactive local copy of orders so we can update in-place on Echo events
 const localOrders = ref(Array.isArray(orders) ? [...orders] : [])
@@ -50,22 +55,6 @@ const localOrderHistory = ref(Array.isArray(orderHistory) ? [...orderHistory] : 
 // Track which order IDs have active print animations to prevent duplicate animations
 const animatedOrderIds = new Set<number>()
 
-// Test function to verify reactivity is working
-const testAddOrder = () => {
-  const testOrder = {
-    id: Date.now(),
-    order_id: Date.now(),
-    order_number: `TEST-${Date.now()}`,
-    status: 'confirmed',
-    total: 100,
-    created_at: new Date().toISOString(),
-    device: { id: 1, name: 'Test Device' },
-    table: { id: 1, name: 'Test Table' },
-  }
-  console.log('Adding test order:', testOrder)
-  localOrders.value = [testOrder, ...localOrders.value]
-  console.log('localOrders now has', localOrders.value.length, 'items')
-}
 
 // DataTable handles all client-side column filtering
 
@@ -366,42 +355,42 @@ onUnmounted(() => {
 
 <template>
     <Head :title="title" :description="description" />
-   
-    <AppLayout :breadcrumbs="breadcrumbs">   
-      <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
-        <Tabs default-value="live_orders" class="">
-                <TabsList class="grid w-full grid-cols-2">
-                    <TabsTrigger value="live_orders">
-                        Live Orders
-                    </TabsTrigger>
-                    <TabsTrigger value="order_history">
-                        Order History
-                    </TabsTrigger>
-                </TabsList>
-                <TabsContent value="live_orders" class="p-2">
-                  <!-- Filters have been moved into the Orders DataTable toolbar -->
-                  <div class="flex items-center justify-between mb-3">
-                    <StatsCards :cards="(stats ?? [
-                      { title: 'Live Orders', value: localOrders.length ?? 0, subtitle: 'Pending and in-progress', variant: 'primary' },
-                      { title: 'Order History', value: localOrderHistory.length ?? 0, subtitle: 'Completed/voided', variant: 'default' },
-                    ])" />
 
-                    <!-- Debug button to test reactivity -->
-                    <button 
-                      v-if="user?.is_admin" 
-                      @click="testAddOrder" 
-                      class="px-3 py-2 rounded bg-blue-500 text-white text-sm ml-4"
-                    >
-                      Test Add Order
-                    </button>
-                  </div>
+    <AppLayout :breadcrumbs="breadcrumbs">
+      <div class="flex h-full flex-1 flex-col gap-6">
+        <!-- Header Section with Stats -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+          <div class="mb-6">
+            <h1 class="text-2xl font-semibold text-gray-900">Orders Management</h1>
+            <p class="text-sm text-gray-500 mt-1">Monitor and manage all orders in real-time</p>
+          </div>
 
-                  <DataTable :data="localOrders" :columns="columns" :devices="devices" :tables="tables" />
-                </TabsContent>
-                <TabsContent value="order_history" class="p-2">
-                  <DataTable :data="localOrderHistory" :columns="columns" :devices="devices" :tables="tables" />  
-                </TabsContent>
-            </Tabs>
+          <StatsCards :cards="statsCards" />
         </div>
+
+        <!-- Orders Table Section -->
+        <div class="bg-white rounded-lg shadow-sm">
+          <Tabs default-value="live_orders" class="w-full">
+            <div class="border-b border-gray-200 px-6 pt-4">
+              <TabsList class="grid w-full max-w-md grid-cols-2 bg-gray-100">
+                <TabsTrigger value="live_orders" class="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Live Orders
+                </TabsTrigger>
+                <TabsTrigger value="order_history" class="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  Order History
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="live_orders" class="p-6 pt-4">
+              <DataTable :data="localOrders" :columns="columns" :devices="devices" :tables="tables" />
+            </TabsContent>
+
+            <TabsContent value="order_history" class="p-6 pt-4">
+              <DataTable :data="localOrderHistory" :columns="columns" :devices="devices" :tables="tables" />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </AppLayout>
 </template>

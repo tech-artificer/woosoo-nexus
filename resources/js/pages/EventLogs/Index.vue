@@ -17,19 +17,21 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 <template>
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="space-y-6">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">Event Logs</h1>
-        <p class="text-muted-foreground">{{ description }}</p>
+    <div class="flex h-full flex-1 flex-col gap-6">
+      <!-- Header Section -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <h1 class="text-2xl font-semibold text-gray-900">Event Logs</h1>
+        <p class="text-sm text-gray-500 mt-1">{{ description }}</p>
       </div>
 
-      <div class="rounded-lg border bg-card">
-        <div class="bg-muted/50 text-card-foreground p-4 rounded-t-lg border-b">
+      <!-- Logs Section -->
+      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-gray-50 text-gray-700 px-6 py-4 border-b border-gray-200">
           <span class="text-sm font-medium">Application Logs</span>
         </div>
-        <div class="bg-slate-900 text-slate-100 p-4 rounded-b-lg max-h-[60vh] overflow-auto font-mono text-xs">
+        <div class="bg-slate-900 text-slate-100 p-6 max-h-[65vh] overflow-auto font-mono text-xs">
           <template v-if="logs && logs.length">
-            <div v-for="(line, idx) in logs" :key="idx" class="whitespace-pre-wrap py-0.5">{{ line }}</div>
+            <div v-for="(line, idx) in logs" :key="idx" class="whitespace-pre-wrap py-0.5 hover:bg-slate-800/50">{{ line }}</div>
           </template>
           <template v-else>
             <div class="text-slate-400">No logs found.</div>

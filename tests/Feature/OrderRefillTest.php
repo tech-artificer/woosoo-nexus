@@ -6,6 +6,7 @@ use Tests\TestCase;
 use Tests\Traits\MocksKryptonSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Mockery;
 use App\Models\Branch;
 use App\Models\Device;
@@ -23,6 +24,22 @@ class OrderRefillTest extends TestCase
         
         // Mock active Krypton session for all tests
         $this->mockActiveKryptonSession();
+
+        // Provide an in-memory Krypton menu table for tests that touch the legacy connection.
+        Schema::connection('krypton_woosoo')->dropIfExists('menu');
+        Schema::connection('krypton_woosoo')->create('menu', function ($table) {
+            $table->increments('id');
+            $table->string('name')->nullable();
+        });
+        DB::connection('krypton_woosoo')->table('menu')->insert(['id' => 46, 'name' => 'Classic Feast']);
+
+        // Ensure POS menu exists for refill validation
+        DB::connection('pos')->table('menus')->insert([
+            'id' => 46,
+            'name' => 'Classic Feast',
+            'receipt_name' => 'Classic Feast',
+            'price' => 399.00,
+        ]);
     }
 
     public function tearDown(): void
@@ -95,6 +112,12 @@ class OrderRefillTest extends TestCase
 
             return $realDb->connection($name);
         });
+        DB::shouldReceive('transaction')->andReturnUsing(function ($callback) {
+            return $callback();
+        });
+        DB::shouldReceive('afterCommit')->andReturnUsing(function ($callback) {
+            $callback();
+        });
 
         // Authenticate as device using token
         $token = $device->createToken('test-token')->plainTextToken;
@@ -122,7 +145,7 @@ class OrderRefillTest extends TestCase
 
         // Verify local device_order_items persisted (ordered_menu_id should equal menu_id)
         $this->assertDatabaseHas('device_order_items', [
-            'order_id' => $deviceOrder->id,
+            'order_id' => $deviceOrder->order_id,
             'menu_id' => 46,
             'ordered_menu_id' => 46,
             'quantity' => 2,

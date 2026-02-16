@@ -38,11 +38,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 const pollingInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const liveStatus = ref<ServiceInfo>(props.service)
 
-const nssmPath = 'C:\\laragon\\bin\\nssm\\win64\\nssm.exe'
-const serviceName = 'woosoo-reverb'
-const phpPath = 'C:\\laragon\\bin\\php\\php-8.3.6-Win32-vs16-64\\php.exe'
-const projectPath = 'C:\\laragon\\www\\woosoo-nexus'
-
+// Config-driven paths; fall back to generic commands
+const nssmPath = import.meta.env.VITE_NSSM_PATH ?? 'nssm'
+const serviceName = import.meta.env.VITE_REVERB_SERVICE_NAME ?? 'woosoo-reverb'
+const phpPath = import.meta.env.VITE_PHP_BIN_PATH ?? 'php'
+const projectPath = import.meta.env.VITE_PROJECT_PATH ?? '.'
 const commands = {
     status: `${nssmPath} status ${serviceName}`,
     start: `${nssmPath} start ${serviceName}`,

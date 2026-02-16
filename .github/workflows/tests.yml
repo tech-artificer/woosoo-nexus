@@ -5,10 +5,7 @@ on:
     branches:
       - develop
       - main
-  pull_request:
-    branches:
-      - develop
-      - main
+      - staging
 
 jobs:
   ci:
@@ -70,6 +67,10 @@ jobs:
 
       - name: Build Assets
         run: npm run build
+
+      - name: Type Check (Vue TSC)
+        run: npm run typecheck
+        continue-on-error: true
 
       - name: Tests
         run: ./vendor/bin/pest

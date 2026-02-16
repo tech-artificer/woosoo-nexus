@@ -12,7 +12,7 @@ class OrderUpdateLog extends Model
     protected $primaryKey = 'id';
 
     protected $dispatchesEvents = [
-        // 'created' => \App\Events\OrderUpdateLogCreated::class,
+        'created' => \App\Events\Order\OrderUpdateLogCreated::class,
         // 'updated' => \App\Events\OrderUpdateLogUpdated::class
     ];
 

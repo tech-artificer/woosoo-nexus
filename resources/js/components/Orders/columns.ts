@@ -44,7 +44,7 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     cell: ({ row }) => {
       const deviceName = row.original.device?.name;
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, deviceName),
+        h('span', { class: ' font-medium', title: deviceName || '' }, deviceName),
       ])
     }
   },  
@@ -61,7 +61,7 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     cell: ({ row }) => {
       const tableName = row.original.table?.name;
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, tableName),
+        h('span', { class: ' font-medium', title: tableName || '' }, tableName),
       ])
     }
   },  

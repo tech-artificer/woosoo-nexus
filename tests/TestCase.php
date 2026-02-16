@@ -200,6 +200,7 @@ abstract class TestCase extends BaseTestCase
                 $table->string('note')->nullable();
                 $table->integer('seat_number')->nullable();
                 $table->integer('index')->nullable();
+                $table->boolean('is_refill')->default(false);
                 $table->timestamps();
                 $table->softDeletes();
             });
@@ -222,6 +223,7 @@ abstract class TestCase extends BaseTestCase
                 $table->string('note')->nullable();
                 $table->integer('seat_number')->nullable();
                 $table->integer('index')->nullable();
+                $table->boolean('is_refill')->default(false);
                 $table->timestamps();
                 $table->softDeletes();
             });

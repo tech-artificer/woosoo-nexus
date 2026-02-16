@@ -53,16 +53,13 @@ class OrderRepository
 
         $mergedOrders = $orders->transform(function ($order) use ($deviceOrders) {
             
-            $data = $deviceOrders->get($order->id) ?? null;
+            $data = $deviceOrders->get($order->id);
 
-            $order->deviceOrder = $data ?? null;
-            $order->device = $data->device ?? null;
-            $order->table = $data->table ?? null;
+            $order->deviceOrder = $data;
+            $order->device = $data?->device;
+            $order->table = $data?->table;
             $order->orderCheck = OrderCheck::where('order_id', $order->id)->first();
-            $order->orderedMenus = OrderedMenu::where('order_id', $order->id)->first();
-
-            // unset($order->deviceOrder->device);
-            // unset($order->deviceOrder->table);
+            $order->orderedMenus = OrderedMenu::where('order_id', $order->id)->get();
 
             return $order;
         });

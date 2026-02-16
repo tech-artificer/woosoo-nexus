@@ -99,7 +99,8 @@ class Menu extends Model
 
     public function getImageUrlAttribute()
     {
-        $imgPath = MenuImage::where('menu_id', $this->id)->first()->path ?? null;
+        $image = MenuImage::where('menu_id', $this->id)->first();
+        $imgPath = $image?->path;
 
         if ($imgPath) {
             return url('storage/'.$imgPath);

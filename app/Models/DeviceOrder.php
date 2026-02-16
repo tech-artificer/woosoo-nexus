@@ -60,7 +60,7 @@ class DeviceOrder extends Model
      */
     public function items() : HasMany
     {
-        return $this->hasMany(DeviceOrderItems::class, 'order_id');
+        return $this->hasMany(DeviceOrderItems::class, 'order_id')->orderBy('index');
     }
 
     /**
@@ -185,6 +185,16 @@ class DeviceOrder extends Model
     public function printEvents(): HasMany
     {
         return $this->hasMany(\App\Models\PrintEvent::class, 'device_order_id', 'id');
+    }
+
+    /**
+     * Latest print event for this device order (singular).
+     * Used by PrintOrder/PrintRefill broadcasts to get print_event_id.
+     */
+    public function printEvent(): HasOne
+    {
+        return $this->hasOne(\App\Models\PrintEvent::class, 'device_order_id', 'id')
+            ->latestOfMany();
     }
 
     public function scopeActiveOrder(Builder $query) {

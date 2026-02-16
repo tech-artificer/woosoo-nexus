@@ -167,31 +167,38 @@ const refreshData = () => {
 <template>
     <Head :title="props.title" :description="props.description" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">Service Requests</h1>
-                <p class="text-muted-foreground">Manage and track customer service requests in real-time</p>
+        <div class="flex h-full flex-1 flex-col gap-6">
+            <!-- Header Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h1 class="text-2xl font-semibold text-gray-900">Service Requests</h1>
+                <p class="text-sm text-gray-500 mt-1">Manage and track customer service requests in real-time</p>
             </div>
 
-            <DataTableToolbar
-                v-model:search="search"
-                v-model:status="statusFilter"
-                v-model:priority="priorityFilter"
-                v-model:fromDate="fromDate"
-                v-model:toDate="toDate"
-                v-model:showAll="showAll"
-            />
+            <!-- Stats Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <StatsCards :stats="localStats" />
+            </div>
 
-            <StatsCards :stats="localStats" />
+            <!-- Filters and Table Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6 space-y-4">
+                <DataTableToolbar
+                    v-model:search="search"
+                    v-model:status="statusFilter"
+                    v-model:priority="priorityFilter"
+                    v-model:fromDate="fromDate"
+                    v-model:toDate="toDate"
+                    v-model:showAll="showAll"
+                />
 
-            <DataTable 
-                :data="filteredServiceRequests" 
-                :columns="columns"
-                :pagination="props.pagination"
-                :filters="props.filters"
-                :table-services="props.tableServices"
-                @refresh="refreshData"
-            />
+                <DataTable
+                    :data="filteredServiceRequests"
+                    :columns="columns"
+                    :pagination="props.pagination"
+                    :filters="props.filters"
+                    :table-services="props.tableServices"
+                    @refresh="refreshData"
+                />
+            </div>
         </div>
     </AppLayout>
 </template>

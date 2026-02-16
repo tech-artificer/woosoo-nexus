@@ -1,10 +1,14 @@
-Printer API Temporary User Manual
+# Printer API Temporary User Manual
 
-Purpose
+> **⚠️ DEPRECATED:** This document describes a **temporary workaround** for guest access to printer endpoints. This approach has **security implications** and should be replaced with proper device token authentication.
+> 
+> **For current printer integration:** See **[printer_readme.md](printer_readme.md)** for the authoritative integration guide with device authentication.
+
+## Purpose
 - Explain the temporary change allowing the printer app to call the printer API endpoints as guest.
 - Provide usage examples, security considerations, and rollback instructions for the print and ops teams.
 
-Location
+## Location
 - This file is stored at `docs/printer_manual.md` in the repository. Link from the main docs index if desired.
 
 What changed (temporary)

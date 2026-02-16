@@ -41,10 +41,18 @@ class OrderPrinted implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
-        $this->deviceOrder->loadMissing(['device', 'table']);
+        $this->deviceOrder->loadMissing(['device', 'table', 'printEvent']);
         $table = $this->deviceOrder->device?->table ?? $this->deviceOrder->table;
 
         return [
+            'print_event_id' => $this->deviceOrder->printEvent?->id,
+            'device_id' => $this->deviceOrder->device_id,
+            'order_id' => $this->deviceOrder->order_id,
+            'session_id' => $this->deviceOrder->session_id,
+            'print_type' => 'INITIAL',
+            'refill_number' => null,
+            'tablename' => $table?->name,
+            'created_at' => $this->deviceOrder->created_at?->toIso8601String(),
             'order' => [
                 'id' => $this->deviceOrder->id,
                 'order_id' => $this->deviceOrder->order_id,

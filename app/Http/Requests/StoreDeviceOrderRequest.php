@@ -77,6 +77,7 @@ class StoreDeviceOrderRequest extends FormRequest
             'items.*.price' => ['required', 'numeric', 'min:0'],
             'items.*.note' => ['nullable', 'string'],
             'items.*.subtotal' => ['required', 'numeric', 'min:0'],
+            'items.*.ordered_menu_id' => ['nullable', 'integer', 'min:1'],
             'items.*.tax' => ['nullable', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
         ];
