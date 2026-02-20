@@ -136,9 +136,6 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     // Printer API routes (device-authenticated for branch isolation)
     require __DIR__ . '/api_printer_routes.php';
     
-    // Session endpoint used by all devices
-    Route::get('/session/latest',[TerminalSessionApiController::class, 'getLatestSession'])->name('api.session.latest');
-    
     // Order print endpoints for devices
     Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->name('api.order.printed');
     Route::get('/order/{orderId}/print', [OrderApiController::class, 'print'])->name('api.order.print');
@@ -156,6 +153,7 @@ Route::prefix('v1')->middleware(['auth:device'])->group(function () {
 Route::middleware(['requestId','auth:sanctum'])->group(function () {
     Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
 });
+
 // Health endpoint — quick check for app DB and POS DB connectivity
 Route::get('/health', function () {
     $status = [
