@@ -50,18 +50,18 @@ class OrderService
         $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
 
         // Calculate totals from items if not provided or if they are 0
-        // if (!isset($attributes['total_amount']) || $attributes['total_amount'] == 0) {
-        //     Log::info('OrderService: Calculating totals from items', [
-        //         'items_count' => count($attributes['items'] ?? []),
-        //         'original_total' => $attributes['total_amount'] ?? 'not set'
-        //     ]);
-        //     // $calculatedTotals = $this->calculateTotalsFromItems($attributes['items'] ?? []);
-        //     $attributes['subtotal'] = $calculatedTotals['subtotal'];
-        //     $attributes['tax'] = $calculatedTotals['tax'];
-        //     $attributes['total_amount'] += $calculatedTotals['total'];
-        //     $attributes['discount_amount'] = $attributes['discount'] ?? 0;
-        //     Log::info('OrderService: Totals calculated', $calculatedTotals);
-        // }
+        if (!isset($attributes['total_amount']) || $attributes['total_amount'] == 0) {
+            Log::info('OrderService: Calculating totals from items', [
+                'items_count' => count($attributes['items'] ?? []),
+                'original_total' => $attributes['total_amount'] ?? 'not set'
+            ]);
+            $calculatedTotals = $this->calculateTotalsFromItems($attributes['items'] ?? []);
+            $attributes['subtotal'] = $calculatedTotals['subtotal'];
+            $attributes['tax'] = $calculatedTotals['tax'];
+            $attributes['total_amount'] = $calculatedTotals['total'];
+            $attributes['discount_amount'] = $attributes['discount'] ?? 0;
+            Log::info('OrderService: Totals calculated', $calculatedTotals);
+        }
 
         // Defensive: strip legacy payload keys that should not be persisted
         // directly on the `device_orders` table. `items` belong in
@@ -201,34 +201,34 @@ class OrderService
      * @param array $items
      * @return array
      */
-    // protected function calculateTotalsFromItems(array $items): array
-    // {
-    //     $subtotal = 0;
-    //     $tax = 0;
-    //     $taxRate = 0.10; // 10% tax rate (same as CreateOrderedMenu)
+    protected function calculateTotalsFromItems(array $items): array
+    {
+        $subtotal = 0;
+        $tax = 0;
+        $taxRate = 0.10; // 10% tax rate (same as CreateOrderedMenu)
 
-    //     foreach ($items as $item) {
-    //         $quantity = $item['quantity'] ?? 0;
-    //         $price = $item['price'] ?? 0;
+        foreach ($items as $item) {
+            $quantity = $item['quantity'] ?? 0;
+            $price = $item['price'] ?? 0;
             
-    //         // Calculate item total (price * quantity)
-    //         $itemTotal = $price * $quantity;
+            // Calculate item total (price * quantity)
+            $itemTotal = $price * $quantity;
             
-    //         // Calculate tax for this item (same as CreateOrderedMenu: totalItemPrice * taxRate)
-    //         $itemTax = $itemTotal * $taxRate;
+            // Calculate tax for this item (same as CreateOrderedMenu: totalItemPrice * taxRate)
+            $itemTax = $itemTotal * $taxRate;
             
-    //         $subtotal += $itemTotal;
-    //         $tax += $itemTax;
-    //     }
+            $subtotal += $itemTotal;
+            $tax += $itemTax;
+        }
 
-    //     $total = $subtotal + $tax;
+        $total = $subtotal + $tax;
 
-    //     return [
-    //         'subtotal' => $subtotal,
-    //         'tax' => $tax,
-    //         'total' => $total,
-    //     ];
-    // }
+        return [
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $total,
+        ];
+    }
 }
 
 // applied_taxes
