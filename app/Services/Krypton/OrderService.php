@@ -63,15 +63,9 @@ class OrderService
             Log::info('OrderService: Totals calculated', $calculatedTotals);
         }
 
-        // Defensive: strip legacy payload keys that should not be persisted
-        // directly on the `device_orders` table. `items` belong in
-        // `device_order_items` and `meta` is exposed via an accessor.
-        if (isset($attributes['items'])) {
-            unset($attributes['items']);
-        }
-        if (isset($attributes['meta'])) {
-            unset($attributes['meta']);
-        }
+        // Keep `items` for downstream CreateOrderedMenu action.
+        // DeviceOrder persistence already uses an explicit create() payload,
+        // so no legacy JSON columns are mass-assigned from here.
 
         $this->attributes = $attributes;
 

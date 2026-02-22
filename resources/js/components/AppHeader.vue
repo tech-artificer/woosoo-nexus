@@ -53,11 +53,22 @@ const rightNavItems: NavItem[] = [
         icon: BookOpen,
     },
 ];
+
+import { ref, onMounted, onUnmounted } from 'vue';
+const isScrolled = ref(false);
+onMounted(() => {
+    const handler = () => {
+        isScrolled.value = window.scrollY > 4;
+    };
+    window.addEventListener('scroll', handler);
+    handler();
+    onUnmounted(() => window.removeEventListener('scroll', handler));
+});
 </script>
 
 <template>
     <div>
-        <div class="border-b border-sidebar-border/80">
+        <div class="border-b border-sidebar-border/80 sticky top-0 z-30 bg-background/95 backdrop-blur transition-shadow shadow-none" :class="{ 'shadow-lg': isScrolled }">
             <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                 <!-- Mobile Menu -->
                 <div class="lg:hidden">
@@ -67,7 +78,7 @@ const rightNavItems: NavItem[] = [
                                 <Menu class="h-5 w-5" />
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" class="w-[300px] p-6">
+                        <SheetContent side="left" class="w-75 p-6">
                             <SheetTitle class="sr-only">Navigation Menu</SheetTitle>
                             <SheetHeader class="flex justify-start text-left">
                                 <AppLogoIcon class="size-6 fill-current text-black dark:text-white" />
@@ -103,7 +114,7 @@ const rightNavItems: NavItem[] = [
                     </Sheet>
                 </div>
 
-                <Link :href="route('dashboard')" class="flex items-center gap-x-2">
+                <Link :href="route('dashboard')" class="flex items-center gap-x-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                     <AppLogo />
                 </Link>
 
@@ -113,7 +124,7 @@ const rightNavItems: NavItem[] = [
                         <NavigationMenuList class="flex h-full items-stretch space-x-2">
                             <NavigationMenuItem v-for="(item, index) in mainNavItems" :key="index" class="relative flex h-full items-center">
                                 <Link
-                                    :class="[navigationMenuTriggerStyle(), activeItemStyles(item.href), 'h-9 cursor-pointer px-3']"
+                                    :class="[navigationMenuTriggerStyle(), activeItemStyles(item.href), 'h-9 cursor-pointer px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary']"
                                     :href="item.href"
                                 >
                                     <component v-if="item.icon" :is="item.icon" class="mr-2 h-4 w-4" />
@@ -133,7 +144,7 @@ const rightNavItems: NavItem[] = [
                         <AppearanceTabs />
                     </div>
                     <div class="relative flex items-center space-x-1">
-                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer">
+                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                             <Search class="size-5 opacity-80 group-hover:opacity-100" />
                         </Button>
 
@@ -142,7 +153,7 @@ const rightNavItems: NavItem[] = [
                                 <TooltipProvider :delay-duration="0">
                                     <Tooltip>
                                         <TooltipTrigger>
-                                            <Button variant="ghost" size="icon" as-child class="group h-9 w-9 cursor-pointer">
+                                            <Button variant="ghost" size="icon" as-child class="group h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                                                 <a :href="item.href" target="_blank" rel="noopener noreferrer">
                                                     <span class="sr-only">{{ item.title }}</span>
                                                     <component :is="item.icon" class="size-5 opacity-80 group-hover:opacity-100" />
@@ -163,7 +174,7 @@ const rightNavItems: NavItem[] = [
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                class="relative size-10 w-auto rounded-full p-1 focus-within:ring-2 focus-within:ring-primary"
+                                class="relative size-10 w-auto rounded-full p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                             >
                                 <Avatar class="size-8 overflow-hidden rounded-full">
                                     <AvatarImage v-if="auth.user.avatar" :src="auth.user.avatar" :alt="auth.user.name" />

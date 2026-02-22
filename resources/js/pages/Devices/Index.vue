@@ -29,6 +29,7 @@ import { type BreadcrumbItem } from '@/types';
 
 import { columns } from '@/components/Devices/columns';
 import DataTable from '@/components/Devices/DataTable.vue'
+import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
 import StatsCards from '@/components/Stats/StatsCards.vue'
 import { router } from '@inertiajs/core'
 import axios from 'axios'
@@ -53,6 +54,8 @@ const props = defineProps<{
 const { devices, registrationCodes, stats } = toRefs(props)
 
 const newCodes = ref<Array<{id:number, code:string}>>([])
+const selectedDevice = ref<Device | null>(null)
+const isDeviceDetailOpen = ref(false)
 const search = ref('')
 
 const statusFilter = ref('')
@@ -60,8 +63,12 @@ const statusFilter = ref('')
 const originalDevices = computed(() => devices.value ?? [])
 
 const hasGeneratedCodes = computed(() => {
-    // Check if codes exist (either newly generated or from server)
-    return newCodes.value.length > 0 || (registrationCodes.value?.length ?? 0) > 0
+    // Check if available codes exist (either newly generated or from server)
+    return newCodes.value.length > 0 || availableRegistrationCodes.value.length > 0
+})
+
+const availableRegistrationCodes = computed(() => {
+    return (registrationCodes.value || []).filter((code: any) => !code.used_by_device_id && !code.used_at)
 })
 
 const filteredDevices = computed(() => {
@@ -146,19 +153,24 @@ function exportCSV() {
     URL.revokeObjectURL(url)
 }
 
+const openDeviceDetail = (device: Device) => {
+    selectedDevice.value = device
+    isDeviceDetailOpen.value = true
+}
+
 </script>
 
 <template>
 
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="space-y-6 px-1 sm:px-2">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">Device Management</h1>
                 <p class="text-muted-foreground">Manage registered devices and activation codes</p>
             </div>
-            <Tabs default-value="devices" class="">
-                <TabsList class="grid w-full grid-cols-2">
+            <Tabs default-value="devices" class="space-y-4">
+                <TabsList class="grid w-full grid-cols-2 p-1 h-11">
                     <TabsTrigger value="devices">
                         Devices
                     </TabsTrigger>
@@ -166,17 +178,19 @@ function exportCSV() {
                         Codes
                     </TabsTrigger>
                 </TabsList>
-                <TabsContent value="devices" class="p-2">
+                <TabsContent value="devices" class="pt-3 px-1 sm:px-2 space-y-4">
                                 <!-- Filters moved into Devices DataTable toolbar -->
-                    <StatsCards :cards="(stats ?? [
-                        { title: 'Total Devices', value: (devices || []).length, subtitle: 'Registered devices', variant: 'primary' },
-                        { title: 'Registration Codes', value: registrationCodes?.length ?? 0, subtitle: 'Available codes', variant: 'accent' },
-                    ])" />
-                    <DataTable :data="devices" :columns="columns" />
+                    <StatsCards
+                        :cards="(stats ?? [
+                            { title: 'Total Devices', value: (devices || []).length, subtitle: 'Registered devices', variant: 'primary' },
+                            { title: 'Registration Codes', value: registrationCodes?.length ?? 0, subtitle: 'Available codes', variant: 'accent' },
+                        ])"
+                    />
+                    <DataTable :data="devices" :columns="columns" @row-click="openDeviceDetail" />
                 </TabsContent>
-                <TabsContent value="codes">
+                <TabsContent value="codes" class="pt-3 px-1 sm:px-2">
                     <Card>
-                        <CardHeader class="flex items-center justify-between">
+                        <CardHeader class="flex items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Codes</CardTitle>
                                 <CardDescription>
@@ -203,6 +217,9 @@ function exportCSV() {
                                         <TableHead class="">
                                             Registered At
                                         </TableHead> 
+                                        <TableHead class="">
+                                            Status
+                                        </TableHead>
                                     </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -212,6 +229,7 @@ function exportCSV() {
                                         </TableCell>
                                         <TableCell>{{ code.used_by_device_id }}</TableCell>
                                         <TableCell>{{ code.used_at }}</TableCell>
+                                        <TableCell>{{ code.used_by_device_id || code.used_at ? 'Used' : 'Available' }}</TableCell>
                                     </TableRow>
                                     </TableBody>
                                 </Table>
@@ -225,6 +243,11 @@ function exportCSV() {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            <DeviceDetailSheet
+                v-model:open="isDeviceDetailOpen"
+                :device="selectedDevice"
+            />
         </div>
     </AppLayout>
 </template>

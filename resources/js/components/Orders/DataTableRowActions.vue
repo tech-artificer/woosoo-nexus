@@ -25,6 +25,7 @@ import { ref, computed } from 'vue'
 import type { DeviceOrder } from '@/types/models';
 import { toast } from 'vue-sonner'
 import KitchenTicket from '@/components/KitchenTicket.vue'
+import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue'
 
 interface DataTableRowActionsProps {
   row: Row<DeviceOrder>
@@ -139,9 +140,23 @@ const openViewDialog = (order: any) => {
   showViewDialog.value = true
 }
 
+const handleDetailPrint = () => {
+  const orderId = viewDialogOrder.value?.order_id ?? computedOrder.value.order_id
+  if (!orderId) return
+  printOrder(orderId as number | string)
+}
+
+const handleDetailComplete = () => {
+  const orderId = viewDialogOrder.value?.order_id ?? computedOrder.value.order_id
+  if (!orderId) return
+  completeOrder(orderId as number | string)
+}
+
 </script>
 
 <template>
+
+<div @click.stop>
 
 <DropdownMenu>
   <DropdownMenuTrigger as-child>
@@ -172,41 +187,12 @@ const openViewDialog = (order: any) => {
   </DropdownMenuContent>
 </DropdownMenu>
 
-<!-- View Order dialog -->
-<Dialog v-model:open="showViewDialog">
-  <DialogContent class="max-w-lg">
-    <DialogHeader>
-      <DialogTitle>Order Details</DialogTitle>
-      <DialogDescription>View device order metadata and items</DialogDescription>
-    </DialogHeader>
-
-    <div class="mt-4 space-y-3 text-sm">
-      <div><strong>Order #:</strong> {{ viewDialogOrder?.order_number }}</div>
-      <div><strong>Status:</strong> {{ viewDialogOrder?.status }}</div>
-      <div><strong>Guests:</strong> {{ viewDialogOrder?.guest_count }}</div>
-      <div><strong>Created:</strong> {{ viewDialogOrder?.created_at }}</div>
-      <div><strong>Subtotal:</strong> {{ viewDialogOrder?.subtotal ?? viewDialogOrder?.meta?.order_check?.subtotal ?? '-' }}</div>
-      <div><strong>Total:</strong> {{ viewDialogOrder?.total ?? viewDialogOrder?.meta?.order_check?.total_amount ?? '-' }}</div>
-    </div>
-
-    <div class="mt-4">
-      <p class="text-sm font-medium">Items</p>
-      <div class="mt-2 divide-y">
-        <div v-for="(it, idx) in (viewDialogOrder?.items || [])" :key="idx" class="py-2">
-          <div class="flex justify-between">
-            <div class="text-sm">{{ it.name }}</div>
-            <div class="text-sm">Qty: {{ it.quantity }}</div>
-          </div>
-          <div class="text-xs text-muted-foreground">Price: {{ it.price ?? it.unit_price ?? '-' }} | Note: {{ it.note || '-' }}</div>
-        </div>
-      </div>
-    </div>
-
-    <DialogFooter class="mt-4">
-      <Button variant="ghost" @click.prevent="showViewDialog = false">Close</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+<OrderDetailSheet
+  v-model:open="showViewDialog"
+  :order="viewDialogOrder"
+  @print="handleDetailPrint"
+  @complete="handleDetailComplete"
+/>
 
 <!-- POS confirmation dialog -->
 <Dialog v-model:open="showPosDialog">
@@ -251,4 +237,6 @@ const openViewDialog = (order: any) => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  </div>
 </template>

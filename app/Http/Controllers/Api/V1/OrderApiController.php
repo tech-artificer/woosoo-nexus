@@ -38,8 +38,14 @@ class OrderApiController extends Controller
             $query->where('session_id', $sessionId);
         }
 
-        // If authenticated as a device, restrict to device's branch
+        // If authenticated as a device, restrict to that specific device.
+        // Branch scoping alone can leak sibling tablet orders and break
+        // device-local active-order recovery in the PWA.
         $device = $request->user();
+        if ($device && isset($device->id)) {
+            $query->where('device_id', $device->id);
+        }
+
         if ($device && isset($device->branch_id)) {
             $query->where('branch_id', $device->branch_id);
         }
@@ -233,6 +239,16 @@ class OrderApiController extends Controller
 
             try {
                 PrintRefill::dispatch($deviceOrder, $created);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            // Emit a PrintEvent for the relay device to consume
+            try {
+                app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'REFILL', [
+                    'refill_count' => count($mappedItems),
+                    'refilled_at' => now()->toIso8601String(),
+                ]);
             } catch (\Throwable $e) {
                 report($e);
             }

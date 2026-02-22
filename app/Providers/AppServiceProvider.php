@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Models\OrderUpdateLog;
+use App\Models\DeviceOrder;
 use App\Observers\OrderUpdateLogObserver;
+use App\Observers\DeviceOrderObserver;
 use App\Services\Krypton\KryptonContextService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -72,6 +74,7 @@ class AppServiceProvider extends ServiceProvider
 
         // 🔹 Observers
         OrderUpdateLog::observe(OrderUpdateLogObserver::class);
+        DeviceOrder::observe(DeviceOrderObserver::class);
     }
 
     /**

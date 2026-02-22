@@ -208,6 +208,60 @@ class DeviceAuthApiController extends Controller
     }
 
     /**
+     * Look up a device by the request IP and issue a short-lived token.
+     *
+     * Called by the print-bridge on startup (GET /api/device/lookup-by-ip).
+     * No authentication required — the device is identified purely by IP.
+     *
+     * Response shape the print-bridge expects:
+     *   { found: true,  device: { device_id, auth_token, printer_name, bluetooth_address } }
+     *   { found: false }
+     *
+     * @unauthenticated
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function lookupByIp(Request $request)
+    {
+        // Prefer client-supplied private IP, otherwise use request IP
+        $clientSupplied = $request->input('ip_address');
+        $requestIp = $request->ip();
+
+        if ($clientSupplied && $this->isPrivateIp($clientSupplied)) {
+            $ip = $clientSupplied;
+        } elseif ($this->isPrivateIp($requestIp)) {
+            $ip = $requestIp;
+        } else {
+            $ip = $requestIp;
+        }
+
+        $device = Device::where('ip_address', $ip)->where('is_active', true)->first();
+
+        if (! $device) {
+            return response()->json(['found' => false, 'ip_used' => $ip], 200);
+        }
+
+        // Revoke stale tokens to keep the token table tidy, then issue a fresh one
+        $device->tokens()->where('name', 'device-auth')->delete();
+
+        $token = $device->createToken(
+            name: 'device-auth',
+            expiresAt: now()->addDays(7)
+        )->plainTextToken;
+
+        return response()->json([
+            'found'  => true,
+            'device' => [
+                'device_id'         => (string) $device->id,
+                'auth_token'        => $token,
+                'printer_name'      => null,
+                'bluetooth_address' => null,
+            ],
+            'ip_used' => $ip,
+        ]);
+    }
+
+    /**
      * Verify a bearer token and return its validity and associated device.
      *
      * @param Request $request

@@ -24,7 +24,11 @@ use App\Http\Controllers\Admin\Reports\{
     SalesController,
 };
 
-  
+// Handle CORS preflight — return 204 No Content with no body
+Route::options('/{any}', function () {
+    return response()->noContent();
+})->where('any', '.*');
+
 Route::get('/', function () {
     // Redirect guests to login, authenticated users to the dashboard.
     if (! Auth::check()) {
@@ -50,6 +54,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
         // Admin: bulk update order statuses
         Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
+        // Device order API for strict verification
+        Route::get('/device-order/by-order-id/{orderId}', [OrderController::class, 'byOrderId'])->name('device-order.by-order-id');
         // Menu
         Route::get('/menus', [MenuController::class, 'index'])->name('menus');
         Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');

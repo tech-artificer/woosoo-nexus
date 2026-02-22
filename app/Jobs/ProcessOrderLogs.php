@@ -5,6 +5,7 @@ namespace App\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 
@@ -19,12 +20,25 @@ class ProcessOrderLogs implements ShouldQueue
 {
     use Queueable;
 
+    private static bool $missingTableLogged = false;
+
     /**
      * Execute the job.
      */
     public function handle(): void
     {
-        Log::info("Checking for log entries");
+        $startTime = microtime(true);
+        Log::info("🔄 [ProcessOrderLogs] Job execution started at " . date('Y-m-d H:i:s.u'));
+
+        if (!Schema::hasTable('order_update_logs')) {
+            if (!self::$missingTableLogged) {
+                Log::warning('[ProcessOrderLogs] Skipping job: table order_update_logs does not exist.');
+                self::$missingTableLogged = true;
+            }
+            return;
+        }
+
+        self::$missingTableLogged = false;
 
         $newLogs = OrderUpdateLog::where(['is_processed' => false, 'is_open' => false])
             ->with(['deviceOrder']) // Eloquent relation
@@ -32,12 +46,17 @@ class ProcessOrderLogs implements ShouldQueue
 
         
         if ($newLogs->isEmpty()) {
-            Log::info('No new order updates found.');
+            Log::info('✅ [ProcessOrderLogs] No new order updates found.');
             return;
         }
 
+        $logCount = $newLogs->count();
+        Log::info("📦 [ProcessOrderLogs] Found {$logCount} unprocessed logs");
 
-        if( $newLogs->count() ) {
+        if( $logCount ) {
+            $processedCount = 0;
+            $voidedCount = 0;
+            $completedCount = 0;
 
             foreach ($newLogs as $log) {
 
@@ -45,7 +64,7 @@ class ProcessOrderLogs implements ShouldQueue
 
                     // $deviceOrder = $log->deviceOrder;
                     if( !$log->deviceOrder ) {
-                        Log::info('Order has no device order.');
+                        Log::warn('⚠️ [ProcessOrderLogs] Log has no device order. log_id=' . $log->id);
                         continue;
                     }
 
@@ -54,12 +73,14 @@ class ProcessOrderLogs implements ShouldQueue
                     if( $log->is_voided == true ) {
                         $log->deviceOrder->update(['status' => OrderStatus::VOIDED]);
                         $action = 'void';
-                        Log::info("Order is voided and broadcasted {$log->deviceOrder}.");
+                        $voidedCount++;
+                        Log::info("🔕 [ProcessOrderLogs] Order VOIDED. order_id={$log->deviceOrder->id} device_id={$log->deviceOrder->device_id}");
                    
                     }else{
                         $action = 'complete';
                         $log->deviceOrder->update(['status' => OrderStatus::COMPLETED]);
-                        Log::info("Order is COMPLETED and broadcasted {$log->deviceOrder}.");
+                        $completedCount++;
+                        Log::info("✅ [ProcessOrderLogs] Order COMPLETED. order_id={$log->deviceOrder->id} device_id={$log->deviceOrder->device_id}");
                     }
 
                     $log->is_processed = true;
@@ -73,34 +94,17 @@ class ProcessOrderLogs implements ShouldQueue
                     }
           
                     $log->delete(); 
-                    
+                    $processedCount++;
                 
-                    // if (!$deviceOrder) {
-                    //     throw new \Exception("No device order for Order ID {$log->order_id}");
-                    // }
-
-                    // if( $log->is_open == false && $log->action == 'paid' ) {
-
-                    //     if( $deviceOrder->status == OrderStatus::CONFIRMED ) {
-                    //         $deviceOrder->status =  OrderStatus::COMPLETED;
-                    //         // Log::info("is true {$deviceOrder->status}");
-                    //         $deviceOrder->save();
-                    //         $log->is_processed = true;
-                    //     }
-                       
-                    //     $log->delete();
-
-                    //     broadcast(new OrderCompleted($deviceOrder));
-                    //     Log::info("Processed & broadcasted Completed Order ID {$log->order_id}");
-                    //      Log::info("{$deviceOrder}");
-                    // }
-
                 } catch (\Throwable $e) {
                     // Optional: create a retry count column
                     // $log->increment('retry_count'); // If you add this field
-                    Log::error("Failed to process Order ID {$log->order_id}: {$e->getMessage()}");
+                    Log::error("❌ [ProcessOrderLogs] Failed to process order_id {$log->order_id}: {$e->getMessage()}");
                 }
             }
+            
+            $durationMs = number_format((microtime(true) - $startTime) * 1000, 2);
+            Log::info("⏱️ [ProcessOrderLogs] Completed. processed={$processedCount} completed={$completedCount} voided={$voidedCount} duration={$durationMs}ms");
         
         }
     }

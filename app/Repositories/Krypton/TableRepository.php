@@ -18,8 +18,8 @@ class TableRepository
 
             return Table::fromQuery('CALL get_active_table_orders()');
         } catch (\Exception $e) {
-            Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            Log::warning('Procedure get_active_table_orders failed: ' . $e->getMessage());
+            return collect([]);
         }
     }
 
@@ -32,8 +32,8 @@ class TableRepository
 
             return Table::fromQuery('CALL get_active_table_orders_by_table_group(?)', [$tableGroupId]);
         } catch (\Exception $e) {
-            Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            Log::warning('Procedure get_active_table_orders_by_table_group failed: ' . $e->getMessage());
+            return collect([]);
         }
     }
 
@@ -47,8 +47,8 @@ class TableRepository
 
             return Table::fromQuery('CALL get_active_table_order_by_table(?)', [$tableId])->first();
         } catch (\Exception $e) {
-            Log::error('Procedure call failed: ' . $e->getMessage());
-            throw new \Exception('Something Went Wrong.');
+            Log::warning('Procedure get_active_table_order_by_table failed: ' . $e->getMessage());
+            return null;
         }
     }
 

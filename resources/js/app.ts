@@ -1,3 +1,11 @@
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').catch(err => {
+            console.warn('Service worker registration failed:', err);
+        });
+    });
+}
 import '../css/app.css';
 // import './bootstrap';
 import axios from 'axios'
@@ -50,18 +58,16 @@ console.log(import.meta.env);
 try {
     window.Echo = new Echo({
         broadcaster: import.meta.env.VITE_BROADCAST_DRIVER ?? 'reverb',
-        // cluster: 'mt1',
-        // authEndpoint: window.config.baseUrl + 'broadcasting/auth',
         key: import.meta.env.VITE_REVERB_APP_KEY,
         wsHost: import.meta.env.VITE_REVERB_HOST,
         wssHost: import.meta.env.VITE_REVERB_HOST,
         wsPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
         wssPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
-        forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+        forceTLS: true, // Always use secure WebSocket when certificate is present
         disableStats: true,
-        encrypted: true, // Also important for WSS
-        enabledTransports: ['ws', 'wss'],
-        withCredentials: true, 
+        encrypted: true,
+        enabledTransports: ['wss'], // Only allow secure transport
+        withCredentials: true,
     });
     
 } catch (error) {

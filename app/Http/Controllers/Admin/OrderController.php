@@ -1,11 +1,9 @@
 <?php
-
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\Krypton\KryptonContextService;
-
 use Inertia\Inertia;
 use App\Repositories\Krypton\OrderRepository;
 use App\Repositories\Krypton\TableRepository;
@@ -17,7 +15,6 @@ use App\Models\Krypton\Table as KryptonTable;
 use App\Enums\OrderStatus;
 use App\Models\Krypton\Session;
 use App\Services\Krypton\OrderService;
-
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -27,190 +24,55 @@ use App\Events\Order\OrderCompleted as OrderCompletedEvent;
 
 class OrderController extends Controller
 {
-    
-    protected $orderService;
-
-    public function __construct(OrderService $orderService) {
-        $this->orderService = $orderService;
-    }
     /**
-     * Render the orders page.
-     *
-     * @return \Inertia\Response
+     * Render the admin Orders page with live orders, history, devices, and tables.
      */
-    public function index(Request $request)
+    public function index()
     {
-        $tableRepo = new TableRepository();
-        $activeOrders = $tableRepo->getActiveTableOrders();
-
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-            $session = Session::orderByDesc('id')->first();
-        } else {
-            $session = Session::fromQuery('CALL get_latest_session_id()')->first();
-        }
-
-        // Get session_id from POS or use query parameter for testing
-        // No fallback to hardcoded 1; if no session available, this is a data integrity issue
-        $sessionId = $session?->id ?? $request->query('session_id');
-        
-        if (!$sessionId) {
-            // Return empty orders if no session is available (safer than showing random data)
-            return Inertia::render('Orders/IndexOrders', [
-                'orders' => [],
-                'stats' => ['totalOrders' => 0, 'liveOrders' => 0, 'completedOrders' => 0],
-                'activeOrders' => $activeOrders,
-            ]);
-        }
-
-        // Apply optional query filters (status, device, table, search, date range)
-        $filters = $request->only(['status', 'device_id', 'table_id', 'search', 'date_from', 'date_to']);
-
-        $ordersQuery = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
-                ->where('session_id', $sessionId)
-                ->activeOrder();
-
-        // status may be comma-separated or array
-        if (!empty($filters['status'])) {
-            $statuses = is_array($filters['status']) ? $filters['status'] : explode(',', $filters['status']);
-            $ordersQuery->whereIn('status', array_map(fn($s) => trim($s), $statuses));
-        }
-
-        if (!empty($filters['device_id'])) {
-            $ordersQuery->where('device_id', $filters['device_id']);
-        }
-
-        if (!empty($filters['table_id'])) {
-            $ordersQuery->where('table_id', $filters['table_id']);
-        }
-
-        if (!empty($filters['search'])) {
-            $s = $filters['search'];
-            $ordersQuery->where(function ($q) use ($s) {
-                $q->where('order_number', 'like', "%{$s}%")
-                  ->orWhereHas('device', fn($q2) => $q2->where('name', 'like', "%{$s}%"))
-                  ->orWhereHas('table', fn($q2) => $q2->where('name', 'like', "%{$s}%"));
-            });
-        }
-
-        if (!empty($filters['date_from'])) {
-            $ordersQuery->where('created_at', '>=', $filters['date_from']);
-        }
-        if (!empty($filters['date_to'])) {
-            $ordersQuery->where('created_at', '<=', $filters['date_to']);
-        }
-
-        $orders = $ordersQuery->orderBy('table_id', 'asc')
-            ->orderBy('created_at', 'desc')
+        $orders = DeviceOrder::with(['device', 'table'])
+            ->activeOrder()
+            ->latest()
             ->get();
 
-        // Order history (completed/terminal) — apply same filters where reasonable
-        $historyQuery = DeviceOrder::with(['device', 'order', 'table', 'serviceRequests'])
-                ->where('session_id', $sessionId)
-                ->completedOrder();
+        $orderHistory = DeviceOrder::with(['device', 'table'])
+            ->completedOrder()
+            ->latest()
+            ->limit(100)
+            ->get();
 
-        if (!empty($filters['status'])) {
-            $historyQuery->whereIn('status', array_map(fn($s) => trim($s), $statuses ?? (is_array($filters['status']) ? $filters['status'] : explode(',', $filters['status']))));
-        }
-
-        if (!empty($filters['search'])) {
-            $s = $filters['search'];
-            $historyQuery->where(function ($q) use ($s) {
-                $q->where('order_number', 'like', "%{$s}%")
-                  ->orWhereHas('device', fn($q2) => $q2->where('name', 'like', "%{$s}%"))
-                  ->orWhereHas('table', fn($q2) => $q2->where('name', 'like', "%{$s}%"));
-            });
-        }
-
-        $orderHistory = $historyQuery->orderBy('updated_at', 'desc')->get();
-        
-        // simple stats and sparkline for orders
-        $today = \Carbon\Carbon::today();
-        $start = $today->copy()->subDays(6)->startOfDay();
-
-        $daily = DeviceOrder::where('created_at', '>=', $start)
-            ->selectRaw("DATE(created_at) as date, COUNT(*) as cnt")
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('cnt', 'date')
-            ->toArray();
-
-        $spark = [];
-        for ($i = 0; $i < 7; $i++) {
-            $d = $start->copy()->addDays($i)->toDateString();
-            $spark[] = isset($daily[$d]) ? (int) $daily[$d] : 0;
-        }
-
-        $stats = [
-            [ 'title' => 'Live Orders', 'value' => $orders->count(), 'subtitle' => 'Pending & in-progress', 'variant' => 'primary', 'sparkline' => $spark ],
-            [ 'title' => 'Order History', 'value' => $orderHistory->count(), 'subtitle' => 'Completed / Voided', 'variant' => 'default' ],
-        ];
-
-        // Provide helper lists for the UI filters
-        try {
-            $devices = Device::orderBy('name')->get(['id', 'name']);
-        } catch (\Throwable $e) {
-            $devices = collect([]);
-        }
-
-        try {
-            $tables = KryptonTable::orderBy('name')->get(['id', 'name']);
-        } catch (\Throwable $e) {
-            $tables = collect([]);
-        }
+        $devices = Device::select('id', 'name')->get();
+        $tables  = KryptonTable::select('id', 'name')->get();
 
         return Inertia::render('Orders/Index', [
-            'title' => 'Orders',
-            'description' => 'Daily Orders',    
-            'orders' => $orders,
+            'title'        => 'Orders',
+            'description'  => 'Manage and monitor live orders',
+            'orders'       => $orders,
             'orderHistory' => $orderHistory,
-            'stats' => $stats,
-            'filters' => $filters,
-            'devices' => $devices,
-            'tables' => $tables,
-            // 'user' => auth()->user(),
-            // 'tableOrders' => $activeOrders,
+            'devices'      => $devices,
+            'tables'       => $tables,
         ]);
     }
-    
 
     /**
-     * Show the form for creating a new resource.
+     * API endpoint: Get device order by order_id with all items (including refills).
      */
-    public function create()
+    public function byOrderId($orderId)
     {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Order $order)
-    {
-        return back()->with(['success' => true]);
+        $deviceOrder = DeviceOrder::with(['items.menu', 'serviceRequests', 'table', 'device'])
+            ->where('order_id', $orderId)
+            ->first();
+        if (! $deviceOrder) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+        // Log when items are unexpectedly missing for easier debugging in prod
+        try {
+            if (! is_countable($deviceOrder->items) || count($deviceOrder->items) === 0) {
+                Log::warning('byOrderId: returned order has no items', ['order_id' => $orderId, 'device_order_id' => $deviceOrder->id ?? null]);
+            }
+        } catch (\Throwable $e) {
+            Log::debug('byOrderId: failed to inspect items', ['order_id' => $orderId, 'error' => $e->getMessage()]);
+        }
+        return response()->json($deviceOrder);
     }
 
     /**
@@ -225,25 +87,6 @@ class OrderController extends Controller
          //Run the console command
         // $exitCode = Artisan::call('broadcast:order-voided', [
         //     'order_id' => $deviceOrder->order_id
-        // ]);
-
-        // Optional: capture output
-        // $output = Artisan::output();
-
-        return redirect()->back()->with('success');
-    }
-
-    public function complete(Request $request) {
-
-        $orderId = $request->input('order_id');
-
-        //Run the console command
-        $exitCode = Artisan::call('broadcast:order-completed', [
-            'order_id' => $orderId
-        ]);
-
-        // Optional: capture output
-        $output = Artisan::output();
 
      
         return redirect()->back()->with('success');

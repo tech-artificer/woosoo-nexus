@@ -19,9 +19,30 @@ class CreateOrderedMenu
         $this->orderedMenuId = null;
 
         $menuItems = $attr['items'] ?? [];
+        $expandedItems = [];
+
+        foreach ($menuItems as $item) {
+            $expandedItems[] = $item;
+
+            if (!empty($item['modifiers']) && is_array($item['modifiers'])) {
+                foreach ($item['modifiers'] as $modifier) {
+                    if (empty($modifier['menu_id'])) {
+                        continue;
+                    }
+
+                    $expandedItems[] = [
+                        'menu_id' => $modifier['menu_id'],
+                        'quantity' => intval($modifier['quantity'] ?? 1),
+                        'seat_number' => $item['seat_number'] ?? 1,
+                        'note' => $item['note'] ?? 'Package modifier',
+                    ];
+                }
+            }
+        }
+
         $created = [];
 
-        foreach ($menuItems as $key => $item) {
+        foreach ($expandedItems as $key => $item) {
             if ($key == 0) {
                 $this->orderedMenuId = $item['menu_id'];
             }
@@ -180,7 +201,13 @@ class CreateOrderedMenu
             throw new \Exception('Failed to insert ordered menu.');
         }
 
-        return $orderedMenu;
+        // The stored proc may not write order_check_id / original_price — set them explicitly.
+        OrderedMenu::where('id', $orderedMenu->id)->update([
+            'order_check_id' => $orderCheckId,
+            'original_price' => $unitPrice,
+        ]);
+
+        return $orderedMenu->refresh();
     }
 
     private function getMenuPriceLevel($menuId)

@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\MenuImage;
-use Illuminate\Support\Number;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use App\Http\Resources\MenuModifierResource;
 
 class Menu extends Model
@@ -94,18 +94,88 @@ class Menu extends Model
         $decimals = (int)$this->tax->rounding ?? 0;
         $taxAmount = ($this->price * $quantity) * ($percentage / 100);
 
-        return Number::format($taxAmount, $decimals);
+        return number_format((float) $taxAmount, $decimals, '.', ',');
     }
 
     public function getImageUrlAttribute()
     {
-        $imgPath = MenuImage::where('menu_id', $this->id)->first()->path ?? null;
+        // Use already-loaded image relation to avoid N+1 queries on collections.
+        if ($this->relationLoaded('image')) {
+            $imgPath = $this->image?->path ?? null;
+        } else {
+            $imgPath = MenuImage::where('menu_id', $this->id)->first()?->path ?? null;
+        }
 
         if ($imgPath) {
-            return url('storage/'.$imgPath);
+            return url('storage/' . $imgPath);
+        }
+
+        $brandImageFile = $this->resolveBrandFoodAssetFile();
+        if ($brandImageFile) {
+            return asset('images/food-assets/' . $brandImageFile);
         }
 
         return asset('images/menu-placeholder/1.jpg');
+    }
+
+    protected function resolveBrandFoodAssetFile(): ?string
+    {
+        $map = [
+            'asian-gochu-woosamgyup' => 'asian-gochu-woosamgyup.png',
+            'beef-bulgogi' => 'beef-bulgogi.png',
+            'candied-sweet-potato-goguma-mattang' => 'candied-sweet-potato-goguma-mattang.png',
+            'citrus-burst-pepper-samgyupsal' => 'citrus-burst-pepper-samgyupsal.png',
+            'dak-galbi-plain-or-spicy' => 'dak-galbi-plain-or-spicy.png',
+            'gamja-jorim-korean-braised-baby-potatoes' => 'gamja-jorim-korean-braised-baby-potatoes.png',
+            'golden-mushroom-beef-roll' => 'golden-mushroom-beef-roll.png',
+            'golden-mushroom-roll' => 'golden-mushroom-roll.png',
+            'gyeran-jjim-egg-souffle' => 'gyeran-jjim-egg-souffle.png',
+            'hyangcho-samgyupsal' => 'hyangcho-samgyupsal-1.png',
+            'hyangcho-woosamgyup' => 'hyangcho-woosamgyup.png',
+            'kajun-bulmat-samgyupsal' => 'kajun-bulmat-samgyupsal.png',
+            'korean-chili-pepper-beef' => 'korean-chili-pepper-beef.png',
+            'korean-chili-pepper-samgyupsal' => 'korean-chili-pepper-samgyupsal.png',
+            'korean-lettuce-salad-sanghu-geotjeori' => 'korean-lettuce-salad-sanghu-geotjeori.png',
+            'korean-pickled-radish' => 'korean-pickled-radish.png',
+            'korean-potato-salad-gamja-salad' => 'korean-potato-salad-gamja-salad.png',
+            'lettuce' => 'lettuce.png',
+            'moksal-pork-neck' => 'moksal-pork-neck.png',
+            'pickled-cucumber' => 'pickled-cucumber.png',
+            'plain-samgyupsal' => 'plain-samgyupsal.png',
+            'samgyupsal' => 'samgyupsal.png',
+            'spicy-sesame-samgyupsal' => 'spicy-sesame-samgyupsal.png',
+            'sweet-and-crunchy-tofu-dubu-ganjeong' => 'sweet-and-crunchy-tofu-dubu-ganjeong.png',
+            'traditional-napa-cabbage-kimchi' => 'traditional-napa-cabbage-kimchi.png',
+            'woosamgyup' => 'woosamgyup.png',
+            'woosoo-cheese' => 'woosoo-cheese.png',
+            'yangyeom-samgyupsal' => 'yangyeom-samgyupsal.png',
+        ];
+
+        $candidates = [
+            $this->name,
+            $this->kitchen_name,
+            $this->receipt_name,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (! $candidate || ! is_string($candidate)) {
+                continue;
+            }
+
+            $slug = Str::of($candidate)
+                ->lower()
+                ->replace('&', 'and')
+                ->replace(['(', ')', '/', ',', '.'], ' ')
+                ->squish()
+                ->slug('-')
+                ->toString();
+
+            if (isset($map[$slug])) {
+                return $map[$slug];
+            }
+        }
+
+        return null;
     }
 
     public static function getModifiers(int $id) {

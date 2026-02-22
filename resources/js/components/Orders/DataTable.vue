@@ -38,6 +38,9 @@ interface DataTableProps {
 }
 
 const props = defineProps<DataTableProps>()
+const emit = defineEmits<{
+  (e: 'row-click', order: DeviceOrder): void
+}>()
 
 // Use computed to ensure reactivity is properly tracked
 const tableData = computed(() => props.data ?? [])
@@ -69,12 +72,29 @@ const table = useVueTable({
   getFacetedRowModel: getFacetedRowModel(),
   getFacetedUniqueValues: getFacetedUniqueValues(),
 })
+
+const shouldIgnoreRowClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement | null
+  if (!target) return false
+  return Boolean(
+    target.closest('button') ||
+    target.closest('a') ||
+    target.closest('input') ||
+    target.closest('[role="menuitem"]') ||
+    target.closest('[data-slot="checkbox"]')
+  )
+}
+
+const handleRowClick = (event: MouseEvent, order: DeviceOrder) => {
+  if (shouldIgnoreRowClick(event)) return
+  emit('row-click', order)
+}
 </script>
 
 <template>
   <div class="space-y-4">
     <DataTableToolbar :table="table" :devices="props.devices" :tables="props.tables" />
-    <div class="rounded-md border">
+    <div class="overflow-hidden rounded-md border bg-background">
       <Table>
         <TableHeader>
           <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
@@ -90,6 +110,8 @@ const table = useVueTable({
               :key="row.id"
               :data-state="row.getIsSelected() && 'selected'"
               :data-order-id="row.original.id"
+              class="cursor-pointer transition-colors hover:bg-muted/50"
+              @click="handleRowClick($event, row.original)"
             >
               <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                 <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />

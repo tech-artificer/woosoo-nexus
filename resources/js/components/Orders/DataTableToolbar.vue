@@ -136,14 +136,14 @@ const handleExport = () => {
 </script>
 
 <template>
-  <div class="flex flex-row flex-wrap justify-between gap-2">
-    <div class="flex flex-row flex-wrap gap-2">
+  <div class="flex flex-row flex-wrap items-center justify-between gap-3 px-1 py-1">
+    <div class="flex flex-row flex-wrap items-center gap-2">
 
       <!-- Search by order number -->
       <Input
         placeholder="Search order #..."
         :model-value="(table.getColumn('order_number')?.getFilterValue() as string) ?? ''"
-        class="h-8 w-[150px] lg:w-[200px]"
+        class="h-8 w-37.5 lg:w-50"
         @input="table.getColumn('order_number')?.setFilterValue($event.target.value)"
       />
 
@@ -183,7 +183,7 @@ const handleExport = () => {
       </Button>
     </div>
 
-    <div class="flex flex-row flex-wrap gap-2">
+    <div class="flex flex-row flex-wrap items-center gap-2">
       <!-- Bulk Complete -->
       <Button
         v-if="selectedRows.length > 0"

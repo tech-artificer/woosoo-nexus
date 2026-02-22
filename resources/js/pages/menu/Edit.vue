@@ -63,14 +63,9 @@ function submit() {
     preserveScroll: true,
     preserveState: true,
     onSuccess: () => {
-      // console.log('✅ Image uploaded successfully');
       toast('Image Uploaded:', {
         description: 'The previous image has been replaced with your new upload.',
-        action: {
-            label: 'Ok',
-            variant: 'success',
-            onClick: () => console.log('Ok'),
-        },
+        action: { label: 'Ok', variant: 'success' },
         duration: 5000,
         position: 'top-right',
       });
@@ -79,10 +74,6 @@ function submit() {
     onError: () => {
       toast('An Error Occured', {
         description: 'Something Went Wrong!',
-        // action: {
-        //   label: 'Undo',
-        //   onClick: () => console.log('Undo'),
-        // },
         duration: 5000,
         position: 'top-right',
       });

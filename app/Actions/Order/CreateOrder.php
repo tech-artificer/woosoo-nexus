@@ -23,9 +23,10 @@ class CreateOrder
         if (! (app()->environment('testing') || env('APP_ENV') === 'testing')) {
             $order->update([
                 'is_available' => true,
-                'end_terminal_id' => $order->terminal_id,
-                'cash_tray_session_id' => $attr['cash_tray_session_id'],
-                'cashier_employee_id' => $attr['cashier_employee_id'],
+                'end_terminal_id' => $order->terminal_id ?? $attr['terminal_id'] ?? null,
+                'cash_tray_session_id' => $attr['cash_tray_session_id'] ?? null,
+                'close_employee_log_id' => $attr['close_employee_log_id'] ?? null,
+                'cashier_employee_id' => $attr['cashier_employee_id'] ?? null,
             ]);
         }
 

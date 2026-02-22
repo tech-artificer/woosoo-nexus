@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\V1\Auth\{
     DeviceAuthApiController,
 };
 
+use App\Http\Controllers\Api\V2\TabletApiController;
+
 use App\Http\Controllers\Api\V1\Krypton\{
     TerminalSessionApiController,
 };
@@ -31,7 +33,7 @@ use App\Models\DeviceOrder;
 use App\Events\PrintOrder;
 
 Route::options('{any}', function () {
-    return response()->json([], 200);
+    return response()->noContent();
 })->where('any', '.*');
 
 Route::get('/device/ip', function (Request $request) {
@@ -56,6 +58,10 @@ Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId)
 Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(function () {
     Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
     Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+
+    // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
+    Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
+    Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
 });
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'api'])->group(function () {
@@ -152,6 +158,20 @@ Route::prefix('v1')->middleware(['auth:device'])->group(function () {
 // Admin/device-reset endpoint (requires auth)
 Route::middleware(['requestId','auth:sanctum'])->group(function () {
     Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
+});
+
+// Device API v2 — tablet-ordering-pwa endpoints
+Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group(function () {
+    Route::get('/tablet/packages', [TabletApiController::class, 'packages'])->name('api.v2.tablet.packages');
+    Route::get('/tablet/packages/{id}', [TabletApiController::class, 'packageDetails'])->name('api.v2.tablet.package.details');
+    Route::get('/tablet/meat-categories', [TabletApiController::class, 'meatCategories'])->name('api.v2.tablet.meat-categories');
+    Route::get('/tablet/categories', [TabletApiController::class, 'categories'])->name('api.v2.tablet.categories');
+    Route::get('/tablet/categories/{slug}/menus', [TabletApiController::class, 'categoryMenus'])->name('api.v2.tablet.category.menus');
+});
+
+// Session alias — PWA calls /api/session/latest; actual route is /api/sessions/current
+Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group(function () {
+    Route::get('/session/latest', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.session.latest');
 });
 
 // Health endpoint — quick check for app DB and POS DB connectivity

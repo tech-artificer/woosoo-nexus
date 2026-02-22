@@ -173,6 +173,8 @@ class OrderController extends Controller
         try {
             $order->status = OrderStatus::from($request->input('status'));
             $order->save();
+            
+            // Broadcast status update immediately (observer will handle this)
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => 'Invalid status transition', 'error' => $e->getMessage()], 422);
         }

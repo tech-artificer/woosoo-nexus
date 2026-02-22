@@ -1,9 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { defineEmits, defineProps } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { computed } from 'vue'
 
 const props = defineProps({
   search: { type: String, default: '' },
@@ -41,33 +39,39 @@ function reset() {
 </script>
 
 <template>
-  <div class="flex flex-col md:flex-row items-start md:items-center gap-3 mb-3">
-    <div class="flex-1">
-      <input :value="search" @input="(e: any) => emit('update:search', e.target?.value)" @keyup.enter="apply" placeholder="Search requests..." class="border rounded px-3 py-2 w-full" />
+  <div class="flex flex-col gap-3 px-1 py-1 lg:flex-row lg:items-center lg:justify-between">
+    <div class="w-full lg:max-w-sm">
+      <Input
+        :model-value="search"
+        @input="(e: any) => emit('update:search', e.target?.value)"
+        @keyup.enter="apply"
+        placeholder="Search requests..."
+        class="h-8"
+      />
     </div>
-    <div class="flex items-center gap-2">
-      <select :value="status" @change="(e: any) => emit('update:status', e.target?.value)" class="border rounded px-3 py-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <select :value="status" @change="(e: any) => emit('update:status', e.target?.value)" class="h-8 rounded-md border border-input bg-background px-2 text-sm">
         <option value="">All status</option>
         <option value="pending">Pending</option>
         <option value="in_progress">In Progress</option>
         <option value="completed">Completed</option>
         <option value="voided">Voided</option>
       </select>
-      <select :value="priority" @change="(e: any) => emit('update:priority', e.target?.value)" class="border rounded px-3 py-2">
+      <select :value="priority" @change="(e: any) => emit('update:priority', e.target?.value)" class="h-8 rounded-md border border-input bg-background px-2 text-sm">
         <option value="">All priorities</option>
         <option value="low">Low</option>
         <option value="medium">Medium</option>
         <option value="high">High</option>
         <option value="urgent">Urgent</option>
       </select>
-      <input type="date" :value="fromDate" @change="(e: any) => emit('update:fromDate', e.target?.value)" class="border rounded px-3 py-2" />
-      <input type="date" :value="toDate" @change="(e: any) => emit('update:toDate', e.target?.value)" class="border rounded px-3 py-2" />
-      <label class="flex items-center gap-2">
+      <input type="date" :value="fromDate" @change="(e: any) => emit('update:fromDate', e.target?.value)" class="h-8 rounded-md border border-input bg-background px-2 text-sm" />
+      <input type="date" :value="toDate" @change="(e: any) => emit('update:toDate', e.target?.value)" class="h-8 rounded-md border border-input bg-background px-2 text-sm" />
+      <label class="flex h-8 items-center gap-2 px-2 text-sm">
         <input type="checkbox" :checked="showAll" @change="(e: any) => emit('update:showAll', e.target?.checked)" />
         <span class="text-sm">Show All</span>
       </label>
-      <button @click.prevent="apply" class="px-3 py-2 rounded bg-primary text-white">Apply</button>
-      <button @click.prevent="reset" class="px-3 py-2 rounded border">Reset</button>
+      <Button size="sm" class="h-8" @click.prevent="apply">Apply</Button>
+      <Button size="sm" variant="outline" class="h-8" @click.prevent="reset">Reset</Button>
     </div>
   </div>
 </template>
