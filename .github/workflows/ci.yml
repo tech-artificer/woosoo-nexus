@@ -48,7 +48,10 @@ jobs:
         run: npm ci
 
       - name: Lint (eslint)
-        run: npm run lint --if-present
+        run: npm run lint:check --if-present
+
+      - name: Type check (vue-tsc)
+        run: npm run typecheck --if-present
 
       - name: Build assets
         run: npm run build --if-present
