@@ -8,6 +8,11 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Never intercept navigation requests (full page loads / refreshes).
+  // Inertia.js pages are server-rendered by Laravel; caching them causes
+  // stale CSRF tokens and breaks PHP-FPM passthrough on refresh.
+  if (event.request.mode === 'navigate') return;
+
   event.respondWith(
     caches.open('woosoo-nexus-v1').then(cache => {
       return cache.match(event.request).then(response => {

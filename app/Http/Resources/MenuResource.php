@@ -18,9 +18,15 @@ class MenuResource extends JsonResource
             'id'              => $this->id,
             'group'           => $this->group?->name ?? null,
             'groupName'       => $this->groupName ?? $this->group?->name ?? null,
-            'category'        => $this->category?->name ?? null,
-            'course'          => $this->course?->name ?? null,
-            'name'            => $this->name,
+            // relationLoaded() is a safe array_key_exists check; getRelation() throws
+            // on missing keys in Laravel 12. SP-hydrated models store category/course
+            // as raw string attributes, so fall back to getRawOriginal() when not loaded.
+            'category'        => $this->relationLoaded('category') ? $this->category?->name : ($this->getRawOriginal('category') ?? null),
+            'course'          => $this->relationLoaded('course') ? $this->course?->name : ($this->getRawOriginal('course') ?? null),
+            // SP-hydrated models (get_menus_by_group, get_menus_by_category, etc.)
+            // return camelCase aliases (menuName) instead of the column name (name).
+            // Fall back to menuName so SP and Eloquent paths both populate the field.
+            'name'            => $this->name ?? $this->menuName ?? null,
             'kitchen_name'    => $this->kitchen_name,
             'receipt_name'    => $this->receipt_name,
             'price'           => number_format((float) ($this->price ?? 0), 2, '.', ','),

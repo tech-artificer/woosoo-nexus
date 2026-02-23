@@ -130,7 +130,7 @@ class TabletApiController extends Controller
                     'id' => 2,
                     'name' => 'Dessert',
                     'slug' => 'dessert',
-                    'pos_category' => 'test entrees'
+                    'pos_category' => 'dessert'
                 ],
                 [
                     'id' => 3,
@@ -294,11 +294,32 @@ class TabletApiController extends Controller
 
             $aliases = $categoryAliases[$normalizedSlug];
 
-            // Try stored-procedure category fetch using aliases until one returns rows.
+            // Primary SP lookup: explicit, confirmed SP calls per category slug.
+            // These are tried before the generic category/group/course fallback chain.
+            // dessert → get_menus_by_course('dessert')  covers all groups (Cake, Flan, Jelly…)
+            // beverage → get_menus_by_group('drinks')   matches the actual POS group name
+            $primarySpLookup = [
+                'dessert'  => fn () => $this->menuRepository->getMenusByCourse('dessert'),
+                'beverage' => fn () => $this->menuRepository->getMenusByGroup('drinks'),
+            ];
+
             $menus = collect();
-            foreach ($aliases as $categoryName) {
+
+            if (isset($primarySpLookup[$normalizedSlug])) {
+                $candidate = ($primarySpLookup[$normalizedSlug])();
+                if ($candidate->isNotEmpty()) {
+                    $menus = $candidate;
+                    $menus->load(['image']);
+                    Log::info("TabletApiController::categoryMenus - Resolved '$normalizedSlug' via primary SP lookup ({$menus->count()} items)");
+                }
+            }
+
+            // Generic fallback chain (runs only when primary lookup returns nothing).
+            if ($menus->isEmpty()) foreach ($aliases as $categoryName) {
+                Log::debug("TabletApiController::categoryMenus - Trying category: $categoryName");
                 $candidateMenus = $this->menuRepository->getMenusByCategory($categoryName);
                 if ($candidateMenus->isNotEmpty()) {
+                    Log::info("TabletApiController::categoryMenus - Found {$candidateMenus->count()} items via category: $categoryName");
                     $menus = $candidateMenus;
                     break;
                 }
@@ -328,27 +349,43 @@ class TabletApiController extends Controller
                 $menus->load(['image']);
             }
 
-            // Second fallback: resolve by menu group names (POS dataset commonly uses groups for these tabs).
+            // Second fallback: resolve by menu group names using repository stored procedure.
             if ($menus->isEmpty()) {
                 $groupNames = $groupAliases[$normalizedSlug] ?? [];
 
                 if (!empty($groupNames)) {
-                    $menus = Menu::with(['image'])
-                        ->whereHas('group', function ($query) use ($groupNames) {
-                            $query->where(function ($innerQuery) use ($groupNames) {
-                                foreach ($groupNames as $index => $groupName) {
-                                    if ($index === 0) {
-                                        $innerQuery->whereRaw('LOWER(name) = ?', [Str::lower($groupName)]);
-                                    } else {
-                                        $innerQuery->orWhereRaw('LOWER(name) = ?', [Str::lower($groupName)]);
-                                    }
+                    // Try each group name with the stored procedure
+                    foreach ($groupNames as $groupName) {
+                        $candidateMenus = $this->menuRepository->getMenusByGroup($groupName);
+                        if ($candidateMenus->isNotEmpty()) {
+                            $menus = $candidateMenus;
+                            break;
+                        }
+                    }
+                    
+                    // If SP still returns empty, fallback to Eloquent with group matching
+                    if ($menus->isEmpty()) {
+                        $menus = Menu::with(['image'])
+                            ->whereHas('group', function ($query) use ($groupNames) {
+                                $query->where(function ($innerQuery) use ($groupNames) {
+                                    foreach ($groupNames as $index => $groupName) {
+                                        if ($index === 0) {
+                                            $innerQuery->whereRaw('LOWER(name) = ?', [Str::lower($groupName)]);
+                                        } else {
+                                            $innerQuery->orWhereRaw('LOWER(name) = ?', [Str::lower($groupName)]);
+                                        }
 
-                                    $innerQuery->orWhereRaw('LOWER(name) LIKE ?', ['%' . Str::lower($groupName) . '%']);
-                                }
-                            });
-                        })
-                        ->where('is_available', true)
-                        ->get();
+                                        $innerQuery->orWhereRaw('LOWER(name) LIKE ?', ['%' . Str::lower($groupName) . '%']);
+                                    }
+                                });
+                            })
+                            ->where('is_available', true)
+                            ->get();
+                    } else {
+                        // SP-hydrated models don't carry eager-loaded relations.
+                        // Post-load image to avoid N+1 when MenuResource accesses img_url.
+                        $menus->load(['image']);
+                    }
                 }
             }
 

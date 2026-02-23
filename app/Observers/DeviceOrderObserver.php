@@ -21,8 +21,13 @@ class DeviceOrderObserver
             $oldStatus = $deviceOrder->getOriginal('status');
             $newStatus = $deviceOrder->getAttribute('status');
 
+            // getAttribute() returns an OrderStatus enum due to the model cast.
+            // Backed enums cannot be interpolated directly — extract the scalar value.
+            $oldStatusStr = $oldStatus instanceof \BackedEnum ? $oldStatus->value : (string) ($oldStatus ?? '');
+            $newStatusStr = $newStatus instanceof \BackedEnum ? $newStatus->value : (string) ($newStatus ?? '');
+
             $timestamp = now()->toIso8601String();
-            Log::info("[🔔 DeviceOrder Status Change] order_id={$deviceOrder->order_id} status={$oldStatus} → {$newStatus} at {$timestamp}");
+            Log::info("[🔔 DeviceOrder Status Change] order_id={$deviceOrder->order_id} status={$oldStatusStr} → {$newStatusStr} at {$timestamp}");
 
             // Broadcast OrderStatusUpdated for real-time PWA notification
             // This ensures PWA receives update whether from polling or from status change trigger
