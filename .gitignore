@@ -30,3 +30,6 @@ docker/
 !bootstrap/cache/.gitignore
 /certs
 /logs
+# APK files (build artifacts)
+*.apk
+/storage/app/public/relay-device/*.apk
