@@ -219,7 +219,11 @@ class PrinterApiController extends Controller
 
             $payload = $events->map(function ($e) {
                 return [
-                    'id' => $e->id,
+                    'id'             => $e->id,
+                    'print_event_id' => $e->id,                                  // alias — primary identity key Flutter expects
+                    'order_id'       => $e->deviceOrder?->order_id,             // flat mirror of order.order_id
+                    'device_id'      => (string) ($e->deviceOrder?->device_id), // cast to string to match Flutter's deviceId type
+                    'session_id'     => $e->deviceOrder?->session_id,
                     'device_order_id' => $e->device_order_id,
                     'event_type' => $e->event_type,
                     'meta' => $e->meta,
