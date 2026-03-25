@@ -2,12 +2,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { router } from '@inertiajs/core'
+import { router, Link } from '@inertiajs/vue3'
 import { Head, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue'
 import { columns } from '@/components/Users/columns';
 import DataTable from '@/components/Users/DataTable.vue'
 import StatsCards from '@/components/Stats/StatsCards.vue'
+import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-vue-next'
 import type { User } from '@/types/models';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -51,9 +53,17 @@ function goto(link: any) {
     <AppLayout :breadcrumbs="breadcrumbs">    
         <!-- <pre> {{ users }} </pre> -->
                 <div class="space-y-6">
-                        <div>
-                            <h1 class="text-2xl font-bold tracking-tight">User Management</h1>
-                            <p class="text-muted-foreground">Manage system users and their accounts</p>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h1 class="text-2xl font-bold tracking-tight">User Management</h1>
+                                <p class="text-muted-foreground">Manage system users and their accounts</p>
+                            </div>
+                            <Link :href="route('users.create')">
+                                <Button>
+                                    <Plus class="mr-2 h-4 w-4" />
+                                    Add User
+                                </Button>
+                            </Link>
                         </div>
                         <!-- Filters moved into Users DataTable toolbar -->
                         <StatsCards :cards="(props.stats ?? [

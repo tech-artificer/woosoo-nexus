@@ -32,11 +32,11 @@ const printerLabel = computed(() => {
 
 <template>
   <div v-if="isPrinted" class="flex items-center gap-2">
-    <CheckCircle class="h-4 w-4 text-green-600" :title="printerLabel || 'Printed'" />
-    <span v-if="relativeTime" class="text-xs text-gray-600">{{ relativeTime }}</span>
+    <CheckCircle class="h-4 w-4 text-green-600" />
+    <span class="text-xs text-green-700">Printed <span v-if="relativeTime" class="text-gray-600">{{ relativeTime }}</span></span>
   </div>
   <div v-else class="flex items-center gap-2 text-gray-400">
-    <Clock class="h-4 w-4" title="Pending print" />
-    <span class="text-xs">Pending</span>
+    <Clock class="h-4 w-4" />
+    <span class="text-xs">Pending print</span>
   </div>
 </template>

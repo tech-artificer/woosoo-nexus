@@ -56,17 +56,24 @@ Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId)
 // Print endpoint is device-only; moved under auth:device group below.
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(function () {
-    Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
-    Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+    // Rate limit: 120 requests per minute for guest endpoints (generous for transition)
+    Route::middleware('throttle:120,1')->group(function () {
+        Route::get('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
+        Route::get('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
 
-    // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
-    Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
-    Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
+        // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
+        Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
+        Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
+    });
 });
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'api'])->group(function () {
-    Route::post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
-    Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
+    // Rate limit: 60 requests per minute for device registration (prevents brute force)
+    Route::middleware('throttle:60,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
+    
+    // Menu endpoints: 300 requests per minute (generous for busy tablets)
+    Route::middleware('throttle:300,1')->group(function () {
+        Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
     Route::get('/menus/with-modifiers', [BrowseMenuApiController::class, 'getMenusWithModifiers'])->name('api.menus.with.modifiers');
     Route::get('/menus/modifier-groups', [BrowseMenuApiController::class, 'getAllModifierGroups'])->name('api.menus.modifier-groups');
     Route::get('/menus/modifiers', [BrowseMenuApiController::class, 'getMenuModifiers'])->name('api.menus.modifiers');
@@ -236,4 +243,5 @@ Route::get('/debug/pos/menus/course', function (Request $request) {
         'menu_rows' => $menus,
     ]);
 
+});
 });

@@ -136,8 +136,31 @@ const posFillDo = (isVoided: boolean) => {
 }
 
 const openViewDialog = (order: any) => {
+  // Show sheet immediately with the row projection to keep UI non-blocking
   viewDialogOrder.value = order
   showViewDialog.value = true
+
+  // Items are not eager-loaded on the list endpoint — fetch the full order in background
+  const orderId = String(order.order_id || order.id || '')
+  if (!orderId) return
+
+  fetch(`/device-order/by-order-id/${orderId}`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(String(res.status))
+      return res.json()
+    })
+    .then(full => {
+      // Only update if this sheet is still showing the same order
+      if (
+        showViewDialog.value &&
+        String((viewDialogOrder.value as any)?.order_id || (viewDialogOrder.value as any)?.id) === orderId
+      ) {
+        viewDialogOrder.value = full
+      }
+    })
+    .catch(err => console.warn('openViewDialog: background fetch failed', err))
 }
 
 const handleDetailPrint = () => {

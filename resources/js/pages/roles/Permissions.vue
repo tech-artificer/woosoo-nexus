@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, reactive } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, Head } from '@inertiajs/vue3';
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription
 } from '@/components/ui/card';

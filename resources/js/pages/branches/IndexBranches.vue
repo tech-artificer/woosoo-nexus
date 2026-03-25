@@ -3,6 +3,7 @@
 import { ref } from 'vue'
 import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { type BreadcrumbItem } from '@/types'
 import DataTable from '@/components/Branches/DataTable.vue'
 import BranchForm from '@/components/Branches/BranchForm.vue'
 
@@ -22,6 +23,13 @@ const props = defineProps<{
   branches: Branch[]
 }>()
 
+const breadcrumbs: BreadcrumbItem[] = [
+  {
+    title: 'Branches',
+    href: '/branches',
+  },
+]
+
 const showForm = ref(false)
 const editingBranch = ref<Branch | null>(null)
 
@@ -37,7 +45,7 @@ const handleEdit = (branch: Branch) => {
 </script>
 
 <template>
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <Head title="Branches" />
 
     <div class="p-6 space-y-6">

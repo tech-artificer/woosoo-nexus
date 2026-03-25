@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { Menu } from '@/types/models';
 import { h } from 'vue'
-// import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import DataTableColumnHeader from '@/components/Menus/DataTableColumnHeader.vue'
 import DataTableRowActions from '@/components/Menus/DataTableRowActions.vue'
@@ -34,7 +34,16 @@ export const columns: ColumnDef<Menu, any>[] = [
   {
     accessorKey: 'price',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Price' }),
-    cell: ({ row }) => h('div', { class: 'font-medium' }, '₱' + row.getValue('price')),
+    cell: ({ row }) => {
+      const price = Number(row.getValue('price')) || 0
+      if (price === 0) {
+        return h('div', { class: 'flex items-center gap-2' }, [
+          h('span', { class: 'font-medium text-muted-foreground' }, '₱0.00'),
+          h(Badge, { variant: 'secondary', class: 'text-xs' }, 'Included')
+        ])
+      }
+      return h('div', { class: 'font-medium' }, '₱' + price.toFixed(2))
+    },
   },
   {
     accessorKey: 'is_available',

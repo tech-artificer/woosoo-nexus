@@ -122,6 +122,11 @@ const itemStatusLabel = (item: OrderItem) => {
   const orderStatus = String((order.value as any)?.status || '').toLowerCase()
   return orderStatus || 'pending'
 }
+
+const isOrderCompleted = computed(() => {
+  const status = String(order.value?.status || '').toLowerCase()
+  return ['completed', 'voided', 'cancelled', 'archived'].includes(status)
+})
 </script>
 
 <template>
@@ -145,7 +150,14 @@ const itemStatusLabel = (item: OrderItem) => {
             <Button variant="outline" size="sm" @click="emit('print')">
               <Printer class="mr-2 size-4" /> Print Bill
             </Button>
-            <Button size="sm" @click="emit('complete')">Complete Transaction</Button>
+            <Button 
+              size="sm" 
+              :disabled="isOrderCompleted" 
+              @click="emit('complete')"
+              :class="{ 'opacity-50 cursor-not-allowed': isOrderCompleted }"
+            >
+              Complete Transaction
+            </Button>
           </div>
         </div>
 
