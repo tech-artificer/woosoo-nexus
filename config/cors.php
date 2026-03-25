@@ -14,12 +14,15 @@ return [
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
     */
-      'paths' => ['api/*', 'auth/broadcasting'],
+    'paths' => ['api/*', 'auth/broadcasting'],
     'allowed_methods' => ['*'],
     'allowed_origins' => ['*'],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
-    'max_age' => 0,
-    'supports_credentials' => true,
+    'max_age' => 86400,
+    // Must be false when allowed_origins is ['*'].
+    // The CORS spec forbids Access-Control-Allow-Origin: * with credentials.
+    // Tablet PWA uses Bearer token auth — no cookies needed.
+    'supports_credentials' => false,
 
 ];

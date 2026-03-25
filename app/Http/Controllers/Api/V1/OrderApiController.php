@@ -41,8 +41,14 @@ class OrderApiController extends Controller
             $query->where('session_id', $sessionId);
         }
 
-        // If authenticated as a device, restrict to device's branch
+        // If authenticated as a device, restrict to that specific device.
+        // Branch scoping alone can leak sibling tablet orders and break
+        // device-local active-order recovery in the PWA.
         $device = $request->user();
+        if ($device && isset($device->id)) {
+            $query->where('device_id', $device->id);
+        }
+
         if ($device && isset($device->branch_id)) {
             $query->where('branch_id', $device->branch_id);
         }
@@ -190,11 +196,22 @@ class OrderApiController extends Controller
             $name = trim(strval($it['name'] ?? ''));
             $quantity = intval($it['quantity'] ?? 1);
 
-            // If caller provided a `menu_id` and `price`, prefer that (no POS lookup required).
+            // Optimization: If both menu_id and price provided, skip DB lookup (testing + API contracts)
             $menu = null;
             if (!empty($it['menu_id']) && isset($it['price'])) {
                 $menu = (object) [ 'id' => $it['menu_id'], 'price' => $it['price'] ];
-            } else {
+            }
+            // Priority 1: Use menu_id to lookup from POS if price not provided
+            elseif (!empty($it['menu_id'])) {
+                try {
+                    $menu = KryptonMenu::find($it['menu_id']);
+                } catch (\Throwable $_e) {
+                    $menu = null;
+                }
+            }
+
+            // Priority 2: Fallback to name-based lookup if menu_id lookup failed or not provided
+            if (!$menu && !empty($name)) {
                 try {
                     $menu = KryptonMenu::whereRaw('LOWER(receipt_name) = ?', [strtolower($name)])->first()
                         ?? KryptonMenu::whereRaw('LOWER(name) = ?', [strtolower($name)])->first();
@@ -204,7 +221,8 @@ class OrderApiController extends Controller
             }
 
             if (! $menu) {
-                return response()->json(['success' => false, 'message' => "Menu item not found: {$name}"], 422);
+                $menuRef = $it['menu_id'] ?? $name ?? 'unknown';
+                return response()->json(['success' => false, 'message' => "Menu item not found: {$menuRef}"], 422);
             }
 
             $mappedItems[] = [
@@ -359,6 +377,16 @@ class OrderApiController extends Controller
                         'error' => $e->getMessage(),
                     ]);
                 }
+            }
+
+            // Emit a PrintEvent for the relay device to consume
+            try {
+                app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'REFILL', [
+                    'refill_count' => count($mappedItems),
+                    'refilled_at' => now()->toIso8601String(),
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
             }
 
             return response()->json(['success' => true, 'created' => $created]);

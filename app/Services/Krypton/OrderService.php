@@ -29,7 +29,6 @@ use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\BroadcastService;
 use App\Events\Order\OrderVoided;
-use App\Events\PrintOrder;
 use App\Exceptions\SessionNotFoundException;
 
 use Illuminate\Support\Facades\Log;
@@ -51,38 +50,27 @@ class OrderService
         $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
 
         // Calculate totals from items if not provided or if they are 0
-        // if (!isset($attributes['total_amount']) || $attributes['total_amount'] == 0) {
-        //     Log::info('OrderService: Calculating totals from items', [
-        //         'items_count' => count($attributes['items'] ?? []),
-        //         'original_total' => $attributes['total_amount'] ?? 'not set'
-        //     ]);
-        //     // $calculatedTotals = $this->calculateTotalsFromItems($attributes['items'] ?? []);
-        //     $attributes['subtotal'] = $calculatedTotals['subtotal'];
-        //     $attributes['tax'] = $calculatedTotals['tax'];
-        //     $attributes['total_amount'] += $calculatedTotals['total'];
-        //     $attributes['discount_amount'] = $attributes['discount'] ?? 0;
-        //     Log::info('OrderService: Totals calculated', $calculatedTotals);
-        // }
+        if (!isset($attributes['total_amount']) || $attributes['total_amount'] == 0) {
+            Log::info('OrderService: Calculating totals from items', [
+                'items_count' => count($attributes['items'] ?? []),
+                'original_total' => $attributes['total_amount'] ?? 'not set'
+            ]);
+            $calculatedTotals = $this->calculateTotalsFromItems($attributes['items'] ?? []);
+            $attributes['subtotal'] = $calculatedTotals['subtotal'];
+            $attributes['tax'] = $calculatedTotals['tax'];
+            $attributes['total_amount'] = $calculatedTotals['total'];
+            $attributes['discount_amount'] = $attributes['discount'] ?? 0;
+            Log::info('OrderService: Totals calculated', $calculatedTotals);
+        }
 
-        // Defensive: strip legacy payload keys that should not be persisted
-        // directly on the `device_orders` table. `items` belong in
-        // `device_order_items` and `meta` is exposed via an accessor.
-        // IMPORTANT: Store items before unsetting for CreateOrderedMenu later
-        $orderItems = $attributes['items'] ?? [];
-        if (isset($attributes['items'])) {
-            unset($attributes['items']);
-        }
-        if (isset($attributes['meta'])) {
-            unset($attributes['meta']);
-        }
+        // Keep `items` for downstream CreateOrderedMenu action.
+        // DeviceOrder persistence already uses an explicit create() payload,
+        // so no legacy JSON columns are mass-assigned from here.
 
         $this->attributes = $attributes;
 
-        try {
-            // NOTE: Transaction management moved to controller layer.
-            // Callers MUST wrap this method in DB::transaction() to ensure atomicity.
-            // This prevents nested transaction issues and gives controllers full
-            // control over the transaction scope (e.g., combining order checks + creation).
+        return DB::transaction(function () use ($device) {
+            // Create a new order using the provided attributes
 
             $order = CreateOrder::run($this->attributes);
 
@@ -101,7 +89,7 @@ class OrderService
 
             // Create an order check
             $orderCheck = CreateOrderCheck::run($this->attributes);
-            //
+            // 
             $this->updateAttributes([
                 'order_check_id' => $orderCheck->id,
             ]);
@@ -124,47 +112,23 @@ class OrderService
             // Add device_order_id so CreateOrderedMenu can save to device_order_items
             $this->updateAttributes([
                 'device_order_id' => $deviceOrder->id,
-                'items' => $orderItems, // Restore items array for CreateOrderedMenu
             ]);
 
             // Create ordered menus (both POS and local device_order_items)
             $orderedMenus = CreateOrderedMenu::run($this->attributes);
 
             // Schedule creation of a PrintEvent after the database transaction commits.
-            // NOTE: POS writes (krypton_woosoo) and local writes (woosoo_api)
-            // live in separate databases, so cross-db rollback is not possible.
-            // Print events remain fire-and-forget after commit to avoid
-            // coupling local print state to POS transaction scope.
+            // This ensures we don't create print events while the order transaction is still open.
             DB::afterCommit(function () use ($deviceOrder) {
                 try {
-                    // PHASE 2 FIX (C1): Wrap PrintEvent::create() + broadcast in transaction
-                    // to ensure printEvent relation is committed before broadcast reads it
-                    DB::transaction(function () use ($deviceOrder) {
-                        app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
-                        // Reload to pick up printEvent relation
-                        $deviceOrder->refresh();
-                        // Dispatch PrintOrder broadcast so relay devices receive the print job
-                        PrintOrder::dispatch($deviceOrder);
-                    });
+                    app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
                 } catch (\Throwable $e) {
                     report($e);
                 }
             });
 
             return $deviceOrder;
-        } catch (\Throwable $e) {
-            // CRITICAL: POS writes have already succeeded and are NOT rolled back.
-            // Local transaction failure leaves POS order orphaned.
-            \Illuminate\Support\Facades\Log::error('Order creation local transaction failed after POS success', [
-                'order_id' => $order->id ?? null,
-                'device_id' => $device->id,
-                'table_id' => $device->table_id,
-                'session_id' => $this->attributes['session_id'] ?? null,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            throw $e;
-        }
+        });
     }
 
     protected function updateAttributes($array = []) {
@@ -231,34 +195,34 @@ class OrderService
      * @param array $items
      * @return array
      */
-    // protected function calculateTotalsFromItems(array $items): array
-    // {
-    //     $subtotal = 0;
-    //     $tax = 0;
-    //     $taxRate = 0.10; // 10% tax rate (same as CreateOrderedMenu)
+    protected function calculateTotalsFromItems(array $items): array
+    {
+        $subtotal = 0;
+        $tax = 0;
+        $taxRate = 0.10; // 10% tax rate (same as CreateOrderedMenu)
 
-    //     foreach ($items as $item) {
-    //         $quantity = $item['quantity'] ?? 0;
-    //         $price = $item['price'] ?? 0;
+        foreach ($items as $item) {
+            $quantity = $item['quantity'] ?? 0;
+            $price = $item['price'] ?? 0;
             
-    //         // Calculate item total (price * quantity)
-    //         $itemTotal = $price * $quantity;
+            // Calculate item total (price * quantity)
+            $itemTotal = $price * $quantity;
             
-    //         // Calculate tax for this item (same as CreateOrderedMenu: totalItemPrice * taxRate)
-    //         $itemTax = $itemTotal * $taxRate;
+            // Calculate tax for this item (same as CreateOrderedMenu: totalItemPrice * taxRate)
+            $itemTax = $itemTotal * $taxRate;
             
-    //         $subtotal += $itemTotal;
-    //         $tax += $itemTax;
-    //     }
+            $subtotal += $itemTotal;
+            $tax += $itemTax;
+        }
 
-    //     $total = $subtotal + $tax;
+        $total = $subtotal + $tax;
 
-    //     return [
-    //         'subtotal' => $subtotal,
-    //         'tax' => $tax,
-    //         'total' => $total,
-    //     ];
-    // }
+        return [
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $total,
+        ];
+    }
 }
 
 // applied_taxes

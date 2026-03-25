@@ -13,11 +13,12 @@ class SessionApiController extends Controller
 {
     /**
      * Return current active session for a branch.
+     * 
+     * Response shape: the session object at root level (or null when none active).
+     * Clients access `response.data.id` via Axios — do NOT nest under a `session` key.
      */
     public function current(Request $request)
     {
-        $branchId = $request->query('branch_id') ?? ($request->user()?->branch_id ?? null);
-
         try {
             $session = KryptonSession::getLatestSession();
         } catch (\Throwable $e) {
@@ -25,11 +26,30 @@ class SessionApiController extends Controller
             $session = null;
         }
 
-        if (! $session) {
-            return response()->json(['success' => true, 'session' => null]);
+        // Return session at root so Axios clients can read `data.id` directly.
+        return response()->json($session);
+    }
+
+    /**
+     * Return the latest active session wrapped under a `session` key.
+     *
+     * Called by the print-bridge (GET /api/devices/latest-session).
+     * Distinct from current() which returns the session at root level for Axios clients.
+     *
+     * Response shape: { session: { id, ... } } or { session: null }
+     *
+     * @unauthenticated
+     */
+    public function latestSession(Request $request)
+    {
+        try {
+            $session = KryptonSession::getLatestSession();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to fetch latest session (latestSession): ' . $e->getMessage());
+            $session = null;
         }
 
-        return response()->json(['success' => true, 'session' => $session]);
+        return response()->json(['session' => $session]);
     }
 
     /**
@@ -53,7 +73,7 @@ class SessionApiController extends Controller
      */
     public function reset(Request $request, int $id)
     {
-        $user = $request()->user();
+        $user = $request->user();
         // Allow admins (User->is_admin) or devices
         $isAdmin = isset($user->is_admin) && $user->is_admin;
         $isDevice = $user && get_class($user) === '\\App\\Models\\Device';

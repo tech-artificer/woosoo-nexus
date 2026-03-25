@@ -4,7 +4,6 @@ namespace App\Services;
 use App\Models\DeviceOrder;
 use App\Enums\OrderStatus;
 use Carbon\Carbon;
-use Illuminate\Support\Number;
 
 class DashboardService
 {
@@ -23,7 +22,7 @@ class DashboardService
             OrderStatus::CONFIRMED
         ])->sum('total');
 
-        return Number::format($totalSales, 2); 
+        return number_format((float) $totalSales, 2, '.', ','); 
     }
 
     public function monthlySales($month = null, $year = null) {
@@ -42,7 +41,7 @@ class DashboardService
             OrderStatus::CONFIRMED
         ])->sum('total');
 
-        return Number::format($sales, 2); 
+        return number_format((float) $sales, 2, '.', ','); 
     }
 
     public function getTotalOrders($startDate = null, $endDate = null) {
@@ -54,7 +53,10 @@ class DashboardService
             $query->whereDate('created_at', Carbon::now());
         }
 
-        return $query->count();
+        return $query->whereIn('status', [
+            OrderStatus::COMPLETED,
+            OrderStatus::CONFIRMED
+        ])->count();
     }
 
     public function getTotalGuests($startDate = null, $endDate = null) {

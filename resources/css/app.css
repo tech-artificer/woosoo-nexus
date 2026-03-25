@@ -169,12 +169,12 @@
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
     --radius: 0.5rem;
-    --sidebar-background: var(--color-woosoo-dark-gray);
-    --sidebar-foreground:var(--color-woosoo-white);
-    --sidebar-primary: var(--color-woosoo-primary-light);
-    --sidebar-primary-foreground: var(--color-woosoo-primary-dark);
-     --sidebar-accent:var(--color-woosoo-accent);
-    --sidebar-accent-foreground: var(--color-woosoo-dark-gray);
+    --sidebar-background: hsl(0 0% 98%);
+    --sidebar-foreground: hsl(0 0% 12%);
+    --sidebar-primary: var(--color-woosoo-primary-dark);
+    --sidebar-primary-foreground: var(--color-woosoo-white);
+     --sidebar-accent: hsl(0 0% 94%);
+    --sidebar-accent-foreground: hsl(0 0% 12%);
     --sidebar-border: hsl(0 0% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 98%);

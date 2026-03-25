@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Models\OrderUpdateLog;
 use App\Models\DeviceOrder;
-use App\Policies\DeviceOrderPolicy;
+use App\Observers\OrderUpdateLogObserver;
+use App\Observers\DeviceOrderObserver;
 use App\Services\Krypton\KryptonContextService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -49,9 +51,6 @@ class AppServiceProvider extends ServiceProvider
         // Always return plain JSON (no "data" wrapper)
         JsonResource::withoutWrapping();
 
-        // Register broadcast event listener for event replay functionality
-        $this->registerBroadcastEventListener();
-
         try {
             // Share context-based sessions (from your Krypton service)
             Inertia::share(app(KryptonContextService::class)->getCurrentSessions());
@@ -69,10 +68,13 @@ class AppServiceProvider extends ServiceProvider
             });
 
         // 🔹 Gates
-        Gate::policy(DeviceOrder::class, DeviceOrderPolicy::class);
         Gate::define('viewPulse', fn (User $user) => $user->is_admin);
         // Backwards-compatible shorthand used by middleware: `can:admin`
         Gate::define('admin', fn (User $user) => $user->is_admin);
+
+        // 🔹 Observers
+        OrderUpdateLog::observe(OrderUpdateLogObserver::class);
+        DeviceOrder::observe(DeviceOrderObserver::class);
     }
 
     /**
@@ -128,31 +130,4 @@ class AppServiceProvider extends ServiceProvider
         // fallback: just prettify words
         return ucfirst(str_replace('.', ' ', $name));
     }
-
-    /**
-     * Register listener for broadcast events to enable event replay
-     */
-    private function registerBroadcastEventListener(): void
-    {
-        // Listen for all broadcast events and record them
-        try {
-            \Illuminate\Support\Facades\Event::listen('*', function ($eventName, $payload) {
-                // Only record events that are ShouldBroadcast
-                if (is_object($payload[0] ?? null) && method_exists($payload[0], 'broadcastOn')) {
-                    $event = $payload[0];
-                    $channels = $event->broadcastOn();
-                    $channel = $channels[0]?->name ?? 'unknown';
-                    $eventClass = class_basename($event);
-                    $eventPayload = method_exists($event, 'broadcastWith')
-                        ? $event->broadcastWith()
-                        : [];
-                    
-                    \App\Models\BroadcastEvent::record($channel, $eventClass, $eventPayload);
-                }
-            });
-        } catch (\Throwable $e) {
-            Log::warning("Failed to register broadcast event listener: " . $e->getMessage());
-        }
-    }
 }
-

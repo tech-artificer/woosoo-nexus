@@ -25,7 +25,7 @@ import { ref, computed } from 'vue'
 import type { DeviceOrder } from '@/types/models';
 import { toast } from 'vue-sonner'
 import KitchenTicket from '@/components/KitchenTicket.vue'
-import OrderDetails from '@/components/Orders/OrderDetails.vue'
+import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue'
 
 interface DataTableRowActionsProps {
   row: Row<DeviceOrder>
@@ -44,8 +44,6 @@ const posDialogOrderId = ref<number | string | null>(null);
 const posDialogSessionId = ref<number | null>(null);
 const showViewDialog = ref(false);
 const viewDialogOrder = ref<any | null>(null);
-const viewDialogLoading = ref(false);
-const viewDialogError = ref<string | null>(null);
 // control sheet open state
 // const isSheetOpen = ref(false)
 
@@ -138,54 +136,54 @@ const posFillDo = (isVoided: boolean) => {
 }
 
 const openViewDialog = (order: any) => {
+  // Show sheet immediately with the row projection to keep UI non-blocking
+  viewDialogOrder.value = order
   showViewDialog.value = true
-  viewDialogOrder.value = null
-  viewDialogError.value = null
-  viewDialogLoading.value = true
 
-  const orderId = order?.id
-  if (!orderId) {
-    viewDialogError.value = 'Missing order id.'
-    viewDialogLoading.value = false
-    return
-  }
+  // Items are not eager-loaded on the list endpoint — fetch the full order in background
+  const orderId = String(order.order_id || order.id || '')
+  if (!orderId) return
 
-  // Use fetch for JSON API endpoint
-  fetch(`/orders/${orderId}`, {
-    credentials: 'same-origin',
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-      'Accept': 'application/json'
-    }
+  fetch(`/device-order/by-order-id/${orderId}`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
   })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    .then(res => {
+      if (!res.ok) throw new Error(String(res.status))
+      return res.json()
+    })
+    .then(full => {
+      // Only update if this sheet is still showing the same order
+      if (
+        showViewDialog.value &&
+        String((viewDialogOrder.value as any)?.order_id || (viewDialogOrder.value as any)?.id) === orderId
+      ) {
+        viewDialogOrder.value = full
       }
-      return response.json()
     })
-    .then(data => {
-      viewDialogOrder.value = data?.order ?? null
-      if (!viewDialogOrder.value) {
-        viewDialogError.value = 'Order data not found in response.'
-      }
-    })
-    .catch(error => {
-      console.warn('Failed to fetch order details', error)
-      viewDialogError.value = `Failed to load order details: ${error.message}`
-    })
-    .finally(() => {
-      viewDialogLoading.value = false
-    })
+    .catch(err => console.warn('openViewDialog: background fetch failed', err))
+}
+
+const handleDetailPrint = () => {
+  const orderId = viewDialogOrder.value?.order_id ?? computedOrder.value.order_id
+  if (!orderId) return
+  printOrder(orderId as number | string)
+}
+
+const handleDetailComplete = () => {
+  const orderId = viewDialogOrder.value?.order_id ?? computedOrder.value.order_id
+  if (!orderId) return
+  completeOrder(orderId as number | string)
 }
 
 </script>
 
 <template>
 
+<div @click.stop>
+
 <DropdownMenu>
   <DropdownMenuTrigger as-child>
-    <Button variant="ghost" class="h-8 w-8 p-0" aria-label="Open order actions menu">
+    <Button variant="ghost" class="h-8 w-8 p-0">
       <span class="sr-only">Open menu</span>
       <MoreHorizontal class="h-4 w-4" />
     </Button>
@@ -203,7 +201,7 @@ const openViewDialog = (order: any) => {
       Trigger POS Test Update
     </DropdownMenuItem>
     <DropdownMenuItem @click.prevent="openViewDialog(computedOrder)">
-      View Details
+      View Order
     </DropdownMenuItem>
     <DropdownMenuSeparator />
     <DropdownMenuItem @click="voidOrder">
@@ -212,23 +210,12 @@ const openViewDialog = (order: any) => {
   </DropdownMenuContent>
 </DropdownMenu>
 
-<!-- View Order dialog -->
-<Dialog v-model:open="showViewDialog">
-  <DialogContent class="max-w-4xl">
-    <DialogHeader>
-      <DialogTitle>Order Details</DialogTitle>
-      <DialogDescription>Full order details, items, and refill history</DialogDescription>
-    </DialogHeader>
-
-    <div class="mt-4">
-      <OrderDetails :order="viewDialogOrder" :loading="viewDialogLoading" :error="viewDialogError" />
-    </div>
-
-    <DialogFooter class="mt-4">
-      <Button variant="ghost" @click.prevent="showViewDialog = false">Close</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+<OrderDetailSheet
+  v-model:open="showViewDialog"
+  :order="viewDialogOrder"
+  @print="handleDetailPrint"
+  @complete="handleDetailComplete"
+/>
 
 <!-- POS confirmation dialog -->
 <Dialog v-model:open="showPosDialog">
@@ -273,4 +260,6 @@ const openViewDialog = (order: any) => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  </div>
 </template>

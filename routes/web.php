@@ -27,7 +27,11 @@ use App\Http\Controllers\Admin\Reports\{
     ReportController,
 };
 
-  
+// Handle CORS preflight — return 204 No Content with no body
+Route::options('/{any}', function () {
+    return response()->noContent();
+})->where('any', '.*');
+
 Route::get('/', function () {
     // Redirect guests to login, authenticated users to the dashboard.
     if (! Auth::check()) {
@@ -54,6 +58,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
         // Admin: bulk update order statuses
         Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
+        // Device order API for strict verification
+        Route::get('/device-order/by-order-id/{orderId}', [OrderController::class, 'byOrderId'])->name('device-order.by-order-id');
         // Menu
         Route::get('/menus', [MenuController::class, 'index'])->name('menus');
         Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');
@@ -188,7 +194,8 @@ require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 
 // Dev-only helper route: unauthenticated generator for quick local testing
-if (app()->environment(['local', 'development']) || env('APP_DEBUG')) {
+// SECURITY: Only enabled in local/development environments (not production, even with APP_DEBUG)
+if (app()->environment(['local', 'development'])) {
     // GET avoids CSRF middleware so it's easy to call from curl/browser during local testing
     Route::get('/dev/generate-codes', function (\Illuminate\Http\Request $request) {
         $count = (int) ($request->query('count', 15));

@@ -80,6 +80,9 @@ class StoreDeviceOrderRequest extends FormRequest
             'items.*.ordered_menu_id' => ['nullable', 'integer', 'min:1'],
             'items.*.tax' => ['nullable', 'numeric', 'min:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
+            'items.*.modifiers' => ['nullable', 'array'],
+            'items.*.modifiers.*.menu_id' => ['required_with:items.*.modifiers', 'integer'],
+            'items.*.modifiers.*.quantity' => ['required_with:items.*.modifiers', 'integer', 'min:1'],
         ];
     }
 }

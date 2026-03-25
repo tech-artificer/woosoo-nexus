@@ -1,37 +1,28 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { computed } from 'vue'
 import NavMain from '@/components/NavMain.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
-import {
-    LayoutDashboard,
-    ListOrdered,
-    UserCog,
-    MonitorSmartphone,
-    UtensilsCrossed,
+import { Link, usePage } from '@inertiajs/vue3';
+import { 
+    LayoutDashboard, 
+    ListOrdered, 
+    UserCog, 
+    MonitorSmartphone, 
+    UtensilsCrossed,  
     Lock,
-    BookOpen,
-    BarChart3
+    Bell,
+    Building2,
+    Accessibility,
+    FileText,
+    Activity
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
-const hasZiggyRoute = (name: string) => {
-    const routes = (typeof window !== 'undefined' ? (window as any)?.Ziggy?.routes : undefined) ?? {};
-    return Object.prototype.hasOwnProperty.call(routes, name);
-};
-
-const routeOrFallback = (name: string, fallback: string) => {
-    if (typeof route !== 'function') return fallback;
-    if (!hasZiggyRoute(name)) return fallback;
-    try {
-        return route(name);
-    } catch (error) {
-        // Keep the sidebar functional even when Ziggy’s route list is stale.
-        console.warn(`Ziggy route missing: ${name}`, error);
-        return fallback;
-    }
-};
-
+const page = usePage()
+const user = computed(() => (page.props.auth as any)?.user)
+const isAdmin = computed(() => Boolean(user.value?.is_admin))
 
 const mainNavItems: NavItem[] = [
     {
@@ -43,68 +34,97 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Orders',
-        href: '/orders',
+        href: route('orders.index'),
         icon: ListOrdered,
         isActive: false,
         hasSubItems: false,
     },
     {
         title: 'Menus',
-        href: '/menus',
+        href: route('menus'),
         icon: UtensilsCrossed,
         isActive: false,
         hasSubItems: false,
     },
     {
         title: 'User Management',
-        href: '/users',
+        href: route('users.index'),
         icon: UserCog,
         isActive: false,
         hasSubItems: false,
     },
     {
         title: 'Devices',
-        href: '/devices',
+        href: route('devices.index'),
         icon: MonitorSmartphone,
         isActive: false,
         hasSubItems: false,
     },
     {
-        title: 'Manual',
-        href: '/manual',
-        icon: BookOpen,
+        title: 'Service Requests',
+        href: route('service-requests.index'),
+        icon: Bell,
         isActive: false,
         hasSubItems: false,
     },
-    {
-        title: 'Reports',
-        href: '#',
-        icon: BarChart3,
-        isActive: false,
-        hasSubItems: true,
-        items: [
-            { title: 'Daily Sales', href: routeOrFallback('reports.daily-sales', '/reports/daily-sales') },
-            { title: 'Menu Items', href: routeOrFallback('reports.menu-items', '/reports/menu-items') },
-            { title: 'Hourly Sales', href: routeOrFallback('reports.hourly-sales', '/reports/hourly-sales') },
-            { title: 'Guest Count', href: routeOrFallback('reports.guest-count', '/reports/guest-count') },
-            { title: 'Print Audit', href: routeOrFallback('reports.print-audit', '/reports/print-audit') },
-            { title: 'Order Status', href: routeOrFallback('reports.order-status', '/reports/order-status') },
-            { title: 'Discount & Tax', href: routeOrFallback('reports.discount-tax', '/reports/discount-tax') },
-        ],
-    },
-
+    
 ];
 
 
 const configNavItems: NavItem[] = [
+    {
+        title: 'Branches',
+        href: route('branches.index'),
+        icon: Building2,
+        isActive: false,
+        hasSubItems: false,
+    },
     {
         title: 'Roles & Permissions',
         href: route('roles.index'),
         icon: Lock,
         isActive: false,
         hasSubItems: false,
+    }, 
+    {
+        title: 'Permissions',
+        href: route('permissions.index'),
+        icon: Lock,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Accessibility',
+        href: route('accessibility.index'),
+        icon: Accessibility,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Event Logs',
+        href: route('event-logs.index'),
+        icon: FileText,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Reverb Service',
+        href: route('reverb.index'),
+        icon: Activity,
+        isActive: false,
+        hasSubItems: false,
     },
 ];
+
+// const reportNavItems: NavItem[] = [
+//     {
+//         title: 'Sales Report',
+//         href: route('reports.sales'),
+//         icon: TrendingUp,
+//         isActive: false,
+//         hasSubItems: false,
+//     }, 
+// ];
 
 </script>
 
@@ -123,9 +143,10 @@ const configNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" title="Main" />
+            <NavMain :items="isAdmin ? mainNavItems : [mainNavItems[0]]" title="Main"  />
+            <!-- <NavMain :items="reportNavItems" title="Reports" /> -->
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter v-if="isAdmin">
             <NavMain :items="configNavItems" title="Configuration" />
         </SidebarFooter>
     </Sidebar>

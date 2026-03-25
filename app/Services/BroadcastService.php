@@ -50,8 +50,17 @@ class BroadcastService
      */
     public function dispatchBroadcastJob($event): void
     {   
-        BroadcastEventJob::dispatch($event);
-        Log::info("Dispatched BroadcastEventJob");
+        $eventClass = get_class($event);
+        $jobId = \Illuminate\Support\Str::uuid();
+        
+        $broadcastJob = BroadcastEventJob::dispatch($event);
+        
+        Log::info("📤 [Broadcast] Job dispatched", [
+            'event' => class_basename($eventClass),
+            'order_id' => $event->order?->id ?? $event->order_id ?? 'unknown',
+            'device_id' => $event->order?->device_id ?? 'unknown',
+            'timestamp' => date('Y-m-d H:i:s.u')
+        ]);
     }
 
 }

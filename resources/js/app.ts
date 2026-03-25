@@ -1,3 +1,11 @@
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').catch(err => {
+            console.warn('Service worker registration failed:', err);
+        });
+    });
+}
 import '../css/app.css';
 // import './bootstrap';
 import axios from 'axios'
@@ -55,29 +63,12 @@ try {
         wssHost: import.meta.env.VITE_REVERB_HOST,
         wsPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
         wssPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
-        wsPath: '/reverb',  // CRITICAL: Use nginx proxy path for TLS termination
-        forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+        forceTLS: true, // Always use secure WebSocket when certificate is present
         disableStats: true,
         encrypted: true,
-        enabledTransports: ['ws', 'wss'],
-        withCredentials: true, 
+        enabledTransports: ['wss'], // Only allow secure transport
+        withCredentials: true,
     });
-
-    // Add connection health monitoring
-    if (window.Echo?.connector?.pusher) {
-        window.Echo.connector.pusher.connection.bind('connected', () => {
-            console.log('[Admin] ✅ WebSocket connected');
-        });
-        window.Echo.connector.pusher.connection.bind('disconnected', () => {
-            console.warn('[Admin] ⚠️ WebSocket disconnected');
-        });
-        window.Echo.connector.pusher.connection.bind('error', (err: any) => {
-            console.error('[Admin] 🔴 WebSocket error:', err);
-        });
-        window.Echo.connector.pusher.connection.bind('failed', () => {
-            console.error('[Admin] 🔴 WebSocket connection failed permanently');
-        });
-    }
     
 } catch (error) {
     console.log( import.meta.env)

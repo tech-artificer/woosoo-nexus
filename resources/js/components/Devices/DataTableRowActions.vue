@@ -91,6 +91,7 @@ const restore = (computedDevice: Device) => {
 </script>
 
 <template>
+  <div @click.stop>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" class="flex h-8 w-8 p-0 data-[state=open]:bg-muted">
@@ -98,7 +99,7 @@ const restore = (computedDevice: Device) => {
         <span class="sr-only">Open menu</span>
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" class="w-[160px]">
+    <DropdownMenuContent align="end" class="w-40">
 
       <DropdownMenuItem class="cursor-pointer" @click="openSheet">Edit Device</DropdownMenuItem>
       
@@ -153,6 +154,8 @@ const restore = (computedDevice: Device) => {
        <DeviceForm :device="computedDevice" :unassignedTables="unassignedTables"  />
     </SheetContent>
   </Sheet>
+
+  </div>
 
 
 </template>

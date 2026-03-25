@@ -7,7 +7,8 @@ import { type BreadcrumbItem } from '@/types';
 import { columns } from '@/components/ServiceRequests/columns';
 import DataTable from '@/components/ServiceRequests/DataTable.vue';
 import StatsCards from '@/components/ServiceRequests/StatsCards.vue';
-import DataTableToolbar from '@/components/ui/DataTableToolbar.vue';
+import DataTableToolbar from '@/components/ServiceRequests/DataTableToolbar.vue';
+import ServiceRequestDetailSheet from '@/components/ServiceRequests/ServiceRequestDetailSheet.vue';
 import { ServiceRequest } from '@/types/models';
 import { toast } from 'vue-sonner';
 
@@ -48,6 +49,8 @@ const props = defineProps<Props>();
 
 const localServiceRequests = ref<ServiceRequest[]>([...props.serviceRequests]);
 const localStats = ref({ ...props.stats });
+const selectedRequest = ref<any | null>(null)
+const isDetailOpen = ref(false)
 
 const search = ref('')
 const statusFilter = ref(props.filters?.status ?? '')
@@ -92,11 +95,8 @@ onMounted(() => {
         return;
     }
 
-    console.log('ServiceRequests Index mounted. Joining admin.service-requests channel.');
-
     window.Echo.channel('admin.service-requests')
         .listen('.service-request.notification', (event: any) => {
-            console.log('Service request event received:', event);
             const serviceRequest = event.service_request;
 
             // Update or add to list
@@ -134,8 +134,9 @@ onMounted(() => {
 
 onUnmounted(() => {
     if (window.Echo) {
-        console.log('ServiceRequests Index unmounted. Leaving channels.');
-        window.Echo.leave('admin.service-requests');
+        if (typeof (window.Echo as any).leave === 'function') {
+            (window.Echo as any).leave('admin.service-requests');
+        }
     }
 });
 
@@ -156,49 +157,53 @@ const updateStats = () => {
 const playNotificationSound = () => {
     const audio = new Audio('/sounds/notification.mp3');
     audio.volume = 0.5;
-    audio.play().catch(err => console.log('Audio play failed:', err));
+    audio.play().catch(err => console.warn('Audio play failed:', err));
 };
 
 const refreshData = () => {
     router.reload({ only: ['serviceRequests', 'stats'] });
 };
+
+const openRequestDetail = (request: any) => {
+    selectedRequest.value = request
+    isDetailOpen.value = true
+}
 </script>
 
 <template>
     <Head :title="props.title" :description="props.description" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6">
-            <!-- Header Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <h1 class="text-2xl font-semibold text-gray-900">Service Requests</h1>
-                <p class="text-sm text-gray-500 mt-1">Manage and track customer service requests in real-time</p>
+        <div class="space-y-6 px-1 sm:px-2">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Service Requests</h1>
+                <p class="text-muted-foreground">Manage and track customer service requests in real-time</p>
             </div>
 
-            <!-- Stats Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <StatsCards :stats="localStats" />
-            </div>
+            <DataTableToolbar
+                v-model:search="search"
+                v-model:status="statusFilter"
+                v-model:priority="priorityFilter"
+                v-model:fromDate="fromDate"
+                v-model:toDate="toDate"
+                v-model:showAll="showAll"
+            />
 
-            <!-- Filters and Table Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6 space-y-4">
-                <DataTableToolbar
-                    v-model:search="search"
-                    v-model:status="statusFilter"
-                    v-model:priority="priorityFilter"
-                    v-model:fromDate="fromDate"
-                    v-model:toDate="toDate"
-                    v-model:showAll="showAll"
-                />
+            <StatsCards :stats="localStats" />
 
-                <DataTable
-                    :data="filteredServiceRequests"
-                    :columns="columns"
-                    :pagination="props.pagination"
-                    :filters="props.filters"
-                    :table-services="props.tableServices"
-                    @refresh="refreshData"
-                />
-            </div>
+            <DataTable 
+                :data="filteredServiceRequests" 
+                :columns="columns"
+                :pagination="props.pagination"
+                :filters="props.filters"
+                :table-services="props.tableServices"
+                @refresh="refreshData"
+                @row-click="openRequestDetail"
+            />
+
+            <ServiceRequestDetailSheet
+                v-model:open="isDetailOpen"
+                :request="selectedRequest"
+            />
         </div>
     </AppLayout>
 </template>

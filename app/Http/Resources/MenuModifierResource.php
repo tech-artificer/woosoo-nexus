@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Number;
 
 class MenuModifierResource extends JsonResource
 {
@@ -14,44 +13,38 @@ class MenuModifierResource extends JsonResource
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
-    {   
-        $placeholder = asset('images/menu-placeholder/1.jpg');
+    {
+        // Derive meat group label from receipt_name prefix (P=Pork, B=Beef, C=Chicken).
+        $groupLabel = null;
+        if ($this->receipt_name) {
+            $groupLabel = match (strtoupper(substr((string) $this->receipt_name, 0, 1))) {
+                'P' => 'Pork',
+                'B' => 'Beef',
+                'C' => 'Chicken',
+                default => $this->group?->name ?? null,
+            };
+        } else {
+            $groupLabel = $this->group?->name ?? null;
+        }
 
         return [
-            'id' => $this->id,
-            // Preserve existing relation-based group name
-            'group' => $this->group->name ?? null,
-            // POS/group label derived from `receipt_name` (P=Pork, B=Beef, C=Chicken)
-            'groupName' => $this->receipt_name ? (function ($code) {
-                $first = strtoupper(substr($code, 0, 1));
-                return match ($first) {
-                    'P' => 'Pork',
-                    'B' => 'Beef',
-                    'C' => 'Chicken',
-                    default => null,
-                };
-            })($this->receipt_name) : ($this->group->name ?? null),
-            'name' => $this->name,
-            'category' => $this->category->name ?? null,
-            'kitchen_name' => $this->kitchen_name,
-            'receipt_name' => $this->receipt_name,
-            'price' => Number::format($this->price ?? 0, 2),
-            // 'cost' => Number::format($this->cost ?? 0, 2),
-            'description' => $this->description,
-            'is_taxable' => $this->is_taxable,
-            'is_available' => $this->is_available,
+            'id'              => $this->id,
+            'group'           => $this->group?->name ?? null,
+            'groupName'       => $groupLabel,
+            'name'            => $this->name,
+            'category'        => $this->category?->name ?? null,
+            'kitchen_name'    => $this->kitchen_name,
+            'receipt_name'    => $this->receipt_name,
+            'price'           => number_format((float) ($this->price ?? 0), 2, '.', ','),
+            'description'     => $this->description,
+            'is_taxable'      => $this->is_taxable,
+            'is_available'    => $this->is_available,
             'is_discountable' => $this->is_discountable,
-            // 'tare_weight' => $this->tare_weight,
-            // 'scale_unit' => $this->scale_unit,
-            // 'measurement_unit' => $this->measurement_unit,
-            // 'is_locked' => $this->is_locked,
-            // 'quantity' => $this->quantity,
-            'is_modifier' => $this->is_modifier,
+            'is_modifier'     => $this->is_modifier,
             'is_modifier_only' => $this->is_modifier_only,
-            'isMod' => $this->isMod ?? (bool) ($this->is_modifier ?? false),
-            'isModOnly' => $this->isModOnly ?? (bool) ($this->is_modifier_only ?? false),
-            'img_url' => $this->image_url ?? $this->image->path ?? $placeholder,
-            // 'img_path' => $this->image_url,
+            'isMod'           => (bool) ($this->is_modifier ?? false),
+            'isModOnly'       => (bool) ($this->is_modifier_only ?? false),
+            'img_url'         => $this->image_url,
         ];
     }
 }

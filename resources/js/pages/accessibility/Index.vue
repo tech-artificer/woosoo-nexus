@@ -41,9 +41,8 @@ const savePermissions = () => {
 
   form.permissions = permissionsState.value;
   form.post(route('roles.permissions.update', selectedRole.value.id), {
-    onSuccess: (response: any) => {
+    onSuccess: () => {
       toast.success(`Successfully updated permissions for '${selectedRole.value}'.`);
-      console.log(response);
     },
     onError: () => toast.error(`Failed to update permissions for '${selectedRole.value}'.`),
   });
@@ -51,11 +50,9 @@ const savePermissions = () => {
 
 // --- Methods ---
 const handleTogglePermission = (permissionName: string, isChecked: boolean) => {
-  console.log(isChecked);
   if (isChecked) {
     if (!permissionsState.value.includes(permissionName)) {
       permissionsState.value.push(permissionName);
-      console.log(permissionName);
     }
   } else {
     permissionsState.value = permissionsState.value.filter(p => p !== permissionName);

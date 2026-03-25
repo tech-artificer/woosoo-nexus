@@ -22,6 +22,10 @@ class DeviceController extends Controller
         $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
         $devices = Device::active()->with('table', 'branch', 'registrationCode')->get(); 
         $registrationCodes = DeviceRegistrationCode::with(['device'])->get();
+        $availableRegistrationCodesCount = DeviceRegistrationCode::query()
+            ->whereNull('used_by_device_id')
+            ->whereNull('used_at')
+            ->count();
 
         inertia()->share('unassignedTables', $unassignedTables);
 
@@ -44,7 +48,7 @@ class DeviceController extends Controller
 
         $stats = [
             [ 'title' => 'Total Devices', 'value' => $devices->count(), 'subtitle' => 'Registered devices', 'variant' => 'primary', 'sparkline' => $spark ],
-            [ 'title' => 'Registration Codes', 'value' => $registrationCodes->count(), 'subtitle' => 'Available codes', 'variant' => 'accent' ],
+            [ 'title' => 'Registration Codes', 'value' => $availableRegistrationCodesCount, 'subtitle' => 'Available codes', 'variant' => 'accent' ],
         ];
 
         return Inertia::render('Devices/Index', [

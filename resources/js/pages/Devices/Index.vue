@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import AppLayout from '@/layouts/AppLayout.vue';
+import { Head } from '@inertiajs/vue3';
 import { Button } from "@/components/ui/button"
 import {
     Card,
@@ -29,6 +30,7 @@ import { type BreadcrumbItem } from '@/types';
 
 import { columns } from '@/components/Devices/columns';
 import DataTable from '@/components/Devices/DataTable.vue'
+import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
 import StatsCards from '@/components/Stats/StatsCards.vue'
 import { router } from '@inertiajs/core'
 import axios from 'axios'
@@ -53,19 +55,21 @@ const props = defineProps<{
 const { devices, registrationCodes, stats } = toRefs(props)
 
 const newCodes = ref<Array<{id:number, code:string}>>([])
+const selectedDevice = ref<Device | null>(null)
+const isDeviceDetailOpen = ref(false)
 const search = ref('')
 
 const statusFilter = ref('')
 
 const originalDevices = computed(() => devices.value ?? [])
 
-const downloadReleaseUrl = computed(() => route('devices.download-apk', { channel: 'release' }))
-const downloadDebugUrl = computed(() => route('devices.download-apk', { channel: 'debug' }))
-const downloadCertificateUrl = computed(() => route('devices.download-certificate'))
-
 const hasGeneratedCodes = computed(() => {
-    // Check if codes exist (either newly generated or from server)
-    return newCodes.value.length > 0 || (registrationCodes.value?.length ?? 0) > 0
+    // Check if available codes exist (either newly generated or from server)
+    return newCodes.value.length > 0 || availableRegistrationCodes.value.length > 0
+})
+
+const availableRegistrationCodes = computed(() => {
+    return (registrationCodes.value || []).filter((code: any) => !code.used_by_device_id && !code.used_at)
 })
 
 const filteredDevices = computed(() => {
@@ -150,104 +154,102 @@ function exportCSV() {
     URL.revokeObjectURL(url)
 }
 
+const openDeviceDetail = (device: Device) => {
+    selectedDevice.value = device
+    isDeviceDetailOpen.value = true
+}
+
 </script>
 
 <template>
-
+    <Head :title="title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6">
-            <!-- Header Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <h1 class="text-2xl font-semibold text-gray-900">Device Management</h1>
-                <p class="text-sm text-gray-500 mt-1">Manage registered devices and activation codes</p>
+        <div class="space-y-6 px-1 sm:px-2">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Device Management</h1>
+                <p class="text-muted-foreground">Manage registered devices and activation codes</p>
             </div>
-
-            <!-- Tabs Section -->
-            <div class="bg-white rounded-lg shadow-sm">
-                <Tabs default-value="devices" class="w-full">
-                    <div class="border-b border-gray-200 px-6 pt-4">
-                        <TabsList class="grid w-full max-w-md grid-cols-2 bg-gray-100">
-                            <TabsTrigger value="devices" class="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                Devices
-                            </TabsTrigger>
-                            <TabsTrigger value="codes" class="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                Codes
-                            </TabsTrigger>
-                        </TabsList>
-                    </div>
-
-                    <TabsContent value="devices" class="p-6 pt-4 space-y-4">
-                        <!-- Download Buttons -->
-                        <div class="flex flex-wrap justify-end gap-3">
-                            <Button as-child size="sm">
-                                <a :href="downloadReleaseUrl" download>Download Printer APK (Release)</a>
-                            </Button>
-                            <Button variant="secondary" as-child size="sm">
-                                <a :href="downloadDebugUrl" download>Download Printer APK (Debug)</a>
-                            </Button>
-                            <Button variant="outline" as-child size="sm">
-                                <a :href="downloadCertificateUrl" download>Download CA Certificate</a>
-                            </Button>
-                        </div>
-
-                        <!-- SSL Setup Notice -->
-                        <div class="text-sm p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <strong class="text-blue-900">SSL Certificate Setup:</strong>
-                            <span class="text-blue-700"> Download <code class="bg-white px-2 py-1 rounded border border-blue-200">woosoo-ca.pem</code> and install on your device to enable secure WebSocket connections. On Android: Settings → Security → Install from SD card.</span>
-                        </div>
-
-                        <!-- Stats Cards -->
-                        <StatsCards :cards="(stats ?? [
+            <Tabs default-value="devices" class="space-y-4">
+                <TabsList class="grid w-full grid-cols-2 p-1 h-11">
+                    <TabsTrigger value="devices">
+                        Devices
+                    </TabsTrigger>
+                    <TabsTrigger value="codes">
+                        Codes
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent value="devices" class="pt-3 px-1 sm:px-2 space-y-4">
+                                <!-- Filters moved into Devices DataTable toolbar -->
+                    <StatsCards
+                        :cards="(stats ?? [
                             { title: 'Total Devices', value: (devices || []).length, subtitle: 'Registered devices', variant: 'primary' },
                             { title: 'Registration Codes', value: registrationCodes?.length ?? 0, subtitle: 'Available codes', variant: 'accent' },
-                        ])" />
-
-                        <!-- Devices Table -->
-                        <DataTable :data="devices" :columns="columns" />
-                    </TabsContent>
-
-                    <TabsContent value="codes" class="p-6 pt-4">
-                        <Card class="shadow-sm">
-                            <CardHeader class="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Registration Codes</CardTitle>
-                                    <CardDescription>
-                                        Generate device codes for device activation
-                                    </CardDescription>
-                                </div>
-                                <div class="ml-4">
-                                    <Button v-if="!hasGeneratedCodes" @click.prevent="generateCodes">Generate 15 Codes</Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableCaption>Device registration codes and usage status</TableCaption>
+                        ])"
+                    />
+                    <DataTable :data="devices" :columns="columns" @row-click="openDeviceDetail" />
+                </TabsContent>
+                <TabsContent value="codes" class="pt-3 px-1 sm:px-2">
+                    <Card>
+                        <CardHeader class="flex items-center justify-between gap-3">
+                            <div>
+                                <CardTitle>Codes</CardTitle>
+                                <CardDescription>
+                                    Generate device codes for device activation.
+                                </CardDescription>
+                            </div>
+                            <div class="ml-4">
+                                <Button v-if="!hasGeneratedCodes" @click.prevent="generateCodes">Generate 15 Codes</Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                           
+                               <!-- {{ registrationCodes }} -->
+                               <Table>
+                                    <TableCaption v-if="!registrationCodes || registrationCodes.length === 0">No activation codes generated yet. Click 'Generate 15 Codes' to create device activation codes.</TableCaption>
+                                    <TableCaption v-else>Device activation codes for registration.</TableCaption>
                                     <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Code</TableHead>
-                                            <TableHead>Device ID</TableHead>
-                                            <TableHead>Registered At</TableHead>
-                                        </TableRow>
+                                    <TableRow>
+                                        <TableHead class="">
+                                        Code
+                                        </TableHead>
+                                       <TableHead class="">
+                                        Device ID
+                                        </TableHead> 
+                                        <TableHead class="">
+                                            Registered At
+                                        </TableHead> 
+                                        <TableHead class="">
+                                            Status
+                                        </TableHead>
+                                    </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        <TableRow v-for="code in registrationCodes" :key="code.id">
-                                            <TableCell class="font-mono">{{ code.code }}</TableCell>
-                                            <TableCell>{{ code.used_by_device_id ?? '-' }}</TableCell>
-                                            <TableCell>{{ code.used_at ?? 'Not used' }}</TableCell>
-                                        </TableRow>
+                                    <TableRow v-for="code in registrationCodes" :key="code.id">
+                                        <TableCell>
+                                        {{ code.code }}
+                                        </TableCell>
+                                        <TableCell>{{ code.used_by_device_id }}</TableCell>
+                                        <TableCell>{{ code.used_at }}</TableCell>
+                                        <TableCell>{{ code.used_by_device_id || code.used_at ? 'Used' : 'Available' }}</TableCell>
+                                    </TableRow>
                                     </TableBody>
                                 </Table>
-                            </CardContent>
-                            <CardFooter class="flex items-center gap-3">
-                                <div class="ml-auto flex items-center gap-2">
-                                    <Button @click.prevent="exportCSV" variant="default">Export CSV</Button>
-                                </div>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </div>
+                          
+                        </CardContent>
+                        <CardFooter class="flex items-center gap-3">
+                            <div class="ml-auto flex items-center gap-2">
+                                <Button @click.prevent="exportCSV" variant="default">Export CSV</Button>
+                            </div>
+                        </CardFooter>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+
+            <DeviceDetailSheet
+                v-model:open="isDeviceDetailOpen"
+                :device="selectedDevice"
+            />
         </div>
     </AppLayout>
 </template>

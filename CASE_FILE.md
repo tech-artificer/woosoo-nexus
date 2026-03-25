@@ -1,300 +1,123 @@
-# CASE FILE: Mission-5 woosoo-nexus Production Stabilization
-**Lead Investigator:** Ranpo Edogawa  
-**Date Opened:** 2026-01-26  
-**Status:** 🚨 **REJECTED — SCOPE BLOAT & STRUCTURAL FLAWS**
+# CASE_FILE: Orders Detail View Alignment
+**Last Updated:** March 25, 2026
+**Lead Detective:** Ranpo Edogawa
+**Priority:** P2 / MEDIUM
+**Status:** ✅ CLOSED
 
 ---
 
-## The Mystery (Failure Mode + Impact)
+## The Mystery
 
-**Original Plan:** Combine backend API fixes (5 P0 + 7 P1 issues) with full UI/UX refactor (component consistency, accessibility, branding) in one mission.
+**User Request:** When selecting an order in woosoo-nexus, show an order detail view similar to the provided reference. Use shadcn components and reusable components.
 
-**Critical Flaws Detected:**
-1. **Scope Bloat:** Attempting 12 backend fixes + complete UI/UX overhaul + testing expansion in one mission. This violates atomic mission discipline.
-2. **Execution Order Risk:** UI/UX refactor happens AFTER backend changes, but API contract changes could break existing UI before refactor completes.
-3. **Missing Critical Items:** No device registration audit, no WebSocket/Reverb stability check, no session timeout verification, no order state machine audit.
-4. **Vague Specifications:** "HP5: Polling timeouts" has no timeout values, backoff strategy, or max retry limits.
-5. **Cross-App Coordination Missing:** API contract changes will affect `tablet-ordering-pwa` and `relay-device-v2`, but no coordination plan exists.
-6. **Test Coverage Unspecified:** No target coverage percentage, no critical path identification.
+**Impact:** Improves admin order triage, refill visibility, and transaction actions from a single panel.
 
 ---
 
-## The Blueprint (Corrected Structure)
+## The Blueprint
 
 ```mermaid
-graph TD
-    A[Mission 5A: Backend P0 Fixes] --> B[Mission 5B: Backend P1 Fixes]
-    B --> C[Mission 5C: API Contract Standardization]
-    C --> D[Mission 5D: UI/UX Atomic Refactor]
-    D --> E[Mission 5E: Branding & Theming Audit]
-    
-    A --> F[Critical: CI1-CI5]
-    B --> G[High Priority: HP1-HP7]
-    C --> H[Contract Tests + Error Standards]
-    D --> I[Component Consistency + A11y]
-    E --> J[Logo/Icon/Typography Audit]
-    
-    style A fill:#ff6b6b
-    style B fill:#ffa500
-    style C fill:#ffd93d
-    style D fill:#6bcf7f
-    style E fill:#4d96ff
+flowchart LR
+  A[Orders Index Table] --> B[Row Actions]
+  B --> C[Order Detail Sheet]
+  C --> D[Overview Card]
+  C --> E[Initial Tray Items]
+  C --> F[Refill Monitor]
+  C --> G[Actions: Print / Complete]
 ```
 
 ---
 
-## The Evidence (What's Wrong)
+## The Evidence
 
-### 1. Backend Issues (Mysterious Auditor)
+- UI entry point: resources/js/pages/Orders/Index.vue
+- Row actions: resources/js/components/Orders/DataTableRowActions.vue
+- New detail view: resources/js/components/Orders/OrderDetailSheet.vue
+- UI primitives: resources/js/components/ui/*
 
-**P0 Critical (CI1-CI5):**
-- ✅ CI1: Remove unreachable code in DeviceOrderApiController — **VALID**
-- ✅ CI2: Add validation for ordered_menu_id in StoreDeviceOrderRequest — **VALID**
-- ✅ CI3: Wrap order creation in DB transaction — **VALID BUT INCOMPLETE**
-  - Must include: order creation, order_items insert, session update, device state update
-  - Missing: What happens if print job fails? Need compensating transaction.
-- ✅ CI4: Set LOG_LEVEL=error in production .env — **VALID**
-- ✅ CI5: Add rate limiting to registration/order endpoints — **VALID BUT INCOMPLETE**
-  - Missing: Specific rate limits (e.g., 10/min for registration, 100/min for orders)
-  - Missing: Rate limit storage (Redis? Database? In-memory?)
+### Addendum: Dashboard 500
 
-**P1 High Priority (HP1-HP7):**
-- ✅ HP1: Remove hardcoded tax rate; fetch from Krypton POS DB — **VALID**
-- ✅ HP2: Enforce refill category validation — **VALID**
-- ❌ HP3: Missing (numbering skips from HP2 to HP4)
-- ✅ HP4: Add DB indexes — **VALID BUT INCOMPLETE**
-  - Missing: Composite index strategy (e.g., `(device_id, status, created_at)` for polling queries)
-  - Missing: Migration strategy (online vs offline, impact on production traffic)
-- ❌ HP5: "Polling timeouts" — **TOO VAGUE**
-  - Need: Specific timeout values (e.g., 30s client, 25s server)
-  - Need: Backoff strategy (exponential? linear?)
-  - Need: Max retry limits
-- ❌ HP6: "Branch isolation" — **TOO VAGUE**
-  - Need: Specific isolation requirements (device-to-branch mapping? session-to-branch?)
-  - Need: Cross-branch access prevention rules
-- ❌ HP7: "CORS for mobile" — **TOO VAGUE**
-  - Need: Allowed origins list
-  - Need: Credentials policy
-  - Need: Preflight cache duration
+- Symptom: `/dashboard` returns HTTP 500 in production.
+- Root cause: Inertia SSR enabled with no running SSR server, causing server-side render failures.
+- Fix: Default SSR to disabled unless explicitly enabled via env.
 
-### 2. UI/UX Issues (Kunikida)
+### Addendum: Dashboard 500 (Second Root Cause)
 
-**Component Consistency:**
-- ✅ Refactor custom buttons to use shadcn — **VALID**
-- ❌ Missing: Inventory of which components need refactoring
-- ❌ Missing: Breaking change plan (will forms/pages need updates?)
+- Symptom: `/dashboard` still returns HTTP 500 after SSR fix.
+- Root cause: `Illuminate\Support\Number::format()` requires PHP `intl`; environment has no `intl` extension.
+- Evidence: `storage/logs/laravel.log` shows `The "intl" PHP extension is required to use the [format] method.` with stack frame in `app/Services/DashboardService.php`.
+- Fix: Replaced intl-dependent formatting with native PHP fallback:
+  - `number_format((float) $totalSales, 2, '.', ',')`
+  - `number_format((float) $sales, 2, '.', ',')`
+- Gate: Re-hit `/dashboard` and confirm HTTP 200 with no new `intl` exceptions.
 
-**Accessibility:**
-- ✅ Focus states and ARIA — **VALID**
-- ❌ Missing: WCAG compliance level (AA? AAA?)
-- ❌ Missing: Screen reader testing plan
+### Addendum: Admin WebSocket Failures
 
-**Branding:**
-- ✅ Audit logos/icons — **VALID**
-- ❌ Missing: Specific contrast ratio targets (4.5:1? 7:1?)
-- ❌ Missing: Design token documentation
+- Symptom: Console shows `wss://192.168.100.7:6002/app/...` connection failures and `window.Echo.leave(...) is not a function` on unmount.
+- Root cause: Client Echo config pointed to WSS on Reverb’s plain WS port (6002), and leave calls were not guarded for non-function.
+- Fix:
+  - Admin client now uses nginx TLS endpoint: `VITE_REVERB_PORT=8443`, `VITE_REVERB_SCHEME=https`.
+  - Backend Reverb broadcast scheme set to plain `http` for direct server port.
+  - Echo leave calls now guard on `typeof leave === 'function'`.
+- Gate: WebSocket connects via `wss://192.168.100.7:8443/app/...` and unmount no longer throws leave errors.
 
-### 3. Missing Critical Items
+### Addendum: Login 500
 
-**Device Registration Flow:**
-- No audit of device authentication
-- No verification of device-to-table assignment logic
-- No check for duplicate device registration prevention
+- Symptom: `/login` returns HTTP 500 after submit.
+- Root cause: `SESSION_DRIVER=database` without a `sessions` table.
+- Fix: Added `create_sessions_table` migration. Run migrations on the legacy DB.
 
-**WebSocket/Reverb Stability:**
-- No audit of connection lifecycle
-- No check for reconnection logic
-- No verification of message delivery guarantees
+### Addendum: Phase 4 Admin UX Cleanup
 
-**Session Management:**
-- No audit of session timeout handling
-- No verification of session-to-order mapping
-- No check for abandoned session cleanup
+- Scope: `apps/woosoo-nexus/**` only. No root-level or cross-app changes required.
+- L3 Event Logs: added in-page search and severity filtering to reduce operator scanning time on sanitized logs.
+- L4 Profile Settings: added a warning banner when the account still uses `admin@example.com`; seeder now supports `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_NAME` overrides.
+- L5 Reverb Status: normalized NSSM output at the controller boundary so raw `SERVICE_*` values map cleanly to `running`, `stopped`, and `paused`.
+- L6 Sidebar Theme: corrected light-theme sidebar tokens in `resources/css/app.css`; the sidebar now follows the active appearance mode instead of rendering dark by default.
+- L7 Letter Spacing / Raw State Leakage: frontend and backend both normalize service status before rendering, preventing raw `SERVICE_STOPPED` text from surfacing in the badge UI.
 
-**Order State Machine:**
-- No verification of status transitions (pending → confirmed → completed)
-- No check for invalid state transitions
-- No audit of concurrent order modification prevention
+- Manual audit gates:
+  1. `/event-logs` filters by search term and level with no console errors.
+  2. `/settings/profile` shows the warning banner when the admin email remains the default placeholder.
+  3. `/reverb` displays `Stopped` or `Running` badges instead of raw NSSM service constants.
+  4. `/dashboard` and sidebar navigation visually switch between light and dark appearances.
 
-**Print Job Coordination:**
-- No audit of print job retry logic
-- No verification of print-then-ACK flow
-- No check for orphaned print jobs
+### Addendum: Permissions Route Miswire
 
----
+- Symptom: `/permissions` rendered the role-assignment screen instead of a permission registry, so the page could not create or delete permissions through the existing CRUD backend.
+- Root cause: `PermissionController@index` rendered `roles/Permissions`, a page built for syncing permissions onto a selected role and expecting role-specific props not provided by the controller.
+- Fix:
+  - Added a dedicated Inertia page at `resources/js/pages/Permissions/Index.vue` for permission creation, search, selection, and deletion.
+  - Updated `PermissionController@index` to render `Permissions/Index` and include `roles_count` so operators can see current usage before deleting a permission.
+  - Verified route bindings with `php artisan route:list --name=permissions`.
+- Gate:
+  1. `/permissions` loads a permission registry instead of the role-sync screen.
+  2. Creating a permission with `web` or `api` guard succeeds and refreshes the table.
+  3. Single delete removes one permission and bulk delete removes all selected permissions.
+  4. Existing role permission assignment still works from `/roles` or `/accessibility`.
 
-## The Verdict (Ranpo's Ruling)
+### Addendum: Order Detail Verification
 
-**REJECTED.** This plan is a **structural disaster** waiting to happen.
-
-### Problems:
-
-1. **Atomic Mission Violation:** One mission cannot handle backend P0 fixes + backend P1 fixes + API standardization + full UI/UX refactor + branding audit. This is 5 missions disguised as one.
-
-2. **Dependency Hell:** UI/UX refactor depends on API stability, but API changes could break UI mid-mission. No coordination strategy.
-
-3. **Vague Specifications:** HP5-HP7 lack concrete values. Chūya cannot execute "add polling timeouts" without knowing what the timeout should be.
-
-4. **Missing Audit Scope:** Device registration, WebSocket, session, order state machine, print coordination — all critical, all missing.
-
-5. **Cross-App Impact Ignored:** API contract changes will break `tablet-ordering-pwa` and `relay-device-v2` if not coordinated. No versioning strategy.
-
-6. **Test Coverage Blind Spot:** No target coverage, no critical path test list, no integration test plan.
+- Symptom: `DataTableRowActions.vue` "View Order" dropdown rendered its own `OrderDetailSheet` per row without fetching full order data. Because `OrderController@index` only eager-loads `device` and `table` (not `items`), the per-row sheet always showed empty item lists.
+- Root cause: The row-level `openViewDialog` set `viewDialogOrder` directly from the row projection, which has an empty `items: []` array on the list endpoint. The page-level `openOrderDetail` already handles this via background fetch to `/device-order/by-order-id/{id}`.
+- Fix:
+  - Added background fetch inside `openViewDialog` in `DataTableRowActions.vue` matching the `openOrderDetail` pattern from `Index.vue`.
+  - Sheet opens immediately with row data (non-blocking), then silently upgrades to fully-loaded order once the fetch resolves.
+  - Fixed duplicate `status` field in `DeviceOrder` interface (was declaring both `status: OrderStatus` and `status: string`).
+  - Added missing financial fields (`subtotal`, `sub_total`, `tax`) and alias fields (`orderedMenus`, `order_items`) to `DeviceOrder` that `OrderDetailSheet` already references.
+- Gate:
+  1. Click "View Order" from row actions dropdown → sheet shows items after short background fetch.
+  2. Click a table row directly → same sheet model, verified to load immediately.
+  3. TypeScript diagnostics clean on `models.d.ts`, `DataTableRowActions.vue`, `OrderDetailSheet.vue`, and `Orders/Index.vue`.
 
 ---
 
-## The Corrected Plan (5 Atomic Missions)
+## The Verdict (Strict Order)
 
-### Mission 5A: Backend P0 Critical Fixes (1-2 days)
-**Scope:** CI1-CI5 only  
-**Files:** DeviceOrderApiController, StoreDeviceOrderRequest, .env, rate limiting middleware  
-**Acceptance:**
-- ✅ All unreachable code removed
-- ✅ All validation gaps closed
-- ✅ Order creation in DB transaction (order + items + session + device state)
-- ✅ LOG_LEVEL=error in production
-- ✅ Rate limiting: 10/min registration, 100/min orders (Redis-backed)
-
-**Tests:**
-- Unit: Validation edge cases
-- Integration: Transaction rollback on failure
-- Load: Rate limit enforcement under 1000 req/s
-
----
-
-### Mission 5B: Backend P1 High-Priority Fixes (2-3 days)
-**Scope:** HP1, HP2, HP4 (defer HP5-HP7 for separate audit)  
-**Files:** Tax calculation, refill validation, migrations  
-**Acceptance:**
-- ✅ Tax fetched from Krypton POS DB (fallback to 8% if unavailable)
-- ✅ Refill endpoint rejects non-refillable categories
-- ✅ DB indexes: (order_id), (device_id, status, created_at), (session_id)
-- ✅ Migration runs online with <1s lock time
-
-**Tests:**
-- Unit: Tax calculation edge cases
-- Integration: Refill validation rejects beverages
-- Performance: Index improves polling query from 200ms → <50ms
-
----
-
-### Mission 5C: API Contract Standardization (1-2 days)
-**Scope:** MP1 (error format), contract tests, API versioning  
-**Files:** Exception handler, test suite, route prefixes  
-**Acceptance:**
-- ✅ All errors return `{error: {code, message, details}}`
-- ✅ Contract tests for all endpoints (tablet-ordering-pwa + relay-device-v2)
-- ✅ API versioned as `/api/v1/` with deprecation strategy
-
-**Tests:**
-- Contract: 20+ tests for request/response schemas
-- Integration: Error format consistency across all endpoints
-
----
-
-### Mission 5D: UI/UX Component Refactor (2-3 days)
-**Scope:** Button/input/alert consistency, accessibility, feedback states  
-**Files:** All custom components, shadcn wrappers  
-**Acceptance:**
-- ✅ All buttons use shadcn Button as base (WoosooButton refactored)
-- ✅ All forms use shadcn Input/Select/Checkbox
-- ✅ All interactive elements have visible focus (2px outline, primary color)
-- ✅ All async views have skeletons (DataTable, Dashboard, Reports)
-- ✅ All error/empty states present (TableEmpty, no-results messages)
-
-**Tests:**
-- Unit: Component prop validation
-- A11y: WCAG AA compliance (axe-core)
-- Visual: Storybook snapshots
-
----
-
-### Mission 5E: Branding & Theming Audit (1 day)
-**Scope:** Logo/icon/typography/color audit, design token documentation  
-**Files:** Tailwind config, component styles, brand assets  
-**Acceptance:**
-- ✅ All text/background pairs meet 4.5:1 contrast (WCAG AA)
-- ✅ Logo/icon sizing consistent (32px, 64px, 128px variants)
-- ✅ Typography scale documented (12/14/16/20/24/32/48px)
-- ✅ Design tokens extracted to tailwind.config.js
-
-**Tests:**
-- Contrast: Automated check (Color Oracle)
-- Visual: Brand consistency audit
-
----
-
-### Deferred to Mission 5F (Future):
-- HP5: Polling timeout strategy (needs requirements clarification)
-- HP6: Branch isolation (needs business logic audit)
-- HP7: CORS configuration (needs security review)
-- Device registration audit
-- WebSocket/Reverb stability audit
-- Session management audit
-- Order state machine verification
-- Print job coordination audit
-
----
-
-## Execution Gates (Mission 5A → 5B → 5C → 5D → 5E)
-
-**Gate 1 (After 5A):**
-- ✅ All P0 fixes deployed to staging
-- ✅ All critical tests pass
-- ✅ No production incidents for 24 hours
-- ✅ Rollback plan tested
-
-**Gate 2 (After 5B):**
-- ✅ All P1 fixes deployed to staging
-- ✅ Performance tests show <50ms query time
-- ✅ No regressions in existing features
-
-**Gate 3 (After 5C):**
-- ✅ All contract tests pass (tablet-ordering-pwa + relay-device-v2)
-- ✅ API versioning active
-- ✅ Error format standardized
-
-**Gate 4 (After 5D):**
-- ✅ All UI components refactored
-- ✅ WCAG AA compliance verified
-- ✅ No visual regressions
-
-**Gate 5 (After 5E):**
-- ✅ Branding audit complete
-- ✅ Design tokens documented
-- ✅ Production deployment authorized
-
----
-
-## Ranpo's Final Verdict
-
-**The original plan is REJECTED.**
-
-**President Fukuzawa, ordinary people can't see the structural flaws, but they're elementary to me:**
-
-1. **Too broad:** 5 missions disguised as one
-2. **Too vague:** HP5-HP7 lack specifications
-3. **Too risky:** No cross-app coordination
-4. **Too blind:** Missing 6 critical audit areas
-
-**Approved Alternative: 5 Atomic Missions (5A → 5B → 5C → 5D → 5E)**
-
-Each mission is:
-- ✅ Small enough to complete in 1-3 days
-- ✅ Testable with clear acceptance criteria
-- ✅ Reversible with minimal blast radius
-- ✅ Sequenced to avoid dependency hell
-
-**Chūya's Orders:**
-- Execute Mission 5A first (P0 fixes only)
-- Report Kill Count after each gate
-- DO NOT proceed to next mission until gate clears
-- If any gate fails, rollback and escalate to Ranpo
-
-**All clear! This case is restructured… unless you want to ignore my audit and fail spectacularly. Your call, President.**
-
----
-
-**Snack consumed:** Virtual dorayaki (demanded, received metaphorically)  
-**Case Status:** RESTRUCTURED & APPROVED (5 atomic missions)  
-**Next Action:** President Fukuzawa authorization for Mission 5A execution
+1. ✅ Implement the order detail sheet view with shadcn components.
+2. ✅ Wire the "View Order" action to open the sheet.
+3. ✅ Verify order data mapping and action callbacks.
+4. ✅ Disable SSR by default to prevent dashboard 500s when SSR server is absent.
+5. ✅ Ensure database-backed sessions have a `sessions` table.
+6. ✅ Ensure dashboard metrics formatting does not hard-require `php_intl`.
+7. ✅ Ensure Echo client uses nginx TLS endpoint and leave calls are guarded.

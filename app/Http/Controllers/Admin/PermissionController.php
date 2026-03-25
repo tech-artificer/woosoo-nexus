@@ -13,9 +13,13 @@ class PermissionController extends Controller
 {
     public function index()
     {
-        $permissions = Permission::orderBy('name')->get();
+        $permissions = Permission::withCount('roles')
+            ->orderBy('name')
+            ->get();
 
-        return Inertia::render('roles/Permissions', [
+        return Inertia::render('Permissions/Index', [
+            'title' => 'Permissions',
+            'description' => 'Create and remove system permissions used by roles.',
             'permissions' => $permissions,
         ]);
     }

@@ -75,11 +75,15 @@ export interface DeviceOrder {
     device_id: number;
     order_id: number | string | null;
     order_number: string;
-    status: OrderStatus;
+    /** Combined from OrderStatus enum + raw backend strings (e.g. 'in_progress') */
+    status: OrderStatus | string;
     device?: Device | null;
     order?: Order | null;
     table?: Table | null;
-    total: number;
+    total: number | string | null;
+    subtotal?: number | string | null;
+    sub_total?: number | string | null;
+    tax?: number | string | null;
     created_at: string;
     updated_at: string;
     meta: any | null;
@@ -90,9 +94,13 @@ export interface DeviceOrder {
     printed_at?: string | null;
     printed_by?: string | null;
     deleted_at?: string;
-    status: string;
-    service_requests: ServiceRequest[] | []
+    service_requests: ServiceRequest[] | [];
     tablename?: string;
+    orderedMenus?: OrderedMenu[];
+    order_items?: OrderedMenu[];
+    session_id?: number | string | null;
+    branch_id?: number | null;
+    table_id?: number | null;
 }
 export interface Menu {
      id: number;
