@@ -1,4 +1,5 @@
 <?php
+// Audit Fix (2026-04-06): align admin routes with existing Orders page actions and package admin module wiring.
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Admin\{
     AccessibilityController,
     RoleController,
     PermissionController,
+    PackageController,
     BranchController,
     ReverbController,
     MonitoringController
@@ -51,6 +53,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+        Route::post('/orders/print', [OrderController::class, 'print'])->name('orders.print');
         Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
         Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
         Route::post('/orders/bulk-void', [OrderController::class, 'bulkVoid'])->name('orders.bulk-void');
@@ -64,6 +67,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/menus', [MenuController::class, 'index'])->name('menus');
         Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');
         Route::post('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
+        // Packages
+        Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
+        Route::post('/packages', [PackageController::class, 'store'])->name('packages.store');
+        Route::put('/packages/{package}', [PackageController::class, 'update'])->name('packages.update');
+        Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
         // User
         Route::resource('/users', UserController::class);
         Route::prefix('users')->name('users.')->group(function () {

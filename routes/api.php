@@ -45,7 +45,10 @@ Route::get('/device/ip', function (Request $request) {
 
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 
-Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId) {
+Route::middleware([
+    \App\Http\Middleware\RequestId::class,
+    'auth:device',
+])->get('/order/{orderId}/dispatch', function (Request $request, int $orderId) {
     $order = DeviceOrder::where(['order_id' => $orderId])->first();
     PrintOrder::dispatch($order);
 });

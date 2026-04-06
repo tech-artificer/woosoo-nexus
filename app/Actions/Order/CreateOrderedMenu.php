@@ -53,13 +53,14 @@ class CreateOrderedMenu
             $index = $item['index'] ?? ($key + 1);
             $note = $item['note'] ?? '';
             
-            // Package indicators (46, 47, 48, 49) are POS context markers, not actual menus.
-            // Skip lookup for package indicators or when price is already provided.
-            $isPackageIndicator = in_array($menuId, [46, 47, 48, 49]);
+            // Package indicators are POS context markers (set meal parents), not regular menu items.
+            // Prefer the is_package flag sent by the client (validated in StoreDeviceOrderRequest);
+            // fall back to the legacy hardcoded ID list for backward compatibility.
+            $isPackageIndicator = $item['is_package'] ?? in_array($menuId, [46, 47, 48, 49]);
             $menuModel = null;
             
-            if (! (app()->environment('testing') || env('APP_ENV') === 'testing')) {
-                if (!$isPackageIndicator && !isset($item['price'])) {
+            if (! app()->environment('testing')) {
+                if (!$isPackageIndicator) {
                     try {
                         $menuModel = Menu::find($menuId);
                     } catch (\Throwable $e) {
@@ -69,7 +70,12 @@ class CreateOrderedMenu
                 }
             }
 
-            $price = $item['price'] ?? ($menuModel->price ?? 0.00);
+            // For non-package items, always use the server-side DB price.
+            // Fallback to client-supplied price only when DB lookup fails (null).
+            // Package indicators have no menu record and must use client-supplied price.
+            $price = (!$isPackageIndicator && $menuModel !== null)
+                ? $menuModel->price
+                : ($item['price'] ?? 0.00);
             $priceLevelId = $this->getMenuPriceLevel($menuId);
             $orderId = $attr['order_id'];
             $orderCheckId = $attr['order_check_id'] ?? null;
@@ -77,10 +83,10 @@ class CreateOrderedMenu
 
             $unitPrice = (float) $price;
             $totalItemPrice = $unitPrice * $quantity;
-            $taxRate = 0.10;
+            $taxRate = config('api.krypton.tax_rate', 0.10);
             $taxAmount = round($totalItemPrice * $taxRate, 2);
             $subTotal = round($totalItemPrice + $taxAmount, 2);
-            $orderedMenu = $this->createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId);
+            $orderedMenu = $this->createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, $isPackageIndicator);
 
             $local = null;
             // Allow callers to opt-out of creating local mirror rows.
@@ -119,11 +125,10 @@ class CreateOrderedMenu
         return $created;
     }
 
-    protected function createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId)
+    protected function createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, bool $isPackageIndicator = false)
     {
-        // Package indicators (46, 47, 48, 49) are POS context markers, not actual menu records.
-        // For these, use stub menu data without querying the menus table.
-        $isPackageIndicator = in_array($menuId, [46, 47, 48, 49]);
+        // $isPackageIndicator is resolved by the caller from the validated request payload.
+        // Fallback: the caller defaults to false, which is safe for regular menu items.
         
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
             $menu = (object) [
@@ -158,7 +163,7 @@ class CreateOrderedMenu
             }
         }
         $totalItemPrice = round($unitPrice * $quantity, 2);
-        $taxAmount = round($totalItemPrice * 0.10, 2);
+        $taxAmount = round($totalItemPrice * config('api.krypton.tax_rate', 0.10), 2);
         $subTotal = round($totalItemPrice + $taxAmount, 2);
         $now = Carbon::now()->format('H:i:s');
         $false = false;

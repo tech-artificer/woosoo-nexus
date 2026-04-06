@@ -35,7 +35,7 @@ class KryptonContextService
                 $today = Carbon::now();
                 $flag = true;
 
-                $terminal = Terminal::where('id', 1)->first();
+                $terminal = Terminal::where('id', config('api.krypton.terminal_id', 1))->first();
 
                 $session = Session::query()
                     ->whereNull('date_time_closed')

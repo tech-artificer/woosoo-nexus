@@ -8,6 +8,7 @@ use App\Repositories\Krypton\MenuRepository;
 use App\Http\Resources\MenuResource;
 use App\Http\Resources\MenuModifierResource;
 use App\Models\Krypton\Menu;
+use Illuminate\Support\Facades\DB;
 
 class BrowseMenuApiController extends Controller
 {   
@@ -545,7 +546,7 @@ class BrowseMenuApiController extends Controller
                     ->whereHas('group', function ($q) {
                         $q->where('name', 'Meat Order');
                     })
-                    ->whereRaw("UPPER(receipt_name) IN ('" . implode("','", $allPackageCodesUpper) . "')")
+                    ->whereIn(DB::raw('UPPER(receipt_name)'), $allPackageCodesUpper)
                     ->where('is_modifier_only', true)
                     ->where('is_available', true);
 

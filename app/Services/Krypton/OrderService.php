@@ -199,7 +199,7 @@ class OrderService
     {
         $subtotal = 0;
         $tax = 0;
-        $taxRate = 0.10; // 10% tax rate (same as CreateOrderedMenu)
+        $taxRate = config('api.krypton.tax_rate', 0.10);
 
         foreach ($items as $item) {
             $quantity = $item['quantity'] ?? 0;

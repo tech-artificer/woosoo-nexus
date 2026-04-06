@@ -8,12 +8,11 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList, navigationMenuTriggerStyle } from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
+import { LayoutGrid, Menu } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 interface Props {
@@ -38,19 +37,6 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutGrid,
-    },
-];
-
-const rightNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
     },
 ];
 
@@ -96,19 +82,6 @@ onMounted(() => {
                                         {{ item.title }}
                                     </Link>
                                 </nav>
-                                <div class="flex flex-col space-y-4">
-                                    <a
-                                        v-for="item in rightNavItems"
-                                        :key="item.title"
-                                        :href="item.href"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="flex items-center space-x-2 text-sm font-medium"
-                                    >
-                                        <component v-if="item.icon" :is="item.icon" class="h-5 w-5" />
-                                        <span>{{ item.title }}</span>
-                                    </a>
-                                </div>
                             </div>
                         </SheetContent>
                     </Sheet>
@@ -142,31 +115,6 @@ onMounted(() => {
                 <div class="ml-auto flex items-center space-x-2">
                     <div class="hidden md:flex items-center mr-2">
                         <AppearanceTabs />
-                    </div>
-                    <div class="relative flex items-center space-x-1">
-                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                            <Search class="size-5 opacity-80 group-hover:opacity-100" />
-                        </Button>
-
-                        <div class="hidden space-x-1 lg:flex">
-                            <template v-for="item in rightNavItems" :key="item.title">
-                                <TooltipProvider :delay-duration="0">
-                                    <Tooltip>
-                                        <TooltipTrigger>
-                                            <Button variant="ghost" size="icon" as-child class="group h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                                                <a :href="item.href" target="_blank" rel="noopener noreferrer">
-                                                    <span class="sr-only">{{ item.title }}</span>
-                                                    <component :is="item.icon" class="size-5 opacity-80 group-hover:opacity-100" />
-                                                </a>
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{{ item.title }}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            </template>
-                        </div>
                     </div>
 
                     <DropdownMenu>

@@ -1,4 +1,5 @@
 <?php
+// Audit Fix (2026-04-06): include package seeding in the default bootstrap path.
 
 namespace Database\Seeders;
 
@@ -10,6 +11,7 @@ use App\Models\Branch;
 use App\Models\TableService;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -18,10 +20,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Branch::firstOrCreate([
-            'name' => 'SM Butuan',
-            'location' => 'Butuan City, Agusan del Norte, Philippines'
-        ]);
+        $branchCount = Branch::withTrashed()->count();
+
+        if ($branchCount > 1) {
+            throw new RuntimeException('Single-branch install invariant violated: multiple branch records already exist.');
+        }
+
+        $branch = Branch::withTrashed()->first();
+        if ($branch === null) {
+            Branch::create([
+                'name' => 'SM Butuan',
+                'location' => 'Butuan City, Agusan del Norte, Philippines',
+            ]);
+        } elseif ($branch->trashed()) {
+            $branch->restore();
+        }
 
         $services = ['Cleaning', 'Billing', 'Call Support', 'Service Water'];
 
@@ -43,6 +56,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->setupRolesAndPermissions($adminUser);
+        $this->call(PackageSeeder::class);
     }
 
     protected function setupRolesAndPermissions(?User $initialAdmin = null) {

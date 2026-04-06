@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Broadcast;
-use App\Jobs\BroadcastEventJob;
 
 class BroadcastService
 {
@@ -15,15 +13,14 @@ class BroadcastService
     {
         try {
             broadcast($event);
-  
+            return true;
         } catch (\Throwable $e) {
             Log::error("Broadcast failed", [
                 'event' => get_class($event),
                 'error' => $e->getMessage(),
             ]);
+            return false;
         }
-
-        return true;
     }
 
 /**
@@ -46,21 +43,27 @@ class BroadcastService
     }
 
     /**
-     * Queue a broadcast event for async retry via jobs.
+     * Backward-compatible entrypoint used by legacy callers.
+     * Broadcast synchronously so order lifecycle updates do not depend on a queue worker.
      */
     public function dispatchBroadcastJob($event): void
-    {   
+    {
         $eventClass = get_class($event);
-        $jobId = \Illuminate\Support\Str::uuid();
-        
-        $broadcastJob = BroadcastEventJob::dispatch($event);
-        
-        Log::info("📤 [Broadcast] Job dispatched", [
+        $success = $this->broadcastWithRetry($event);
+
+        $context = [
             'event' => class_basename($eventClass),
             'order_id' => $event->order?->id ?? $event->order_id ?? 'unknown',
             'device_id' => $event->order?->device_id ?? 'unknown',
             'timestamp' => date('Y-m-d H:i:s.u')
-        ]);
+        ];
+
+        if ($success) {
+            Log::info("📤 [Broadcast] Event sent synchronously", $context);
+            return;
+        }
+
+        Log::warning("⚠️ [Broadcast] Event failed after sync retries", $context);
     }
 
 }

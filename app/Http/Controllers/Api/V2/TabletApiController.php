@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Repositories\Krypton\MenuRepository;
 use App\Http\Resources\MenuResource;
 use App\Models\Krypton\Menu;
+use App\Models\Package;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -39,23 +40,39 @@ class TabletApiController extends Controller
     public function packages(Request $request)
     {
         try {
-            // Known package IDs (Set Meal A, B, C)
-            $packageIds = [46, 47, 48];
-            
-            // Fetch packages with images and tax
-            $packages = Menu::with(['image', 'tax'])
-                ->whereIn('id', $packageIds)
-                ->where('is_available', true)
+            // Load active packages from app DB, ordered for display.
+            $dbPackages = Package::with('modifiers')
+                ->where('is_active', true)
+                ->orderBy('sort_order')
                 ->get();
 
-            // Load modifiers for each package using the static getModifiers method
-            foreach ($packages as $package) {
-                $modifiers = Menu::getModifiers($package->id);
-                $package->setRelation('modifiers', $modifiers);
-            }
+            // Bulk-load all required Krypton menu records in two queries.
+            $packageMenuIds  = $dbPackages->pluck('krypton_menu_id')->filter()->unique()->values()->toArray();
+            $modifierMenuIds = $dbPackages->flatMap(fn ($p) => $p->modifiers->pluck('krypton_menu_id'))
+                ->filter()->unique()->values()->toArray();
+            $allIds = array_values(array_unique(array_merge($packageMenuIds, $modifierMenuIds)));
+
+            $kryptonMenus = Menu::with(['image', 'tax', 'group'])
+                ->whereIn('id', $allIds)
+                ->get()
+                ->keyBy('id');
+
+            // Stitch Krypton menu models together with their ordered modifiers.
+            $result = $dbPackages->map(function ($dbPackage) use ($kryptonMenus) {
+                $menu = $kryptonMenus->get($dbPackage->krypton_menu_id);
+                if (! $menu) {
+                    return null;
+                }
+                $modifierModels = $dbPackage->modifiers
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
+                    ->filter()
+                    ->values();
+                $menu->setRelation('modifiers', $modifierModels);
+                return $menu;
+            })->filter()->values();
 
             return ApiResponse::success(
-                MenuResource::collection($packages),
+                MenuResource::collection($result),
                 'Packages retrieved successfully'
             );
         } catch (\Exception $e) {
@@ -169,25 +186,37 @@ class TabletApiController extends Controller
     public function packageDetails(Request $request, int $id)
     {
         try {
-            $validPackageIds = [46, 47, 48];
-            
-            if (!in_array($id, $validPackageIds)) {
-                return ApiResponse::error(
-                    'Invalid package ID. Must be one of: ' . implode(', ', $validPackageIds),
-                    null,
-                    422
-                );
-            }
+            // Resolve the package entity from the app DB using the Krypton menu ID
+            // so the route signature stays backward-compatible with the tablet PWA.
+            $dbPackage = Package::with('modifiers')
+                ->where('krypton_menu_id', $id)
+                ->where('is_active', true)
+                ->first();
 
-            // Fetch package with image and tax
-            $package = Menu::with(['image', 'tax'])->find($id);
-
-            if (!$package) {
+            if (! $dbPackage) {
                 return ApiResponse::error('Package not found', null, 404);
             }
 
-            // Load modifiers using the static method
-            $modifiers = Menu::getModifiers($id);
+            // Bulk-load the package menu + all its modifier menus from Krypton.
+            $modifierMenuIds = $dbPackage->modifiers->pluck('krypton_menu_id')->filter()->toArray();
+            $allIds = array_unique(array_merge([$id], $modifierMenuIds));
+
+            $kryptonMenus = Menu::with(['image', 'tax', 'group'])
+                ->whereIn('id', $allIds)
+                ->get()
+                ->keyBy('id');
+
+            $package = $kryptonMenus->get($id);
+
+            if (! $package) {
+                return ApiResponse::error('Package not found in POS', null, 404);
+            }
+
+            // Resolve modifier Krypton menu models in seeded order.
+            $modifiers = $dbPackage->modifiers
+                ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
+                ->filter()
+                ->values();
 
             // Filter by meat category if provided
             if ($request->has('meat_category')) {

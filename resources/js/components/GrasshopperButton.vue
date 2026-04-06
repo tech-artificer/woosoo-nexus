@@ -40,7 +40,6 @@ const buttonClass = computed(() =>
     :disabled="disabled || loading"
     :aria-busy="loading ? 'true' : undefined"
     @click="$emit('click', $event)"
-    style="background: #fff; height: 48px; min-width: 140px; border-radius: 999px; display: flex; align-items: center; padding: 0; box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08); transition: background 0.3s;"
   >
     <span class="button__icon-accent">
       <span class="button__icon">
@@ -78,7 +77,7 @@ const buttonClass = computed(() =>
     cursor: pointer;
     display: flex;
     align-items: center;
-    background: #fff;
+    background: var(--color-card, #fff);
     transition: background 0.3s;
     min-width: 140px;
     height: 48px;

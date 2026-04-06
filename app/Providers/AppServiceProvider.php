@@ -8,6 +8,7 @@ use App\Models\DeviceOrder;
 use App\Observers\OrderUpdateLogObserver;
 use App\Observers\DeviceOrderObserver;
 use App\Services\Krypton\KryptonContextService;
+use App\Services\LocalBranchResolver;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -36,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(KryptonContextService::class, fn () => new KryptonContextService());
+        $this->app->singleton(LocalBranchResolver::class, fn () => new LocalBranchResolver());
         // Register test-only service provider when running tests so we can
         // bind POS/Krypton repositories to fakes for isolation.
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {

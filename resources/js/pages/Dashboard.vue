@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Head } from '@inertiajs/vue3'
@@ -14,6 +14,7 @@ import {
 
 import LineChart from '@/components/charts/LineChart.vue';
 import DonutChart from '@/components/charts/DonutChart.vue';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface DashCards {
@@ -21,6 +22,7 @@ interface DashCards {
   value?: string | number;
   icon?: LucideIcon;
   helpText?: string;
+  colorClass?: string;
 }
 
 const props = defineProps<{
@@ -43,30 +45,37 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const formatPHP = (value: string | number) =>
+    '₱' + new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))
+
 const dashCards: DashCards[] = [
     {
         title: 'Total Sales Today',
-        value: '₱' + props.totalSales,
+        value: formatPHP(props.totalSales),
         icon: ChartSpline,
         helpText: `${props.totalOrders} Transactions`,
+        colorClass: 'text-woosoo-accent',
     },
     {
         title: `Today's Orders`,
         value: props.totalOrders,
         icon: ArrowUp10,
         helpText: 'Completed orders today',
+        colorClass: 'text-woosoo-green',
     },
     {
         title: `Total Guests`,
         value: props.guestCount,
         icon: Contact,
         helpText: 'Guests served today',
+        colorClass: 'text-woosoo-blue',
     },
     {
         title: `Monthly Sales`,
-        value: '₱' + props.monthlySales,
+        value: formatPHP(props.monthlySales),
         icon: ChartPie,
         helpText: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+        colorClass: 'text-woosoo-primary-dark',
     },
 ];
 
@@ -77,6 +86,7 @@ onMounted(() => {
   
 });
 
+const hasSalesData = computed(() => Array.isArray(props.salesData) && props.salesData.length > 0)
 
 </script>
 
@@ -88,7 +98,7 @@ onMounted(() => {
 
         <div class="space-y-6">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">Overview</h1>
+                <h1 class="text-2xl font-bold tracking-tight font-header">Overview</h1>
                 <p class="text-muted-foreground">Welcome to the main dashboard</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -97,7 +107,7 @@ onMounted(() => {
                         <CardTitle class="text-sm font-medium">
                         {{ dashCard.title }}
                         </CardTitle>
-                        <component :is="dashCard.icon" class="text-woosoo-green " />   
+                        <component :is="dashCard.icon" :class="dashCard.colorClass ?? 'text-woosoo-accent'" />
                     </CardHeader>
                     <CardContent>
                         <div class="text-2xl font-bold">
@@ -112,10 +122,20 @@ onMounted(() => {
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <LineChart />
+                    <template v-if="hasSalesData">
+                        <LineChart />
+                    </template>
+                    <div v-else class="flex flex-col items-center justify-center rounded-lg border border-dashed border-border h-48 gap-2 text-muted-foreground">
+                        <Skeleton class="h-full w-full rounded-lg" />
+                    </div>
                 </div>
-                  <div class="flex justify-center items-center">
-                    <DonutChart />
+                <div class="flex justify-center items-center">
+                    <template v-if="hasSalesData">
+                        <DonutChart />
+                    </template>
+                    <div v-else class="flex flex-col items-center justify-center rounded-lg border border-dashed border-border h-48 w-full gap-2 text-muted-foreground">
+                        <Skeleton class="h-48 w-48 rounded-full" />
+                    </div>
                 </div>
             </div>
         </div>

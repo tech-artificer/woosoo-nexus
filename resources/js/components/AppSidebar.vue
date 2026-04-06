@@ -1,7 +1,9 @@
+<!-- Audit Fix (2026-04-06): expose package management page in admin sidebar. -->
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { computed } from 'vue'
 import NavMain from '@/components/NavMain.vue';
+import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -12,11 +14,13 @@ import {
     MonitorSmartphone, 
     UtensilsCrossed,  
     Lock,
+    ShieldCheck,
     Bell,
     Building2,
     Accessibility,
     FileText,
-    Activity
+    Activity,
+    Package
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
@@ -43,6 +47,13 @@ const mainNavItems: NavItem[] = [
         title: 'Menus',
         href: route('menus'),
         icon: UtensilsCrossed,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Packages',
+        href: route('packages.index'),
+        icon: Package,
         isActive: false,
         hasSubItems: false,
     },
@@ -89,7 +100,7 @@ const configNavItems: NavItem[] = [
     {
         title: 'Permissions',
         href: route('permissions.index'),
-        icon: Lock,
+        icon: ShieldCheck,
         isActive: false,
         hasSubItems: false,
     },
@@ -145,9 +156,10 @@ const configNavItems: NavItem[] = [
         <SidebarContent>
             <NavMain :items="isAdmin ? mainNavItems : [mainNavItems[0]]" title="Main"  />
             <!-- <NavMain :items="reportNavItems" title="Reports" /> -->
+            <NavMain v-if="isAdmin" :items="configNavItems" title="Configuration" />
         </SidebarContent>
-        <SidebarFooter v-if="isAdmin">
-            <NavMain :items="configNavItems" title="Configuration" />
+        <SidebarFooter>
+            <NavUser />
         </SidebarFooter>
     </Sidebar>
     <slot />

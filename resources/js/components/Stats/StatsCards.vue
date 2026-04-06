@@ -17,13 +17,13 @@ const props = defineProps<{ cards: StatCard[] }>()
 const getAccent = (variant: StatCard['variant']) => {
   switch (variant) {
     case 'primary':
-      return 'bg-blue-50 border-blue-100 text-blue-700'
+      return 'bg-primary/10 border-primary/20 text-primary'
     case 'accent':
-      return 'bg-emerald-50 border-emerald-100 text-emerald-700'
+      return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
     case 'danger':
-      return 'bg-rose-50 border-rose-100 text-rose-700'
+      return 'bg-destructive/10 border-destructive/20 text-destructive'
     default:
-      return 'bg-white border-gray-100 text-gray-900'
+      return 'bg-card border-border text-card-foreground'
   }
 }
 
@@ -54,7 +54,7 @@ const getSparkPoints = (arr?: number[]) => {
         </div>
         <div class="flex flex-col items-end">
           <component v-if="card.icon" :is="card.icon" class="h-6 w-6 opacity-80" />
-          <div v-if="typeof card.delta !== 'undefined'" :class="['mt-2 text-sm font-medium', card.delta >= 0 ? 'text-emerald-600' : 'text-rose-600']">
+          <div v-if="typeof card.delta !== 'undefined'" :class="['mt-2 text-sm font-medium', card.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive']">
             <span v-if="card.delta >= 0">+{{ card.delta }}%</span>
             <span v-else>{{ card.delta }}%</span>
           </div>

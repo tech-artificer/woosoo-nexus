@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Services\LocalBranchResolver;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
@@ -66,7 +67,7 @@ class Device extends Authenticatable
             }
 
             if (empty($model->branch_id)) {
-                $model->branch_id = Branch::first()->id;
+                $model->branch_id = app(LocalBranchResolver::class)->requireId();
             }
         });
 

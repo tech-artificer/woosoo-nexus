@@ -25,6 +25,15 @@ export default defineConfig({
             '@': path.resolve(__dirname, './resources/js'),
         },
     },
+    optimizeDeps: {
+        include: [
+            '@tiptap/vue-3',
+            '@tiptap/starter-kit',
+            '@tiptap/extension-image',
+            '@tiptap/extension-link',
+            'dompurify',
+        ],
+    },
     server: {
         host: '127.0.0.1',
         port: Number(process.env.VITE_DEV_PORT) || 5173,

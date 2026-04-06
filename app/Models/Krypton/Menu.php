@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\MenuImage;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use App\Http\Resources\MenuModifierResource;
@@ -277,7 +278,7 @@ class Menu extends Model
             ->whereHas('group', function ($q) {
                 $q->where('name', 'Meat Order');
             })
-            ->whereRaw("UPPER(receipt_name) IN ('" . implode("','", $allCodes) . "')")
+            ->whereIn(DB::raw('UPPER(receipt_name)'), $allCodes)
             ->where('is_modifier_only', true)
             ->where('is_available', true)
             ->get()

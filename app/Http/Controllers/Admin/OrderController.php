@@ -1,29 +1,28 @@
 <?php
+// Audit Fix (2026-04-06): restore missing admin order actions and route handlers used by Orders UI.
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\Krypton\KryptonContextService;
 use Inertia\Inertia;
-use App\Repositories\Krypton\OrderRepository;
-use App\Repositories\Krypton\TableRepository;
-use App\Models\Krypton\Order;
-use App\Models\Krypton\OrderCheck;
 use App\Models\DeviceOrder;
 use App\Models\Device;
 use App\Models\Krypton\Table as KryptonTable;
 use App\Enums\OrderStatus;
-use App\Models\Krypton\Session;
 use App\Services\Krypton\OrderService;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Enum as EnumRule;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderCompleted as OrderCompletedEvent;
+use App\Events\PrintOrder;
 
 class OrderController extends Controller
 {
+    public function __construct(private readonly OrderService $orderService)
+    {
+    }
+
     /**
      * Render the admin Orders page with live orders, history, devices, and tables.
      */
@@ -76,20 +75,86 @@ class OrderController extends Controller
     }
 
     /**
+     * Show one order from admin context.
+     * Keeps backward compatibility with /orders/{id} route while rendering the existing page.
+     */
+    public function show(int $id)
+    {
+        $order = DeviceOrder::with(['items.menu', 'serviceRequests', 'table', 'device'])->findOrFail($id);
+
+        return Inertia::render('Orders/Index', [
+            'title' => 'Orders',
+            'description' => 'Manage and monitor live orders',
+            'orders' => DeviceOrder::with(['device', 'table'])->activeOrder()->latest()->get(),
+            'orderHistory' => DeviceOrder::with(['device', 'table'])->completedOrder()->latest()->limit(100)->get(),
+            'devices' => Device::select('id', 'name')->get(),
+            'tables' => KryptonTable::select('id', 'name')->get(),
+            'selectedOrderId' => $order->id,
+        ]);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(int $id)
-    {   
-        $deviceOrder = DeviceOrder::find($id); 
-      
+    {
+        $deviceOrder = DeviceOrder::findOrFail($id);
+
         $deviceOrder->update(['status' => OrderStatus::VOIDED]);
         $this->orderService->voidOrder($deviceOrder);
-         //Run the console command
-        // $exitCode = Artisan::call('broadcast:order-voided', [
-        //     'order_id' => $deviceOrder->order_id
 
-     
-        return redirect()->back()->with('success');
+        return redirect()->back()->with('success', 'Order voided successfully.');
+    }
+
+    /**
+     * Mark one order as completed by external POS order id and broadcast update.
+     */
+    public function complete(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => ['required'],
+        ]);
+
+        $order = DeviceOrder::where('order_id', $validated['order_id'])->first();
+
+        if (! $order) {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        try {
+            $order->update(['status' => OrderStatus::COMPLETED]);
+            event(new OrderStatusUpdated($order));
+            event(new OrderCompletedEvent($order));
+        } catch (\Throwable $e) {
+            Log::error('Failed to complete order', [
+                'order_id' => $validated['order_id'],
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to complete order.');
+        }
+
+        return redirect()->back()->with('success', 'Order completed successfully.');
+    }
+
+    /**
+     * Trigger print dispatch for a specific order by external order id.
+     */
+    public function print(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => ['required'],
+        ]);
+
+        $order = DeviceOrder::where('order_id', $validated['order_id'])->first();
+
+        if (! $order) {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        PrintOrder::dispatch($order);
+
+        return redirect()->back()->with('success', 'Order sent to printer.');
     }
 
     /**

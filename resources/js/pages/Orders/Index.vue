@@ -1,3 +1,4 @@
+<!-- Audit Fix (2026-04-06): use named routes for print/complete to match backend route contracts. -->
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
@@ -51,6 +52,8 @@ const selectedOrder = ref<DeviceOrder | null>(null)
 const isDetailOpen = ref(false)
 // Track which order_id we are currently fetching to avoid race updates
 const ongoingFetchOrderId = ref<number | string | null>(null)
+// AbortController for the current background fetch — cancelled when a new order is opened
+let currentFetchController: AbortController | null = null
 
 // Track which order IDs have active print animations to prevent duplicate animations
 const animatedOrderIds = new Set<number>()
@@ -73,8 +76,15 @@ const openOrderDetail = (order: DeviceOrder) => {
     const orderId = String((order as any).order_id || (order as any).id)
     if (!orderId) return
 
+    // Cancel any in-flight fetch for a previously opened order
+    if (currentFetchController) {
+      currentFetchController.abort()
+    }
+    const controller = new AbortController()
+    currentFetchController = controller
+
     ongoingFetchOrderId.value = orderId
-    fetch(`/device-order/by-order-id/${orderId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    fetch(`/device-order/by-order-id/${orderId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error(String(res.status))
         return res.json()
@@ -85,10 +95,13 @@ const openOrderDetail = (order: DeviceOrder) => {
         selectedOrder.value = full
         ;(selectedOrder.value as any).__is_partial = false
         ongoingFetchOrderId.value = null
+        currentFetchController = null
       })
       .catch(err => {
+        if (err.name === 'AbortError') return // intentionally cancelled
         console.warn('Background fetch for full order failed', err)
         ongoingFetchOrderId.value = null
+        currentFetchController = null
       })
   } catch (err) {
     console.error('openOrderDetail error', err)
@@ -100,13 +113,13 @@ const openOrderDetail = (order: DeviceOrder) => {
 const handleDetailPrint = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  router.post('/orders/print', { order_id: orderId })
+  router.post(route('orders.print'), { order_id: orderId })
 }
 
 const handleDetailComplete = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  router.post('/orders/complete', { order_id: orderId })
+  router.post(route('orders.complete'), { order_id: orderId })
 }
 
 // DataTable handles all client-side column filtering

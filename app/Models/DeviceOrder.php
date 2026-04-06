@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Services\LocalBranchResolver;
 use App\Models\Branch;
 use App\Models\Krypton\Table;
 use App\Models\Krypton\Order;
@@ -133,7 +134,22 @@ class DeviceOrder extends Model
         parent::boot();
 
         static::creating(function ($model) {
-                $model->branch_id = Branch::first()->id;
+            if (!empty($model->branch_id)) {
+                return;
+            }
+
+            if (!empty($model->device_id)) {
+                $deviceBranchId = Device::query()
+                    ->whereKey($model->device_id)
+                    ->value('branch_id');
+
+                if (!empty($deviceBranchId)) {
+                    $model->branch_id = (int) $deviceBranchId;
+                    return;
+                }
+            }
+
+            $model->branch_id = app(LocalBranchResolver::class)->requireId();
         });
 
         static::creating(function ($model) {

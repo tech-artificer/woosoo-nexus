@@ -49,22 +49,13 @@ const submit = () => {
                             {{ status }}
                         </div> 
 
-                    <div class="flex flex-col items-center gap-4">
-                        <Link :href="route('home')" class="flex flex-col items-center gap-2 font-medium">
-                            <div class="mb-1 flex h-40 w-40 items-center justify-center rounded-md">
-                                <!-- <AppLogoIcon class="size-40 fill-current text-[var(--foreground)] dark:text-white" /> -->
-                            </div>
-                            <span class="sr-only">{{ title }}</span>
-                        </Link>
-                      
-                    </div>
                 </div>
                 <div class="flex flex-1 justify-center">
                     <div class="w-full max-w-xs">
                         <div class="flex flex-col items-center gap-4 mb-6">
-                              <div class="text-center align-middle">
-                                <h2 class="text-xl font-medium">Login to your account</h2>
-                                <p class="text-center text-sm text-muted-foreground">Enter your email and password below to login</p>
+                            <div class="text-center">
+                                <h1 class="text-xl font-medium">Log in to your account</h1>
+                                <p class="text-center text-sm text-muted-foreground">Enter your email and password below to log in</p>
                             </div>
                         </div>
                         <form @submit.prevent="submit" class="flex flex-col gap-6">
@@ -81,7 +72,7 @@ const submit = () => {
                                     <div class="flex items-center justify-between">
                                         <Label for="password">Password</Label>
                                         <TextLink v-if="canResetPassword" :href="route('password.request')"
-                                            class="text-sm" :tabindex="5">
+                                            class="text-sm" :tabindex="4">
                                             Forgot password?
                                         </TextLink>
                                     </div>
@@ -101,7 +92,7 @@ const submit = () => {
                                 <Button
                                     type="submit"
                                     class="mt-4 w-full"
-                                    :tabindex="4"
+                                    :tabindex="5"
                                     :disabled="form.processing"
                                 >
                                     <LoaderCircle v-if="form.processing" class="mr-2 h-4 w-4 animate-spin" />
