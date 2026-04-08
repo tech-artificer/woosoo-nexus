@@ -42,12 +42,28 @@ class OrderRestrictionTest extends TestCase
             'branch_id' => $this->branch->id,
         ]);
 
+        // Create menu group for refill validation
+        DB::connection('pos')->table('menu_groups')->insert([
+            ['id' => 1, 'name' => 'Meats'],
+            ['id' => 2, 'name' => 'Desserts'], // Non-refillable group
+        ]);
+
         // Ensure a menu item exists on the POS connection for refill validation
         DB::connection('pos')->table('menus')->insert([
-            'id' => 46,
-            'name' => 'Beef',
-            'receipt_name' => 'Beef',
-            'price' => 100.00,
+            [
+                'id' => 46,
+                'name' => 'Beef',
+                'receipt_name' => 'Beef',
+                'price' => 100.00,
+                'menu_group_id' => 1, // Associate with Meats group for refill eligibility
+            ],
+            [
+                'id' => 99,
+                'name' => 'Brownie Sundae',
+                'receipt_name' => 'Brownie Sundae',
+                'price' => 75.00,
+                'menu_group_id' => 2, // Desserts - not refillable
+            ],
         ]);
     }
 
@@ -213,12 +229,15 @@ class OrderRestrictionTest extends TestCase
                         'quantity' => 1,
                     ]
                 ],
-                'session_id' => $order->session_id,
+                'session_id' => (string) $order->session_id, // Cast to string to match validation rule
             ]);
 
         // Should reject with validation error
+        // Note: App uses custom error format with errors in 'error.details' path
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors('items.0.name');
+        $response->assertJsonPath('error.details.items.0.name.0', function ($message) {
+            return str_contains($message, 'not available for refill');
+        });
     }
 
     /**

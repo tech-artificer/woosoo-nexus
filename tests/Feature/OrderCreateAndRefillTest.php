@@ -34,12 +34,19 @@ class OrderCreateAndRefillTest extends TestCase
         });
         DB::connection('krypton_woosoo')->table('menu')->insert(['id' => 46, 'name' => 'Classic Feast']);
 
-        // Ensure POS menu exists for refill validation
+        // Create menu group for refill validation
+        DB::connection('pos')->table('menu_groups')->insert([
+            'id' => 1,
+            'name' => 'Meats',
+        ]);
+
+        // Ensure POS menu exists for refill validation with proper menu_group_id
         DB::connection('pos')->table('menus')->insert([
             'id' => 46,
             'name' => 'Classic Feast',
             'receipt_name' => 'Classic Feast',
             'price' => 399.00,
+            'menu_group_id' => 1, // Associate with Meats group
         ]);
     }
 
@@ -159,8 +166,9 @@ class OrderCreateAndRefillTest extends TestCase
         // Now ensure there are two device_order_items for this device order
         $this->assertDatabaseCount('device_order_items', 2);
 
+        // Note: order_id column stores DeviceOrder->id, not DeviceOrder->order_id
         $this->assertDatabaseHas('device_order_items', [
-            'order_id' => $deviceOrder->order_id,
+            'order_id' => $deviceOrder->id,  // Uses DeviceOrder's database id, not POS order_id
             'menu_id' => 46,
             'ordered_menu_id' => 46,
             'quantity' => 2,
