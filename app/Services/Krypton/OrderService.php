@@ -29,6 +29,7 @@ use App\Enums\OrderStatus;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\BroadcastService;
 use App\Events\Order\OrderVoided;
+use App\Events\PrintOrder;
 use App\Exceptions\SessionNotFoundException;
 
 use Illuminate\Support\Facades\Log;
@@ -49,18 +50,45 @@ class OrderService
         $defaults = $this->getDefaultAttributes();
         $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
 
-        // Calculate totals from items if not provided or if they are 0
-        if (!isset($attributes['total_amount']) || $attributes['total_amount'] == 0) {
-            Log::info('OrderService: Calculating totals from items', [
-                'items_count' => count($attributes['items'] ?? []),
-                'original_total' => $attributes['total_amount'] ?? 'not set'
-            ]);
-            $calculatedTotals = $this->calculateTotalsFromItems($attributes['items'] ?? []);
-            $attributes['subtotal'] = $calculatedTotals['subtotal'];
-            $attributes['tax'] = $calculatedTotals['tax'];
-            $attributes['total_amount'] = $calculatedTotals['total'];
-            $attributes['discount_amount'] = $attributes['discount'] ?? 0;
-            Log::info('OrderService: Totals calculated', $calculatedTotals);
+        // Always derive monetary totals from item lines server-side.
+        // This prevents client-side floating-point drift from propagating to transactions.
+        $clientTotals = [
+            'subtotal' => $attributes['subtotal'] ?? null,
+            'tax' => $attributes['tax'] ?? null,
+            'total_amount' => $attributes['total_amount'] ?? null,
+        ];
+        $calculatedTotals = $this->calculateTotalsFromItems($attributes['items'] ?? []);
+        $attributes['subtotal'] = $calculatedTotals['subtotal'];
+        $attributes['tax'] = $calculatedTotals['tax'];
+        $attributes['total_amount'] = $calculatedTotals['total'];
+        $attributes['discount_amount'] = $this->money($attributes['discount'] ?? 0);
+
+        if (
+            $clientTotals['subtotal'] !== null ||
+            $clientTotals['tax'] !== null ||
+            $clientTotals['total_amount'] !== null
+        ) {
+            $clientNormalized = [
+                'subtotal' => $this->money($clientTotals['subtotal'] ?? 0),
+                'tax' => $this->money($clientTotals['tax'] ?? 0),
+                'total_amount' => $this->money($clientTotals['total_amount'] ?? 0),
+            ];
+
+            if (
+                $clientNormalized['subtotal'] !== $attributes['subtotal'] ||
+                $clientNormalized['tax'] !== $attributes['tax'] ||
+                $clientNormalized['total_amount'] !== $attributes['total_amount']
+            ) {
+                Log::warning('OrderService: Client totals drift detected; server totals enforced', [
+                    'client' => $clientNormalized,
+                    'server' => [
+                        'subtotal' => $attributes['subtotal'],
+                        'tax' => $attributes['tax'],
+                        'total_amount' => $attributes['total_amount'],
+                    ],
+                    'items_count' => count($attributes['items'] ?? []),
+                ]);
+            }
         }
 
         // Keep `items` for downstream CreateOrderedMenu action.
@@ -122,6 +150,10 @@ class OrderService
             DB::afterCommit(function () use ($deviceOrder) {
                 try {
                     app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                    // P1 fix 2026-04-08: Broadcast initial order to print bridge via WebSocket
+                    // Without this, initial orders only reach print bridge via 30s polling cycle
+                    $deviceOrder->refresh(); // Load printEvent relation for broadcast payload
+                    \App\Events\PrintOrder::dispatch($deviceOrder);
                 } catch (\Throwable $e) {
                     report($e);
                 }
@@ -202,26 +234,31 @@ class OrderService
         $taxRate = config('api.krypton.tax_rate', 0.10);
 
         foreach ($items as $item) {
-            $quantity = $item['quantity'] ?? 0;
-            $price = $item['price'] ?? 0;
+            $quantity = (int) ($item['quantity'] ?? 0);
+            $price = $this->money($item['price'] ?? 0);
             
             // Calculate item total (price * quantity)
-            $itemTotal = $price * $quantity;
+            $itemTotal = $this->money($price * $quantity);
             
             // Calculate tax for this item (same as CreateOrderedMenu: totalItemPrice * taxRate)
-            $itemTax = $itemTotal * $taxRate;
+            $itemTax = $this->money($itemTotal * $taxRate);
             
-            $subtotal += $itemTotal;
-            $tax += $itemTax;
+            $subtotal = $this->money($subtotal + $itemTotal);
+            $tax = $this->money($tax + $itemTax);
         }
 
-        $total = $subtotal + $tax;
+        $total = $this->money($subtotal + $tax);
 
         return [
             'subtotal' => $subtotal,
             'tax' => $tax,
             'total' => $total,
         ];
+    }
+
+    private function money($value): float
+    {
+        return round((float) $value, 2);
     }
 }
 
