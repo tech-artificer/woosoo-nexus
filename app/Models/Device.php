@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Services\LocalBranchResolver;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ use App\Models\Krypton\Table;
 
 class Device extends Authenticatable
 {
-    use HasApiTokens;
+    use HasApiTokens, HasFactory;
 
     protected $table = 'devices';
     protected $primaryKey = 'id';
@@ -27,10 +28,12 @@ class Device extends Authenticatable
         'table_id',
         'is_active',
         'status',
+        'type',                 // Task 2.7: 'tablet' | 'printer_relay' | null
         'app_version',
         'ip_address',
         'last_ip_address',
         'last_seen_at',
+        'last_heartbeat_at',    // Task 2.7: relay device heartbeat timestamp
     ];
 
     protected $guarded = [
@@ -47,6 +50,7 @@ class Device extends Authenticatable
       'table_id' => 'integer',
       'is_active' => 'boolean',
       'last_seen_at' => 'datetime',
+      'last_heartbeat_at' => 'datetime',
     ];
 
     /**

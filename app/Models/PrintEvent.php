@@ -27,6 +27,9 @@ class PrintEvent extends Model
         'acknowledged_by_device_id',   // NEW: Track which relay device acked (audit trail)
         'attempts',
         'last_error',
+        'backend_status',              // Task 2.3: backend broadcast lifecycle
+        'broadcast_at',                // Task 2.3: when the backend last broadcast this event
+        'retry_count',                 // Task 2.3: backend re-broadcast counter (≠ device-ack 'attempts')
     ];
 
     protected $casts = [
@@ -34,6 +37,8 @@ class PrintEvent extends Model
         'is_acknowledged' => 'boolean',
         'acknowledged_at' => 'datetime',
         'attempts' => 'integer',
+        'broadcast_at' => 'datetime',
+        'retry_count' => 'integer',
     ];
 
     public function deviceOrder(): BelongsTo
