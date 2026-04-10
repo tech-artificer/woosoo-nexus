@@ -27,6 +27,9 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 // use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -50,6 +53,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(KryptonContextService $contextService): void
     {
+        RateLimiter::for('device-order-create', function (Request $request) {
+            $deviceId = $request->user('device')?->id ?? $request->user()?->id;
+            $tokenKey = $request->bearerToken();
+
+            return Limit::perMinute(10)->by(
+                $deviceId
+                    ? 'device:' . $deviceId
+                    : ($tokenKey ? 'token:' . sha1($tokenKey) : $request->fingerprint())
+            );
+        });
+
         // Always return plain JSON (no "data" wrapper)
         JsonResource::withoutWrapping();
 

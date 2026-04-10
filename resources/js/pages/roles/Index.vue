@@ -12,11 +12,12 @@ import { Head } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
 import Permissions from '@/pages/roles/Permissions.vue'
 const page = usePage();
+const roleProps = page.props as any
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'Roles & Permissions',
-    href: '/roles/permissions',
+    title: 'Permission Registry',
+    href: route('roles.index'),
   },
 ];
 
@@ -33,9 +34,9 @@ defineProps<{
 
   <AppLayout :breadcrumbs="breadcrumbs">
  
-      <Permissions :roles="page.props.roles" :permissions="page.props.permissions"
-        :groupedPermissions="page.props.groupedPermissions"
-        :assignedPermissions="page.props.assignedPermissions" />
+      <Permissions :roles="roleProps.roles" :permissions="roleProps.permissions"
+        :groupedPermissions="roleProps.groupedPermissions"
+        :assignedPermissions="roleProps.assignedPermissions" />
           
   </AppLayout>
 </template>

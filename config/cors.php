@@ -16,7 +16,9 @@ return [
     */
     'paths' => ['api/*', 'auth/broadcasting'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => ['*'],
+    // Restrict to known origins in production. Set CORS_ALLOWED_ORIGINS in .env.
+    // Default '*' is only safe in closed on-prem networks; still prefer explicit allowlist.
+    'allowed_origins' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', '*'))),
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
     'max_age' => 86400,

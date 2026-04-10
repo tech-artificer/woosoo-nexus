@@ -25,9 +25,9 @@ interface PageProps {
 const props = defineProps<PageProps>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reports', href: '#' },
-    { label: props.title, href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reports', href: route('reports.index') },
+    { title: props.title, href: '#' },
 ]
 
 const chartData = ref(
@@ -38,17 +38,23 @@ const chartData = ref(
     }))
 )
 
-const totalSales = props.data.reduce((sum, row) => sum + row.total_sales, 0)
-const totalTransactions = props.data.reduce((sum, row) => sum + row.transaction_count, 0)
+const totalSales = (props.data ?? []).reduce((sum, row) => sum + row.total_sales, 0)
+const totalTransactions = (props.data ?? []).reduce((sum, row) => sum + row.transaction_count, 0)
 const avgOrderValue = totalTransactions > 0 ? totalSales / totalTransactions : 0
-const totalGuests = props.data.reduce((sum, row) => sum + row.total_guests, 0)
+const totalGuests = (props.data ?? []).reduce((sum, row) => sum + row.total_guests, 0)
+
+const currencyFormatter = (value: unknown) => {
+    return typeof value === 'number'
+        ? '₱' + new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+        : String(value)
+}
 </script>
 
 <template>
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="p-6 space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -64,7 +70,7 @@ const totalGuests = props.data.reduce((sum, row) => sum + row.total_guests, 0)
                         <CardTitle class="text-sm font-medium">Total Sales</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalSales.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalSales) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">{{ props.data.length }} days</p>
                     </CardContent>
                 </Card>
@@ -84,7 +90,7 @@ const totalGuests = props.data.reduce((sum, row) => sum + row.total_guests, 0)
                         <CardTitle class="text-sm font-medium">Avg Order Value</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ avgOrderValue.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(avgOrderValue) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Per transaction</p>
                     </CardContent>
                 </Card>
@@ -109,7 +115,7 @@ const totalGuests = props.data.reduce((sum, row) => sum + row.total_guests, 0)
                 <CardContent>
                     <LineChart :data="chartData" index="date" :categories="['Total Sales', 'Transactions']"
                         :colors="['#10b981', '#3b82f6']"
-                        :valueFormatter="(value: number) => typeof value === 'number' ? `$${value.toFixed(0)}` : value" />
+                        :valueFormatter="currencyFormatter" />
                 </CardContent>
             </Card>
 
@@ -135,8 +141,8 @@ const totalGuests = props.data.reduce((sum, row) => sum + row.total_guests, 0)
                                 <tr v-for="row in props.data" :key="row.date" class="border-b hover:bg-muted/50">
                                     <td class="py-3 px-4">{{ row.date }}</td>
                                     <td class="text-right py-3 px-4">{{ row.transaction_count }}</td>
-                                    <td class="text-right py-3 px-4">${{ row.total_sales.toFixed(2) }}</td>
-                                    <td class="text-right py-3 px-4">${{ row.avg_order_value.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_sales) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.avg_order_value) }}</td>
                                     <td class="text-right py-3 px-4">{{ row.total_guests }}</td>
                                 </tr>
                             </tbody>

@@ -146,7 +146,7 @@ const updateStats = () => {
         total_pending: localServiceRequests.value.filter(sr => sr.status === 'pending').length,
         total_active: localServiceRequests.value.filter(sr => sr.is_active).length,
         total_today: localServiceRequests.value.filter(sr => {
-            const createdDate = new Date(sr.created_at);
+            const createdDate = new Date(sr.created_at ?? Date.now());
             const today = new Date();
             return createdDate.toDateString() === today.toDateString();
         }).length,

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageRequest;
 use App\Http\Requests\Admin\UpdatePackageRequest;
 use App\Http\Resources\PackageResource;
+use App\Models\Krypton\Menu;
 use App\Models\Package;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -20,10 +21,27 @@ class PackageController extends Controller
             ->orderBy('id')
             ->get();
 
+        $menuOptions = Menu::query()
+            ->select('id', 'name', 'receipt_name', 'is_modifier_only', 'is_available')
+            ->where('is_available', true)
+            ->orderBy('name')
+            ->limit(3000)
+            ->get()
+            ->map(static function (Menu $menu): array {
+                return [
+                    'id' => (int) $menu->id,
+                    'name' => $menu->name ?: $menu->receipt_name ?: ('Menu #' . $menu->id),
+                    'receipt_name' => $menu->receipt_name,
+                    'is_modifier_only' => (bool) $menu->is_modifier_only,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Packages/Index', [
             'title' => 'Packages',
             'description' => 'Manage package definitions and their allowed Krypton modifier menus.',
             'packages' => PackageResource::collection($packages)->resolve(),
+            'menuOptions' => $menuOptions,
         ]);
     }
 

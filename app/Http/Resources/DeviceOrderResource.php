@@ -18,24 +18,39 @@ class DeviceOrderResource extends BaseResource
         // during tests (they would hit the `pos` connection). In testing
         // environments, return null/fallbacks so resources remain stable.
         $isTesting = app()->environment('testing') || env('APP_ENV') === 'testing';
+        $items = $this->relationLoaded('items') ? $this->items : collect();
+        $device = $this->relationLoaded('device') ? $this->device : null;
+        $tableRelation = $this->relationLoaded('table') ? $this->table : null;
+        $orderRelation = $this->relationLoaded('order') ? $this->order : null;
 
         $table = null;
-        if (! $isTesting) {
+        if (! $isTesting && $tableRelation) {
             try {
-                $table = $this->table?->checkTableStatus();
+                $table = $tableRelation->checkTableStatus();
             } catch (\Throwable $e) {
                 report($e);
                 $table = null;
             }
         }
+
+        $packageId = collect($items)
+            ->map(function ($item) {
+                return $item->ordered_menu_id ?? null;
+            })
+            ->first(function ($orderedMenuId) {
+                return ! is_null($orderedMenuId);
+            });
+
         return [
             'id' => $this->id,
             'order_id' => $this->order_id,
+            'order_uuid' => $this->order_uuid,
             'order_number' => $this->order_number,
-            'device' => new DeviceResource($this->device),
-            'order' => $isTesting ? null : ($this->order ?? null),
+            'package_id' => $packageId,
+            'device' => $device ? new DeviceResource($device) : null,
+            'order' => $isTesting ? null : $orderRelation,
             'table' => $table,
-            'tablename' => $table['name'] ?? $this->table?->name ?? null,
+            'tablename' => $table['name'] ?? $tableRelation?->name ?? null,
             'status' => $this->status,
             // Expose monetary fields so clients (devices/clients) can display totals immediately
             'subtotal' => $this->subtotal ?? ($this->meta['order_check']->subtotal_amount ?? null),
@@ -48,7 +63,7 @@ class DeviceOrderResource extends BaseResource
             'printed_by' => $this->printed_by ?? null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
-            'items' => collect($this->items)->map(function ($it) use ($isTesting) {
+            'items' => collect($items)->map(function ($it) use ($isTesting) {
                 $menuName = null;
                 if (! $isTesting) {
                     try {
@@ -61,6 +76,7 @@ class DeviceOrderResource extends BaseResource
                 return [
                     'id' => $it->id,
                     'menu_id' => $it->menu_id,
+                    'ordered_menu_id' => $it->ordered_menu_id ?? null,
                     'menu' => ! $isTesting ? [
                         'id' => $it->menu?->id ?? null,
                         'name' => $it->menu?->name ?? null,

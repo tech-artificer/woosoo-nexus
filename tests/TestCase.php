@@ -163,6 +163,7 @@ abstract class TestCase extends BaseTestCase
                 $table->timestamp('printed_at')->nullable();
                 $table->string('printed_by')->nullable();
                 $table->timestamps();
+                $table->softDeletes();
             });
 
             if ($testingSchema->hasTable('device_orders')) {
@@ -188,6 +189,7 @@ abstract class TestCase extends BaseTestCase
                 $table->timestamp('printed_at')->nullable();
                 $table->string('printed_by')->nullable();
                 $table->timestamps();
+                $table->softDeletes();
             });
 
             // Ensure device_order_items has the expected columns by dropping

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -30,7 +31,11 @@ class ThrottleByDevice
                 'success' => false,
                 'message' => 'Too many requests. Please try again later.',
                 'retry_after' => $retryAfter,
-            ], 429);
+            ], 429)->withHeaders([
+                'Retry-After'           => $retryAfter,
+                'X-RateLimit-Limit'     => $maxAttempts,
+                'X-RateLimit-Remaining' => 0,
+            ]);
         }
 
         RateLimiter::hit($key, $decayMinutes * 60);
@@ -50,7 +55,17 @@ class ThrottleByDevice
      */
     protected function resolveRequestSignature(Request $request): string
     {
-        // If authenticated as a device, use device ID (unspoofable)
+        // Prefer bearer token resolution to avoid stale guard user in sequential requests.
+        $token = $request->bearerToken();
+        if (!empty($token)) {
+            $personalAccessToken = PersonalAccessToken::findToken($token);
+            if ($personalAccessToken && !empty($personalAccessToken->tokenable_id)) {
+                return 'device:' . $personalAccessToken->tokenable_id;
+            }
+            return 'token:' . sha1($token);
+        }
+
+        // If no token is present, fall back to authenticated device ID.
         $device = $request->user();
         if ($device && isset($device->id)) {
             return 'device:' . $device->id;

@@ -100,16 +100,12 @@ class CreateOrder
             // so higher-level services can operate without hitting the real
             // POS stored procedure.
             if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-                // In tests, avoid writing to the external `pos` connection.
-                // Return a lightweight object with the attributes consumers expect.
-                $fake = new \stdClass();
-                // Use a reasonably unique id to avoid collisions in tests.
-                $fake->id = random_int(100000, 999999);
-                $fake->session_id = $sessionId;
-                $fake->terminal_session_id = $terminalSessionId;
-                $fake->guest_count = $guestCount;
-                $fake->status = 'OPEN';
-                return $fake;
+                return Order::create([
+                    'session_id' => $sessionId,
+                    'terminal_session_id' => $terminalSessionId,
+                    'guest_count' => $guestCount,
+                    'status' => 'OPEN',
+                ]);
             }
 
             $placeholdersArray = array_fill(0, count($params), '?');

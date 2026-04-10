@@ -1,9 +1,10 @@
-import { computed } from 'vue'
+import { computed, type ComputedRef } from 'vue'
 import type { Table } from '@tanstack/vue-table'
 
 interface FacetedFilterOption {
   label: string
   value: string
+  icon?: any
 }
 
 /**
@@ -13,7 +14,7 @@ interface FacetedFilterOption {
 export function useFacetedOptions(
   table: Table<any>,
   columnId: string
-): { options: typeof computed<FacetedFilterOption[]>; hasColumn: boolean } {
+): { options: ComputedRef<FacetedFilterOption[]>; hasColumn: boolean } {
   const hasColumn = table.getAllColumns().some((c: any) => c.id === columnId)
 
   const options = computed(() => {

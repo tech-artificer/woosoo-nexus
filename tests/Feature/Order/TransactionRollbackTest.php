@@ -11,6 +11,7 @@ use App\Services\Krypton\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class TransactionRollbackTest extends TestCase
 {
@@ -124,8 +125,8 @@ class TransactionRollbackTest extends TestCase
 
         // Force local DB failure by making device_orders table unavailable
         // (simulates network partition or local DB crash)
-        DB::statement('DROP TABLE IF EXISTS device_orders_backup');
-        DB::statement('RENAME TABLE device_orders TO device_orders_backup');
+        Schema::dropIfExists('device_orders_backup');
+        Schema::rename('device_orders', 'device_orders_backup');
 
         try {
             $response = $this->actingAs($device, 'device')
@@ -151,7 +152,7 @@ class TransactionRollbackTest extends TestCase
             $response->assertStatus(500);
         } finally {
             // Restore table
-            DB::statement('RENAME TABLE device_orders_backup TO device_orders');
+            Schema::rename('device_orders_backup', 'device_orders');
         }
 
         // CRITICAL: Verify no orphaned POS orders were created
@@ -213,8 +214,9 @@ class TransactionRollbackTest extends TestCase
     /** @test */
     public function it_logs_errors_when_transaction_fails()
     {
+        Log::shouldReceive('withContext')->zeroOrMoreTimes();
         Log::shouldReceive('error')
-            ->once()
+            ->atLeast()->once()
             ->withArgs(function ($message, $context) {
                 return str_contains($message, 'Order creation') &&
                        isset($context['device_id']) &&

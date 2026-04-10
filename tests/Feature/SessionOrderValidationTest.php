@@ -8,10 +8,23 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use App\Models\Device;
 use App\Models\Branch;
+use App\Models\Krypton\Menu;
 
 class SessionOrderValidationTest extends TestCase
 {
     use RefreshDatabase, MocksKryptonSession;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Menu::factory()->create([
+            'id' => 1,
+            'name' => 'Test Item',
+            'receipt_name' => 'Test Item',
+            'price' => 1.00,
+        ]);
+    }
 
     public function test_order_rejected_for_inactive_session()
     {
@@ -58,6 +71,7 @@ class SessionOrderValidationTest extends TestCase
         $response->assertStatus(201);
         $this->assertTrue($response->json('success'));
         $this->assertArrayHasKey('order', $response->json());
+        $this->assertSame(1, $response->json('order.guest_count'));
     }
 
     public function test_print_event_skipped_for_closed_session()

@@ -1,86 +1,34 @@
-<script setup lang="ts">
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+﻿<script setup lang="ts">
+import { usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { DonutChart } from '@/components/ui/chart-donut'
 
-const invoices = [
-  {
-    invoice: "INV001",
-    paymentStatus: "Paid",
-    totalAmount: "$250.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV002",
-    paymentStatus: "Pending",
-    totalAmount: "$150.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV003",
-    paymentStatus: "Unpaid",
-    totalAmount: "$350.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV004",
-    paymentStatus: "Paid",
-    totalAmount: "$450.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV005",
-    paymentStatus: "Paid",
-    totalAmount: "$550.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-]
+interface TopItem {
+  name: string
+  qty: number
+  revenue: number
+}
+
+const page = usePage()
+const data = computed(() => {
+  const items = page.props.topItems as TopItem[] | undefined
+  if (!Array.isArray(items) || items.length === 0) return []
+  return items.map(item => ({ name: item.name, Orders: item.qty }))
+})
+
+const hasData = computed(() => data.value.length > 0)
 </script>
 
 <template>
-  <Table>
-    <TableCaption>A list of your recent invoices.</TableCaption>
-    <TableHeader>
-      <TableRow>
-        <TableHead class="w-[100px]">
-          Invoice
-        </TableHead>
-        <TableHead>Status</TableHead>
-        <TableHead>Method</TableHead>
-        <TableHead class="text-right">
-          Amount
-        </TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      <TableRow v-for="invoice in invoices" :key="invoice.invoice">
-        <TableCell class="font-medium">
-          {{ invoice.invoice }}
-        </TableCell>
-        <TableCell>{{ invoice.paymentStatus }}</TableCell>
-        <TableCell>{{ invoice.paymentMethod }}</TableCell>
-        <TableCell class="text-right">
-          {{ invoice.totalAmount }}
-        </TableCell>
-      </TableRow>
-    </TableBody>
-  </Table>
+  <DonutChart
+    v-if="hasData"
+    index="name"
+    :category="'Orders'"
+    :data="data"
+    :type="'pie'"
+    :value-formatter="(v: number | Date) => typeof v === 'number' ? `${v} orders` : ''"
+  />
+  <div v-else class="flex items-center justify-center h-20 text-sm text-muted-foreground opacity-70">
+    No data yet today
+  </div>
 </template>

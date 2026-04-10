@@ -97,70 +97,84 @@ class OrderService
 
         $this->attributes = $attributes;
 
-        return DB::transaction(function () use ($device) {
-            // Create a new order using the provided attributes
+        $createdOrderId = null;
 
-            $order = CreateOrder::run($this->attributes);
+        try {
+            return DB::transaction(function () use ($device, &$createdOrderId) {
+                // Create a new order using the provided attributes
+                $order = CreateOrder::run($this->attributes);
 
-            if (!$order) return;
-
-            $this->updateAttributes([
-                'order_id' => $order->id,
-            ]);
-            // Create a table order
-            $tableOrder = CreateTableOrder::run($this->attributes);
-            // Update table availability
-            $table = Table::where('id', $this->attributes['table_id'])->update([
-                'is_available' => true,
-                'is_locked' => true,
-            ]);
-
-            // Create an order check
-            $orderCheck = CreateOrderCheck::run($this->attributes);
-            // 
-            $this->updateAttributes([
-                'order_check_id' => $orderCheck->id,
-            ]);
-
-            // Create a new device order FIRST so we have device_order_id for items
-            // session_id must come from POS; terminal_session_id can fall back to null if not available
-            $deviceOrder = $device->orders()->create([
-                'order_id' => $order->id,
-                'table_id' => $device->table_id,
-                'terminal_session_id' => $order->terminal_session_id ?? $this->attributes['terminal_session_id'],
-                'status' => OrderStatus::CONFIRMED,
-                'guest_count' => $order->guest_count,
-                'session_id' => $order->session_id ?? $this->attributes['session_id'],  // Must be non-null from KryptonContextService
-                'total' => $this->attributes['total_amount'],
-                'subtotal' => $this->attributes['subtotal'],
-                'tax' => $this->attributes['tax'],
-                'discount' => $orderCheck->discount_amount,
-            ]);
-
-            // Add device_order_id so CreateOrderedMenu can save to device_order_items
-            $this->updateAttributes([
-                'device_order_id' => $deviceOrder->id,
-            ]);
-
-            // Create ordered menus (both POS and local device_order_items)
-            $orderedMenus = CreateOrderedMenu::run($this->attributes);
-
-            // Schedule creation of a PrintEvent after the database transaction commits.
-            // This ensures we don't create print events while the order transaction is still open.
-            DB::afterCommit(function () use ($deviceOrder) {
-                try {
-                    app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
-                    // P1 fix 2026-04-08: Broadcast initial order to print bridge via WebSocket
-                    // Without this, initial orders only reach print bridge via 30s polling cycle
-                    $deviceOrder->refresh(); // Load printEvent relation for broadcast payload
-                    \App\Events\PrintOrder::dispatch($deviceOrder);
-                } catch (\Throwable $e) {
-                    report($e);
+                if (! $order) {
+                    return null;
                 }
-            });
 
-            return $deviceOrder;
-        });
+                $createdOrderId = $order->id ?? null;
+
+                $this->updateAttributes([
+                    'order_id' => $order->id,
+                ]);
+
+                CreateTableOrder::run($this->attributes);
+
+                Table::where('id', $this->attributes['table_id'])->update([
+                    'is_available' => true,
+                    'is_locked' => true,
+                ]);
+
+                $orderCheck = CreateOrderCheck::run($this->attributes);
+
+                $this->updateAttributes([
+                    'order_check_id' => $orderCheck->id,
+                ]);
+
+                // Create a new device order FIRST so we have device_order_id for items
+                // session_id must come from POS; terminal_session_id can fall back to null if not available
+                $deviceOrder = $device->orders()->create([
+                    'order_id' => $order->id,
+                    'table_id' => $device->table_id,
+                    'terminal_session_id' => $order->terminal_session_id ?? $this->attributes['terminal_session_id'],
+                    'status' => OrderStatus::CONFIRMED,
+                    'guest_count' => $order->guest_count,
+                    'session_id' => $order->session_id ?? $this->attributes['session_id'],
+                    'total' => $this->attributes['total_amount'],
+                    'subtotal' => $this->attributes['subtotal'],
+                    'tax' => $this->attributes['tax'],
+                    'discount' => $orderCheck->discount_amount,
+                ]);
+
+                $this->updateAttributes([
+                    'device_order_id' => $deviceOrder->id,
+                ]);
+
+                CreateOrderedMenu::run($this->attributes);
+
+                DB::afterCommit(function () use ($deviceOrder) {
+                    try {
+                        app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                        $deviceOrder->refresh();
+                        \App\Events\PrintOrder::dispatch($deviceOrder);
+                    } catch (\Throwable $e) {
+                        report($e);
+                    }
+                });
+
+                return $deviceOrder;
+            });
+        } catch (\Throwable $e) {
+            if ($createdOrderId !== null) {
+                DB::connection('pos')->table('ordered_menus')->where('order_id', $createdOrderId)->delete();
+                DB::connection('pos')->table('order_checks')->where('order_id', $createdOrderId)->delete();
+                DB::connection('pos')->table('table_orders')->where('order_id', $createdOrderId)->delete();
+                DB::connection('pos')->table('orders')->where('id', $createdOrderId)->delete();
+            }
+
+            Log::error('Order creation failed', [
+                'device_id' => $device->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 
     protected function updateAttributes($array = []) {

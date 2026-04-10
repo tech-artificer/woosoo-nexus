@@ -13,7 +13,10 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    // Production default: 'sync' (no queue worker required).
+    // Switch to 'database' only after running `php artisan queue:table && artisan migrate`
+    // and starting a managed `php artisan queue:work` service (see STABILITY_PLAN docs).
+    'default' => env('QUEUE_CONNECTION', 'sync'),
 
     /*
     |--------------------------------------------------------------------------

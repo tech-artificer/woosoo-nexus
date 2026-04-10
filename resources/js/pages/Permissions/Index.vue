@@ -120,7 +120,7 @@ function createPermission() {
     preserveScroll: true,
     onSuccess: () => {
       createForm.reset('name')
-      createForm.setDefaults({ guard_name: createForm.guard_name })
+      createForm.defaults({ guard_name: createForm.guard_name })
       toast.success('Permission created.')
     },
     onError: () => {
@@ -183,7 +183,7 @@ function bulkDestroy() {
           </p>
         </div>
 
-        <div class="grid w-full gap-3 sm:grid-cols-3 lg:w-auto lg:min-w-[420px]">
+        <div class="grid w-full gap-3 sm:grid-cols-3 lg:w-auto lg:min-w-105">
           <Card>
             <CardHeader class="pb-2">
               <CardDescription>Total Permissions</CardDescription>

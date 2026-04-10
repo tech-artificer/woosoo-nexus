@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pencil } from 'lucide-vue-next'
+import type { BreadcrumbItem } from '@/types'
 
 type Guide = {
   id: string
@@ -55,15 +56,20 @@ const renderMarkdown = (markdown: string) => {
 const adminGuides = computed(() => props.guides.filter(g => g.section === 'admin'))
 const tabletGuides = computed(() => props.guides.filter(g => g.section === 'tablet'))
 const relayGuides = computed(() => props.guides.filter(g => g.section === 'relay'))
+
+const breadcrumbs: BreadcrumbItem[] = [
+  { title: 'Dashboard', href: '/dashboard' },
+  { title: 'Manual', href: route('manual.index') },
+]
 </script>
 
 <template>
   <Head title="Manual" />
 
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="space-y-6">
       <!-- Header -->
-      <div class="rounded-lg border bg-white p-6 shadow-sm">
+      <div class="rounded-lg border bg-card p-6 shadow-sm">
         <h1 class="text-2xl font-semibold">Manual & Guides</h1>
         <p class="mt-2 text-sm text-muted-foreground">
           Comprehensive documentation for all three systems: Admin Dashboard, Tablet Ordering, and Printer Relay.

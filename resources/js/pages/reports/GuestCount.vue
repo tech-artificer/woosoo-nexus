@@ -24,9 +24,9 @@ interface PageProps {
 const props = defineProps<PageProps>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reports', href: '#' },
-    { label: props.title, href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reports', href: route('reports.index') },
+    { title: props.title, href: '#' },
 ]
 
 const chartData = ref(
@@ -37,20 +37,24 @@ const chartData = ref(
     }))
 )
 
-const totalGuests = props.data.reduce((sum, row) => sum + row.total_guests, 0)
-const totalOrders = props.data.reduce((sum, row) => sum + row.order_count, 0)
-const avgGuestsPerDay = totalGuests / props.data.length
-const maxGuestDay = props.data.reduce((max, curr) =>
+const totalGuests = (props.data ?? []).reduce((sum, row) => sum + row.total_guests, 0)
+const totalOrders = (props.data ?? []).reduce((sum, row) => sum + row.order_count, 0)
+const avgGuestsPerDay = (props.data ?? []).length > 0 ? totalGuests / (props.data ?? []).length : 0
+const maxGuestDay = (props.data ?? []).length ? (props.data ?? []).reduce((max, curr) =>
     curr.total_guests > max.total_guests ? curr : max,
-    props.data[0]
-)
+    (props.data ?? [])[0]
+) : null
+
+const numberFormatter = (value: unknown) => {
+    return typeof value === 'number' ? value.toFixed(0) : String(value)
+}
 </script>
 
 <template>
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="p-6 space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -86,8 +90,10 @@ const maxGuestDay = props.data.reduce((max, curr) =>
                         <CardTitle class="text-sm font-medium">Busiest Day</CardTitle>
                     </CardHeader>
                     <CardContent>
+                        <div v-if="maxGuestDay" class="bg-card border rounded-lg p-4">
                         <div class="text-2xl font-bold">{{ maxGuestDay.total_guests }}</div>
                         <p class="text-xs text-muted-foreground mt-1">{{ maxGuestDay.date }}</p>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -96,7 +102,7 @@ const maxGuestDay = props.data.reduce((max, curr) =>
                         <CardTitle class="text-sm font-medium">Avg Guests/Order</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">{{ (totalGuests / totalOrders).toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ totalOrders > 0 ? (totalGuests / totalOrders).toFixed(2) : '0.00' }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Party size</p>
                     </CardContent>
                 </Card>
@@ -111,7 +117,7 @@ const maxGuestDay = props.data.reduce((max, curr) =>
                 <CardContent>
                     <LineChart :data="chartData" index="date" :categories="['Total Guests', 'Orders']"
                         :colors="['#8b5cf6', '#3b82f6']"
-                        :valueFormatter="(value: number) => typeof value === 'number' ? value.toFixed(0) : value" />
+                        :valueFormatter="numberFormatter" />
                 </CardContent>
             </Card>
 

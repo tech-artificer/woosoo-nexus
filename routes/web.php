@@ -80,14 +80,13 @@ Route::middleware(['auth'])->group(function () {
             Route::post('bulk-destroy', [UserController::class, 'bulkDestroy'])->name('bulk-destroy');
             Route::post('bulk-restore', [UserController::class, 'bulkRestore'])->name('bulk-restore');
         });
-        // Roles & Permissions
-        Route::resource('/roles', RoleController::class);
+        // Roles & Permissions — specific routes declared before resource to prevent param shadowing
         Route::post('/roles/bulk-destroy', [RoleController::class, 'bulkDestroy'])->name('roles.bulk-destroy');
-        // Sync permissions for a role (expects array of permission names)
         Route::post('/roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
-        // Permissions management
-        Route::resource('/permissions', PermissionController::class)->only(['index', 'store', 'destroy']);
+        Route::resource('/roles', RoleController::class);
+        // Permissions management — bulk action before resource
         Route::post('/permissions/bulk-destroy', [PermissionController::class, 'bulkDestroy'])->name('permissions.bulk-destroy');
+        Route::resource('/permissions', PermissionController::class)->only(['index', 'store', 'destroy']);
         // Branch
         Route::resource('/branches', BranchController::class)->except(['show', 'create', 'edit']);
         Route::prefix('branches')->name('branches.')->group(function () {
@@ -179,6 +178,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Reports
         Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [ReportController::class, 'index'])->name('index');
             Route::get('/daily-sales', [ReportController::class, 'dailySales'])->name('daily-sales');
             Route::get('/menu-items', [ReportController::class, 'menuItems'])->name('menu-items');
             Route::get('/hourly-sales', [ReportController::class, 'hourlySales'])->name('hourly-sales');
@@ -189,8 +189,9 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
-    // Monitoring
-    Route::prefix('monitoring')->name('monitoring.')->group(function () {
+    // Monitoring is an admin operational surface and exposes queue, database,
+    // device-order, and print-failure telemetry. Keep it behind the admin gate.
+    Route::middleware(['can:admin'])->prefix('monitoring')->name('monitoring.')->group(function () {
         Route::get('/', [MonitoringController::class, 'index'])->name('index');
         Route::get('/metrics', [MonitoringController::class, 'metrics'])->name('metrics');
         Route::post('/purge-print-events', [MonitoringController::class, 'purgePrintEvents'])->name('purge-print-events');

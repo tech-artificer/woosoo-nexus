@@ -1,63 +1,40 @@
-<script setup lang="ts">
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
+﻿<script setup lang="ts">
+import { usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Badge } from '@/components/ui/badge'
+
+interface TopItem {
+  name: string
+  qty: number
+  revenue: number
+}
+
+const page = usePage()
+const topItems = computed(() => {
+  const items = page.props.topItems as TopItem[] | undefined
+  return Array.isArray(items) ? items.slice(0, 5) : []
+})
+
+const formatPHP = (value: number) =>
+  '₱' + new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
 </script>
 
 <template>
-  <div class="space-y-8">
-    <div class="flex items-center">
-      <Avatar class="h-9 w-9">
-        <AvatarImage src="/avatars/01.png" alt="Avatar" />
-        <AvatarFallback>OM</AvatarFallback>
-      </Avatar>
-      <div class="ml-4 space-y-1">
-        <p class="text-sm font-medium leading-none">
-          Olivia Martin
-        </p>
-        <p class="text-sm text-muted-foreground">
-          olivia.martin@email.com
-        </p>
+  <div v-if="topItems.length > 0" class="space-y-4">
+    <div v-for="(item, idx) in topItems" :key="item.name" class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold shrink-0">
+          {{ idx + 1 }}
+        </span>
+        <span class="text-sm font-medium truncate">{{ item.name }}</span>
       </div>
-      <div class="ml-auto font-medium">
-        +$1,999.00
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs text-muted-foreground">{{ item.qty }}x</span>
+        <Badge variant="secondary" class="text-xs font-mono">{{ formatPHP(item.revenue) }}</Badge>
       </div>
     </div>
-    <div class="flex items-center">
-      <Avatar class="flex h-9 w-9 items-center justify-center space-y-0 border">
-        <AvatarImage src="/avatars/02.png" alt="Avatar" />
-        <AvatarFallback>JL</AvatarFallback>
-      </Avatar>
-      <div class="ml-4 space-y-1">
-        <p class="text-sm font-medium leading-none">
-          Jackson Lee
-        </p>
-        <p class="text-sm text-muted-foreground">
-          jackson.lee@email.com
-        </p>
-      </div>
-      <div class="ml-auto font-medium">
-        +$39.00
-      </div>
-    </div>
-    <div class="flex items-center">
-      <Avatar class="flex h-9 w-9 items-center justify-center space-y-0 border">
-        <AvatarImage src="/avatars/02.png" alt="Avatar" />
-        <AvatarFallback>JL</AvatarFallback>
-      </Avatar>
-      <div class="ml-4 space-y-1">
-        <p class="text-sm font-medium leading-none">
-          Jackson Lee
-        </p>
-        <p class="text-sm text-muted-foreground">
-          jackson.lee@email.com
-        </p>
-      </div>
-      <div class="ml-auto font-medium">
-        +$39.00
-      </div>
-    </div>
+  </div>
+  <div v-else class="flex items-center justify-center h-20 text-sm text-muted-foreground opacity-70">
+    No sales yet today
   </div>
 </template>

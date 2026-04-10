@@ -25,9 +25,9 @@ interface PageProps {
 const props = defineProps<PageProps>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reports', href: '#' },
-    { label: props.title, href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reports', href: route('reports.index') },
+    { title: props.title, href: '#' },
 ]
 
 const chartData = ref(
@@ -38,20 +38,26 @@ const chartData = ref(
     }))
 )
 
-const peakHour = props.data.reduce((max, curr) =>
+const peakHour = (props.data ?? []).length ? (props.data ?? []).reduce((max, curr) =>
     curr.total_sales > max.total_sales ? curr : max,
-    props.data[0]
-)
+    (props.data ?? [])[0]
+) : null
 
 const totalSales = props.data.reduce((sum, row) => sum + row.total_sales, 0)
 const totalTransactions = props.data.reduce((sum, row) => sum + row.transaction_count, 0)
+
+const currencyFormatter = (value: unknown) => {
+    return typeof value === 'number'
+        ? '₱' + new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+        : String(value)
+}
 </script>
 
 <template>
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="p-6 space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -68,7 +74,7 @@ const totalTransactions = props.data.reduce((sum, row) => sum + row.transaction_
                         <CardTitle class="text-sm font-medium">Total Sales</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalSales.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalSales) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">All hours</p>
                     </CardContent>
                 </Card>
@@ -88,8 +94,10 @@ const totalTransactions = props.data.reduce((sum, row) => sum + row.transaction_
                         <CardTitle class="text-sm font-medium">Peak Hour</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">{{ peakHour.hour_label }}</div>
-                        <p class="text-xs text-muted-foreground mt-1">${{ peakHour.total_sales.toFixed(2) }}</p>
+                        <div v-if="peakHour" class="space-y-1">
+                            <div class="text-2xl font-bold">{{ peakHour.hour_label }}</div>
+                            <p class="text-xs text-muted-foreground mt-1">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(peakHour.total_sales) }}</p>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -113,7 +121,7 @@ const totalTransactions = props.data.reduce((sum, row) => sum + row.transaction_
                 <CardContent>
                     <LineChart :data="chartData" index="hour" :categories="['Sales', 'Transactions']"
                         :colors="['#10b981', '#3b82f6']"
-                        :valueFormatter="(value: number) => typeof value === 'number' ? `$${value.toFixed(0)}` : value" />
+                        :valueFormatter="currencyFormatter" />
                 </CardContent>
             </Card>
 
@@ -136,11 +144,11 @@ const totalTransactions = props.data.reduce((sum, row) => sum + row.transaction_
                             </thead>
                             <tbody>
                                 <tr v-for="row in props.data" :key="row.hour" class="border-b hover:bg-muted/50"
-                                    :class="{ 'bg-amber-50': row.hour === peakHour.hour }">
+                                     :class="{ 'bg-amber-50': peakHour && row.hour === peakHour.hour }">
                                     <td class="py-3 px-4 font-medium">{{ row.hour_label }}</td>
                                     <td class="text-right py-3 px-4">{{ row.transaction_count }}</td>
-                                    <td class="text-right py-3 px-4">${{ row.total_sales.toFixed(2) }}</td>
-                                    <td class="text-right py-3 px-4">${{ row.avg_order_value.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_sales) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.avg_order_value) }}</td>
                                 </tr>
                             </tbody>
                         </table>

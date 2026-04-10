@@ -11,6 +11,7 @@ use App\Models\Package;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 
 /**
  * Tablet API Controller (V2)
@@ -22,6 +23,12 @@ use Illuminate\Support\Str;
  */
 class TabletApiController extends Controller
 {
+    /**
+     * Original hardcoded package menu IDs kept as a compatibility fallback.
+     * These should still render when admin package mappings are empty/missing.
+     */
+    private const LEGACY_PACKAGE_IDS = [46, 47, 48];
+
     protected $menuRepository;
 
     public function __construct(MenuRepository $menuRepository)
@@ -58,7 +65,7 @@ class TabletApiController extends Controller
                 ->keyBy('id');
 
             // Stitch Krypton menu models together with their ordered modifiers.
-            $result = $dbPackages->map(function ($dbPackage) use ($kryptonMenus) {
+            $configuredById = $dbPackages->map(function ($dbPackage) use ($kryptonMenus) {
                 $menu = $kryptonMenus->get($dbPackage->krypton_menu_id);
                 if (! $menu) {
                     return null;
@@ -69,7 +76,15 @@ class TabletApiController extends Controller
                     ->values();
                 $menu->setRelation('modifiers', $modifierModels);
                 return $menu;
-            })->filter()->values();
+            })->filter()->keyBy('id');
+
+            // Compatibility: include legacy package definitions so the original
+            // package dataset still appears even if admin mappings are incomplete.
+            $legacyById = $this->buildLegacyPackages();
+
+            $result = $legacyById
+                ->merge($configuredById) // configured packages override legacy by id
+                ->values();
 
             return ApiResponse::success(
                 MenuResource::collection($result),
@@ -193,12 +208,16 @@ class TabletApiController extends Controller
                 ->where('is_active', true)
                 ->first();
 
-            if (! $dbPackage) {
+            $usesLegacyFallback = ! $dbPackage;
+
+            if ($usesLegacyFallback && ! in_array($id, self::LEGACY_PACKAGE_IDS, true)) {
                 return ApiResponse::error('Package not found', null, 404);
             }
 
             // Bulk-load the package menu + all its modifier menus from Krypton.
-            $modifierMenuIds = $dbPackage->modifiers->pluck('krypton_menu_id')->filter()->toArray();
+            $modifierMenuIds = $dbPackage
+                ? $dbPackage->modifiers->pluck('krypton_menu_id')->filter()->toArray()
+                : Menu::getModifiers($id)->pluck('id')->filter()->toArray();
             $allIds = array_unique(array_merge([$id], $modifierMenuIds));
 
             $kryptonMenus = Menu::with(['image', 'tax', 'group'])
@@ -212,11 +231,25 @@ class TabletApiController extends Controller
                 return ApiResponse::error('Package not found in POS', null, 404);
             }
 
-            // Resolve modifier Krypton menu models in seeded order.
-            $modifiers = $dbPackage->modifiers
-                ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
-                ->filter()
-                ->values();
+            // Resolve modifier Krypton menu models in configured order.
+            $modifiers = $dbPackage
+                ? $dbPackage->modifiers
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
+                    ->filter()
+                    ->values()
+                : Menu::getModifiers($id)
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->id) ?? $pm)
+                    ->filter()
+                    ->values();
+
+            // If a configured package has no mapped modifiers yet, fall back to
+            // the legacy map so package details still include modifier options.
+            if ($dbPackage && $modifiers->isEmpty() && in_array($id, self::LEGACY_PACKAGE_IDS, true)) {
+                $modifiers = Menu::getModifiers($id)
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->id) ?? $pm)
+                    ->filter()
+                    ->values();
+            }
 
             // Filter by meat category if provided
             if ($request->has('meat_category')) {
@@ -279,6 +312,25 @@ class TabletApiController extends Controller
             Log::error("V2 Tablet API - package details error (ID: $id): " . $e->getMessage());
             return ApiResponse::error('Failed to retrieve package details', null, 500);
         }
+    }
+
+    /**
+     * Build legacy package menu models with their corresponding legacy modifiers.
+     *
+     * @return Collection<int, Menu>
+     */
+    private function buildLegacyPackages(): Collection
+    {
+        $legacyPackages = Menu::with(['image', 'tax', 'group'])
+            ->whereIn('id', self::LEGACY_PACKAGE_IDS)
+            ->get();
+
+        return $legacyPackages
+            ->map(function (Menu $menu) {
+                $menu->setRelation('modifiers', Menu::getModifiers((int) $menu->id)->values());
+                return $menu;
+            })
+            ->keyBy('id');
     }
 
     /**

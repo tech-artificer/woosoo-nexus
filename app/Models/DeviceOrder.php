@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,7 +20,7 @@ use App\Models\DeviceOrderItems;
 
 class DeviceOrder extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $table = 'device_orders';
     // Prevent accidental mass-assignment of legacy JSON columns
     // The `items` and `meta` JSON columns have been migrated out

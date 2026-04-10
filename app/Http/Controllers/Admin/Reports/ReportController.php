@@ -15,6 +15,13 @@ use Inertia\Inertia;
 
 class ReportController extends Controller
 {
+    public function index()
+    {
+        return Inertia::render('reports/Index', [
+            'title' => 'Reports',
+        ]);
+    }
+
     public function dailySales(ReportQueryRequest $request)
     {
         $service = new DailySalesReport();

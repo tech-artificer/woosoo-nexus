@@ -15,6 +15,7 @@ use App\Events\Order\OrderPrinted;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\PrintEventService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class OrderApiController extends Controller
@@ -163,6 +164,36 @@ class OrderApiController extends Controller
      */
     public function refill(RefillOrderRequest $request, int $orderId)
     {
+        $idempotencyKey = trim((string) $request->header('X-Idempotency-Key', ''));
+        $idempotencyScope = null;
+        $processingKey = null;
+        $responseCacheKey = null;
+
+        if ($idempotencyKey !== '') {
+            $requestDevice = $request->user();
+            $requestDeviceId = $requestDevice && isset($requestDevice->id) ? (string) $requestDevice->id : 'anonymous';
+            $idempotencyScope = 'refill:' . $requestDeviceId . ':' . $orderId . ':' . sha1($idempotencyKey);
+            $processingKey = $idempotencyScope . ':processing';
+            $responseCacheKey = $idempotencyScope . ':response';
+
+            $cachedResponse = Cache::get($responseCacheKey);
+            if (is_array($cachedResponse)) {
+                return response()->json(
+                    $cachedResponse['body'] ?? ['success' => true, 'message' => 'Refill request replayed'],
+                    (int) ($cachedResponse['status'] ?? 200),
+                    ['X-Idempotent-Replay' => 'true']
+                );
+            }
+
+            // Prevent duplicate in-flight refill requests with the same idempotency key.
+            if (!Cache::add($processingKey, 1, now()->addSeconds(30))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Duplicate refill request already processing',
+                ], 409);
+            }
+        }
+
         Log::info("[REFILL] Received refill request", [
             'order_id' => $orderId,
             'ip' => $request->ip(),
@@ -389,10 +420,23 @@ class OrderApiController extends Controller
                 report($e);
             }
 
-            return response()->json(['success' => true, 'created' => $created]);
+            $responseBody = ['success' => true, 'created' => $created];
+
+            if ($responseCacheKey) {
+                Cache::put($responseCacheKey, [
+                    'status' => 200,
+                    'body' => $responseBody,
+                ], now()->addMinutes(10));
+            }
+
+            return response()->json($responseBody);
         } catch (\Throwable $th) {
             report($th);
             return response()->json(['success' => false, 'message' => 'Failed to persist refill', 'error' => $th->getMessage()], 500);
+        } finally {
+            if ($processingKey) {
+                Cache::forget($processingKey);
+            }
         }
     }
 

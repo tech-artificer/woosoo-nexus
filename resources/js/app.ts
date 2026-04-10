@@ -1,6 +1,26 @@
-// Register service worker for PWA
+// Register service worker only in production. In dev, unregister stale workers
+// so Vite HMR requests are never intercepted or cached.
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
+        if (import.meta.env.DEV) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(registration => registration.unregister()));
+
+                if ('caches' in window) {
+                    const cacheKeys = await caches.keys();
+                    await Promise.all(
+                        cacheKeys
+                            .filter(key => key.startsWith('woosoo-nexus-'))
+                            .map(key => caches.delete(key))
+                    );
+                }
+            } catch (err) {
+                console.warn('Service worker cleanup in dev failed:', err);
+            }
+            return;
+        }
+
         navigator.serviceWorker.register('/service-worker.js').catch(err => {
             console.warn('Service worker registration failed:', err);
         });

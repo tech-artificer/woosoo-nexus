@@ -28,9 +28,9 @@ interface PageProps {
 const props = defineProps<PageProps>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reports', href: '#' },
-    { label: props.title, href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reports', href: route('reports.index') },
+    { title: props.title, href: '#' },
 ]
 
 const chartData = ref(
@@ -43,15 +43,19 @@ const chartData = ref(
 
 const topItems = props.data.slice(0, 5)
 const packageBestSellers = props.data.filter(item => item.package_count > 0).slice(0, 10)
-const totalRevenue = props.data.reduce((sum, row) => sum + row.total_revenue, 0)
-const totalQuantity = props.data.reduce((sum, row) => sum + row.quantity_sold, 0)
+const totalRevenue = (props.data ?? []).reduce((sum, row) => sum + row.total_revenue, 0)
+const totalQuantity = (props.data ?? []).reduce((sum, row) => sum + row.quantity_sold, 0)
+
+const numberFormatter = (value: unknown) => {
+    return typeof value === 'number' ? value.toFixed(0) : String(value)
+}
 </script>
 
 <template>
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="p-6 space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -78,7 +82,7 @@ const totalQuantity = props.data.reduce((sum, row) => sum + row.quantity_sold, 0
                         <CardTitle class="text-sm font-medium">Total Revenue</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalRevenue.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalRevenue) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">From menu sales</p>
                     </CardContent>
                 </Card>
@@ -113,7 +117,7 @@ const totalQuantity = props.data.reduce((sum, row) => sum + row.quantity_sold, 0
                 <CardContent>
                     <BarChart :data="chartData" index="name" :categories="['Quantity', 'Revenue']"
                         :colors="['#3b82f6', '#10b981']" layout="vertical"
-                        :valueFormatter="(value: number) => typeof value === 'number' ? value.toFixed(0) : value" />
+                        :valueFormatter="numberFormatter" />
                 </CardContent>
             </Card>
 
@@ -129,11 +133,10 @@ const totalQuantity = props.data.reduce((sum, row) => sum + row.quantity_sold, 0
                             class="flex items-center justify-between p-3 border rounded-lg">
                             <div>
                                 <div class="font-semibold">{{ idx + 1 }}. {{ item.menu_name }}</div>
-                                <div class="text-sm text-muted-foreground">{{ item.quantity_sold }} sold • Avg: ${{
-                                    item.avg_price.toFixed(2) }}</div>
+                                <div class="text-sm text-muted-foreground">{{ item.quantity_sold }} sold · Avg: ₱{{ new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(item.avg_price) }}</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-lg font-bold">${{ item.total_revenue.toFixed(2) }}</div>
+                                <div class="text-lg font-bold">₱{{ new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(item.total_revenue) }}</div>
                             </div>
                         </div>
                     </div>
@@ -166,8 +169,8 @@ const totalQuantity = props.data.reduce((sum, row) => sum + row.quantity_sold, 0
                                         <Badge variant="default">{{ item.package_count }}</Badge>
                                     </td>
                                     <td class="text-right py-3 px-4">{{ item.quantity_sold }}</td>
-                                    <td class="text-right py-3 px-4">${{ item.total_revenue.toFixed(2) }}</td>
-                                    <td class="text-right py-3 px-4">${{ item.avg_price.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(item.total_revenue) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(item.avg_price) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -197,11 +200,11 @@ const totalQuantity = props.data.reduce((sum, row) => sum + row.quantity_sold, 0
                                 <tr v-for="item in props.data" :key="item.menu_id" class="border-b hover:bg-muted/50">
                                     <td class="py-3 px-4">{{ item.menu_name }}</td>
                                     <td class="text-right py-3 px-4">{{ item.quantity_sold }}</td>
-                                    <td class="text-right py-3 px-4">${{ item.avg_price.toFixed(2) }}</td>
-                                    <td class="text-right py-3 px-4">${{ item.total_revenue.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(item.avg_price) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(item.total_revenue) }}</td>
                                     <td class="text-center py-3 px-4">
                                         <Badge v-if="item.is_package_best_seller" variant="secondary">Yes</Badge>
-                                        <span v-else class="text-muted-foreground">–</span>
+                                        <span v-else class="text-muted-foreground">-</span>
                                     </td>
                                 </tr>
                             </tbody>

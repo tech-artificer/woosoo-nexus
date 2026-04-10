@@ -15,11 +15,13 @@ if (empty(config('broadcasting.connections.reverb.key')) && empty(config('broadc
 }
 
 Broadcast::channel('device.{deviceId}', function (Device $device, int $deviceId) {
-    return true;
+    // P0 fix 2026-04-07: verify the authenticated device owns this channel
+    return (int) $device->id === (int) $deviceId;
 });
 
 Broadcast::channel('orders.{orderId}', function (Device $device, int $orderId) {
-    return true;
+    // P0 fix 2026-04-07: verify the authenticated device has an order with this POS order_id
+    return $device->orders()->where('order_id', $orderId)->exists();
 });
 
 Broadcast::channel('service-requests.{deviceId}', function (User $user, int $deviceId) {

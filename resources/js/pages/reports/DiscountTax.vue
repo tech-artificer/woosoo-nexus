@@ -29,9 +29,9 @@ interface PageProps {
 const props = defineProps<PageProps>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reports', href: '#' },
-    { label: props.title, href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reports', href: route('reports.index') },
+    { title: props.title, href: '#' },
 ]
 
 const chartData = ref(
@@ -43,19 +43,25 @@ const chartData = ref(
     }))
 )
 
-const totalDiscount = props.data.reduce((sum, row) => sum + row.total_discount, 0)
-const totalTax = props.data.reduce((sum, row) => sum + row.total_tax, 0)
-const totalSales = props.data.reduce((sum, row) => sum + row.total_sales, 0)
-const totalOrders = props.data.reduce((sum, row) => sum + row.order_count, 0)
+const totalDiscount = (props.data ?? []).reduce((sum, row) => sum + row.total_discount, 0)
+const totalTax = (props.data ?? []).reduce((sum, row) => sum + row.total_tax, 0)
+const totalSales = (props.data ?? []).reduce((sum, row) => sum + row.total_sales, 0)
+const totalOrders = (props.data ?? []).reduce((sum, row) => sum + row.order_count, 0)
 const avgDiscount = totalOrders > 0 ? totalDiscount / totalOrders : 0
 const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
+
+const currencyFormatter = (value: unknown) => {
+    return typeof value === 'number'
+        ? '₱' + new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+        : String(value)
+}
 </script>
 
 <template>
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="p-6 space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -71,8 +77,8 @@ const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
                         <CardTitle class="text-sm font-medium">Total Discount</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalDiscount.toFixed(2) }}</div>
-                        <p class="text-xs text-muted-foreground mt-1">{{ ((totalDiscount / totalSales) * 100).toFixed(2)
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalDiscount) }}</div>
+                        <p class="text-xs text-muted-foreground mt-1">{{ (totalSales > 0 ? ((totalDiscount / totalSales) * 100) : 0).toFixed(2)
                             }}% of sales</p>
                     </CardContent>
                 </Card>
@@ -82,8 +88,8 @@ const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
                         <CardTitle class="text-sm font-medium">Total Tax</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalTax.toFixed(2) }}</div>
-                        <p class="text-xs text-muted-foreground mt-1">{{ ((totalTax / totalSales) * 100).toFixed(2) }}%
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalTax) }}</div>
+                        <p class="text-xs text-muted-foreground mt-1">{{ (totalSales > 0 ? ((totalTax / totalSales) * 100) : 0).toFixed(2) }}%
                             of sales</p>
                     </CardContent>
                 </Card>
@@ -93,7 +99,7 @@ const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
                         <CardTitle class="text-sm font-medium">Avg Discount/Order</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ avgDiscount.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(avgDiscount) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Per order</p>
                     </CardContent>
                 </Card>
@@ -103,7 +109,7 @@ const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
                         <CardTitle class="text-sm font-medium">Avg Tax/Order</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ avgTax.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(avgTax) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Per order</p>
                     </CardContent>
                 </Card>
@@ -118,7 +124,7 @@ const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
                 <CardContent>
                     <LineChart :data="chartData" index="date" :categories="['Discount', 'Tax', 'Sales']"
                         :colors="['#f59e0b', '#10b981', '#3b82f6']"
-                        :valueFormatter="(value: number) => typeof value === 'number' ? `$${value.toFixed(0)}` : value" />
+                        :valueFormatter="currencyFormatter" />
                 </CardContent>
             </Card>
 
@@ -146,10 +152,10 @@ const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
                                 <tr v-for="row in props.data" :key="row.date" class="border-b hover:bg-muted/50">
                                     <td class="py-3 px-4 font-medium">{{ row.date }}</td>
                                     <td class="text-right py-3 px-4">{{ row.order_count }}</td>
-                                    <td class="text-right py-3 px-4">${{ row.total_sales.toFixed(2) }}</td>
-                                    <td class="text-right py-3 px-4">${{ row.total_discount.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_sales) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_discount) }}</td>
                                     <td class="text-right py-3 px-4">{{ row.discount_percentage.toFixed(2) }}%</td>
-                                    <td class="text-right py-3 px-4">${{ row.total_tax.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_tax) }}</td>
                                     <td class="text-right py-3 px-4">{{ row.tax_percentage.toFixed(2) }}%</td>
                                 </tr>
                             </tbody>
@@ -171,25 +177,27 @@ const avgTax = totalOrders > 0 ? totalTax / totalOrders : 0
                         </div>
                         <div>
                             <div class="text-sm font-medium text-muted-foreground">Total Sales</div>
-                            <div class="text-2xl font-bold">${{ totalSales.toFixed(2) }}</div>
+                            <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalSales) }}</div>
                         </div>
                         <div>
                             <div class="text-sm font-medium text-muted-foreground">Discount Expense</div>
-                            <div class="text-2xl font-bold">${{ totalDiscount.toFixed(2) }}</div>
+                            <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalDiscount) }}</div>
                         </div>
                         <div>
                             <div class="text-sm font-medium text-muted-foreground">Tax Collected</div>
-                            <div class="text-2xl font-bold">${{ totalTax.toFixed(2) }}</div>
+                            <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalTax) }}</div>
                         </div>
                         <div>
                             <div class="text-sm font-medium text-muted-foreground">Avg Discount %</div>
-                            <div class="text-2xl font-bold">{{(props.data.reduce((sum, r) => sum +
-                                r.discount_percentage, 0) / props.data.length).toFixed(2) }}%</div>
+                            <div class="text-2xl font-bold">{{ (props.data.length > 0
+                                ? (props.data.reduce((sum, r) => sum + r.discount_percentage, 0) / props.data.length)
+                                : 0).toFixed(2) }}%</div>
                         </div>
                         <div>
                             <div class="text-sm font-medium text-muted-foreground">Avg Tax %</div>
-                            <div class="text-2xl font-bold">{{(props.data.reduce((sum, r) => sum + r.tax_percentage, 0)
-                                / props.data.length).toFixed(2) }}%</div>
+                            <div class="text-2xl font-bold">{{ (props.data.length > 0
+                                ? (props.data.reduce((sum, r) => sum + r.tax_percentage, 0) / props.data.length)
+                                : 0).toFixed(2) }}%</div>
                         </div>
                     </div>
                 </CardContent>

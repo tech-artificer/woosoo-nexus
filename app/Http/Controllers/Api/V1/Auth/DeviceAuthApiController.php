@@ -10,6 +10,7 @@ use App\Actions\Device\RegisterDevice;
 // use App\Http\Resources\DeviceResource;
 use App\Http\Requests\DeviceRegisterRequest;
 use App\Models\DeviceRegistrationCode;
+use App\Services\AuditLogService;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
@@ -88,6 +89,8 @@ class DeviceAuthApiController extends Controller
 
         $device = RegisterDevice::run($validated);
 
+        AuditLogService::deviceRegistered($request, $device->id);
+
         $token = $device->createToken(
             name: 'device-auth',
             expiresAt: now()->addDays(30)
@@ -136,8 +139,9 @@ class DeviceAuthApiController extends Controller
             'last_seen_at' => now(),
             'last_ip_address' => $ip,
         ]);
-        // Revoke all existing tokens (optional)
-        $device->tokens()->delete();
+        // H3 fix 2026-04-08: only revoke expired tokens so concurrent device connections
+        // (e.g., print bridge) are not disconnected when a tablet re-authenticates via IP.
+        $device->tokens()->where('expires_at', '<', now())->delete();
 
          // Create token with device info
         $token = $device->createToken(

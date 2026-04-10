@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-col gap-3">
-    <div class="flex items-center gap-3 flex-wrap">
+  <div class="flex flex-col gap-4">
+    <div class="flex items-center gap-4 flex-wrap">
       <span class="text-sm font-medium">Statuses:</span>
       <div v-for="s in ORDER_STATUS_VALUES" :key="s" class="flex items-center gap-2">
         <Checkbox :id="`status-${s}`" :value="s" :checked="localStatus.includes(s)" @update:checked="toggleStatus(s)" />

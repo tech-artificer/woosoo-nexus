@@ -52,9 +52,9 @@ const submit = () => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="name">Name</Label>
-                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Name" />
-                        <InputError class="mt-2" :message="form.errors.name" />
+                        <Label for="location">Location</Label>
+                        <Input id="location" class="mt-1 block w-full" v-model="form.location" autocomplete="off" placeholder="Location" />
+                        <InputError class="mt-2" :message="form.errors.location" />
                     </div>
                 </form>
             </div>

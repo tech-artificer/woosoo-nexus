@@ -47,23 +47,22 @@ const categoriesFromPage = (page && (page.props as any).categories) ? (page.prop
    <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6">
             <!-- Header Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <h1 class="text-2xl font-semibold text-gray-900">Menu Management</h1>
-                <p class="text-sm text-gray-500 mt-1">Manage menu items and availability</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Menu Management</h1>
+                    <p class="text-muted-foreground">Manage menu items and availability</p>
+                </div>
             </div>
 
             <!-- Stats Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <StatsCards :cards="(stats ?? [
-                    { title: 'Total Menus', value: (menus || []).length, subtitle: 'All menu items', variant: 'primary' },
-                    { title: 'Available', value: (menus || []).filter(m => m.is_available).length, subtitle: 'Currently available', variant: 'accent' },
-                ])" />
-            </div>
+            <StatsCards :cards="(stats ?? [
+                { title: 'Total Menus', value: (menus || []).length, subtitle: 'All menu items', variant: 'primary' },
+                { title: 'Available', value: (menus || []).filter(m => m.is_available).length, subtitle: 'Currently available', variant: 'accent' },
+                { title: 'Unavailable', value: (menus || []).filter(m => !m.is_available).length, subtitle: 'Currently unavailable', variant: 'danger' },
+            ])" />
 
             <!-- Menu Table Section -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <DataTable :data="menus" :columns="columns" />
-            </div>
+            <DataTable :data="menus" :columns="columns" />
         </div>
     </AppLayout>
 </template>

@@ -58,15 +58,17 @@ class CreateOrderedMenu
             // fall back to the legacy hardcoded ID list for backward compatibility.
             $isPackageIndicator = $item['is_package'] ?? in_array($menuId, [46, 47, 48, 49]);
             $menuModel = null;
-            
-            if (! app()->environment('testing')) {
-                if (!$isPackageIndicator) {
-                    try {
-                        $menuModel = Menu::find($menuId);
-                    } catch (\Throwable $e) {
-                        report($e);
-                        $menuModel = null;
-                    }
+
+            if (! $isPackageIndicator) {
+                try {
+                    $menuModel = Menu::find($menuId);
+                } catch (\Throwable $e) {
+                    report($e);
+                    $menuModel = null;
+                }
+
+                if ($menuModel === null) {
+                    throw new \RuntimeException("Menu item not found: {$menuId}");
                 }
             }
 
@@ -130,15 +132,7 @@ class CreateOrderedMenu
         // $isPackageIndicator is resolved by the caller from the validated request payload.
         // Fallback: the caller defaults to false, which is safe for regular menu items.
         
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-            $menu = (object) [
-                'name' => 'Menu ' . $menuId,
-                'receipt_name' => 'Menu ' . $menuId,
-                'kitchen_name' => 'Menu ' . $menuId,
-                'description' => '',
-                'is_for_kitchen_display' => true,
-            ];
-        } elseif ($isPackageIndicator) {
+        if ($isPackageIndicator) {
             // Package indicator - use stub without querying database
             $menu = (object) [
                 'name' => 'Package ' . $menuId,
@@ -147,6 +141,12 @@ class CreateOrderedMenu
                 'description' => '',
                 'is_for_kitchen_display' => true,
             ];
+        } elseif (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            $menu = Menu::find($menuId);
+
+            if (! $menu) {
+                throw new \RuntimeException("Menu item not found: {$menuId}");
+            }
         } else {
             try {
                 $menu = Menu::findOrFail($menuId);

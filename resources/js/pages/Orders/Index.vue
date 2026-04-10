@@ -58,6 +58,22 @@ let currentFetchController: AbortController | null = null
 // Track which order IDs have active print animations to prevent duplicate animations
 const animatedOrderIds = new Set<number>()
 
+const ordersMatch = (left?: Partial<DeviceOrder> | null, right?: Partial<DeviceOrder> | null) => {
+  if (!left || !right) {
+    return false
+  }
+
+  if (left.id && right.id && left.id === right.id) {
+    return true
+  }
+
+  if (left.order_uuid && right.order_uuid && left.order_uuid === right.order_uuid) {
+    return true
+  }
+
+  return false
+}
+
 const openOrderDetail = (order: DeviceOrder) => {
   try {
     // Immediately open the sheet with the row projection to keep UI non-blocking
@@ -127,7 +143,7 @@ const handleDetailComplete = () => {
 
 const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   // Extract order from event (some events wrap in { order: {...} })
-  const incoming = event.order ? event.order : event
+  const incoming = (event.order ? event.order : event) as DeviceOrder
 
   // Only process orders with confirmed or active status for live orders
   const liveStatuses = ['confirmed', 'pending', 'in_progress', 'ready', 'served']
@@ -135,19 +151,19 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
   const incomingStatus = String((incoming as any).status).toLowerCase()
 
   // Heuristic: detect "refill" in items. Adjust to your domain's true refill marker.
-  const isRefill = Array.isArray(incoming.items) && incoming.items.some((it: any) => {
+  const isRefill = Array.isArray((incoming as any).items ?? (incoming as any).orderedMenus) && ((incoming as any).items ?? (incoming as any).orderedMenus).some((it: any) => {
     return it.is_refill || (it.name && String(it.name).toLowerCase().includes('refill')) || it.type === 'refill'
   })
 
   // Patch: Always update all order fields for real-time sync
   const orderFields = [
-    'items', 'subtotal', 'tax', 'total', 'discount', 'guest_count', 'created_at', 'updated_at', 'is_printed', 'device', 'table', 'serviceRequests', 'order_id', 'order_number', 'status', 'id', 'branch_id', 'session_id', 'device_id', 'table_id'
+    'items', 'subtotal', 'tax', 'total', 'discount', 'guest_count', 'created_at', 'updated_at', 'is_printed', 'device', 'table', 'serviceRequests', 'order_id', 'order_uuid', 'order_number', 'status', 'id', 'branch_id', 'session_id', 'device_id', 'table_id'
   ];
 
   // Update selectedOrder if open
-  if (selectedOrder.value && (selectedOrder.value.id === incoming.id || selectedOrder.value.order_number === incoming.order_number)) {
+  if (selectedOrder.value && ordersMatch(selectedOrder.value, incoming)) {
     orderFields.forEach(field => {
-      selectedOrder.value[field] = incoming[field];
+      (selectedOrder.value as any)[field] = (incoming as any)[field];
     });
   }
 
@@ -189,11 +205,11 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
 
   // Update localOrders / localOrderHistory - use array reassignment for proper reactivity
   try {
-    const idx = localOrders.value.findIndex(o => o.id === incoming.id || o.order_number === incoming.order_number)
+    const idx = localOrders.value.findIndex(o => ordersMatch(o, incoming))
     // Patch: Always update all fields
     if (idx !== -1) {
       orderFields.forEach(field => {
-        localOrders.value[idx][field] = incoming[field];
+        (localOrders.value[idx] as any)[field] = (incoming as any)[field];
       });
     }
 
@@ -203,22 +219,22 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
         const removed = localOrders.value[idx]
         const merged = { ...removed, ...incoming }
         localOrders.value = localOrders.value.filter((_, i) => i !== idx)
-        const histIdx = localOrderHistory.value.findIndex(o => o.id === incoming.id || o.order_number === incoming.order_number)
+        const histIdx = localOrderHistory.value.findIndex(o => ordersMatch(o, incoming))
         if (histIdx === -1) {
           localOrderHistory.value = [merged, ...localOrderHistory.value]
         } else {
           orderFields.forEach(field => {
-            localOrderHistory.value[histIdx][field] = merged[field];
+            (localOrderHistory.value[histIdx] as any)[field] = (merged as any)[field];
           });
         }
         return
       } else {
-        const histIdx = localOrderHistory.value.findIndex(o => o.id === incoming.id || o.order_number === incoming.order_number)
+        const histIdx = localOrderHistory.value.findIndex(o => ordersMatch(o, incoming))
         if (histIdx === -1) {
           localOrderHistory.value = [incoming, ...localOrderHistory.value]
         } else {
           orderFields.forEach(field => {
-            localOrderHistory.value[histIdx][field] = incoming[field];
+            (localOrderHistory.value[histIdx] as any)[field] = (incoming as any)[field];
           });
         }
         return
@@ -233,7 +249,7 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
         const justPrinted = wasNotPrinted && isNowPrinted
         // Patch: Always update all fields
         orderFields.forEach(field => {
-          localOrders.value[idx][field] = incoming[field];
+          (localOrders.value[idx] as any)[field] = (incoming as any)[field];
         });
         if (justPrinted && incoming.id && !animatedOrderIds.has(incoming.id)) {
           animatedOrderIds.add(incoming.id)
@@ -244,6 +260,14 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
               rowElement.classList.remove('print-highlight')
               animatedOrderIds.delete(incoming.id)
             }, 5000)
+          }
+        }
+        // Flash ring on any live status update
+        if (isUpdate && incoming.id) {
+          const rowEl = document.querySelector(`[data-order-id="${incoming.id}"]`)
+          if (rowEl && !rowEl.classList.contains('status-flash')) {
+            rowEl.classList.add('status-flash')
+            setTimeout(() => rowEl.classList.remove('status-flash'), 1500)
           }
         }
       } else {
@@ -312,7 +336,7 @@ onMounted(() => {
   orderRefillHandler = (ev: any) => {
     try {
       const payload = (ev && ev.detail) ? ev.detail : ev
-      const idx = localOrders.value.findIndex(o => o.id === payload.id || o.order_number === payload.order_number)
+      const idx = localOrders.value.findIndex(o => ordersMatch(o, payload))
       if (idx !== -1) {
         localOrders.value[idx] = Object.assign({}, localOrders.value[idx], payload, { __is_refill: true })
       } else {
@@ -322,7 +346,7 @@ onMounted(() => {
 
       // clear refill highlight after 20 seconds
       setTimeout(() => {
-        const i = localOrders.value.findIndex(o => o.id === payload.id || o.order_number === payload.order_number)
+        const i = localOrders.value.findIndex(o => ordersMatch(o, payload))
         if (i !== -1 && localOrders.value[i].__is_refill) {
           localOrders.value[i].__is_refill = false
         }
@@ -371,6 +395,15 @@ onUnmounted(() => {
 
 .print-highlight {
   animation: print-highlight 5s ease-out;
+}
+
+@keyframes status-flash {
+  0%   { box-shadow: inset 0 0 0 2px rgba(246, 181, 109, 0.6); }
+  100% { box-shadow: inset 0 0 0 0px transparent; }
+}
+
+.status-flash {
+  animation: status-flash 1.5s ease-out;
 }
 </style>
 

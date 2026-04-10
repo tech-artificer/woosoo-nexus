@@ -26,9 +26,9 @@ interface PageProps {
 const props = defineProps<PageProps>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reports', href: '#' },
-    { label: props.title, href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reports', href: route('reports.index') },
+    { title: props.title, href: '#' },
 ]
 
 const chartData = ref(
@@ -38,8 +38,8 @@ const chartData = ref(
     }))
 )
 
-const totalOrders = props.data.reduce((sum, row) => sum + row.order_count, 0)
-const totalRevenue = props.data.reduce((sum, row) => sum + row.total_revenue, 0)
+const totalOrders = (props.data ?? []).reduce((sum, row) => sum + row.order_count, 0)
+const totalRevenue = (props.data ?? []).reduce((sum, row) => sum + row.total_revenue, 0)
 
 const getStatusColor = (status: string) => {
     return status === 'COMPLETED' ? 'default' : status === 'CONFIRMED' ? 'secondary' : 'outline'
@@ -50,7 +50,7 @@ const getStatusColor = (status: string) => {
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="p-6 space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -77,7 +77,7 @@ const getStatusColor = (status: string) => {
                         <CardTitle class="text-sm font-medium">Total Revenue</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalRevenue.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalRevenue) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">From all statuses</p>
                     </CardContent>
                 </Card>
@@ -97,8 +97,7 @@ const getStatusColor = (status: string) => {
                         <CardTitle class="text-sm font-medium">Avg Order Value</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) :
-                            '0.00' }}</div>
+                        <div class="text-2xl font-bold">₱{{ totalOrders > 0 ? new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(totalRevenue / totalOrders) : '0.00' }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Across all orders</p>
                     </CardContent>
                 </Card>
@@ -113,7 +112,7 @@ const getStatusColor = (status: string) => {
                 <CardContent>
                     <DonutChart :data="chartData" category="value" index="name"
                         :colors="['#10b981', '#3b82f6', '#f59e0b', '#ef4444']"
-                        :valueFormatter="(value: number) => value.toFixed(0)" />
+                            :valueFormatter="(value) => Number(value).toFixed(0)" />
                 </CardContent>
             </Card>
 
@@ -132,13 +131,13 @@ const getStatusColor = (status: string) => {
                                 <div>
                                     <div class="font-semibold">{{ row.order_count }} orders</div>
                                     <div class="text-sm text-muted-foreground">
-                                        {{ ((row.order_count / totalOrders) * 100).toFixed(1) }}% of total
+                                        {{ (totalOrders > 0 ? ((row.order_count / totalOrders) * 100) : 0).toFixed(1) }}% of total
                                     </div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="text-lg font-bold">${{ row.total_revenue.toFixed(2) }}</div>
-                                <div class="text-sm text-muted-foreground">Avg: ${{ row.avg_order_value.toFixed(2) }}
+                                <div class="text-lg font-bold">₱{{ new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(row.total_revenue) }}</div>
+                                <div class="text-sm text-muted-foreground">Avg: ₱{{ new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(row.avg_order_value) }}
                                 </div>
                             </div>
                         </div>
@@ -171,10 +170,10 @@ const getStatusColor = (status: string) => {
                                         <Badge :variant="getStatusColor(row.status)">{{ row.status }}</Badge>
                                     </td>
                                     <td class="text-right py-3 px-4">{{ row.order_count }}</td>
-                                    <td class="text-right py-3 px-4">{{ ((row.order_count / totalOrders) *
-                                        100).toFixed(1) }}%</td>
-                                    <td class="text-right py-3 px-4">${{ row.total_revenue.toFixed(2) }}</td>
-                                    <td class="text-right py-3 px-4">${{ row.avg_order_value.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ (totalOrders > 0 ? ((row.order_count / totalOrders) *
+                                        100) : 0).toFixed(1) }}%</td>
+                                    <td class="text-right py-3 px-4">₱{{ new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(row.total_revenue) }}</td>
+                                    <td class="text-right py-3 px-4">₱{{ new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(row.avg_order_value) }}</td>
                                     <td class="text-right py-3 px-4">{{ row.total_guests }}</td>
                                 </tr>
                             </tbody>

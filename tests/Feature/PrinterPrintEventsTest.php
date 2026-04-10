@@ -117,13 +117,18 @@ class PrinterPrintEventsTest extends TestCase
         $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.6', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
-        $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/printer/heartbeat', [
                 'printer_id' => 'PR6',
-                'status' => 'invalid_status',  // Not in enum
-            ])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('status');
+                'status' => 'invalid_status',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error.code', 'VALIDATION_ERROR');
+
+        $errors = $response->json('error.details');
+        $this->assertIsArray($errors);
+        $this->assertArrayHasKey('status', $errors);
     }
 
     public function test_heartbeat_requires_authentication()

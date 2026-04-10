@@ -13,7 +13,7 @@ import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { LayoutGrid, Menu } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 
 interface Props {
     breadcrumbs?: BreadcrumbItem[];
@@ -40,7 +40,6 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-import { ref, onMounted, onUnmounted } from 'vue';
 const isScrolled = ref(false);
 onMounted(() => {
     const handler = () => {

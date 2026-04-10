@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/composables/useToast'
+import type { BreadcrumbItem } from '@/types'
 
 type Guide = {
   id: string
@@ -174,10 +175,16 @@ const cancel = () => {
 }
 
 const sectionInfo = computed(() => props.sections[props.guide.section])
+
+const breadcrumbs: BreadcrumbItem[] = [
+  { title: 'Dashboard', href: '/dashboard' },
+  { title: 'Manual', href: route('manual.index') },
+  { title: 'Edit Guide', href: route('manual.edit', props.guide.id) },
+]
 </script>
 
 <template>
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="container mx-auto py-6 space-y-6">
       <!-- Header -->
       <div>
@@ -316,14 +323,14 @@ const sectionInfo = computed(() => props.sections[props.guide.section])
             <!-- Editor Pane -->
             <div class="border rounded-md">
               <div class="bg-muted px-4 py-2 font-medium text-sm">Editor</div>
-              <EditorContent :editor="editor" class="min-h-[600px]" />
+              <EditorContent :editor="editor" class="min-h-150" />
             </div>
 
             <!-- Preview Pane -->
             <div class="border rounded-md">
               <div class="bg-muted px-4 py-2 font-medium text-sm">Preview</div>
               <div 
-                class="prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none p-4 min-h-[600px]" 
+                class="prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none p-4 min-h-150" 
                 v-html="previewHtml"
               />
             </div>

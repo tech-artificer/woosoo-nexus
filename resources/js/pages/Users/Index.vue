@@ -67,14 +67,14 @@ function goto(link: any) {
                         </div>
                         <!-- Filters moved into Users DataTable toolbar -->
                         <StatsCards :cards="(props.stats ?? [
-                                     { title: 'Total Users', value: users?.meta?.total ?? users.data.length, subtitle: 'All registered users', variant: 'primary' },
-                                     { title: 'Active', value: (users?.data ?? []).filter(u => !u.deleted_at).length, subtitle: 'Currently active', variant: 'accent' },
-                                     { title: 'Inactive', value: (users?.meta?.total ?? users.data.length) - ((users?.data ?? []).filter(u => !u.deleted_at).length), subtitle: 'Deactivated accounts', variant: 'danger' },
+                                     { title: 'Total Users', value: users?.meta?.total ?? (users?.data?.length ?? 0), subtitle: 'All registered users', variant: 'primary' },
+                                     { title: 'Active', value: (users?.data ?? []).filter((u: User) => !u.deleted_at).length, subtitle: 'Currently active', variant: 'accent' },
+                                     { title: 'Inactive', value: (users?.meta?.total ?? (users?.data?.length ?? 0)) - ((users?.data ?? []).filter((u: User) => !u.deleted_at).length), subtitle: 'Deactivated accounts', variant: 'danger' },
                                  ])" />
-                                 <DataTable :data="users.data" :columns="columns" />
+                                 <DataTable :data="users?.data ?? []" :columns="columns" />
 
                          <div class="flex items-center justify-between">
-                             <div class="text-sm text-muted-foreground">Showing {{ users.data.length }} of {{ users.meta?.total ?? users.data.length }}</div>
+                             <div class="text-sm text-muted-foreground">Showing {{ users?.data?.length ?? 0 }} of {{ users?.meta?.total ?? (users?.data?.length ?? 0) }}</div>
                              <div class="flex items-center gap-1">
                                  <button v-for="link in paginationLinks" :key="link.label" @click.prevent="goto(link)"
                                      class="px-3 py-1.5 text-sm rounded-md border bg-background hover:bg-accent transition-colors" :class="{ 'font-semibold bg-primary text-primary-foreground hover:bg-primary/90': link.active }" v-html="link.label">

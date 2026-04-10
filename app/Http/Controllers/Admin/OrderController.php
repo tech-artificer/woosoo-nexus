@@ -16,6 +16,7 @@ use Illuminate\Validation\Rules\Enum as EnumRule;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderCompleted as OrderCompletedEvent;
 use App\Events\PrintOrder;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrderController extends Controller
 {
@@ -23,13 +24,42 @@ class OrderController extends Controller
     {
     }
 
-    /**
-     * Render the admin Orders page with live orders, history, devices, and tables.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $orders = DeviceOrder::with(['device', 'table'])
-            ->activeOrder()
+        $search = trim((string) $request->query('search', ''));
+        $statusFilter = collect(explode(',', (string) $request->query('status', '')))
+            ->map(fn (string $status) => trim($status))
+            ->filter()
+            ->values();
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+
+        $ordersQuery = DeviceOrder::with(['device', 'table'])
+            ->activeOrder();
+
+        if ($statusFilter->isNotEmpty()) {
+            $ordersQuery->whereIn('status', $statusFilter->all());
+        }
+
+        if ($search !== '') {
+            $ordersQuery->where(function (Builder $query) use ($search) {
+                $query->where('order_number', 'like', '%' . $search . '%')
+                    ->orWhere('order_id', 'like', '%' . $search . '%')
+                    ->orWhereHas('device', function (Builder $deviceQuery) use ($search) {
+                        $deviceQuery->where('name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        if (! empty($dateFrom)) {
+            $ordersQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if (! empty($dateTo)) {
+            $ordersQuery->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $orders = $ordersQuery
             ->latest()
             ->get();
 
@@ -80,7 +110,13 @@ class OrderController extends Controller
      */
     public function show(int $id)
     {
-        $order = DeviceOrder::with(['items.menu', 'serviceRequests', 'table', 'device'])->findOrFail($id);
+        $order = DeviceOrder::with(['items.menu', 'serviceRequests', 'table', 'device', 'printEvents'])->findOrFail($id);
+
+        if (request()->expectsJson() || request()->wantsJson()) {
+            return response()->json([
+                'order' => $order,
+            ]);
+        }
 
         return Inertia::render('Orders/Index', [
             'title' => 'Orders',

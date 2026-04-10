@@ -27,9 +27,9 @@ interface PageProps {
 const props = defineProps<PageProps>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Reports', href: '#' },
-    { label: props.title, href: '#' },
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Reports', href: route('reports.index') },
+    { title: props.title, href: '#' },
 ]
 
 const totalPrints = props.data.length
@@ -40,7 +40,7 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="p-6 space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -66,7 +66,7 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
                         <CardTitle class="text-sm font-medium">Total Value</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalPrintedValue.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalPrintedValue) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Printed orders</p>
                     </CardContent>
                 </Card>
@@ -76,8 +76,7 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
                         <CardTitle class="text-sm font-medium">Avg Order Value</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">${{ totalPrints > 0 ? (totalPrintedValue /
-                            totalPrints).toFixed(2) : '0.00' }}</div>
+                        <div class="text-2xl font-bold">₱{{ totalPrints > 0 ? new Intl.NumberFormat('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2}).format(totalPrintedValue / totalPrints) : '0.00' }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Per print job</p>
                     </CardContent>
                 </Card>
@@ -115,7 +114,7 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
                             <tbody>
                                 <tr v-for="row in props.data" :key="row.id" class="border-b hover:bg-muted/50">
                                     <td class="py-3 px-4 font-medium">#{{ row.order_number }}</td>
-                                    <td class="py-3 px-4">{{ row.printed_by || '–' }}</td>
+                                    <td class="py-3 px-4">{{ row.printed_by || '-' }}</td>
                                     <td class="py-3 px-4 text-xs">{{ new Date(row.printed_at).toLocaleString() }}</td>
                                     <td class="text-center py-3 px-4">
                                         <Badge v-if="row.status === 'COMPLETED'" variant="default">{{ row.status }}
@@ -124,7 +123,7 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
                                             }}</Badge>
                                         <Badge v-else variant="outline">{{ row.status }}</Badge>
                                     </td>
-                                    <td class="text-right py-3 px-4">${{ row.total.toFixed(2) }}</td>
+                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total) }}</td>
                                     <td class="text-center py-3 px-4 text-xs">{{ row.device_id }}</td>
                                 </tr>
                             </tbody>

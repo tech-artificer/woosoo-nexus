@@ -10,9 +10,20 @@ interface StatCard {
   variant?: 'default' | 'primary' | 'accent' | 'danger'
   icon?: Component
   delta?: number // percent change, optional
+  sparkline?: number[] // optional sparkline data
 }
 
-const props = defineProps<{ cards: StatCard[] }>()
+const props = defineProps<{ cards: StatCard[] | Record<string, any> | null | undefined }>()
+
+const normalizedCards = computed<StatCard[]>(() => {
+  if (Array.isArray(props.cards)) return props.cards
+  if (!props.cards || typeof props.cards !== 'object') return []
+  return Object.entries(props.cards).map(([key, value]) => ({
+    title: String(key).replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    value: typeof value === 'number' || typeof value === 'string' ? value : 0,
+    variant: 'default',
+  }))
+})
 
 const getAccent = (variant: StatCard['variant']) => {
   switch (variant) {
@@ -46,7 +57,7 @@ const getSparkPoints = (arr?: number[]) => {
 
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div v-for="card in cards" :key="card.title" :class="['p-4 rounded-lg shadow-sm border', getAccent(card.variant)]">
+    <div v-for="card in normalizedCards" :key="card.title" :class="['p-4 rounded-lg shadow-sm border', getAccent(card.variant)]">
       <div class="flex items-start justify-between gap-4">
         <div class="flex-1">
           <div class="text-xs text-muted-foreground font-medium">{{ card.title }}</div>
@@ -70,6 +81,3 @@ const getSparkPoints = (arr?: number[]) => {
   </div>
 </template>
 
-<script lang="ts">
-export default {}
-</script>

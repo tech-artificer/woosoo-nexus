@@ -18,7 +18,7 @@ defineProps<{
 <template>
   <Head :title="title" :description="description" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
+    <div class="flex h-full flex-1 flex-col gap-4 rounded p-6">
       <h2 class="text-lg font-semibold">Edit Device</h2>
       <DeviceForm :device="device" :unassignedTables="unassignedTables" form-type="edit" />
     </div>

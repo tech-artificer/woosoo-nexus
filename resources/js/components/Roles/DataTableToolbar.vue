@@ -7,7 +7,6 @@ import { toast } from 'vue-sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import DataTableFacetedFilter from './DataTableFacetedFilter.vue'
 import DataTableViewOptions from './DataTableViewOptions.vue'
 import {
   AlertDialog,
@@ -27,15 +26,11 @@ interface DataTableToolbarProps {
 const props = defineProps<DataTableToolbarProps>()
 
 const isFiltered = computed(() => props.table.getState().columnFilters.length > 0)
+
 const selectedRows = computed(() => props.table.getFilteredSelectedRowModel().rows)
 const hasSelection = computed(() => selectedRows.value.length > 0)
 
 const showBulkDeleteDialog = ref(false)
-
-const guards = [
-  { label: 'Web', value: 'web' },
-  { label: 'API', value: 'api' },
-]
 
 const handleBulkDelete = () => {
   const ids = selectedRows.value.map(row => row.original.id)
@@ -68,14 +63,8 @@ const handleBulkDelete = () => {
       <Input
         placeholder="Filter roles..."
         :model-value="(table.getColumn('name')?.getFilterValue() as string) ?? ''"
-        class="h-8 w-[150px] lg:w-[250px]"
+        class="h-8 w-37.5 lg:w-62.5"
         @input="table.getColumn('name')?.setFilterValue($event.target.value)"
-      />
-      <DataTableFacetedFilter
-        v-if="table.getColumn('guard_name')"
-        :column="table.getColumn('guard_name')"
-        title="Guard"
-        :options="guards"
       />
       <Button
         v-if="isFiltered"

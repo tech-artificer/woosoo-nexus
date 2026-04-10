@@ -82,7 +82,7 @@ const filteredLogs = computed(() => {
           class="sm:max-w-xs"
         />
         <Select v-model="levelFilter">
-          <SelectTrigger class="sm:w-[180px]">
+          <SelectTrigger class="sm:w-45">
             <SelectValue placeholder="Filter by level" />
           </SelectTrigger>
           <SelectContent>
@@ -125,7 +125,7 @@ const filteredLogs = computed(() => {
                   <div v-if="entry.timestamp" class="text-xs text-muted-foreground">
                     {{ entry.timestamp }}
                   </div>
-                  <div class="text-sm mt-1 break-words">
+                  <div class="text-sm mt-1 wrap-break-word">
                     {{ entry.message }}
                   </div>
                   <details v-if="showRaw && entry.raw" class="mt-2">

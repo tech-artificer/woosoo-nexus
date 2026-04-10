@@ -235,9 +235,10 @@ class OrderRestrictionTest extends TestCase
         // Should reject with validation error
         // Note: App uses custom error format with errors in 'error.details' path
         $response->assertStatus(422);
-        $response->assertJsonPath('error.details.items.0.name.0', function ($message) {
-            return str_contains($message, 'not available for refill');
-        });
+        $errors = $response->json('error.details');
+        $this->assertIsArray($errors);
+        $this->assertArrayHasKey('items.0.name', $errors);
+        $this->assertStringContainsString('not available for refill', $errors['items.0.name'][0]);
     }
 
     /**

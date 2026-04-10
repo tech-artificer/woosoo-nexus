@@ -10,7 +10,11 @@ use App\Events\Order\OrderCreated;
 use App\Services\Krypton\OrderService;
 use App\Exceptions\SessionNotFoundException;
 use App\Enums\OrderStatus;
+use App\Services\AuditLogService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Handle incoming order requests from devices.
@@ -25,6 +29,41 @@ class DeviceOrderApiController extends Controller
      */
     public function __invoke(StoreDeviceOrderRequest $request)
     {   
+        // ── Idempotency ────────────────────────────────────────────────────
+        // If the client sends X-Idempotency-Key, replay the cached response on
+        // duplicate submissions (e.g. PWA retry after network error).
+        // Requires CACHE_DRIVER=redis in production for atomic locking.
+        $idempotencyKey = trim((string) $request->header('X-Idempotency-Key', ''));
+        $idempotencyScope = null;
+        $processingKey = null;
+        $responseCacheKey = null;
+
+        if ($idempotencyKey !== '') {
+            $device = $request->user();
+            $deviceId = $device && isset($device->id) ? (string) $device->id : 'anonymous';
+            $idempotencyScope = 'device-order:' . $deviceId . ':' . sha1($idempotencyKey);
+            $processingKey = $idempotencyScope . ':processing';
+            $responseCacheKey = $idempotencyScope . ':response';
+
+            // Return cached response for duplicate submission (HTTP 200 replay)
+            $cachedResponse = Cache::get($responseCacheKey);
+            if (is_array($cachedResponse)) {
+                return response()->json(
+                    $cachedResponse['body'] ?? ['success' => true],
+                    (int) ($cachedResponse['status'] ?? 200),
+                    ['X-Idempotent-Replay' => 'true']
+                );
+            }
+
+            // Block duplicate in-flight requests with the same key
+            if (!Cache::add($processingKey, 1, now()->addSeconds(30))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Duplicate order request is already being processed',
+                ], 409);
+            }
+        }
+
         // Validate the incoming request
         $validatedData = $request->validated();
         
@@ -47,6 +86,7 @@ class DeviceOrderApiController extends Controller
             $result = DB::transaction(function () use ($device, $validatedData) {
                 // Ensure there is no existing PENDING or CONFIRMED order for this device before creating a new one.
                 $existing = $device->orders()
+                    ->with(['items', 'device'])
                     ->whereIn('status', [OrderStatus::CONFIRMED->value, OrderStatus::PENDING->value])
                     ->lockForUpdate()
                     ->latest()
@@ -81,11 +121,27 @@ class DeviceOrderApiController extends Controller
             }
 
             OrderCreated::dispatch($order);
+            AuditLogService::orderStatusChanged($request, $order->id, 'NEW', OrderStatus::PENDING->value, $device->id);
 
-            return response()->json([
+            // H4 fix 2026-04-08: eager-load relationships so DeviceOrderResource
+            // returns items and device in the 201 response (prevents silent empty-items body).
+            $order->load(['items', 'device']);
+
+            $responseBody = [
                 'success' => true,
-                'order' => new DeviceOrderResource($order),
-            ], 201);
+                'order' => (new DeviceOrderResource($order))->toArray($request),
+            ];
+
+            // Cache the response for idempotency replay (24 hours TTL)
+            if ($responseCacheKey !== null) {
+                Cache::put($responseCacheKey, [
+                    'body' => $responseBody,
+                    'status' => 201,
+                ], now()->addHours(24));
+                Cache::forget($processingKey);
+            }
+
+            return response()->json($responseBody, 201);
         } catch (SessionNotFoundException $e) {
             // Transaction aborted: No active POS session
             return response()->json([
@@ -93,6 +149,16 @@ class DeviceOrderApiController extends Controller
                 'message' => $e->getMessage(),
                 'code' => 'SESSION_NOT_FOUND',
             ], 503);
+        } catch (Throwable $e) {
+            Log::error('Order creation failed', [
+                'device_id' => $device?->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Order creation failed.',
+            ], 500);
         }
     
     }

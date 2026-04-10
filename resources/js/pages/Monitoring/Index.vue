@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { type BreadcrumbItem } from '@/types';
 import axios from 'axios';
 
 interface MonitoringMetrics {
@@ -54,7 +55,7 @@ const props = defineProps<{
 const metrics = ref<MonitoringMetrics>(props.metrics);
 const loading = ref(false);
 const autoRefresh = ref(true);
-const refreshInterval = ref<NodeJS.Timeout | null>(null);
+const refreshInterval = ref<ReturnType<typeof setInterval> | null>(null);
 
 const totalAlerts = computed(() => {
     return (
@@ -131,11 +132,13 @@ onUnmounted(() => {
     stopAutoRefresh();
 });
 
-defineOptions({ layout: AppLayout });
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'System Monitoring', href: route('monitoring.index') },
+];
 </script>
 
 <template>
-    <div>
+    <AppLayout :breadcrumbs="breadcrumbs">
 
         <Head title="System Monitoring" />
 
@@ -169,15 +172,15 @@ defineOptions({ layout: AppLayout });
             </div>
 
             <!-- Alert Banner -->
-            <div v-if="hasAlerts" class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div v-if="hasAlerts" class="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
                 <div class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20"
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-destructive" viewBox="0 0 20 20"
                         fill="currentColor">
                         <path fill-rule="evenodd"
                             d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
                             clip-rule="evenodd" />
                     </svg>
-                    <span class="font-semibold text-red-900">{{ totalAlerts }} active alerts require attention</span>
+                    <span class="font-semibold text-destructive">{{ totalAlerts }} active alerts require attention</span>
                 </div>
             </div>
 
@@ -358,5 +361,5 @@ defineOptions({ layout: AppLayout });
                 Last updated: {{ new Date(metrics.timestamp).toLocaleString() }}
             </div>
         </div>
-    </div>
+    </AppLayout>
 </template>

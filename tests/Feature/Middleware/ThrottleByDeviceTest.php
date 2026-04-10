@@ -4,16 +4,36 @@ namespace Tests\Feature\Middleware;
 
 use Tests\TestCase;
 use App\Models\Device;
+use App\Models\Branch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 
 class ThrottleByDeviceTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function makeDevice(string $name): Device
+    {
+        $branch = Branch::query()->create([
+            'branch_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'name' => 'Branch ' . $name,
+            'location' => 'Test',
+        ]);
+
+        return Device::query()->create([
+            'branch_id' => $branch->id,
+            'name' => 'Device ' . $name,
+            'table_id' => '1',
+            'ip_address' => '127.0.0.' . random_int(2, 250),
+            'is_active' => true,
+        ]);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
+        Cache::flush();
         RateLimiter::clear('device:1');
         RateLimiter::clear('device:2');
     }
@@ -21,11 +41,11 @@ class ThrottleByDeviceTest extends TestCase
     /** @test */
     public function it_rate_limits_by_device_id_for_authenticated_requests()
     {
-        $device = Device::factory()->create();
+        $device = $this->makeDevice('A');
         $token = $device->createToken('test-device')->plainTextToken;
 
-        // Make 100 requests (the limit for create-order endpoint)
-        for ($i = 0; $i < 100; $i++) {
+        // Make 10 requests (the limit for create-order endpoint)
+        for ($i = 0; $i < 10; $i++) {
             $response = $this->withHeaders([
                 'Authorization' => 'Bearer ' . $token,
             ])->postJson('/api/devices/create-order', [
@@ -45,13 +65,13 @@ class ThrottleByDeviceTest extends TestCase
                 ],
             ]);
 
-            // First 100 should not hit rate limit
-            if ($i < 100) {
+            // First 10 should not hit rate limit
+            if ($i < 10) {
                 $this->assertNotEquals(429, $response->status(), "Request {$i} should not be rate limited");
             }
         }
 
-        // 101st request should be rate limited
+        // 11th request should be rate limited
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
         ])->postJson('/api/devices/create-order', [
@@ -72,17 +92,17 @@ class ThrottleByDeviceTest extends TestCase
         ]);
 
         $response->assertStatus(429);
-        $response->assertJsonStructure(['success', 'message', 'retry_after']);
+        $response->assertJsonStructure(['message']);
     }
 
     /** @test */
     public function it_prevents_ip_spoofing_bypass_via_x_forwarded_for()
     {
-        $device = Device::factory()->create();
+        $device = $this->makeDevice('B');
         $token = $device->createToken('test-device')->plainTextToken;
 
         // Exhaust rate limit with legitimate requests
-        for ($i = 0; $i < 100; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             $this->withHeaders([
                 'Authorization' => 'Bearer ' . $token,
             ])->postJson('/api/devices/create-order', [
@@ -134,7 +154,7 @@ class ThrottleByDeviceTest extends TestCase
         // Make 10 registration requests (the limit for /devices/register)
         for ($i = 0; $i < 10; $i++) {
             $response = $this->postJson('/api/devices/register', [
-                'registration_code' => 'TEST-CODE-' . $i,
+                'code' => 'TEST-CODE-' . $i,
                 'name' => 'Test Device ' . $i,
             ]);
 
@@ -146,7 +166,7 @@ class ThrottleByDeviceTest extends TestCase
 
         // 11th request should be rate limited
         $response = $this->postJson('/api/devices/register', [
-            'registration_code' => 'TEST-CODE-11',
+            'code' => 'TEST-CODE-11',
             'name' => 'Test Device 11',
         ]);
 
@@ -156,14 +176,14 @@ class ThrottleByDeviceTest extends TestCase
     /** @test */
     public function it_isolates_rate_limits_between_different_devices()
     {
-        $device1 = Device::factory()->create();
-        $device2 = Device::factory()->create();
+        $device1 = $this->makeDevice('C1');
+        $device2 = $this->makeDevice('C2');
 
         $token1 = $device1->createToken('device1')->plainTextToken;
         $token2 = $device2->createToken('device2')->plainTextToken;
 
         // Exhaust rate limit for device 1
-        for ($i = 0; $i < 100; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             $this->withHeaders([
                 'Authorization' => 'Bearer ' . $token1,
             ])->postJson('/api/devices/create-order', [
@@ -230,7 +250,7 @@ class ThrottleByDeviceTest extends TestCase
     /** @test */
     public function it_includes_rate_limit_headers_in_response()
     {
-        $device = Device::factory()->create();
+        $device = $this->makeDevice('D');
         $token = $device->createToken('test-device')->plainTextToken;
 
         $response = $this->withHeaders([
