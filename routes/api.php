@@ -68,7 +68,6 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(funct
 
         // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
         Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
-        Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
     });
 });
 
@@ -151,6 +150,7 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     // Session endpoints for devices
     Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
     Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
+    Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
     
     // Printer API routes (device-authenticated for branch isolation)
     require __DIR__ . '/api_printer_routes.php';
