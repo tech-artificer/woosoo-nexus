@@ -20,10 +20,12 @@ class Branch extends Model
         'branch_uuid',
         'name',
         'location',
+        'is_active',
         'settings',
     ];
 
     protected $casts = [
+        'is_active' => 'boolean',
         'settings' => 'array',
     ];
 
