@@ -19,13 +19,14 @@ use App\Http\Controllers\Admin\{
     PackageController,
     PackageConfigController,
     TabletCategoryController,
-    MediaLibraryController,
+    MediaController,
     BranchController,
     ReverbController,
     MonitoringController
 };
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\EventLogController;
+use App\Http\Controllers\Admin\PosIntegrationController;
 
 use App\Http\Controllers\Admin\Reports\{
     SalesController,
@@ -88,10 +89,77 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'update'])->name('tablet-categories.update');
         Route::delete('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'destroy'])->name('tablet-categories.destroy');
         Route::post('/tablet-categories/{tabletCategory}/menus', [TabletCategoryController::class, 'syncMenus'])->name('tablet-categories.sync-menus');
+        Route::post('/tablet-categories/{tabletCategory}/menus/attach', [TabletCategoryController::class, 'attachMenus'])->name('tablet-categories.menus.attach');
+        Route::delete('/tablet-categories/{tabletCategory}/menus/{menuId}', [TabletCategoryController::class, 'detachMenu'])->name('tablet-categories.menus.detach');
+        Route::post('/tablet-categories/{tabletCategory}/menus/{menuId}/featured', [TabletCategoryController::class, 'toggleFeatured'])->name('tablet-categories.menus.featured');
+        Route::put('/tablet-categories/{tabletCategory}/menus/order', [TabletCategoryController::class, 'updateMenuOrder'])->name('tablet-categories.menus.order');
         // Media Library
-        Route::get('/media', [MediaLibraryController::class, 'index'])->name('media.index');
-        Route::post('/media', [MediaLibraryController::class, 'store'])->name('media.store');
-        Route::delete('/media/{mediaFile}', [MediaLibraryController::class, 'destroy'])->name('media.destroy');
+        Route::get('/media', [MediaController::class, 'index'])->name('media.index');
+        Route::post('/media', [MediaController::class, 'store'])->name('media.store');
+        Route::delete('/media/{medium}', [MediaController::class, 'destroy'])->name('media.destroy');
+        Route::post('/media/from-url', [MediaController::class, 'createFromUrl'])->name('media.from-url');
+        Route::post('/media/{medium}/attach', [MediaController::class, 'attachToMenu'])->name('media.attach');
+        Route::delete('/media/{medium}/detach', [MediaController::class, 'detachFromMenu'])->name('media.detach');
+
+        // Admin settings (branch-backed JSON settings)
+        $settingsDefaults = [
+            'theme' => 'light',
+            'itemsPerPage' => 25,
+            'emailNotifications' => true,
+            'orderAlerts' => true,
+            'soundAlerts' => false,
+            'posSystem' => null,
+            'apiBaseUrl' => null,
+            'websocketUrl' => null,
+        ];
+
+        Route::get('/admin/api/settings', function () use ($settingsDefaults) {
+            $branch = app(\App\Services\LocalBranchResolver::class)->resolve();
+
+            if (! $branch) {
+                return response()->json(['message' => 'No active branch configured.'], 422);
+            }
+
+            return response()->json(array_merge($settingsDefaults, $branch->settings ?? []));
+        })->name('admin.settings.get');
+
+        Route::put('/admin/api/settings', function (\Illuminate\Http\Request $request) use ($settingsDefaults) {
+            $branch = app(\App\Services\LocalBranchResolver::class)->resolve();
+
+            if (! $branch) {
+                return response()->json(['message' => 'No active branch configured.'], 422);
+            }
+
+            $incoming = $request->validate([
+                'theme' => ['nullable', 'string', 'in:light,dark,system'],
+                'itemsPerPage' => ['nullable', 'integer', 'min:1', 'max:200'],
+                'emailNotifications' => ['nullable', 'boolean'],
+                'orderAlerts' => ['nullable', 'boolean'],
+                'soundAlerts' => ['nullable', 'boolean'],
+                'posSystem' => ['nullable', 'string', 'max:100'],
+                'apiBaseUrl' => ['nullable', 'url', 'max:2048'],
+                'websocketUrl' => ['nullable', 'url', 'max:2048'],
+            ]);
+
+            $branch->settings = array_merge($branch->settings ?? [], $incoming);
+            $branch->save();
+
+            return response()->json($branch->settings ?? []);
+        })->name('admin.settings.put');
+
+        Route::get('/admin/settings', function () {
+            return Inertia::render('Admin/Settings');
+        })->name('admin.settings.page');
+
+        // POS Integration settings
+        Route::prefix('integrations/pos')->name('integrations.pos.')->group(function () {
+            Route::get('/',                [PosIntegrationController::class, 'index'])->name('index');
+            Route::post('/',               [PosIntegrationController::class, 'store'])->name('store');
+            Route::post('/test',           [PosIntegrationController::class, 'testConnection'])->name('test');
+            Route::put('/{integration}',   [PosIntegrationController::class, 'update'])->name('update');
+            Route::delete('/{integration}',[PosIntegrationController::class, 'destroy'])->name('destroy');
+        });
+
         // User
         Route::resource('/users', UserController::class);
         Route::prefix('users')->name('users.')->group(function () {

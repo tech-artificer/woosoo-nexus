@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StorePackageConfigRequest;
 use App\Models\TabletPackageConfig;
 use App\Models\TabletPackageAllowedMenu;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class PackageConfigController extends Controller
@@ -22,32 +24,16 @@ class PackageConfigController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StorePackageConfigRequest $request)
     {
-        $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:150'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'base_price'  => ['required', 'numeric', 'min:0'],
-            'is_active'   => ['boolean'],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
-        ]);
-
-        TabletPackageConfig::create($validated);
+        TabletPackageConfig::create($request->validated());
 
         return redirect()->back()->with('success', 'Package created.');
     }
 
-    public function update(Request $request, TabletPackageConfig $packageConfig)
+    public function update(StorePackageConfigRequest $request, TabletPackageConfig $packageConfig)
     {
-        $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:150'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'base_price'  => ['required', 'numeric', 'min:0'],
-            'is_active'   => ['boolean'],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
-        ]);
-
-        $packageConfig->update($validated);
+        $packageConfig->update($request->validated());
 
         return redirect()->back()->with('success', 'Package updated.');
     }
@@ -67,28 +53,36 @@ class PackageConfigController extends Controller
     public function syncAllowedMenus(Request $request, TabletPackageConfig $packageConfig)
     {
         $validated = $request->validate([
-            'menus'                  => ['required', 'array'],
-            'menus.*.krypton_menu_id' => ['required', 'integer', 'min:1'],
-            'menus.*.menu_type'      => ['nullable', 'string', 'max:50'],
-            'menus.*.min_qty'        => ['nullable', 'integer', 'min:0'],
-            'menus.*.max_qty'        => ['nullable', 'integer', 'min:0'],
-            'menus.*.is_active'      => ['boolean'],
-            'menus.*.sort_order'     => ['nullable', 'integer', 'min:0'],
+            'menus'                       => ['required', 'array'],
+            'menus.*.krypton_menu_id'     => ['required', 'integer', 'min:1', 'distinct'],
+            'menus.*.menu_type'           => ['nullable', 'string', 'in:meat,side,dessert,beverage'],
+            'menus.*.meat_category_code'  => ['nullable', 'string', 'max:50'],
+            'menus.*.extra_price'         => ['nullable', 'numeric', 'min:0'],
+            'menus.*.quantity_limit'      => ['nullable', 'integer', 'min:0'],
+            'menus.*.is_required'         => ['boolean'],
+            'menus.*.is_default'          => ['boolean'],
+            'menus.*.is_active'           => ['boolean'],
+            'menus.*.sort_order'          => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $packageConfig->allowedMenus()->delete();
+        DB::transaction(function () use ($packageConfig, $validated): void {
+            $packageConfig->allowedMenus()->delete();
 
-        foreach ($validated['menus'] as $index => $menu) {
-            TabletPackageAllowedMenu::create([
-                'package_config_id' => $packageConfig->id,
-                'krypton_menu_id'   => $menu['krypton_menu_id'],
-                'menu_type'         => $menu['menu_type'] ?? null,
-                'min_qty'           => $menu['min_qty'] ?? 0,
-                'max_qty'           => $menu['max_qty'] ?? null,
-                'is_active'         => $menu['is_active'] ?? true,
-                'sort_order'        => $menu['sort_order'] ?? $index,
-            ]);
-        }
+            foreach ($validated['menus'] as $index => $menu) {
+                TabletPackageAllowedMenu::create([
+                    'package_config_id' => $packageConfig->id,
+                    'krypton_menu_id'   => $menu['krypton_menu_id'],
+                    'menu_type'         => $menu['menu_type'] ?? 'meat',
+                    'meat_category_code' => $menu['meat_category_code'] ?? null,
+                    'extra_price'       => $menu['extra_price'] ?? 0,
+                    'quantity_limit'    => $menu['quantity_limit'] ?? 1,
+                    'is_required'       => $menu['is_required'] ?? false,
+                    'is_default'        => $menu['is_default'] ?? false,
+                    'is_active'         => $menu['is_active'] ?? true,
+                    'sort_order'        => $menu['sort_order'] ?? $index,
+                ]);
+            }
+        });
 
         return redirect()->back()->with('success', 'Allowed menus updated.');
     }
