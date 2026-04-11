@@ -35,6 +35,8 @@ class Device extends Authenticatable
         'last_ip_address',
         'last_seen_at',
         'last_heartbeat_at',    // Task 2.7: relay device heartbeat timestamp
+        'security_code',
+        'security_code_generated_at',
     ];
 
     protected $guarded = [
@@ -52,6 +54,7 @@ class Device extends Authenticatable
       'is_active' => 'boolean',
       'last_seen_at' => 'datetime',
       'last_heartbeat_at' => 'datetime',
+      'security_code_generated_at' => 'datetime',
     ];
 
     /**
@@ -82,6 +85,11 @@ class Device extends Authenticatable
                 throw new \Exception('Device UUID is immutable and cannot be modified after creation.');
             }
         });
+
+        // Ensure orphaned device PATs are purged when device is deleted.
+        static::deleting(function ($model) {
+            $model->tokens()->delete();
+        });
     }
 
     public function orders(): HasMany
@@ -102,6 +110,16 @@ class Device extends Authenticatable
     public function registrationCode(): HasOne
     {
         return $this->hasOne(DeviceRegistrationCode::class, 'used_by_device_id', 'id');
+    }
+
+    public function heartbeats(): HasMany
+    {
+        return $this->hasMany(DeviceHeartbeat::class, 'device_id')->orderByDesc('recorded_at');
+    }
+
+    public function latestHeartbeat(): HasOne
+    {
+        return $this->hasOne(DeviceHeartbeat::class, 'device_id')->latestOfMany('recorded_at');
     }
 
 

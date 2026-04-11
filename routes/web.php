@@ -17,6 +17,9 @@ use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
     PackageController,
+    PackageConfigController,
+    TabletCategoryController,
+    MediaLibraryController,
     BranchController,
     ReverbController,
     MonitoringController
@@ -46,6 +49,7 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     // Dashboard is available to any authenticated user
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/stats', [DashboardController::class, 'apiStats'])->name('dashboard.stats');
 
     // Admin-only routes
     Route::middleware(['can:admin'])->group(function () {
@@ -67,11 +71,27 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/menus', [MenuController::class, 'index'])->name('menus');
         Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');
         Route::post('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
-        // Packages
+        // Packages (legacy Package model)
         Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
         Route::post('/packages', [PackageController::class, 'store'])->name('packages.store');
         Route::put('/packages/{package}', [PackageController::class, 'update'])->name('packages.update');
         Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
+        // Package Configs (TabletPackageConfig — admin-managed tablet packages)
+        Route::get('/package-configs', [PackageConfigController::class, 'index'])->name('package-configs.index');
+        Route::post('/package-configs', [PackageConfigController::class, 'store'])->name('package-configs.store');
+        Route::put('/package-configs/{packageConfig}', [PackageConfigController::class, 'update'])->name('package-configs.update');
+        Route::delete('/package-configs/{packageConfig}', [PackageConfigController::class, 'destroy'])->name('package-configs.destroy');
+        Route::post('/package-configs/{packageConfig}/menus', [PackageConfigController::class, 'syncAllowedMenus'])->name('package-configs.sync-menus');
+        // Tablet Categories
+        Route::get('/tablet-categories', [TabletCategoryController::class, 'index'])->name('tablet-categories.index');
+        Route::post('/tablet-categories', [TabletCategoryController::class, 'store'])->name('tablet-categories.store');
+        Route::put('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'update'])->name('tablet-categories.update');
+        Route::delete('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'destroy'])->name('tablet-categories.destroy');
+        Route::post('/tablet-categories/{tabletCategory}/menus', [TabletCategoryController::class, 'syncMenus'])->name('tablet-categories.sync-menus');
+        // Media Library
+        Route::get('/media', [MediaLibraryController::class, 'index'])->name('media.index');
+        Route::post('/media', [MediaLibraryController::class, 'store'])->name('media.store');
+        Route::delete('/media/{mediaFile}', [MediaLibraryController::class, 'destroy'])->name('media.destroy');
         // User
         Route::resource('/users', UserController::class);
         Route::prefix('users')->name('users.')->group(function () {

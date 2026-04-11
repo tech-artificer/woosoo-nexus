@@ -151,4 +151,40 @@ class DashboardController extends Controller
             'devices' => $devices,
         ]);
     }
+
+    /**
+     * GET /dashboard/stats
+     * Returns lightweight real-time counts for dashboard widgets.
+     * Authenticated (session-based) only.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function apiStats()
+    {
+        $dashboard = new DashboardService();
+        $reverbStatus = $this->getReverbStatus();
+
+        $pendingStatuses = [
+            OrderStatus::PENDING->value,
+            OrderStatus::CONFIRMED->value,
+            OrderStatus::IN_PROGRESS->value,
+        ];
+
+        $activeDevices    = Device::where('is_active', true)->count();
+        $pendingOrders    = DeviceOrder::whereIn('status', $pendingStatuses)->count();
+        $todayRevenue     = DeviceOrder::whereDate('created_at', today())
+                               ->whereNotIn('status', [OrderStatus::VOIDED->value, OrderStatus::CANCELLED->value])
+                               ->sum('total');
+        $todayOrderCount  = DeviceOrder::whereDate('created_at', today())->count();
+
+        return response()->json([
+            'active_devices'   => $activeDevices,
+            'pending_orders'   => $pendingOrders,
+            'today_revenue'    => (float) $todayRevenue,
+            'today_orders'     => $todayOrderCount,
+            'reverb'           => $reverbStatus,
+            'top_items'        => $dashboard->getTopItems(5),
+            'generated_at'     => now()->toIso8601String(),
+        ]);
+    }
 }

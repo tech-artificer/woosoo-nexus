@@ -258,20 +258,20 @@ class HappyPathIntegrationTest extends TestCase
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // 6. Admin status update stub — event contract confirmed, HTTP route TBD
+    // 6. Status update via device API dispatches OrderStatusUpdated event
     // ─────────────────────────────────────────────────────────────────────
 
     #[\PHPUnit\Framework\Attributes\Test]
     public function admin_status_update_dispatches_order_status_updated_event(): void
     {
-        Event::fake([OrderStatusUpdated::class]);
+        $sessionId = $this->createTestSession();
 
-        DeviceOrder::create([
+        $order = DeviceOrder::create([
             'device_id'           => $this->device->id,
             'branch_id'           => $this->branch->id,
             'table_id'            => $this->device->table_id,
             'terminal_session_id' => 1,
-            'session_id'          => 1,
+            'session_id'          => $sessionId,
             'order_id'            => 88899,
             'order_number'        => 'T-STATUS',
             'status'              => OrderStatus::PENDING->value,
@@ -282,8 +282,21 @@ class HappyPathIntegrationTest extends TestCase
             'guest_count'         => 1,
         ]);
 
-        // Admin HTTP route test pending — confirmed via admin auth test suite.
-        Event::assertNothingDispatched();
+        Event::fake([OrderStatusUpdated::class]);
+
+        $token = $this->device->createToken('device-auth')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->patchJson('/api/v1/orders/' . $order->id . '/status', [
+                'status' => OrderStatus::CONFIRMED->value,
+            ])
+            ->assertStatus(200)
+            ->assertJson(['success' => true]);
+
+        Event::assertDispatched(OrderStatusUpdated::class, function ($event) use ($order) {
+            return $event->order->id === $order->id
+                && $event->order->status === OrderStatus::CONFIRMED;
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────

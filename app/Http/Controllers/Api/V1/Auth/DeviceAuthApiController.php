@@ -128,6 +128,8 @@ class DeviceAuthApiController extends Controller
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
 
         if(  !$device ) {
+            AuditLogService::authFailed($request, 'device_not_found_or_inactive');
+
             return response()->json([
                 'success' => false,
                 'error' => 'Device not found',

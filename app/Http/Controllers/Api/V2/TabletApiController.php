@@ -8,6 +8,7 @@ use App\Repositories\Krypton\MenuRepository;
 use App\Http\Resources\MenuResource;
 use App\Models\Krypton\Menu;
 use App\Models\Package;
+use App\Models\TabletCategory;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -141,47 +142,40 @@ class TabletApiController extends Controller
 
     /**
      * GET /api/v2/tablet/categories
-     * 
-     * Returns tablet-specific categories (sides, desserts, beverages, alacarte).
-     * These map to POS category names for menu filtering.
-     * 
+     *
+     * Returns tablet categories. Tries the DB-backed `tablet_categories` table
+     * first (admin-managed). If none are active, falls back to the original
+     * hardcoded list so the PWA always has data.
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function categories(Request $request)
     {
         try {
-            // Define tablet categories that map to POS categories
+            $dbCategories = TabletCategory::where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get();
+
+            if ($dbCategories->isNotEmpty()) {
+                $payload = $dbCategories->map(fn ($cat) => [
+                    'id'   => $cat->id,
+                    'name' => $cat->name,
+                    'slug' => $cat->slug,
+                ])->values();
+
+                return ApiResponse::success($payload, 'Categories retrieved successfully');
+            }
+
+            // Hardcoded fallback — original four categories.
             $categories = [
-                [
-                    'id' => 1,
-                    'name' => 'Sides',
-                    'slug' => 'sides',
-                    'pos_category' => 'sides' // POS group alias
-                ],
-                [
-                    'id' => 2,
-                    'name' => 'Dessert',
-                    'slug' => 'dessert',
-                    'pos_category' => 'dessert'
-                ],
-                [
-                    'id' => 3,
-                    'name' => 'Beverage',
-                    'slug' => 'beverage',
-                    'pos_category' => 'drinks'
-                ],
-                [
-                    'id' => 4,
-                    'name' => 'Alacarte',
-                    'slug' => 'alacarte',
-                    'pos_category' => 'alacarte'
-                ],
+                ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides'],
+                ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert'],
+                ['id' => 3, 'name' => 'Beverage', 'slug' => 'beverage', 'pos_category' => 'drinks'],
+                ['id' => 4, 'name' => 'Alacarte', 'slug' => 'alacarte', 'pos_category' => 'alacarte'],
             ];
 
-            return ApiResponse::success(
-                $categories,
-                'Categories retrieved successfully'
-            );
+            return ApiResponse::success($categories, 'Categories retrieved successfully');
         } catch (\Exception $e) {
             Log::error('V2 Tablet API - categories error: ' . $e->getMessage());
             return ApiResponse::error('Failed to retrieve categories', null, 500);
