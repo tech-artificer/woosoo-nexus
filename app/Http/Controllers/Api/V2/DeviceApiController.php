@@ -31,6 +31,8 @@ class DeviceApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $query = Device::query()->with('branch');
 
         if ($request->filled('status')) {
@@ -72,6 +74,8 @@ class DeviceApiController extends Controller
      */
     public function metadata(): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $resolved = $this->branchResolver->resolve();
 
         // On-prem default: exactly one local branch. Fallback to full list for
@@ -89,6 +93,8 @@ class DeviceApiController extends Controller
      */
     public function statistics(): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $onlineThreshold = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
         $total   = Device::count();
         $active  = Device::where('is_active', true)->count();
@@ -118,6 +124,8 @@ class DeviceApiController extends Controller
      */
     public function byStatus(): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $threshold = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
 
         $online  = Device::where('last_seen_at', '>=', $threshold)->with('branch')->get();
@@ -174,6 +182,8 @@ class DeviceApiController extends Controller
      */
     public function show(Device $device): JsonResponse
     {
+        $this->authorize('view', $device);
+
         $device->load(['branch', 'latestHeartbeat']);
         return response()->json($this->formatDevice($device, withHeartbeat: true));
     }
@@ -184,6 +194,8 @@ class DeviceApiController extends Controller
      */
     public function heartbeats(Request $request, Device $device): JsonResponse
     {
+        $this->authorize('view', $device);
+
         $days  = min((int) $request->input('days', 1), 30);
         $limit = min((int) $request->input('limit', 100), 500);
 
@@ -202,6 +214,8 @@ class DeviceApiController extends Controller
      */
     public function health(Device $device): JsonResponse
     {
+        $this->authorize('view', $device);
+
         $hb     = $device->latestHeartbeat;
         $online = $device->last_seen_at
             && $device->last_seen_at->gte(now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
@@ -225,6 +239,8 @@ class DeviceApiController extends Controller
      */
     public function regenerateSecurityCode(Device $device): JsonResponse
     {
+        $this->authorize('update', $device);
+
         $plain = (string) random_int(100000, 999999);
         $device->update([
             'security_code'              => Hash::make($plain),
@@ -240,6 +256,8 @@ class DeviceApiController extends Controller
      */
     public function toggleStatus(Request $request, Device $device): JsonResponse
     {
+        $this->authorize('update', $device);
+
         $request->validate(['is_active' => ['required', 'boolean']]);
         $device->update(['is_active' => $request->boolean('is_active')]);
 
