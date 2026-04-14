@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Services\LocalBranchResolver;
 use App\Models\Branch;
 use App\Models\Krypton\Table;
 use App\Models\Krypton\Order;
@@ -17,6 +20,7 @@ use App\Models\DeviceOrderItems;
 
 class DeviceOrder extends Model
 {
+    use HasFactory, SoftDeletes;
     protected $table = 'device_orders';
     // Prevent accidental mass-assignment of legacy JSON columns
     // The `items` and `meta` JSON columns have been migrated out
@@ -38,11 +42,11 @@ class DeviceOrder extends Model
     // ];
 
     protected $hidden = [
-        'deleted_at',
         'updated_at'
     ];
 
     protected $casts = [
+        'order_uuid' => 'string',
         'order_number' => 'string',
         'status' => OrderStatus::class,
         'total' => 'decimal:2',
@@ -60,7 +64,7 @@ class DeviceOrder extends Model
      */
     public function items() : HasMany
     {
-        return $this->hasMany(DeviceOrderItems::class, 'order_id');
+        return $this->hasMany(DeviceOrderItems::class, 'order_id')->orderBy('index');
     }
 
     /**
@@ -77,91 +81,82 @@ class DeviceOrder extends Model
         }
     }
 
-    // Mutator removed — validation moved to updating event hook in boot()
-    // Laravel's enum casting handles type conversion automatically
-
-    public static function generateOrderNumber($orderId): string
+    /**
+     * Set the status attribute, accepting either an OrderStatus enum or a string value.
+     */
+    public function setStatusAttribute($newStatus): void
     {
-        // Get the latest order number
-        $latestOrder = static::latest()->first();
-
-        $nextNumber = 1;
-        if ($latestOrder) {
-            // Extract the numeric part (assuming a format like ORD-000001)
-            $lastNumber = (int) substr($latestOrder->order_number, 4); // "ORD-" is 4 chars
-            $nextNumber = $lastNumber + 1;
+        // Coerce string values to the OrderStatus enum
+        if (is_string($newStatus)) {
+            $newStatus = OrderStatus::from($newStatus);
         }
 
-        // Format the number with leading zeros, e.g., ORD-000001
-        return 'ORD-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT) . '-' . $orderId;
+        if (!$newStatus instanceof OrderStatus) {
+            $newStatus = OrderStatus::PENDING;
+        }
+
+        // If this is a new model (creating), skip transition validation
+        if (!$this->exists) {
+            $this->attributes['status'] = $newStatus->value;
+            return;
+        }
+
+        $currentStatus = $this->status ?? OrderStatus::PENDING;
+        if (is_string($currentStatus)) {
+            $currentStatus = OrderStatus::from($currentStatus);
+        }
+
+        if (!$currentStatus->canTransitionTo($newStatus)) {
+            throw new \InvalidArgumentException(
+                "Invalid status transition: {$currentStatus->value} → {$newStatus->value}"
+            );
+        }
+
+        // Store the underlying value (string) so casting remains consistent
+        $this->attributes['status'] = $newStatus->value;
     }
+
+    // generateOrderNumber() removed 2026-04-07 — replaced with UUID-backed identity generation.
+    // See RANPO_PRODUCTION_AUDIT_2026-04-07.md §P0 Race Condition.
 
     protected static function boot()
     {   
         parent::boot();
 
-        // Validate status transitions before saving (replaces mutator logic)
-        static::updating(function (DeviceOrder $model) {
-            // Only validate if status is being changed
-            if ($model->isDirty('status')) {
-                $oldStatus = $model->getOriginal('status');
-                $newStatus = $model->getAttribute('status');
-                
-                // Convert to enums if needed
-                if (is_string($oldStatus)) {
-                    $oldStatus = OrderStatus::from($oldStatus);
-                }
-                if (is_string($newStatus)) {
-                    $newStatus = OrderStatus::from($newStatus);
-                } elseif (!$newStatus instanceof OrderStatus) {
-                    throw new \InvalidArgumentException('Status must be an OrderStatus enum or valid string');
-                }
-                
-                // Validate transition
-                if (!$oldStatus->canTransitionTo($newStatus)) {
-                    throw new \InvalidArgumentException(
-                        "Invalid status transition: {$oldStatus->value} → {$newStatus->value}"
-                    );
+        static::creating(function ($model) {
+            if (!empty($model->branch_id)) {
+                return;
+            }
+
+            if (!empty($model->device_id)) {
+                $deviceBranchId = Device::query()
+                    ->whereKey($model->device_id)
+                    ->value('branch_id');
+
+                if (!empty($deviceBranchId)) {
+                    $model->branch_id = (int) $deviceBranchId;
+                    return;
                 }
             }
+
+            $model->branch_id = app(LocalBranchResolver::class)->requireId();
         });
 
-        static::creating(function ($model) {
-            // Auto-assign branch_id from first branch if not set
-            // Skip in testing environment to avoid race conditions
-            if (!$model->branch_id && !app()->environment('testing')) {
-                $firstBranch = Branch::first();
-                if ($firstBranch) {
-                    $model->branch_id = $firstBranch->id;
-                }
+        static::creating(function (DeviceOrder $model) {
+            // P0 fix 2026-04-07: Assign a UUID for collision-free device order identity.
+            if (empty($model->order_uuid)) {
+                $model->order_uuid = (string) Str::uuid();
             }
-        });
 
-        static::creating(function ($model) {
-            // Skip auto-generation if order_number already set (e.g., in tests)
+            // Preserve explicitly supplied display order numbers in tests/admin fixtures.
             if ($model->order_number) {
                 return;
             }
 
-            // Skip if order_id is missing (required for generation)
-            if (!$model->order_id) {
-                return;
-            }
-
-            // Attempt to generate a unique order number
-            // This loop handles potential race conditions by retrying
-            $maxAttempts = 5; // Or more, depending on expected concurrency
-            for ($i = 0; $i < $maxAttempts; $i++) {
-                $orderNumber = static::generateOrderNumber($model->order_id);
-                // Check if it already exists to avoid unique constraint violation
-                if (!static::where('order_number', $orderNumber)->exists()) {
-                    $model->order_number = $orderNumber;
-                    return; // Number is unique, proceed with creation
-                }
-                // If it exists, retry with a potentially higher number in the next iteration
-                // (though generateOrderNumber already gets the latest, this is a fallback)
-            }
-            throw new \Exception('Failed to generate a unique order number after multiple attempts.');
+            $model->order_number = 'ORD-'
+                . now()->format('Ymd')
+                . '-'
+                . strtoupper(substr((string) $model->order_uuid, -6));
         });
     }
 
@@ -191,6 +186,16 @@ class DeviceOrder extends Model
     public function printEvents(): HasMany
     {
         return $this->hasMany(\App\Models\PrintEvent::class, 'device_order_id', 'id');
+    }
+
+    /**
+     * Latest print event for this device order (singular).
+     * Used by PrintOrder/PrintRefill broadcasts to get print_event_id.
+     */
+    public function printEvent(): HasOne
+    {
+        return $this->hasOne(\App\Models\PrintEvent::class, 'device_order_id', 'id')
+            ->latestOfMany();
     }
 
     public function scopeActiveOrder(Builder $query) {

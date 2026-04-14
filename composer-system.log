@@ -1,0 +1,11 @@
+﻿Composer version 2.9.5 2026-01-29 11:40:53
+php.exe : PHP version 8.3.29 
+(C:\Users\Pc1\Projects\deployment-manager-legacy\bin\php\php.exe)
+At line:1 char:177
++ ... soo-nexus'; & 'C:\Users\Pc1\Projects\deployment-manager-legacy\bin\ph ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP version 8.3...in\php\php.exe) 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Run the "diagnose" command to get more detailed diagnostics output.

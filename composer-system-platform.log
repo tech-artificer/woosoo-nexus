@@ -1,0 +1,35 @@
+﻿php.exe : Checking platform requirements for packages in the vendor dir
+At line:1 char:186
++ ... soo-nexus'; & 'C:\Users\Pc1\Projects\deployment-manager-legacy\bin\ph ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Checking platfo... the vendor dir 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+composer-plugin-api  2.9.0      success                                       
+composer-runtime-api 2.2.2      success                                       
+ext-ctype            *          success provided by symfony/polyfill-ctype    
+ext-curl             8.3.29     success                                       
+ext-date             8.3.29     success                                       
+ext-dom              20031129   success                                       
+ext-fileinfo         8.3.29     success                                       
+ext-filter           8.3.29     success                                       
+ext-hash             8.3.29     success                                       
+ext-iconv            8.3.29     success                                       
+ext-intl             8.3.29     success                                       
+ext-json             8.3.29     success                                       
+ext-libxml           8.3.29     success                                       
+ext-mbstring         *          success provided by symfony/polyfill-mbstring 
+ext-openssl          8.3.29     success                                       
+ext-pcre             8.3.29     success                                       
+ext-phar             8.3.29     success                                       
+ext-reflection       8.3.29     success                                       
+ext-session          8.3.29     success                                       
+ext-simplexml        8.3.29     success                                       
+ext-tokenizer        8.3.29     success                                       
+ext-xml              8.3.29     success                                       
+ext-xmlwriter        8.3.29     success                                       
+ext-zlib             8.3.29     success                                       
+lib-pcre             10.42      success                                       
+php                  8.3.29     success                                       
+php-64bit            8.3.29     success                                       

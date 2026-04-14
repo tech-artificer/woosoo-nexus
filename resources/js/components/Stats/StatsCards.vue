@@ -10,20 +10,31 @@ interface StatCard {
   variant?: 'default' | 'primary' | 'accent' | 'danger'
   icon?: Component
   delta?: number // percent change, optional
+  sparkline?: number[] // optional sparkline data
 }
 
-const props = defineProps<{ cards: StatCard[] }>()
+const props = defineProps<{ cards: StatCard[] | Record<string, any> | null | undefined }>()
+
+const normalizedCards = computed<StatCard[]>(() => {
+  if (Array.isArray(props.cards)) return props.cards
+  if (!props.cards || typeof props.cards !== 'object') return []
+  return Object.entries(props.cards).map(([key, value]) => ({
+    title: String(key).replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    value: typeof value === 'number' || typeof value === 'string' ? value : 0,
+    variant: 'default',
+  }))
+})
 
 const getAccent = (variant: StatCard['variant']) => {
   switch (variant) {
     case 'primary':
-      return 'bg-blue-50 border-blue-100 text-blue-700'
+      return 'bg-primary/10 border-primary/20 text-primary'
     case 'accent':
-      return 'bg-emerald-50 border-emerald-100 text-emerald-700'
+      return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
     case 'danger':
-      return 'bg-rose-50 border-rose-100 text-rose-700'
+      return 'bg-destructive/10 border-destructive/20 text-destructive'
     default:
-      return 'bg-white border-gray-100 text-gray-900'
+      return 'bg-card border-border text-card-foreground'
   }
 }
 
@@ -46,7 +57,7 @@ const getSparkPoints = (arr?: number[]) => {
 
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div v-for="card in cards" :key="card.title" :class="['p-4 rounded-lg shadow-sm border', getAccent(card.variant)]">
+    <div v-for="card in normalizedCards" :key="card.title" :class="['p-4 rounded-lg shadow-sm border', getAccent(card.variant)]">
       <div class="flex items-start justify-between gap-4">
         <div class="flex-1">
           <div class="text-xs text-muted-foreground font-medium">{{ card.title }}</div>
@@ -54,7 +65,7 @@ const getSparkPoints = (arr?: number[]) => {
         </div>
         <div class="flex flex-col items-end">
           <component v-if="card.icon" :is="card.icon" class="h-6 w-6 opacity-80" />
-          <div v-if="typeof card.delta !== 'undefined'" :class="['mt-2 text-sm font-medium', card.delta >= 0 ? 'text-emerald-600' : 'text-rose-600']">
+          <div v-if="typeof card.delta !== 'undefined'" :class="['mt-2 text-sm font-medium', card.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive']">
             <span v-if="card.delta >= 0">+{{ card.delta }}%</span>
             <span v-else>{{ card.delta }}%</span>
           </div>
@@ -70,6 +81,3 @@ const getSparkPoints = (arr?: number[]) => {
   </div>
 </template>
 
-<script lang="ts">
-export default {}
-</script>

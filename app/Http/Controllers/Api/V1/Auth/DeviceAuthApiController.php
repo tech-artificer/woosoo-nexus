@@ -10,6 +10,7 @@ use App\Actions\Device\RegisterDevice;
 // use App\Http\Resources\DeviceResource;
 use App\Http\Requests\DeviceRegisterRequest;
 use App\Models\DeviceRegistrationCode;
+use App\Services\AuditLogService;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
@@ -144,9 +145,11 @@ class DeviceAuthApiController extends Controller
 
         $device = RegisterDevice::run($validated);
 
+        AuditLogService::deviceRegistered($request, $device->id);
+
         $token = $device->createToken(
             name: 'device-auth',
-            expiresAt: now()->addDays(7)
+            expiresAt: now()->addDays(30)
         )->plainTextToken;
 
         return response()->json([
@@ -154,7 +157,7 @@ class DeviceAuthApiController extends Controller
             'token' => $token,
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
-            'expires_at' => now()->addDays(7)->toDateTimeString(),
+            'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ipToUse,
         ], 201);
     }
@@ -181,6 +184,8 @@ class DeviceAuthApiController extends Controller
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
 
         if(  !$device ) {
+            AuditLogService::authFailed($request, 'device_not_found_or_inactive');
+
             return response()->json([
                 'success' => false,
                 'error' => 'Device not found',
@@ -192,13 +197,14 @@ class DeviceAuthApiController extends Controller
             'last_seen_at' => now(),
             'last_ip_address' => $ip,
         ]);
-        // Revoke all existing tokens (optional)
-        $device->tokens()->delete();
+        // H3 fix 2026-04-08: only revoke expired tokens so concurrent device connections
+        // (e.g., print bridge) are not disconnected when a tablet re-authenticates via IP.
+        $device->tokens()->where('expires_at', '<', now())->delete();
 
          // Create token with device info
         $token = $device->createToken(
             name: 'device-auth',
-            expiresAt: now()->addDays(7)
+            expiresAt: now()->addDays(30)
         )->plainTextToken;
         
         return response()->json([
@@ -206,7 +212,7 @@ class DeviceAuthApiController extends Controller
             'token' => $token,
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
-            'expires_at' => now()->addDays(7)->toDateTimeString(),
+            'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ip,
         ]);
     }

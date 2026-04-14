@@ -1,3 +1,4 @@
+<!-- Audit Fix (2026-04-06): route-safe print/complete actions for admin orders table. -->
 <script setup lang="ts">
 import type { Row } from '@tanstack/vue-table'
 import { Button } from '@/components/ui/button'
@@ -70,7 +71,7 @@ const voidOrder = () => {
 
 const printOrder = (order_id: number | string) => {
 
-  router.post(`/orders/print`, { 
+  router.post(route('orders.print'), { 
     order_id: order_id, 
   }, { 
     onSuccess: () => {
@@ -81,7 +82,7 @@ const printOrder = (order_id: number | string) => {
 
 const completeOrder = (order_id: number | string) => {
 
-  router.post(`/orders/complete`, { 
+  router.post(route('orders.complete'), { 
     order_id: order_id, 
   }, { 
     onSuccess: () => {

@@ -2,8 +2,8 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import type { Task } from '../data/schema'
 
 import { h } from 'vue'
-import { Badge } from '@/registry/new-york/ui/badge'
-import { Checkbox } from '@/registry/new-york/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { labels, priorities, statuses } from '../data/data'
 import DataTableColumnHeader from './DataTableColumnHeader.vue'
 import DataTableRowActions from './DataTableRowActions.vue'
@@ -58,7 +58,7 @@ export const columns: ColumnDef<Task>[] = [
         h('span', status.label),
       ])
     },
-    filterFn: (row, id, value) => {
+    filterFn: (row: any, id: any, value: any) => {
       return value.includes(row.getValue(id))
     },
   },
@@ -78,7 +78,7 @@ export const columns: ColumnDef<Task>[] = [
         h('span', {}, priority.label),
       ])
     },
-    filterFn: (row, id, value) => {
+    filterFn: (row: any, id: any, value: any) => {
       return value.includes(row.getValue(id))
     },
   },

@@ -44,7 +44,7 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     cell: ({ row }) => {
       const deviceName = row.original.device?.name;
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, deviceName),
+        h('span', { class: ' font-medium', title: deviceName || '' }, deviceName),
       ])
     }
   },  
@@ -61,7 +61,7 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     cell: ({ row }) => {
       const tableName = row.original.table?.name || '—';
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, tableName),
+        h('span', { class: ' font-medium', title: tableName || '' }, tableName),
       ])
     }
   },  
@@ -83,7 +83,7 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     enableSorting: false,
     cell: ({ row }) => {
       
-      const total = row.original.total || 0;
+      const total = Number(row.original.total ?? 0);
       return h('div', { class: 'w-20 flex space-x-2' }, [
         h('span', { class: ' font-medium' }, formatCurrency(total) ),
       ])
@@ -94,7 +94,7 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Status', class: 'max-w-[140px]' }),
     enableColumnFilter: true,
     enableSorting: true,
-    filterFn: (row, columnId, filterValue) => {
+    filterFn: (row: any, columnId: string, filterValue: any) => {
       if (!filterValue?.length) return true
       return filterValue.includes(row.getValue(columnId))
     },
@@ -135,9 +135,9 @@ export const columns: ColumnDef<DeviceOrder, any>[] = [
     enableSorting: false,
     cell: ({ row }) => {
       return h(PrintedBadge, {
-        isPrinted: row.getValue('is_printed'),
-        printedAt: row.original.printed_at,
-        printerId: row.original.printed_by,
+        isPrinted: Boolean(row.getValue('is_printed')),
+        printedAt: (row.original.printed_at ?? null) as string | null,
+        printerId: (row.original.printed_by ?? null) as string | null,
       })
     }
   },  

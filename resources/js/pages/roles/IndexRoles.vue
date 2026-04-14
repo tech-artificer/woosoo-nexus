@@ -6,6 +6,7 @@ import { Plus } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 import AuthenticatedLayout from '@/layouts/AppLayout.vue'
+import { type BreadcrumbItem } from '@/types'
 import { Button } from '@/components/ui/button'
 import { columns, type Role } from '@/components/Roles/columns'
 import DataTable from '@/components/Roles/DataTable.vue'
@@ -31,6 +32,10 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const breadcrumbs: BreadcrumbItem[] = [
+  { title: 'Roles', href: route('roles.index') },
+]
+
 const showCreateSheet = ref(false)
 
 function handleCreateRole() {
@@ -41,8 +46,8 @@ function handleCreateRole() {
 <template>
   <Head title="Roles & Permissions" />
 
-  <AuthenticatedLayout>
-    <div class="space-y-6">
+  <AuthenticatedLayout :breadcrumbs="breadcrumbs">
+    <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold tracking-tight">Roles & Permissions</h1>
@@ -58,7 +63,7 @@ function handleCreateRole() {
     </div>
 
     <Sheet v-model:open="showCreateSheet">
-      <SheetContent>
+      <SheetContent side="right" class="sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Create New Role</SheetTitle>
           <SheetDescription>

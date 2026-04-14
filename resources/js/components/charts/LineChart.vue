@@ -11,7 +11,7 @@ interface SalesDataItem {
 
 const page = usePage()
 const salesData = computed(() => {
-  const data = page.props.salesData
+  const data = page.props?.salesData
   return Array.isArray(data) ? data as SalesDataItem[] : []
 })
 

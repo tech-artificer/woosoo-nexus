@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     // Registration is restricted — only admins may create users via admin UI.
     // Public registration routes removed to prevent self-service signups.
+    Route::match(['get', 'post'], 'register', static fn () => abort(404));
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

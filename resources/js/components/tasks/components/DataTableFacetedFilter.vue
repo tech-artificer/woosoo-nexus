@@ -71,7 +71,7 @@ const selectedValues = computed(() => new Set(props.column?.getFilterValue() as 
         </template>
       </Button>
     </PopoverTrigger>
-    <PopoverContent class="w-[200px] p-0" align="start">
+    <PopoverContent class="w-50 p-0" align="start">
       <Command>
         <CommandInput :placeholder="title" />
         <CommandList>

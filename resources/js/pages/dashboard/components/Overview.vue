@@ -1,52 +1,37 @@
-<script setup lang="ts">
-import { DonutChart } from "@/components/ui/chart-donut"
+﻿<script setup lang="ts">
+import { BarChart } from '@/components/ui/chart-bar'
+import { usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
-const data = [
-  {
-    name: "Jan",
-    total: Math.floor(Math.random() * 2000) + 500,
-    predicted: Math.floor(Math.random() * 2000) + 500,
-  },
-  {
-    name: "Feb",
-    total: Math.floor(Math.random() * 2000) + 500,
-    predicted: Math.floor(Math.random() * 2000) + 500,
-  },
-  {
-    name: "Mar",
-    total: Math.floor(Math.random() * 2000) + 500,
-    predicted: Math.floor(Math.random() * 2000) + 500,
-  },
-  {
-    name: "Apr",
-    total: Math.floor(Math.random() * 2000) + 500,
-    predicted: Math.floor(Math.random() * 2000) + 500,
-  },
-  {
-    name: "May",
-    total: Math.floor(Math.random() * 2000) + 500,
-    predicted: Math.floor(Math.random() * 2000) + 500,
-  },
-  {
-    name: "Jun",
-    total: Math.floor(Math.random() * 2000) + 500,
-    predicted: Math.floor(Math.random() * 2000) + 500,
-  },
-]
-
-function valueFormatter(tick: number | Date) {
-  return typeof tick === "number"
-    ? `$ ${new Intl.NumberFormat("us").format(tick).toString()}`
-    : ""
+interface SalesDataItem {
+  date: string
+  sales: number
+  orders: number
 }
+
+const page = usePage()
+
+const data = computed(() => {
+  const raw = page.props.salesData as SalesDataItem[] | undefined
+  if (!Array.isArray(raw) || raw.length === 0) return []
+  return raw.map(item => ({
+    date: item.date,
+    Sales: item.sales,
+  }))
+})
+
+const hasData = computed(() => data.value.length > 0)
 </script>
 
 <template>
-  <DonutChart
-    index="name"
-    :category="'total'"
+  <BarChart
+    v-if="hasData"
     :data="data"
-    :value-formatter="valueFormatter"
-    class="flex justify-center align-center"
+    index="date"
+    :categories="['Sales']"
+    :y-formatter="(tick: number | Date) => typeof tick === 'number' ? `₱${new Intl.NumberFormat('en-PH').format(tick)}` : ''"
   />
+  <div v-else class="flex flex-col items-center justify-center h-40 text-sm text-muted-foreground gap-2 opacity-70">
+    <p>No data available</p>
+  </div>
 </template>

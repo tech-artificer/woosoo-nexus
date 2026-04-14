@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -13,18 +14,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PrintEvent extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'print_events';
     protected $fillable = [
         'device_order_id',
         'printer_id',
+        'printer_name',                // NEW: Human-readable printer name
         'event_type',
         'meta',
         'is_acknowledged',
         'acknowledged_at',
+        'acknowledged_by_device_id',   // NEW: Track which relay device acked (audit trail)
         'attempts',
         'last_error',
+        'backend_status',              // Task 2.3: backend broadcast lifecycle
+        'broadcast_at',                // Task 2.3: when the backend last broadcast this event
+        'retry_count',                 // Task 2.3: backend re-broadcast counter (≠ device-ack 'attempts')
     ];
 
     protected $casts = [
@@ -32,10 +38,23 @@ class PrintEvent extends Model
         'is_acknowledged' => 'boolean',
         'acknowledged_at' => 'datetime',
         'attempts' => 'integer',
+        'broadcast_at' => 'datetime',
+        'retry_count' => 'integer',
     ];
 
     public function deviceOrder(): BelongsTo
     {
         return $this->belongsTo(DeviceOrder::class, 'device_order_id', 'id');
+    }
+
+    /**
+     * B2: Audit trail relationship - which relay device acknowledged this print event.
+     * Links to the Device that sent the ack, creating an immutable audit trail.
+     * 
+     * @return BelongsTo
+     */
+    public function acknowledgedByDevice(): BelongsTo
+    {
+        return $this->belongsTo(Device::class, 'acknowledged_by_device_id', 'id');
     }
 }

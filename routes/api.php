@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\PersonalAccessToken;
 
 use App\Http\Controllers\Api\V1\{
@@ -45,7 +47,10 @@ Route::get('/device/ip', function (Request $request) {
 
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 
-Route::get('/order/{orderId}/dispatch', function(Request $request, int $orderId) {
+Route::middleware([
+    \App\Http\Middleware\RequestId::class,
+    'auth:device',
+])->get('/order/{orderId}/dispatch', function (Request $request, int $orderId) {
     $order = DeviceOrder::where(['order_id' => $orderId])->first();
     PrintOrder::dispatch($order);
 });
@@ -63,13 +68,12 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(funct
 
         // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
         Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
-        Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
     });
 });
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'api'])->group(function () {
-    // Rate limit: 60 requests per minute for device registration (prevents brute force)
-    Route::middleware('throttle:60,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
+    // Rate limit: 10 requests per minute for device registration (prevents brute force)
+    Route::middleware('throttle:10,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
     
     // Menu endpoints: 300 requests per minute (generous for busy tablets)
     Route::middleware('throttle:300,1')->group(function () {
@@ -128,9 +132,8 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
         ->name('device.table');
     Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
-    Route::post('/devices/create-order', DeviceOrderApiController::class)
-        ->middleware('idempotency')
-        ->name('api.devices.create.order');
+    // P0 fix 2026-04-07: throttle order creation to prevent double-tap duplicates (10 req/min per device)
+    Route::post('/devices/create-order', DeviceOrderApiController::class)->middleware('throttle.device:10,1')->name('api.devices.create.order');
 
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
@@ -141,16 +144,13 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
     // Refill endpoint (device-authenticated) and alias for print-refill
-    Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])
-        ->middleware('idempotency')
-        ->name('api.order.refill');
-    Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])
-        ->middleware('idempotency')
-        ->name('api.order.print-refill');
+    Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->name('api.order.refill');
+    Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->name('api.order.print-refill');
     
     // Session endpoints for devices
     Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
     Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
+    Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
     
     // Printer API routes (device-authenticated for branch isolation)
     require __DIR__ . '/api_printer_routes.php';
@@ -185,40 +185,79 @@ Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:de
 // Session alias — PWA calls /api/session/latest; actual route is /api/sessions/current
 Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group(function () {
     Route::get('/session/latest', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.session.latest');
-
-    // Missed-events replay contract for tablet broadcasts.
-    // Returns empty set by default until persistent event-log backfill is introduced.
-    Route::get('/events/missing', function (Request $request) {
-        return response()->json([
-            'events' => [],
-            'hasMore' => false,
-        ]);
-    })->name('api.events.missing');
 });
 
-// Health endpoint — quick check for app DB and POS DB connectivity
+// Health endpoint — app DB, Redis, queue depth, version, uptime
 Route::get('/health', function () {
-    $status = [
-        'app' => true,
-        'mysql' => false,
-        'pos' => false,
+    $startTime = defined('LARAVEL_START') ? LARAVEL_START : microtime(true);
+
+    $services = [
+        'mysql'  => false,
+        'pos'    => false,
+        'redis'  => false,
     ];
 
+    // MySQL (app DB)
     try {
         DB::connection()->getPdo();
-        $status['mysql'] = true;
+        $services['mysql'] = true;
     } catch (\Throwable $e) {
         // keep false
     }
 
+    // POS DB
     try {
         DB::connection('pos')->getPdo();
-        $status['pos'] = true;
+        $services['pos'] = true;
     } catch (\Throwable $e) {
         // keep false
     }
 
-    return \App\Http\Responses\ApiResponse::success($status, 'Health check');
+    // Redis — requires CACHE_DRIVER=redis in production
+    try {
+        Cache::store('redis')->set('__health_ping', 1, 5);
+        $services['redis'] = (bool) Cache::store('redis')->get('__health_ping');
+    } catch (\Throwable $e) {
+        $services['redis'] = false;
+    }
+
+    // Queue depth — size() on the default queue connection
+    $queueDepth = null;
+    try {
+        $queueDepth = Queue::size();
+    } catch (\Throwable $e) {
+        // Queue driver may not support size() (e.g. sync driver)
+    }
+
+    // Determine overall status
+    $coreHealthy = $services['mysql'];
+    $fullyHealthy = $coreHealthy && $services['redis'];
+    $overallStatus = match (true) {
+        !$coreHealthy => 'down',
+        !$fullyHealthy => 'degraded',
+        default => 'ok',
+    };
+
+    $statusCode = match ($overallStatus) {
+        'down'     => 503,
+        'degraded' => 207,
+        default    => 200,
+    };
+
+    $payload = [
+        'status'         => $overallStatus,
+        'services'       => $services,
+        'queue_depth'    => $queueDepth,
+        'version'        => config('app.version', env('APP_VERSION', '1.0.0')),
+        'environment'    => app()->environment(),
+        'uptime_seconds' => (int) round(microtime(true) - $startTime, 3),
+    ];
+
+    return response()->json([
+        'success' => $overallStatus !== 'down',
+        'data'    => $payload,
+        'message' => 'Health check',
+    ], $statusCode);
 });
 
 // Debug endpoint: returns raw POS stored-proc rows and local Menu rows for a course

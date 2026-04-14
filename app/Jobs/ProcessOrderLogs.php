@@ -13,6 +13,12 @@ use App\Models\OrderUpdateLog;
 use App\Models\DeviceOrder;
 use App\Enums\OrderStatus;
 
+/**
+ * PRODUCTION STATUS: DISABLED — 2026-04-07
+ * This job requires the `order_update_logs` table which does not exist in production.
+ * Scheduler entry removed from routes/console.php. Do not re-enable without migration plan.
+ * See: RANPO_PRODUCTION_AUDIT_2026-04-07.md §ProcessOrderLogs P0
+ */
 class ProcessOrderLogs implements ShouldQueue
 {
     use Queueable;

@@ -19,7 +19,7 @@ defineProps<{
 <template>
   <Head :title="title" :description="description" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex h-full flex-1 flex-col bg-white gap-4 rounded p-6">
+    <div class="flex h-full flex-1 flex-col gap-4 rounded p-6">
       <h2 class="text-lg font-semibold">Edit User</h2>
       <UserForm :user="user" form-type="edit" />
     </div>

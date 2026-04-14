@@ -7,9 +7,12 @@ use Illuminate\Http\Request;
 use App\Repositories\Krypton\MenuRepository;
 use App\Http\Resources\MenuResource;
 use App\Models\Krypton\Menu;
+use App\Models\Package;
+use App\Models\TabletCategory;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 
 /**
  * Tablet API Controller (V2)
@@ -21,6 +24,12 @@ use Illuminate\Support\Str;
  */
 class TabletApiController extends Controller
 {
+    /**
+     * Original hardcoded package menu IDs kept as a compatibility fallback.
+     * These should still render when admin package mappings are empty/missing.
+     */
+    private const LEGACY_PACKAGE_IDS = [46, 47, 48];
+
     protected $menuRepository;
 
     public function __construct(MenuRepository $menuRepository)
@@ -39,23 +48,47 @@ class TabletApiController extends Controller
     public function packages(Request $request)
     {
         try {
-            // Known package IDs (Set Meal A, B, C)
-            $packageIds = [46, 47, 48];
-            
-            // Fetch packages with images and tax
-            $packages = Menu::with(['image', 'tax'])
-                ->whereIn('id', $packageIds)
-                ->where('is_available', true)
+            // Load active packages from app DB, ordered for display.
+            $dbPackages = Package::with('modifiers')
+                ->where('is_active', true)
+                ->orderBy('sort_order')
                 ->get();
 
-            // Load modifiers for each package using the static getModifiers method
-            foreach ($packages as $package) {
-                $modifiers = Menu::getModifiers($package->id);
-                $package->setRelation('modifiers', $modifiers);
-            }
+            // Bulk-load all required Krypton menu records in two queries.
+            $packageMenuIds  = $dbPackages->pluck('krypton_menu_id')->filter()->unique()->values()->toArray();
+            $modifierMenuIds = $dbPackages->flatMap(fn ($p) => $p->modifiers->pluck('krypton_menu_id'))
+                ->filter()->unique()->values()->toArray();
+            $allIds = array_values(array_unique(array_merge($packageMenuIds, $modifierMenuIds)));
+
+            $kryptonMenus = Menu::with(['image', 'tax', 'group'])
+                ->whereIn('id', $allIds)
+                ->get()
+                ->keyBy('id');
+
+            // Stitch Krypton menu models together with their ordered modifiers.
+            $configuredById = $dbPackages->map(function ($dbPackage) use ($kryptonMenus) {
+                $menu = $kryptonMenus->get($dbPackage->krypton_menu_id);
+                if (! $menu) {
+                    return null;
+                }
+                $modifierModels = $dbPackage->modifiers
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
+                    ->filter()
+                    ->values();
+                $menu->setRelation('modifiers', $modifierModels);
+                return $menu;
+            })->filter()->keyBy('id');
+
+            // Compatibility: include legacy package definitions so the original
+            // package dataset still appears even if admin mappings are incomplete.
+            $legacyById = $this->buildLegacyPackages();
+
+            $result = $legacyById
+                ->merge($configuredById) // configured packages override legacy by id
+                ->values();
 
             return ApiResponse::success(
-                MenuResource::collection($packages),
+                MenuResource::collection($result),
                 'Packages retrieved successfully'
             );
         } catch (\Exception $e) {
@@ -109,47 +142,40 @@ class TabletApiController extends Controller
 
     /**
      * GET /api/v2/tablet/categories
-     * 
-     * Returns tablet-specific categories (sides, desserts, beverages, alacarte).
-     * These map to POS category names for menu filtering.
-     * 
+     *
+     * Returns tablet categories. Tries the DB-backed `tablet_categories` table
+     * first (admin-managed). If none are active, falls back to the original
+     * hardcoded list so the PWA always has data.
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function categories(Request $request)
     {
         try {
-            // Define tablet categories that map to POS categories
+            $dbCategories = TabletCategory::where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get();
+
+            if ($dbCategories->isNotEmpty()) {
+                $payload = $dbCategories->map(fn ($cat) => [
+                    'id'   => $cat->id,
+                    'name' => $cat->name,
+                    'slug' => $cat->slug,
+                ])->values();
+
+                return ApiResponse::success($payload, 'Categories retrieved successfully');
+            }
+
+            // Hardcoded fallback — original four categories.
             $categories = [
-                [
-                    'id' => 1,
-                    'name' => 'Sides',
-                    'slug' => 'sides',
-                    'pos_category' => 'sides' // POS group alias
-                ],
-                [
-                    'id' => 2,
-                    'name' => 'Dessert',
-                    'slug' => 'dessert',
-                    'pos_category' => 'dessert'
-                ],
-                [
-                    'id' => 3,
-                    'name' => 'Beverage',
-                    'slug' => 'beverage',
-                    'pos_category' => 'drinks'
-                ],
-                [
-                    'id' => 4,
-                    'name' => 'Alacarte',
-                    'slug' => 'alacarte',
-                    'pos_category' => 'alacarte'
-                ],
+                ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides'],
+                ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert'],
+                ['id' => 3, 'name' => 'Beverage', 'slug' => 'beverage', 'pos_category' => 'drinks'],
+                ['id' => 4, 'name' => 'Alacarte', 'slug' => 'alacarte', 'pos_category' => 'alacarte'],
             ];
 
-            return ApiResponse::success(
-                $categories,
-                'Categories retrieved successfully'
-            );
+            return ApiResponse::success($categories, 'Categories retrieved successfully');
         } catch (\Exception $e) {
             Log::error('V2 Tablet API - categories error: ' . $e->getMessage());
             return ApiResponse::error('Failed to retrieve categories', null, 500);
@@ -169,25 +195,55 @@ class TabletApiController extends Controller
     public function packageDetails(Request $request, int $id)
     {
         try {
-            $validPackageIds = [46, 47, 48];
-            
-            if (!in_array($id, $validPackageIds)) {
-                return ApiResponse::error(
-                    'Invalid package ID. Must be one of: ' . implode(', ', $validPackageIds),
-                    null,
-                    422
-                );
-            }
+            // Resolve the package entity from the app DB using the Krypton menu ID
+            // so the route signature stays backward-compatible with the tablet PWA.
+            $dbPackage = Package::with('modifiers')
+                ->where('krypton_menu_id', $id)
+                ->where('is_active', true)
+                ->first();
 
-            // Fetch package with image and tax
-            $package = Menu::with(['image', 'tax'])->find($id);
+            $usesLegacyFallback = ! $dbPackage;
 
-            if (!$package) {
+            if ($usesLegacyFallback && ! in_array($id, self::LEGACY_PACKAGE_IDS, true)) {
                 return ApiResponse::error('Package not found', null, 404);
             }
 
-            // Load modifiers using the static method
-            $modifiers = Menu::getModifiers($id);
+            // Bulk-load the package menu + all its modifier menus from Krypton.
+            $modifierMenuIds = $dbPackage
+                ? $dbPackage->modifiers->pluck('krypton_menu_id')->filter()->toArray()
+                : Menu::getModifiers($id)->pluck('id')->filter()->toArray();
+            $allIds = array_unique(array_merge([$id], $modifierMenuIds));
+
+            $kryptonMenus = Menu::with(['image', 'tax', 'group'])
+                ->whereIn('id', $allIds)
+                ->get()
+                ->keyBy('id');
+
+            $package = $kryptonMenus->get($id);
+
+            if (! $package) {
+                return ApiResponse::error('Package not found in POS', null, 404);
+            }
+
+            // Resolve modifier Krypton menu models in configured order.
+            $modifiers = $dbPackage
+                ? $dbPackage->modifiers
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
+                    ->filter()
+                    ->values()
+                : Menu::getModifiers($id)
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->id) ?? $pm)
+                    ->filter()
+                    ->values();
+
+            // If a configured package has no mapped modifiers yet, fall back to
+            // the legacy map so package details still include modifier options.
+            if ($dbPackage && $modifiers->isEmpty() && in_array($id, self::LEGACY_PACKAGE_IDS, true)) {
+                $modifiers = Menu::getModifiers($id)
+                    ->map(fn ($pm) => $kryptonMenus->get($pm->id) ?? $pm)
+                    ->filter()
+                    ->values();
+            }
 
             // Filter by meat category if provided
             if ($request->has('meat_category')) {
@@ -250,6 +306,25 @@ class TabletApiController extends Controller
             Log::error("V2 Tablet API - package details error (ID: $id): " . $e->getMessage());
             return ApiResponse::error('Failed to retrieve package details', null, 500);
         }
+    }
+
+    /**
+     * Build legacy package menu models with their corresponding legacy modifiers.
+     *
+     * @return Collection<int, Menu>
+     */
+    private function buildLegacyPackages(): Collection
+    {
+        $legacyPackages = Menu::with(['image', 'tax', 'group'])
+            ->whereIn('id', self::LEGACY_PACKAGE_IDS)
+            ->get();
+
+        return $legacyPackages
+            ->map(function (Menu $menu) {
+                $menu->setRelation('modifiers', Menu::getModifiers((int) $menu->id)->values());
+                return $menu;
+            })
+            ->keyBy('id');
     }
 
     /**

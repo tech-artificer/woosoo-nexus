@@ -46,7 +46,7 @@ onMounted(() => {
         <span class="sr-only">Open menu</span>
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" class="w-[160px]">
+    <DropdownMenuContent align="end" class="w-40">
       <!-- <DropdownMenuItem @click="console.log(user)">View</DropdownMenuItem> -->
       <!-- <DropdownMenuItem>Modify Role</DropdownMenuItem>
       <DropdownMenuSeparator />

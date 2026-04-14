@@ -1,4 +1,5 @@
 <?php
+// Audit Fix (2026-04-06): align admin routes with existing Orders page actions and package admin module wiring.
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -11,17 +12,25 @@ use App\Http\Controllers\Admin\{
     MenuController,
     UserController,
     Device\DeviceController,
+    ManualController,
     AccessibilityController,
     RoleController,
     PermissionController,
+    PackageController,
+    PackageConfigController,
+    TabletCategoryController,
+    MediaController,
     BranchController,
-    ReverbController
+    ReverbController,
+    MonitoringController
 };
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\EventLogController;
+use App\Http\Controllers\Admin\PosIntegrationController;
 
 use App\Http\Controllers\Admin\Reports\{
     SalesController,
+    ReportController,
 };
 
 // Handle CORS preflight — return 204 No Content with no body
@@ -41,12 +50,15 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     // Dashboard is available to any authenticated user
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/stats', [DashboardController::class, 'apiStats'])->name('dashboard.stats');
 
     // Admin-only routes
     Route::middleware(['can:admin'])->group(function () {
         // Orders
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
+        Route::post('/orders/print', [OrderController::class, 'print'])->name('orders.print');
         Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
         Route::post('/orders/print', [OrderController::class, 'print'])->name('orders.print');
         Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
@@ -61,6 +73,94 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/menus', [MenuController::class, 'index'])->name('menus');
         Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');
         Route::post('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
+        // Packages (legacy Package model)
+        Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
+        Route::post('/packages', [PackageController::class, 'store'])->name('packages.store');
+        Route::put('/packages/{package}', [PackageController::class, 'update'])->name('packages.update');
+        Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
+        // Package Configs (TabletPackageConfig — admin-managed tablet packages)
+        Route::get('/package-configs', [PackageConfigController::class, 'index'])->name('package-configs.index');
+        Route::post('/package-configs', [PackageConfigController::class, 'store'])->name('package-configs.store');
+        Route::put('/package-configs/{packageConfig}', [PackageConfigController::class, 'update'])->name('package-configs.update');
+        Route::delete('/package-configs/{packageConfig}', [PackageConfigController::class, 'destroy'])->name('package-configs.destroy');
+        Route::post('/package-configs/{packageConfig}/menus', [PackageConfigController::class, 'syncAllowedMenus'])->name('package-configs.sync-menus');
+        // Tablet Categories
+        Route::get('/tablet-categories', [TabletCategoryController::class, 'index'])->name('tablet-categories.index');
+        Route::post('/tablet-categories', [TabletCategoryController::class, 'store'])->name('tablet-categories.store');
+        Route::put('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'update'])->name('tablet-categories.update');
+        Route::delete('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'destroy'])->name('tablet-categories.destroy');
+        Route::post('/tablet-categories/{tabletCategory}/menus', [TabletCategoryController::class, 'syncMenus'])->name('tablet-categories.sync-menus');
+        Route::post('/tablet-categories/{tabletCategory}/menus/attach', [TabletCategoryController::class, 'attachMenus'])->name('tablet-categories.menus.attach');
+        Route::delete('/tablet-categories/{tabletCategory}/menus/{menuId}', [TabletCategoryController::class, 'detachMenu'])->name('tablet-categories.menus.detach');
+        Route::post('/tablet-categories/{tabletCategory}/menus/{menuId}/featured', [TabletCategoryController::class, 'toggleFeatured'])->name('tablet-categories.menus.featured');
+        Route::put('/tablet-categories/{tabletCategory}/menus/order', [TabletCategoryController::class, 'updateMenuOrder'])->name('tablet-categories.menus.order');
+        // Media Library
+        Route::get('/media', [MediaController::class, 'index'])->name('media.index');
+        Route::post('/media', [MediaController::class, 'store'])->name('media.store');
+        Route::delete('/media/{medium}', [MediaController::class, 'destroy'])->name('media.destroy');
+        Route::post('/media/from-url', [MediaController::class, 'createFromUrl'])->name('media.from-url');
+        Route::post('/media/{medium}/attach', [MediaController::class, 'attachToMenu'])->name('media.attach');
+        Route::delete('/media/{medium}/detach', [MediaController::class, 'detachFromMenu'])->name('media.detach');
+
+        // Admin settings (branch-backed JSON settings)
+        $settingsDefaults = [
+            'theme' => 'light',
+            'itemsPerPage' => 25,
+            'emailNotifications' => true,
+            'orderAlerts' => true,
+            'soundAlerts' => false,
+            'posSystem' => null,
+            'apiBaseUrl' => null,
+            'websocketUrl' => null,
+        ];
+
+        Route::get('/admin/api/settings', function () use ($settingsDefaults) {
+            $branch = app(\App\Services\LocalBranchResolver::class)->resolve();
+
+            if (! $branch) {
+                return response()->json(['message' => 'No active branch configured.'], 422);
+            }
+
+            return response()->json(array_merge($settingsDefaults, $branch->settings ?? []));
+        })->name('admin.settings.get');
+
+        Route::put('/admin/api/settings', function (\Illuminate\Http\Request $request) use ($settingsDefaults) {
+            $branch = app(\App\Services\LocalBranchResolver::class)->resolve();
+
+            if (! $branch) {
+                return response()->json(['message' => 'No active branch configured.'], 422);
+            }
+
+            $incoming = $request->validate([
+                'theme' => ['nullable', 'string', 'in:light,dark,system'],
+                'itemsPerPage' => ['nullable', 'integer', 'min:1', 'max:200'],
+                'emailNotifications' => ['nullable', 'boolean'],
+                'orderAlerts' => ['nullable', 'boolean'],
+                'soundAlerts' => ['nullable', 'boolean'],
+                'posSystem' => ['nullable', 'string', 'max:100'],
+                'apiBaseUrl' => ['nullable', 'url', 'max:2048'],
+                'websocketUrl' => ['nullable', 'url', 'max:2048'],
+            ]);
+
+            $branch->settings = array_merge($branch->settings ?? [], $incoming);
+            $branch->save();
+
+            return response()->json($branch->settings ?? []);
+        })->name('admin.settings.put');
+
+        Route::get('/admin/settings', function () {
+            return Inertia::render('Admin/Settings');
+        })->name('admin.settings.page');
+
+        // POS Integration settings
+        Route::prefix('integrations/pos')->name('integrations.pos.')->group(function () {
+            Route::get('/',                [PosIntegrationController::class, 'index'])->name('index');
+            Route::post('/',               [PosIntegrationController::class, 'store'])->name('store');
+            Route::post('/test',           [PosIntegrationController::class, 'testConnection'])->name('test');
+            Route::put('/{integration}',   [PosIntegrationController::class, 'update'])->name('update');
+            Route::delete('/{integration}',[PosIntegrationController::class, 'destroy'])->name('destroy');
+        });
+
         // User
         Route::resource('/users', UserController::class);
         Route::prefix('users')->name('users.')->group(function () {
@@ -69,14 +169,13 @@ Route::middleware(['auth'])->group(function () {
             Route::post('bulk-destroy', [UserController::class, 'bulkDestroy'])->name('bulk-destroy');
             Route::post('bulk-restore', [UserController::class, 'bulkRestore'])->name('bulk-restore');
         });
-        // Roles & Permissions
-        Route::resource('/roles', RoleController::class);
+        // Roles & Permissions — specific routes declared before resource to prevent param shadowing
         Route::post('/roles/bulk-destroy', [RoleController::class, 'bulkDestroy'])->name('roles.bulk-destroy');
-        // Sync permissions for a role (expects array of permission names)
         Route::post('/roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
-        // Permissions management
-        Route::resource('/permissions', PermissionController::class)->only(['index', 'store', 'destroy']);
+        Route::resource('/roles', RoleController::class);
+        // Permissions management — bulk action before resource
         Route::post('/permissions/bulk-destroy', [PermissionController::class, 'bulkDestroy'])->name('permissions.bulk-destroy');
+        Route::resource('/permissions', PermissionController::class)->only(['index', 'store', 'destroy']);
         // Branch
         Route::resource('/branches', BranchController::class)->except(['show', 'create', 'edit']);
         Route::prefix('branches')->name('branches.')->group(function () {
@@ -84,6 +183,13 @@ Route::middleware(['auth'])->group(function () {
             Route::post('bulk-destroy', [BranchController::class, 'bulkDestroy'])->name('bulk-destroy');
             Route::post('bulk-restore', [BranchController::class, 'bulkRestore'])->name('bulk-restore');
         });
+
+        Route::get('/devices/download-apk/{channel?}', [DeviceController::class, 'downloadApk'])
+            ->where('channel', 'release|debug')
+            ->name('devices.download-apk');
+
+        Route::get('/devices/download-certificate', [DeviceController::class, 'downloadCertificate'])
+            ->name('devices.download-certificate');
 
         Route::resource('/devices', DeviceController::class);
         Route::prefix('devices')->name('devices.')->group(function () {
@@ -100,6 +206,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/service-requests', [ServiceRequestController::class, 'index'])->name('service-requests.index');
         // Event logs viewer
         Route::get('/event-logs', [EventLogController::class, 'index'])->name('event-logs.index');
+
+        // Admin manual
+        Route::get('/manual', [ManualController::class, 'index'])->name('manual.index');
+        Route::get('/manual/{id}/edit', [ManualController::class, 'edit'])->name('manual.edit');
+        Route::put('/manual/{id}', [ManualController::class, 'update'])->name('manual.update');
+        Route::post('/manual/upload-image', [ManualController::class, 'uploadImage'])->name('manual.upload.image');
 
         // Reverb Service Management
         Route::prefix('reverb')->name('reverb.')->group(function () {
@@ -152,13 +264,27 @@ Route::middleware(['auth'])->group(function () {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
             }
         })->name('pos.fill-order');
+
+        // Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [ReportController::class, 'index'])->name('index');
+            Route::get('/daily-sales', [ReportController::class, 'dailySales'])->name('daily-sales');
+            Route::get('/menu-items', [ReportController::class, 'menuItems'])->name('menu-items');
+            Route::get('/hourly-sales', [ReportController::class, 'hourlySales'])->name('hourly-sales');
+            Route::get('/guest-count', [ReportController::class, 'guestCount'])->name('guest-count');
+            Route::get('/print-audit', [ReportController::class, 'printAudit'])->name('print-audit');
+            Route::get('/order-status', [ReportController::class, 'orderStatus'])->name('order-status');
+            Route::get('/discount-tax', [ReportController::class, 'discountTax'])->name('discount-tax');
+        });
     });
-    
-    // Route::prefix('reports')->group(function () {
-    //     Route::get('/sales', [SalesController::class, 'index'])->name('reports.sales'); 
-    //     // Route::get('{type}', [ReportController::class, 'index'])->name('reports.index'); 
-    //     // Route::get('{type}/export', [ReportController::class, 'export']); // CSV export
-    // });
+
+    // Monitoring is an admin operational surface and exposes queue, database,
+    // device-order, and print-failure telemetry. Keep it behind the admin gate.
+    Route::middleware(['can:admin'])->prefix('monitoring')->name('monitoring.')->group(function () {
+        Route::get('/', [MonitoringController::class, 'index'])->name('index');
+        Route::get('/metrics', [MonitoringController::class, 'metrics'])->name('metrics');
+        Route::post('/purge-print-events', [MonitoringController::class, 'purgePrintEvents'])->name('purge-print-events');
+    });
 
 });
 

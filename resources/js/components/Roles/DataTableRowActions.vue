@@ -82,7 +82,7 @@ const deleteRole = (role: Role) => {
         <span class="sr-only">Open menu</span>
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" class="w-[160px]">
+    <DropdownMenuContent align="end" class="w-40">
       <DropdownMenuItem class="cursor-pointer" @click="openSheet">
         Edit Role
       </DropdownMenuItem>

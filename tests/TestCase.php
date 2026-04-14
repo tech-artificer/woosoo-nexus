@@ -64,12 +64,20 @@ abstract class TestCase extends BaseTestCase
                 });
             }
 
+            if (! $schema->hasTable('menu_groups')) {
+                $schema->create('menu_groups', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->string('name')->nullable();
+                });
+            }
+
             if (! $schema->hasTable('menus')) {
                 $schema->create('menus', function (Blueprint $table) {
                     $table->increments('id');
                     $table->string('name')->nullable();
                     $table->string('receipt_name')->nullable();
                     $table->decimal('price', 8, 2)->default(0);
+                    $table->integer('menu_group_id')->nullable();
                 });
             }
 
@@ -143,6 +151,7 @@ abstract class TestCase extends BaseTestCase
                 $table->integer('session_id')->nullable();
                 $table->integer('order_id')->nullable();
                 $table->string('order_number')->nullable();
+                $table->uuid('order_uuid')->nullable()->unique();
                 $table->string('status')->nullable();
                 $table->decimal('subtotal', 8, 2)->nullable();
                 $table->decimal('tax', 8, 2)->nullable();
@@ -154,6 +163,7 @@ abstract class TestCase extends BaseTestCase
                 $table->timestamp('printed_at')->nullable();
                 $table->string('printed_by')->nullable();
                 $table->timestamps();
+                $table->softDeletes();
             });
 
             if ($testingSchema->hasTable('device_orders')) {
@@ -167,6 +177,7 @@ abstract class TestCase extends BaseTestCase
                 $table->integer('session_id')->nullable();
                 $table->integer('order_id')->nullable();
                 $table->string('order_number')->nullable();
+                $table->uuid('order_uuid')->nullable()->unique();
                 $table->string('status')->nullable();
                 $table->decimal('subtotal', 8, 2)->nullable();
                 $table->decimal('tax', 8, 2)->nullable();
@@ -178,6 +189,7 @@ abstract class TestCase extends BaseTestCase
                 $table->timestamp('printed_at')->nullable();
                 $table->string('printed_by')->nullable();
                 $table->timestamps();
+                $table->softDeletes();
             });
 
             // Ensure device_order_items has the expected columns by dropping
@@ -200,6 +212,7 @@ abstract class TestCase extends BaseTestCase
                 $table->string('note')->nullable();
                 $table->integer('seat_number')->nullable();
                 $table->integer('index')->nullable();
+                $table->boolean('is_refill')->default(false);
                 $table->timestamps();
                 $table->softDeletes();
             });
@@ -222,6 +235,7 @@ abstract class TestCase extends BaseTestCase
                 $table->string('note')->nullable();
                 $table->integer('seat_number')->nullable();
                 $table->integer('index')->nullable();
+                $table->boolean('is_refill')->default(false);
                 $table->timestamps();
                 $table->softDeletes();
             });

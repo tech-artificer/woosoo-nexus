@@ -8,7 +8,6 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use App\Models\DeviceOrder;
-use App\Helpers\OrderBroadcastPayload;
 
 class OrderPrinted implements ShouldBroadcastNow
 {
@@ -42,8 +41,40 @@ class OrderPrinted implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
+        $this->deviceOrder->loadMissing(['device', 'table', 'printEvent']);
+        $table = $this->deviceOrder->device?->table ?? $this->deviceOrder->table;
+
         return [
-            'order' => OrderBroadcastPayload::make($this->deviceOrder),
+            'print_event_id' => $this->deviceOrder->printEvent?->id,
+            'device_id' => $this->deviceOrder->device_id,
+            'order_id' => $this->deviceOrder->order_id,
+            'session_id' => $this->deviceOrder->session_id,
+            'print_type' => 'INITIAL',
+            'refill_number' => null,
+            'tablename' => $table?->name,
+            'created_at' => $this->deviceOrder->created_at?->toIso8601String(),
+            'order' => [
+                'id' => $this->deviceOrder->id,
+                'order_id' => $this->deviceOrder->order_id,
+                'order_number' => $this->deviceOrder->order_number,
+                'device_id' => $this->deviceOrder->device_id,
+                'table_id' => $this->deviceOrder->table_id,
+                'branch_id' => $this->deviceOrder->branch_id,
+                'status' => $this->deviceOrder->status,
+                'is_printed' => $this->deviceOrder->is_printed ?? false,
+                'printed_at' => $this->deviceOrder->printed_at?->toIso8601String(),
+                'total' => $this->deviceOrder->total,
+                'created_at' => $this->deviceOrder->created_at?->toIso8601String(),
+                'updated_at' => $this->deviceOrder->updated_at?->toIso8601String(),
+                'device' => $this->deviceOrder->device ? [
+                    'id' => $this->deviceOrder->device->id,
+                    'name' => $this->deviceOrder->device->name,
+                ] : null,
+                'table' => $table ? [
+                    'id' => $table->id,
+                    'name' => $table->name,
+                ] : null,
+            ],
         ];
     }
 

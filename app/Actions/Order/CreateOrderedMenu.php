@@ -52,13 +52,32 @@ class CreateOrderedMenu
             $seatNumber = $item['seat_number'] ?? 1;
             $index = $item['index'] ?? ($key + 1);
             $note = $item['note'] ?? '';
-            // Avoid touching the external POS `menus` table during tests.
+            
+            // Package indicators are POS context markers (set meal parents), not regular menu items.
+            // Prefer the is_package flag sent by the client (validated in StoreDeviceOrderRequest);
+            // fall back to the legacy hardcoded ID list for backward compatibility.
+            $isPackageIndicator = $item['is_package'] ?? in_array($menuId, [46, 47, 48, 49]);
             $menuModel = null;
-            if (! (app()->environment('testing') || env('APP_ENV') === 'testing')) {
-                $menuModel = Menu::find($menuId);
+
+            if (! $isPackageIndicator) {
+                try {
+                    $menuModel = Menu::find($menuId);
+                } catch (\Throwable $e) {
+                    report($e);
+                    $menuModel = null;
+                }
+
+                if ($menuModel === null) {
+                    throw new \RuntimeException("Menu item not found: {$menuId}");
+                }
             }
 
-            $price = $item['price'] ?? ($menuModel->price ?? 0.00);
+            // For non-package items, always use the server-side DB price.
+            // Fallback to client-supplied price only when DB lookup fails (null).
+            // Package indicators have no menu record and must use client-supplied price.
+            $price = (!$isPackageIndicator && $menuModel !== null)
+                ? $menuModel->price
+                : ($item['price'] ?? 0.00);
             $priceLevelId = $this->getMenuPriceLevel($menuId);
             $orderId = $attr['order_id'];
             $orderCheckId = $attr['order_check_id'] ?? null;
@@ -66,13 +85,15 @@ class CreateOrderedMenu
 
             $unitPrice = (float) $price;
             $totalItemPrice = $unitPrice * $quantity;
-            $taxRate = 0.10;
+            $taxRate = config('api.krypton.tax_rate', 0.10);
             $taxAmount = round($totalItemPrice * $taxRate, 2);
             $subTotal = round($totalItemPrice + $taxAmount, 2);
-            $orderedMenu = $this->createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId);
+            $orderedMenu = $this->createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, $isPackageIndicator);
 
             $local = null;
-            if (!empty($attr['device_order_id'])) {
+            // Allow callers to opt-out of creating local mirror rows.
+            $mirrorLocal = $attr['mirror_local'] ?? true;
+            if ($mirrorLocal && !empty($attr['device_order_id'])) {
                 $localPayload = [
                     'order_id' => $attr['device_order_id'],
                     // Store the package/menu id as ordered_menu_id (package_id),
@@ -92,34 +113,57 @@ class CreateOrderedMenu
                 $local = DeviceOrderItems::create($localPayload);
             }
 
-            $created[] = [
-                'pos' => (array) $orderedMenu,
-                'local' => $local ? $local->toArray() : null,
-            ];
+            if ($mirrorLocal) {
+                $created[] = [
+                    'pos' => (array) $orderedMenu,
+                    'local' => $local ? $local->toArray() : null,
+                ];
+            } else {
+                // Return the POS object directly when caller will mirror local items.
+                $created[] = $orderedMenu;
+            }
         }
 
         return $created;
     }
 
-    protected function createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId)
+    protected function createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, bool $isPackageIndicator = false)
     {
-        // During tests avoid querying the POS `menus` table or calling
-        // stored procedures. Provide sensible defaults for the menu
-        // attributes required by the stored-proc parameters and returned
-        // result shape.
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        // $isPackageIndicator is resolved by the caller from the validated request payload.
+        // Fallback: the caller defaults to false, which is safe for regular menu items.
+        
+        if ($isPackageIndicator) {
+            // Package indicator - use stub without querying database
             $menu = (object) [
-                'name' => 'Menu ' . $menuId,
-                'receipt_name' => 'Menu ' . $menuId,
-                'kitchen_name' => 'Menu ' . $menuId,
+                'name' => 'Package ' . $menuId,
+                'receipt_name' => 'Package ' . $menuId,
+                'kitchen_name' => 'Package ' . $menuId,
                 'description' => '',
                 'is_for_kitchen_display' => true,
             ];
+        } elseif (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            $menu = Menu::find($menuId);
+
+            if (! $menu) {
+                throw new \RuntimeException("Menu item not found: {$menuId}");
+            }
         } else {
-            $menu = Menu::findOrFail($menuId);
+            try {
+                $menu = Menu::findOrFail($menuId);
+            } catch (\Throwable $e) {
+                // If menu not found in POS DB, create stub with menu ID
+                report($e);
+                $menu = (object) [
+                    'name' => 'Menu ' . $menuId,
+                    'receipt_name' => 'Menu ' . $menuId,
+                    'kitchen_name' => 'Menu ' . $menuId,
+                    'description' => '',
+                    'is_for_kitchen_display' => true,
+                ];
+            }
         }
         $totalItemPrice = round($unitPrice * $quantity, 2);
-        $taxAmount = round($totalItemPrice * 0.10, 2);
+        $taxAmount = round($totalItemPrice * config('api.krypton.tax_rate', 0.10), 2);
         $subTotal = round($totalItemPrice + $taxAmount, 2);
         $now = Carbon::now()->format('H:i:s');
         $false = false;
@@ -179,7 +223,7 @@ class CreateOrderedMenu
         $placeholders = implode(', ', array_fill(0, count($params), '?'));
         // If running tests, do not call the POS stored procedure. Return
         // a lightweight object with the expected attributes so calling
-        // code can read `price`, `sub_total`, `tax`, and `note` safely.
+        // code can read `price`, `sub_total`, `tax`, `note`, and `name` safely.
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
             $fake = new \stdClass();
             $fake->id = $menuId;
@@ -187,6 +231,12 @@ class CreateOrderedMenu
             $fake->sub_total = $subTotal;
             $fake->tax = $taxAmount;
             $fake->note = $note;
+            $fake->name = 'Menu ' . $menuId; // Ensure name is always present for broadcasts
+            $fake->receipt_name = 'Menu ' . $menuId;
+            $fake->menu_id = $menuId;
+            $fake->quantity = $quantity;
+            $fake->seat_number = $seatNumber;
+            $fake->index = $index;
             return $fake;
         }
 

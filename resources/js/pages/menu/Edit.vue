@@ -123,7 +123,7 @@ onMounted(() => {
       </Tooltip>
     </TooltipProvider>
 
-    <DialogContent class="sm:max-w-[600px]">
+    <DialogContent class="sm:max-w-150">
       <DialogHeader class="flex flex-col gap-2 justify-start">
         <div class="flex justify-start mb-5">
           <!-- Image Preview -->

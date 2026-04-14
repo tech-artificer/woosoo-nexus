@@ -26,8 +26,24 @@ class SessionApiController extends Controller
             $session = null;
         }
 
-        // Return session at root so Axios clients can read `data.id` directly.
-        return response()->json($session);
+        // Safety: return null if session is closed (date_time_closed is set).
+        // NOTE: KryptonSession is the shared POS cashier session — all tablets in the
+        // same restaurant use the same session ID by design. Device-scoped filtering
+        // does not apply here; device isolation is enforced at the order level via device_id.
+        if ($session && isset($session->date_time_closed) && $session->date_time_closed !== null) {
+            Log::info('SessionApiController@current: Latest session is closed, returning null', ['session_id' => $session->id]);
+            $session = null;
+        }
+
+        // Return session nested under `data` with server-authoritative timing so PWA
+        // clients can correct for clock skew. The existing `responseData?.data ?? responseData`
+        // fallback in the PWA store handles both this new format and any cached old responses.
+        return response()->json([
+            'data'                    => $session,
+            'server_time'             => now()->toIso8601String(),
+            'session_started_at'      => $session?->date_time_opened,
+            'session_duration_seconds'=> $session ? 14400 : null,
+        ]);
     }
 
     /**

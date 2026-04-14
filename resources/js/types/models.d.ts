@@ -11,6 +11,7 @@ export interface User {
     is_admin: boolean;
     
     deleted_at?: string;
+    email_verified_at?: string | null;
     roles: Role[];
 }
 
@@ -74,6 +75,7 @@ export interface DeviceOrder {
     name: string;
     device_id: number;
     order_id: number | string | null;
+    order_uuid?: string | null;
     order_number: string;
     /** Combined from OrderStatus enum + raw backend strings (e.g. 'in_progress') */
     status: OrderStatus | string;
@@ -133,11 +135,14 @@ export interface Order {
     transaction_no: number;
     guest_count: number;
     reprint_count: number;
+    items?: OrderedMenu[];
     orderCheck?: OrderCheck;
     orderedMenus?: OrderedMenu[];
     device?: Device;
     deviceOrder?: DeviceOrder;
     table?: Table;
+    status?: string;
+    [key: string]: unknown;
 }
 export interface OrderedMenu {
     id?: number;
@@ -171,10 +176,14 @@ export interface DeviceRegistrationCode {
 }
 
 export interface ServiceRequest {
+    id?: number;
     device_order_id: number;
     order_id: number;
     table_service_id: number;
     table_service_name: string;
+    status?: string;
+    is_active?: boolean;
+    created_at?: string;
 }
 
     

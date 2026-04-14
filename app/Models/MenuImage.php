@@ -12,11 +12,13 @@ class MenuImage extends Model
     protected $table = 'menu_images';
     protected $primaryKey = 'id';
 
-    protected $fillable = ['path', 'menu_id'];
+    protected $fillable = ['path', 'menu_id', 'media_file_id', 'image_type', 'sort_order'];
 
     protected $casts = [
-        'id' => 'integer',
-        'menu_id' => 'integer',
+        'id'            => 'integer',
+        'menu_id'       => 'integer',
+        'media_file_id' => 'integer',
+        'sort_order'    => 'integer',
     ];
 
     protected static function booted()

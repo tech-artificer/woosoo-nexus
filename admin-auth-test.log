@@ -1,0 +1,10 @@
+﻿﻿﻿﻿﻿
+   PASS  Tests\Feature\Admin\AdminAuthorizationTest
+  ✓ non-admin users cannot access users index                            0.79s  
+  ✓ admins can access users index                                        0.09s  
+  ✓ non-admin users cannot access branches index                         0.05s  
+  ✓ admins with branch permission can access branches index              0.09s  
+
+  Tests:    4 passed (4 assertions)
+  Duration: 1.28s
+

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import InputError from '@/components/InputError.vue'
 import {
   Sheet,
   SheetClose,
@@ -73,7 +74,7 @@ watch(() => props.open, (newValue) => {
 
 <template>
   <Sheet :open="open" @update:open="emit('update:open', $event)">
-    <SheetContent class="sm:max-w-[540px]">
+    <SheetContent class="sm:max-w-135">
       <SheetHeader>
         <SheetTitle>{{ branch ? 'Edit Branch' : 'Add Branch' }}</SheetTitle>
         <SheetDescription>
@@ -81,20 +82,18 @@ watch(() => props.open, (newValue) => {
         </SheetDescription>
       </SheetHeader>
 
-      <form @submit.prevent="submit" class="space-y-6 py-6">
+      <form @submit.prevent="submit" class="flex flex-col gap-6 py-6">
         <div class="space-y-2">
           <Label for="name">
-            Branch Name <span class="text-red-500">*</span>
+            Branch Name <span class="text-destructive">*</span>
           </Label>
           <Input
             id="name"
             v-model="form.name"
             placeholder="Enter branch name"
-            :class="form.errors.name ? 'border-red-500' : ''"
+            required
           />
-          <p v-if="form.errors.name" class="text-sm text-red-500">
-            {{ form.errors.name }}
-          </p>
+          <InputError :message="form.errors.name" />
         </div>
 
         <div class="space-y-2">
@@ -103,12 +102,9 @@ watch(() => props.open, (newValue) => {
             id="location"
             v-model="form.location"
             placeholder="Enter branch location/address"
-            :class="form.errors.location ? 'border-red-500' : ''"
             rows="3"
           />
-          <p v-if="form.errors.location" class="text-sm text-red-500">
-            {{ form.errors.location }}
-          </p>
+          <InputError :message="form.errors.location" />
         </div>
 
         <SheetFooter>
@@ -118,7 +114,7 @@ watch(() => props.open, (newValue) => {
             </Button>
           </SheetClose>
           <Button type="submit" :disabled="form.processing">
-            {{ form.processing ? 'Saving...' : (branch ? 'Update' : 'Create') }}
+            {{ form.processing ? 'Saving…' : (branch ? 'Update Branch' : 'Create Branch') }}
           </Button>
         </SheetFooter>
       </form>

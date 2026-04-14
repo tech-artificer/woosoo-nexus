@@ -28,7 +28,7 @@ class BranchPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create branch');
+        return $user->hasPermissionTo('create branches');
     }
 
     /**
@@ -36,7 +36,7 @@ class BranchPolicy
      */
     public function update(User $user, Branch $branch): bool
     {
-        return $user->hasPermissionTo('edit branch');
+        return $user->hasPermissionTo('update branches');
     }
 
     /**
@@ -44,7 +44,7 @@ class BranchPolicy
      */
     public function delete(User $user, Branch $branch): bool
     {
-        return $user->hasPermissionTo('delete branch');
+        return $user->hasPermissionTo('delete branches');
     }
 
     /**
@@ -52,7 +52,7 @@ class BranchPolicy
      */
     public function restore(User $user, Branch $branch): bool
     {
-        return $user->hasPermissionTo('delete branch');
+        return $user->hasPermissionTo('delete branches');
     }
 
     /**
@@ -60,6 +60,6 @@ class BranchPolicy
      */
     public function forceDelete(User $user, Branch $branch): bool
     {
-        return $user->hasPermissionTo('delete branch');
+        return $user->hasPermissionTo('delete branches');
     }
 }

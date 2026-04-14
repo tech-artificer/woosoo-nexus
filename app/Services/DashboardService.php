@@ -71,6 +71,43 @@ class DashboardService
         return $query->sum('guest_count') ?? 0;
     }
 
+    /**
+     * Get top selling menu items for today (or a date range).
+     */
+    public function getTopItems(int $limit = 5, $startDate = null, $endDate = null): array
+    {
+        $query = DeviceOrder::query();
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        } else {
+            $query->whereDate('created_at', Carbon::today());
+        }
+
+        $orders = $query->whereIn('status', [
+            OrderStatus::COMPLETED,
+            OrderStatus::CONFIRMED,
+        ])->with('items')->get();
+
+        $totals = [];
+        foreach ($orders as $order) {
+            foreach ($order->items as $item) {
+                $name = $item->name ?? $item->menu_name ?? 'Unknown';
+                $qty  = (int) ($item->quantity ?? 1);
+                $price = (float) ($item->price ?? $item->unit_price ?? 0);
+                if (!isset($totals[$name])) {
+                    $totals[$name] = ['name' => $name, 'qty' => 0, 'revenue' => 0.0];
+                }
+                $totals[$name]['qty'] += $qty;
+                $totals[$name]['revenue'] += $price * $qty;
+            }
+        }
+
+        usort($totals, fn($a, $b) => $b['qty'] <=> $a['qty']);
+
+        return array_slice(array_values($totals), 0, $limit);
+    }
+
     public function getSalesData($days = 7) {
         $today = Carbon::today();
         $start = $today->copy()->subDays($days - 1)->startOfDay();

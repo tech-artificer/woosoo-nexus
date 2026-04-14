@@ -8,6 +8,7 @@ use App\Models\DeviceOrder;
 use App\Observers\OrderUpdateLogObserver;
 use App\Observers\DeviceOrderObserver;
 use App\Services\Krypton\KryptonContextService;
+use App\Services\LocalBranchResolver;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -25,6 +26,9 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 // use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -35,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(KryptonContextService::class, fn () => new KryptonContextService());
+        $this->app->singleton(LocalBranchResolver::class, fn () => new LocalBranchResolver());
         // Register test-only service provider when running tests so we can
         // bind POS/Krypton repositories to fakes for isolation.
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
@@ -47,6 +52,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(KryptonContextService $contextService): void
     {
+        RateLimiter::for('device-order-create', function (Request $request) {
+            $deviceId = $request->user('device')?->id ?? $request->user()?->id;
+            $tokenKey = $request->bearerToken();
+
+            return Limit::perMinute(10)->by(
+                $deviceId
+                    ? 'device:' . $deviceId
+                    : ($tokenKey ? 'token:' . sha1($tokenKey) : $request->fingerprint())
+            );
+        });
+
         // Always return plain JSON (no "data" wrapper)
         JsonResource::withoutWrapping();
 

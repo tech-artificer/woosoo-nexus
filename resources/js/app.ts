@@ -1,6 +1,26 @@
-// Register service worker for PWA
+// Register service worker only in production. In dev, unregister stale workers
+// so Vite HMR requests are never intercepted or cached.
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
+        if (import.meta.env.DEV) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(registration => registration.unregister()));
+
+                if ('caches' in window) {
+                    const cacheKeys = await caches.keys();
+                    await Promise.all(
+                        cacheKeys
+                            .filter(key => key.startsWith('woosoo-nexus-'))
+                            .map(key => caches.delete(key))
+                    );
+                }
+            } catch (err) {
+                console.warn('Service worker cleanup in dev failed:', err);
+            }
+            return;
+        }
+
         navigator.serviceWorker.register('/service-worker.js').catch(err => {
             console.warn('Service worker registration failed:', err);
         });
@@ -43,18 +63,10 @@ import Pusher from 'pusher-js';
 // Make Pusher globally available for Echo
 window.Pusher = Pusher;
 
-if( 'performance' in window ) {
-    console.log('This browser supports performance.now()');
-    console.log(window.performance.now());
-    window.performance.now();
-}else{
-    console.log('This browser does not support performance.now()');
-}
  // Get the CSRF token
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };
-console.log(import.meta.env);
 try {
     window.Echo = new Echo({
         broadcaster: import.meta.env.VITE_BROADCAST_DRIVER ?? 'reverb',
@@ -71,8 +83,7 @@ try {
     });
     
 } catch (error) {
-    console.log( import.meta.env)
-    console.log('[BOOTSTRAP] Error initializing Echo:', error);
+    console.warn('[BOOTSTRAP] Error initializing Echo:', error);
 }
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';

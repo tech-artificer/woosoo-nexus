@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,7 +12,7 @@ use Illuminate\Support\Str;
 
 class Branch extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'branches';
 
@@ -19,6 +20,13 @@ class Branch extends Model
         'branch_uuid',
         'name',
         'location',
+        'is_active',
+        'settings',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'settings' => 'array',
     ];
 
     protected $hidden = [

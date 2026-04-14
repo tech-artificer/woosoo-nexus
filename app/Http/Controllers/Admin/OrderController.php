@@ -1,74 +1,65 @@
 <?php
+// Audit Fix (2026-04-06): restore missing admin order actions and route handlers used by Orders UI.
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\Krypton\KryptonContextService;
 use Inertia\Inertia;
-use App\Repositories\Krypton\OrderRepository;
-use App\Repositories\Krypton\TableRepository;
-use App\Models\Krypton\Order;
-use App\Models\Krypton\OrderCheck;
 use App\Models\DeviceOrder;
 use App\Models\Device;
 use App\Models\Krypton\Table as KryptonTable;
 use App\Enums\OrderStatus;
-use App\Models\Krypton\Session;
 use App\Services\Krypton\OrderService;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Enum as EnumRule;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderCompleted as OrderCompletedEvent;
+use App\Events\PrintOrder;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrderController extends Controller
 {
-    /**
-     * Render the admin Orders page with live orders, history, devices, and tables.
-     */
+    public function __construct(private readonly OrderService $orderService)
+    {
+    }
+
     public function index(Request $request)
     {
-        $statuses = collect((array) $request->query('status', []))
-            ->flatMap(function ($value) {
-                return is_string($value) ? explode(',', $value) : [$value];
-            })
-            ->map(fn ($value) => trim((string) $value))
+        $search = trim((string) $request->query('search', ''));
+        $statusFilter = collect(explode(',', (string) $request->query('status', '')))
+            ->map(fn (string $status) => trim($status))
             ->filter()
             ->values();
-
-        $search = trim((string) $request->query('search', ''));
-        $deviceId = $request->query('device_id');
-        $tableId = $request->query('table_id');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
 
-        $orders = DeviceOrder::query()
-            ->with(['device', 'table'])
-            ->activeOrder()
-            ->when($statuses->isNotEmpty(), function ($query) use ($statuses) {
-                $query->whereIn('status', $statuses->all());
-            })
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('order_number', 'like', "%{$search}%")
-                        ->orWhereHas('device', function ($deviceQuery) use ($search) {
-                            $deviceQuery->where('name', 'like', "%{$search}%");
-                        });
-                });
-            })
-            ->when($deviceId, function ($query) use ($deviceId) {
-                $query->where('device_id', $deviceId);
-            })
-            ->when($tableId, function ($query) use ($tableId) {
-                $query->where('table_id', $tableId);
-            })
-            ->when($dateFrom, function ($query) use ($dateFrom) {
-                $query->whereDate('created_at', '>=', $dateFrom);
-            })
-            ->when($dateTo, function ($query) use ($dateTo) {
-                $query->whereDate('created_at', '<=', $dateTo);
-            })
+        $ordersQuery = DeviceOrder::with(['device', 'table'])
+            ->activeOrder();
+
+        if ($statusFilter->isNotEmpty()) {
+            $ordersQuery->whereIn('status', $statusFilter->all());
+        }
+
+        if ($search !== '') {
+            $ordersQuery->where(function (Builder $query) use ($search) {
+                $query->where('order_number', 'like', '%' . $search . '%')
+                    ->orWhere('order_id', 'like', '%' . $search . '%')
+                    ->orWhereHas('device', function (Builder $deviceQuery) use ($search) {
+                        $deviceQuery->where('name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        if (! empty($dateFrom)) {
+            $ordersQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if (! empty($dateTo)) {
+            $ordersQuery->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $orders = $ordersQuery
             ->latest()
             ->get();
 
@@ -114,20 +105,92 @@ class OrderController extends Controller
     }
 
     /**
+     * Show one order from admin context.
+     * Keeps backward compatibility with /orders/{id} route while rendering the existing page.
+     */
+    public function show(int $id)
+    {
+        $order = DeviceOrder::with(['items.menu', 'serviceRequests', 'table', 'device', 'printEvents'])->findOrFail($id);
+
+        if (request()->expectsJson() || request()->wantsJson()) {
+            return response()->json([
+                'order' => $order,
+            ]);
+        }
+
+        return Inertia::render('Orders/Index', [
+            'title' => 'Orders',
+            'description' => 'Manage and monitor live orders',
+            'orders' => DeviceOrder::with(['device', 'table'])->activeOrder()->latest()->get(),
+            'orderHistory' => DeviceOrder::with(['device', 'table'])->completedOrder()->latest()->limit(100)->get(),
+            'devices' => Device::select('id', 'name')->get(),
+            'tables' => KryptonTable::select('id', 'name')->get(),
+            'selectedOrderId' => $order->id,
+        ]);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(int $id)
-    {   
-        $deviceOrder = DeviceOrder::find($id); 
-      
+    {
+        $deviceOrder = DeviceOrder::findOrFail($id);
+
         $deviceOrder->update(['status' => OrderStatus::VOIDED]);
         $this->orderService->voidOrder($deviceOrder);
-         //Run the console command
-        // $exitCode = Artisan::call('broadcast:order-voided', [
-        //     'order_id' => $deviceOrder->order_id
 
-     
-        return redirect()->back()->with('success');
+        return redirect()->back()->with('success', 'Order voided successfully.');
+    }
+
+    /**
+     * Mark one order as completed by external POS order id and broadcast update.
+     */
+    public function complete(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => ['required'],
+        ]);
+
+        $order = DeviceOrder::where('order_id', $validated['order_id'])->first();
+
+        if (! $order) {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        try {
+            $order->update(['status' => OrderStatus::COMPLETED]);
+            event(new OrderStatusUpdated($order));
+            event(new OrderCompletedEvent($order));
+        } catch (\Throwable $e) {
+            Log::error('Failed to complete order', [
+                'order_id' => $validated['order_id'],
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to complete order.');
+        }
+
+        return redirect()->back()->with('success', 'Order completed successfully.');
+    }
+
+    /**
+     * Trigger print dispatch for a specific order by external order id.
+     */
+    public function print(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => ['required'],
+        ]);
+
+        $order = DeviceOrder::where('order_id', $validated['order_id'])->first();
+
+        if (! $order) {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        PrintOrder::dispatch($order);
+
+        return redirect()->back()->with('success', 'Order sent to printer.');
     }
 
     /**
@@ -200,6 +263,14 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Invalid status transition.');
         }
 
+        // Broadcast status update
+        event(new OrderStatusUpdated($order));
+
+        // If completed, also dispatch the completed event
+        if ($newStatus === OrderStatus::COMPLETED) {
+            event(new OrderCompletedEvent($order));
+        }
+
         return redirect()->back()->with('success', true);
     }
 
@@ -222,6 +293,10 @@ class OrderController extends Controller
                 $deviceOrder = DeviceOrder::find($id);
                 if (! $deviceOrder) continue;
                 $deviceOrder->update(['status' => $status]);
+                event(new OrderStatusUpdated($deviceOrder));
+                if ($status === OrderStatus::COMPLETED) {
+                    event(new OrderCompletedEvent($deviceOrder));
+                }
                 $updated++;
             } catch (\Throwable $e) {
                 Log::error('Failed to update order status', ['id' => $id, 'error' => $e->getMessage()]);
@@ -230,46 +305,5 @@ class OrderController extends Controller
         }
 
         return redirect()->back()->with('success', "{$updated} order(s) updated.");
-    }
-
-    /**
-     * Complete a single order (admin action).
-     * Updates status to COMPLETED, observer broadcasts event.
-     */
-    public function complete(Request $request)
-    {
-        $validated = $request->validate([
-            'order_id' => ['required', 'integer'],
-        ]);
-
-        $order = DeviceOrder::where('order_id', $validated['order_id'])->firstOrFail();
-        
-        // Update status → Observer automatically dispatches OrderCompleted event
-        $order->update(['status' => OrderStatus::COMPLETED]);
-
-        return redirect()->back()->with('success', 'Order completed successfully');
-    }
-
-    /**
-     * Mark order as printed and dispatch print event (admin action).
-     */
-    public function print(Request $request)
-    {
-        $validated = $request->validate([
-            'order_id' => ['required', 'integer'],
-        ]);
-
-        $order = DeviceOrder::where('order_id', $validated['order_id'])->firstOrFail();
-        
-        // Update is_printed flag
-        $order->update([
-            'is_printed' => true,
-            'printed_at' => now(),
-        ]);
-
-        // Manually dispatch OrderPrinted event for real-time notification
-        \App\Events\Order\OrderPrinted::dispatch($order);
-
-        return redirect()->back()->with('success', 'Print job dispatched');
     }
 }

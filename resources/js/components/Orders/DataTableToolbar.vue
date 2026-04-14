@@ -213,6 +213,7 @@ const handleExport = () => {
         variant="outline"
         size="sm"
         class="h-8"
+        aria-label="Export orders to CSV"
         @click="handleExport"
       >
         <Download class="mr-2 h-4 w-4" />
@@ -224,6 +225,7 @@ const handleExport = () => {
         variant="outline"
         size="sm"
         class="h-8"
+        aria-label="Refresh orders list"
         @click="handleRefresh"
       >
         <RefreshCw class="h-4 w-4" />

@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Device;
-use App\Models\Branch;
+use App\Services\LocalBranchResolver;
 use Illuminate\Support\Str;
 
 class DeviceSeeder extends Seeder
@@ -14,10 +14,10 @@ class DeviceSeeder extends Seeder
      */
     public function run(): void
     {
-        $branch = Branch::first();
+        $branch = app(LocalBranchResolver::class)->resolve();
         
         if (!$branch) {
-            $this->command->error('No branch found. Please run DatabaseSeeder first to create a branch.');
+            $this->command->error('Single-branch install must have exactly one active branch before devices can be seeded.');
             return;
         }
 

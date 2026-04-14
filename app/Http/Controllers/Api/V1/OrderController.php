@@ -97,6 +97,7 @@ class OrderController extends Controller
             return [
                 'id' => $order->id,
                 'order_id' => $order->order_id,
+                'order_uuid' => $order->order_uuid,
                 'order_number' => $order->order_number,
                 'status' => $order->status,
                 'total' => $order->total,
@@ -140,6 +141,7 @@ class OrderController extends Controller
             'data' => [
                 'id' => $order->id,
                 'order_id' => $order->order_id,
+                'order_uuid' => $order->order_uuid,
                 'order_number' => $order->order_number,
                 'status' => $order->status,
                 'total' => $order->total,

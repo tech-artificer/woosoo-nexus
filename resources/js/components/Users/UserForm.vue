@@ -74,33 +74,35 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-6">
     <Separator class="my-0" />
-    <form @submit.prevent="submit" class="p-4 flex flex-col gap-4">
+    <form @submit.prevent="submit" class="px-4 sm:px-6 py-6 flex flex-col gap-6">
 
-      <div class="flex flex-col gap-3">
-        <Label for="name">Name</Label>
-        <Input type="text" v-model="form.name" placeholder="John Doe" />
+      <div class="space-y-2">
+        <Label for="name">Name <span class="text-destructive">*</span></Label>
+        <Input type="text" v-model="form.name" placeholder="John Doe" required />
         <InputError :message="form.errors.name" />
       </div>
 
-      <div class="flex flex-col gap-3">
-        <Label for="email">Email</Label>
-        <Input type="email" v-model="form.email" placeholder="email@example" />
+      <div class="space-y-2">
+        <Label for="email">Email <span class="text-destructive">*</span></Label>
+        <Input type="email" v-model="form.email" placeholder="email@example.com" required />
         <InputError :message="form.errors.email" />
       </div>
 
-      <div class="flex flex-row justify-between gap-2">
+      <div class="flex flex-col lg:flex-row gap-6">
 
-        <div class="flex flex-col gap-2">
-          <Label for="Role">Role</Label>
-          <span class="text-xs text-muted-foreground">User can have multiple roles</span>
-          <div class="flex flex-col gap-2">
-            <div v-for="role in roles" :key="role.name" class="flex justify-start items-center gap-2">
+        <div class="flex-1 space-y-3" role="group" aria-labelledby="roles-label">
+          <div>
+            <Label id="roles-label" class="text-sm font-semibold">Roles</Label>
+            <p class="text-sm text-muted-foreground mt-1">User can have multiple roles</p>
+          </div>
+          <div class="space-y-3 p-4 rounded-lg border bg-muted/30">
+            <div v-for="role in roles" :key="role.name" class="flex items-center gap-3">
               <Checkbox :id="`role-${role.name}`" :model-value="form.roles.includes(role.name)"
                 @update:model-value="(checked: any) => toggleRole(role.name, checked)" />
               <label :for="`role-${role.name}`"
-                class="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize">
+                class="text-sm font-medium cursor-pointer select-none capitalize leading-tight">
                 {{ role.name }}
               </label>
             </div>
@@ -108,11 +110,14 @@ onMounted(() => {
           <InputError :message="form.errors.roles" />
         </div>
 
-        <div class="flex flex-col gap-2">
-          <Label for="branch">Branch</Label>
-          <span class="text-xs text-muted-foreground">User can have multiple branches</span>
-          <div class="flex flex-col gap-2">
+        <div class="flex-1 space-y-3" role="group" aria-labelledby="branches-label">
+          <div>
+            <Label id="branches-label" class="text-sm font-semibold">Branches</Label>
+            <p class="text-sm text-muted-foreground mt-1">User can have multiple branches</p>
+          </div>
+          <div class="space-y-3 p-4 rounded-lg border bg-muted/30">
             <!-- branch checkboxes go here -->
+            <p class="text-sm text-muted-foreground italic">No branches available</p>
           </div>
           <InputError :message="(form.errors as any).branches" />
         </div>
@@ -122,21 +127,17 @@ onMounted(() => {
     </form>
   </div>
   <SheetFooter>
-    <div class="flex items-start flex-row gap-2 p-4">
+    <div class="flex items-center gap-3 px-4 sm:px-6 py-4 border-t bg-muted/30">
       <SheetClose as-child>
-
-        <Button type="button" variant="destructive" class="cursor-pointer ">
+        <Button type="button" variant="outline" class="cursor-pointer">
           Cancel
         </Button>
-
       </SheetClose>
-      <Button type="button" @click.prevent="submit" variant="outline"
-        class="hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark text-woosoo-primary-dark cursor-pointer"
+      <Button type="button" @click.prevent="submit"
         :disabled="form.processing">
-        Save Changes
+        {{ form.processing ? 'Saving…' : (formType === 'create' ? 'Create User' : 'Save Changes') }}
       </Button>
     </div>
   </SheetFooter>
 
 </template>
-                {{ branch.name }}

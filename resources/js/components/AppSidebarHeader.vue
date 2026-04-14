@@ -28,7 +28,6 @@ withDefaults(
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
             </div>
-             <NavUser class="hover:text-woosoo-dark-gray w-fit h-auto" /> 
         </div>
     </header>
 </template>

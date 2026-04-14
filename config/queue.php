@@ -13,7 +13,10 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    // Production default: 'sync' (no queue worker required).
+    // Switch to 'database' only after running `php artisan queue:table && artisan migrate`
+    // and starting a managed `php artisan queue:work` service (see STABILITY_PLAN docs).
+    'default' => env('QUEUE_CONNECTION', 'sync'),
 
     /*
     |--------------------------------------------------------------------------
@@ -40,7 +43,7 @@ return [
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
-            'after_commit' => false,
+            'after_commit' => true,
         ],
 
         'beanstalkd' => [

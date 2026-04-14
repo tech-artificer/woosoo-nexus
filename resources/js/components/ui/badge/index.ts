@@ -17,8 +17,8 @@ export const badgeVariants = cva(
           'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
        success:
           'text-xs border-transparent bg-woosoo-green-100 text-woosoo-green [a&]:hover:bg-primary/90', 
-        active: "bg-green-500 text-green-100",
-        accent: "bg-blue-500 text-blue-100",
+        active: "border-transparent bg-woosoo-green/15 text-woosoo-green border-woosoo-green/25",
+        accent: "border-transparent bg-woosoo-blue/15 text-woosoo-blue border-woosoo-blue/25",
       },
     },
     defaultVariants: {

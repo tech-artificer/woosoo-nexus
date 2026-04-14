@@ -1,7 +1,9 @@
+<!-- Audit Fix (2026-04-06): expose package management page in admin sidebar. -->
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { computed } from 'vue'
 import NavMain from '@/components/NavMain.vue';
+import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -12,11 +14,19 @@ import {
     MonitorSmartphone, 
     UtensilsCrossed,  
     Lock,
+    ShieldCheck,
     Bell,
     Building2,
     Accessibility,
     FileText,
-    Activity
+    Activity,
+    Package,
+    TrendingUp,
+    BarChart2,
+    Users,
+    Clock,
+    Printer,
+    Tag,
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
@@ -43,6 +53,13 @@ const mainNavItems: NavItem[] = [
         title: 'Menus',
         href: route('menus'),
         icon: UtensilsCrossed,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Packages',
+        href: route('packages.index'),
+        icon: Package,
         isActive: false,
         hasSubItems: false,
     },
@@ -80,16 +97,16 @@ const configNavItems: NavItem[] = [
         hasSubItems: false,
     },
     {
-        title: 'Roles & Permissions',
+        title: 'Roles',
         href: route('roles.index'),
         icon: Lock,
         isActive: false,
         hasSubItems: false,
     }, 
     {
-        title: 'Permissions',
+        title: 'Permission Registry',
         href: route('permissions.index'),
-        icon: Lock,
+        icon: ShieldCheck,
         isActive: false,
         hasSubItems: false,
     },
@@ -114,6 +131,13 @@ const configNavItems: NavItem[] = [
         isActive: false,
         hasSubItems: false,
     },
+    {
+        title: 'System Monitoring',
+        href: route('monitoring.index'),
+        icon: MonitorSmartphone,
+        isActive: false,
+        hasSubItems: false,
+    },
 ];
 
 // const reportNavItems: NavItem[] = [
@@ -125,6 +149,65 @@ const configNavItems: NavItem[] = [
 //         hasSubItems: false,
 //     }, 
 // ];
+
+const reportNavItems: NavItem[] = [
+    {
+        title: 'Reports Hub',
+        href: route('reports.index'),
+        icon: TrendingUp,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Daily Sales',
+        href: route('reports.daily-sales'),
+        icon: BarChart2,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Menu Items',
+        href: route('reports.menu-items'),
+        icon: UtensilsCrossed,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Hourly Sales',
+        href: route('reports.hourly-sales'),
+        icon: Clock,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Guest Count',
+        href: route('reports.guest-count'),
+        icon: Users,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Order Status',
+        href: route('reports.order-status'),
+        icon: ListOrdered,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Print Audit',
+        href: route('reports.print-audit'),
+        icon: Printer,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Discount & Tax',
+        href: route('reports.discount-tax'),
+        icon: Tag,
+        isActive: false,
+        hasSubItems: false,
+    },
+];
 
 </script>
 
@@ -144,10 +227,11 @@ const configNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="isAdmin ? mainNavItems : [mainNavItems[0]]" title="Main"  />
-            <!-- <NavMain :items="reportNavItems" title="Reports" /> -->
+            <NavMain v-if="isAdmin" :items="reportNavItems" title="Reports" />
+            <NavMain v-if="isAdmin" :items="configNavItems" title="Configuration" />
         </SidebarContent>
-        <SidebarFooter v-if="isAdmin">
-            <NavMain :items="configNavItems" title="Configuration" />
+        <SidebarFooter>
+            <NavUser />
         </SidebarFooter>
     </Sidebar>
     <slot />

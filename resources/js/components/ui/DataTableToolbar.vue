@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { computed } from 'vue'
 import DataTableFacetedFilter from '@/components/ui/DataTableFacetedFilter.vue'
+import { useFacetedOptions } from '@/composables/useTableFacetedOptions'
 
 interface DataTableToolbarProps {
   table: Table<any>
@@ -20,32 +21,9 @@ function hasColumn(id: string) {
   return table.getAllColumns().some((c: any) => c.id === id)
 }
 
-const courseOptions = computed(() => {
-  if (!hasColumn('course')) return []
-  const col = table.getColumn('course')
-  if (!col) return []
-  const facets = col.getFacetedUniqueValues?.()
-  if (!facets) return []
-  return Array.from(facets.keys()).map((v: any) => ({ label: String(v), value: String(v) }))
-})
-
-const categoryOptions = computed(() => {
-  if (!hasColumn('category')) return []
-  const col = table.getColumn('category')
-  if (!col) return []
-  const facets = col.getFacetedUniqueValues?.()
-  if (!facets) return []
-  return Array.from(facets.keys()).map((v: any) => ({ label: String(v), value: String(v) }))
-})
-
-const groupOptions = computed(() => {
-  if (!hasColumn('group')) return []
-  const col = table.getColumn('group')
-  if (!col) return []
-  const facets = col.getFacetedUniqueValues?.()
-  if (!facets) return []
-  return Array.from(facets.keys()).map((v: any) => ({ label: String(v), value: String(v) }))
-})
+const { options: courseOptions, hasColumn: hasCourseColumn } = useFacetedOptions(table, 'course')
+const { options: categoryOptions, hasColumn: hasCategoryColumn } = useFacetedOptions(table, 'category')
+const { options: groupOptions, hasColumn: hasGroupColumn } = useFacetedOptions(table, 'group')
 
 const isAvailableFiltered = computed(() => {
   if (!hasColumn('is_available')) return false
@@ -64,21 +42,21 @@ const isAvailableFiltered = computed(() => {
           @input="(e: any) => { if (hasColumn('name')) table.getColumn('name')?.setFilterValue(e.target.value) }"
         />
       <DataTableFacetedFilter
-        v-if="hasColumn('course')"
+        v-if="hasCourseColumn"
         :column="table.getColumn('course')"
         title="Course"
         :options="courseOptions"
       />
 
       <DataTableFacetedFilter
-        v-if="hasColumn('category')"
+        v-if="hasCategoryColumn"
         :column="table.getColumn('category')"
         title="Category"
         :options="categoryOptions"
       />
 
       <DataTableFacetedFilter
-        v-if="hasColumn('group')"
+        v-if="hasGroupColumn"
         :column="table.getColumn('group')"
         title="Group"
         :options="groupOptions"

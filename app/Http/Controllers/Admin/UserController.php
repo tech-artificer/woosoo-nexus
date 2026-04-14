@@ -25,7 +25,7 @@ class UserController extends Controller
      */
     public function index()
     {
-    //    $this->authorize('viewAny', User::class);
+        $this->authorize('admin');
 
         $perPage = 15;
         $users = User::with('roles')->withTrashed()->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
@@ -88,6 +88,8 @@ class UserController extends Controller
      */
     public function create()
     {
+        $this->authorize('admin');
+
         $roles = Role::all();
         $branches = Branch::all();
 
@@ -104,6 +106,8 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request)
     {
+        $this->authorize('admin');
+
         $data = $request->validated();
 
         $user = User::create([
@@ -135,6 +139,8 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
+        $this->authorize('admin');
+
         $roles = Role::all();
         $branches = Branch::all();
 
@@ -152,6 +158,8 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user)
     {
+        $this->authorize('admin');
+
         $data = $request->validated();
 
         $user->update([
@@ -179,7 +187,7 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {  
-        // $this->authorize('delete', $user);
+        $this->authorize('admin');
 
         $user->delete();
         return redirect()->route('users.index')->with('success', 'User deleted successfully.');
@@ -187,7 +195,7 @@ class UserController extends Controller
 
     public function restore(Request $request, int $id)
     {
-        // $this->authorize('restore', $request->user());
+        $this->authorize('admin');
 
         $user = User::withTrashed()->findOrFail($id);
         $user->restore();
@@ -200,6 +208,8 @@ class UserController extends Controller
      */
     public function bulkDestroy(Request $request)
     {
+        $this->authorize('admin');
+
         $validated = $request->validate([
             'ids' => ['required', 'array'],
             'ids.*' => ['exists:users,id'],
@@ -221,6 +231,8 @@ class UserController extends Controller
      */
     public function bulkRestore(Request $request)
     {
+        $this->authorize('admin');
+
         $validated = $request->validate([
             'ids' => ['required', 'array'],
             'ids.*' => ['exists:users,id'],
