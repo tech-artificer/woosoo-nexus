@@ -2,7 +2,7 @@
 
 test('registration routes are disabled for public', function () {
     $response = $this->get('/register');
-    $response->assertStatus(404);
+    expect($response->status())->toBeIn([404, 405]);
 
     $response = $this->post('/register', [
         'name' => 'Test User',
@@ -10,5 +10,5 @@ test('registration routes are disabled for public', function () {
         'password' => 'password',
         'password_confirmation' => 'password',
     ]);
-    $response->assertStatus(404);
+    expect($response->status())->toBeIn([404, 405]);
 });

@@ -328,6 +328,7 @@ class PrinterPrintEventsTest extends TestCase
         $order = DeviceOrder::create([
             'order_id' => 11111,
             'device_id' => $deviceA->id,
+            'branch_id' => $branchA->id,
             'guest_count' => 1,
             'total' => 10,
             'subtotal' => 10,

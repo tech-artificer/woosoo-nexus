@@ -47,6 +47,7 @@ class DeviceOrderResource extends BaseResource
             'order_uuid' => $this->order_uuid,
             'order_number' => $this->order_number,
             'package_id' => $packageId,
+            'device_id' => $this->device_id,
             'device' => $device ? new DeviceResource($device) : null,
             'order' => $isTesting ? null : $orderRelation,
             'table' => $table,
