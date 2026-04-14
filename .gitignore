@@ -48,4 +48,5 @@ coverage/
 .rnd
 storage/logs/*.log
 /.claude/
+.git-backups/
 public/woosoo-ca.crt
