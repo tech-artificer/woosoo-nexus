@@ -450,7 +450,7 @@ onUnmounted(() => {
         </div>
 
         <Tabs default-value="live_orders" class="space-y-4">
-                <TabsList class="grid h-11 w-full grid-cols-2 p-1">
+                <TabsList class="inline-flex h-11 w-auto p-1">
                     <TabsTrigger value="live_orders">
                         <span class="flex items-center gap-2">
                             Live Orders
