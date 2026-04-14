@@ -90,5 +90,8 @@
     "bugs": {
         "url": "https://github.com/tech-artificer/woosoo-nexus/issues"
     },
-    "homepage": "https://github.com/tech-artificer/woosoo-nexus#readme"
+    "homepage": "https://github.com/tech-artificer/woosoo-nexus#readme",
+    "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+    }
 }
