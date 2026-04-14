@@ -30,8 +30,17 @@ class User extends Authenticatable
         'user_uuid',
         'name',
         'email',
-        'is_admin',
         'password',
+    ];
+
+    /**
+     * The attributes that are NOT mass assignable (security-sensitive fields).
+     *
+     * @var list<string>
+     */
+    protected $guarded = [
+        'is_admin', // Prevent privilege escalation via mass assignment
+        'id',
     ];
 
     /**

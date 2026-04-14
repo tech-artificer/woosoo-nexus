@@ -53,7 +53,10 @@ class DashboardService
             $query->whereDate('created_at', Carbon::now());
         }
 
-        return $query->count();
+        return $query->whereIn('status', [
+            OrderStatus::COMPLETED,
+            OrderStatus::CONFIRMED
+        ])->count();
     }
 
     public function getTotalGuests($startDate = null, $endDate = null) {

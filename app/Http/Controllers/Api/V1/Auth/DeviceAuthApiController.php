@@ -188,7 +188,10 @@ class DeviceAuthApiController extends Controller
             ], 404);
         }
 
-        $device->update(['last_seen_at' => now()]);
+        $device->update([
+            'last_seen_at' => now(),
+            'last_ip_address' => $ip,
+        ]);
         // Revoke all existing tokens (optional)
         $device->tokens()->delete();
 
@@ -296,6 +299,12 @@ class DeviceAuthApiController extends Controller
         if (! $device) {
             return response()->json(['found' => false, 'ip_used' => $ip], 200);
         }
+
+        // Update last seen and IP tracking
+        $device->update([
+            'last_seen_at' => now(),
+            'last_ip_address' => $ip,
+        ]);
 
         // Revoke stale tokens to keep the token table tidy, then issue a fresh one
         $device->tokens()->where('name', 'device-auth')->delete();

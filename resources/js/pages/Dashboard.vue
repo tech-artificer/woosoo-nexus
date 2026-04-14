@@ -54,19 +54,19 @@ const dashCards: DashCards[] = [
         title: `Today's Orders`,
         value: props.totalOrders,
         icon: ArrowUp10,
-        helpText: `${props.guestCount} Guests`,
+        helpText: 'Completed orders today',
     },
     {
         title: `Total Guests`,
         value: props.guestCount,
         icon: Contact,
-        helpText: `${props.totalOrders} Orders`,
+        helpText: 'Guests served today',
     },
     {
         title: `Monthly Sales`,
-        value: props.monthlySales,
+        value: '₱' + props.monthlySales,
         icon: ChartPie,
-        helpText: 'Sales for the month',
+        helpText: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
     },
 ];
 

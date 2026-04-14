@@ -30,10 +30,13 @@ class DatabaseSeeder extends Seeder
         }
 
       
+        $initialAdminEmail = env('INITIAL_ADMIN_EMAIL', 'admin@example.com');
+        $initialAdminName = env('INITIAL_ADMIN_NAME', 'admin');
+
         $adminUser = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => $initialAdminEmail],
             [
-                'name' => 'admin',
+                'name' => $initialAdminName,
                 'password' => bcrypt('password'),
                 'is_admin' => true,
             ]

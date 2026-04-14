@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import AppLayout from '@/layouts/AppLayout.vue';
+import { Head } from '@inertiajs/vue3';
 import { Button } from "@/components/ui/button"
 import {
     Card,
@@ -161,7 +162,7 @@ const openDeviceDetail = (device: Device) => {
 </script>
 
 <template>
-
+    <Head :title="title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-6 px-1 sm:px-2">
@@ -205,7 +206,8 @@ const openDeviceDetail = (device: Device) => {
                            
                                <!-- {{ registrationCodes }} -->
                                <Table>
-                                    <TableCaption>A list of your recent invoices.</TableCaption>
+                                    <TableCaption v-if="!registrationCodes || registrationCodes.length === 0">No activation codes generated yet. Click 'Generate 15 Codes' to create device activation codes.</TableCaption>
+                                    <TableCaption v-else>Device activation codes for registration.</TableCaption>
                                     <TableHeader>
                                     <TableRow>
                                         <TableHead class="">

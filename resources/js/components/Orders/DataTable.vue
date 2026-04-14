@@ -94,7 +94,7 @@ const handleRowClick = (event: MouseEvent, order: DeviceOrder) => {
 <template>
   <div class="space-y-4">
     <DataTableToolbar :table="table" :devices="props.devices" :tables="props.tables" />
-    <div class="overflow-hidden rounded-md border bg-background">
+    <div class="overflow-x-auto rounded-md border bg-background">
       <Table>
         <TableHeader>
           <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">

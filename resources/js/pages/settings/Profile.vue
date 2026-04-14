@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -28,6 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const page = usePage();
 const user = page.props.auth.user as User;
+const isDefaultAdminEmail = computed(() => user.email.trim().toLowerCase() === 'admin@example.com');
 
 const form = useForm({
     name: user.name,
@@ -48,6 +50,13 @@ const submit = () => {
         <SettingsLayout>
             <div class="flex flex-col space-y-6">
                 <HeadingSmall title="Profile information" description="Update your name and email address" />
+
+                <div
+                    v-if="isDefaultAdminEmail"
+                    class="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 dark:border-yellow-900/40 dark:bg-yellow-950/30 dark:text-yellow-100"
+                >
+                    This account is still using the default admin email. Update it to a real address so password recovery and verification emails reach the correct owner.
+                </div>
 
                 <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid gap-2">

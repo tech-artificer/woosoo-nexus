@@ -166,7 +166,8 @@ require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 
 // Dev-only helper route: unauthenticated generator for quick local testing
-if (app()->environment(['local', 'development']) || env('APP_DEBUG')) {
+// SECURITY: Only enabled in local/development environments (not production, even with APP_DEBUG)
+if (app()->environment(['local', 'development'])) {
     // GET avoids CSRF middleware so it's easy to call from curl/browser during local testing
     Route::get('/dev/generate-codes', function (\Illuminate\Http\Request $request) {
         $count = (int) ($request->query('count', 15));

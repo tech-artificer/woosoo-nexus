@@ -133,6 +133,11 @@ const itemStatusLabel = (item: OrderItem) => {
   const orderStatus = String((order.value as any)?.status || '').toLowerCase()
   return orderStatus || 'pending'
 }
+
+const isOrderCompleted = computed(() => {
+  const status = String(order.value?.status || '').toLowerCase()
+  return ['completed', 'voided', 'cancelled', 'archived'].includes(status)
+})
 </script>
 
 <template>
@@ -158,7 +163,13 @@ const itemStatusLabel = (item: OrderItem) => {
             </Button>
             <AlertDialog>
               <AlertDialogTrigger as-child>
-                <Button size="sm">Complete Transaction</Button>
+                <Button 
+                  size="sm" 
+                  :disabled="isOrderCompleted"
+                  :class="{ 'opacity-50 cursor-not-allowed': isOrderCompleted }"
+                >
+                  Complete Transaction
+                </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
