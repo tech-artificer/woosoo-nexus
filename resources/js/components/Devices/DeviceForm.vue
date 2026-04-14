@@ -22,6 +22,14 @@ import {
     SheetFooter,
     SheetClose
 } from '@/components/ui/sheet'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import type { Device, Table } from '@/types/models'
 
 const props = defineProps<{
@@ -86,6 +94,9 @@ const submit = () => {
 }
 
 const isEdit = computed(() => props.formType === 'edit')
+const showTokenDialog = ref(false)
+const generatedToken = ref('')
+
 async function createToken() {
     try {
         const url = route('devices.create.token', props.device?.id)
@@ -94,9 +105,10 @@ async function createToken() {
             const token = res.data.token
             // copy to clipboard then prompt the admin
             await navigator.clipboard.writeText(token).catch(() => {})
-            // Show success via toast + token in alert for easy copying
+            // Show success via toast + token in dialog for easy copying
             toast('Device token copied to clipboard', { description: 'Token issued and ready to paste into the device app.' })
-            alert('Device token:\n' + token + '\n\nThis token was also copied to your clipboard.');
+            generatedToken.value = token
+            showTokenDialog.value = true
         } else {
             toast('Failed to create device token', { description: res?.data?.message ?? 'Unknown error' })
         }
@@ -105,8 +117,6 @@ async function createToken() {
         toast('Failed to create token', { description: err?.response?.data?.message ?? err?.message ?? 'Unknown' })
     }
 }
-
-console.log(selectedTableName)
 </script>
 
 <template>
@@ -115,35 +125,35 @@ console.log(selectedTableName)
         <form  class="p-4 flex flex-col gap-4">
             <div class="flex flex-col gap-3">
                 <Label for="name">Name</Label>
-                <Input type="text" v-model="form.name" placeholder="John Doe" />
+                <Input id="name" type="text" v-model="form.name" placeholder="John Doe" />
                 <InputError :message="form.errors.name" />
             </div>
 
             <div class="flex flex-col gap-3">
                 <Label for="ip_address">IP Address</Label>
-                <Input type="text" v-model="form.ip_address" placeholder="127.0.0.1" />
+                <Input id="ip_address" type="text" inputmode="numeric" v-model="form.ip_address" placeholder="127.0.0.1" />
                 <InputError :message="form.errors.ip_address" />
             </div>
 
             <div class="flex flex-col gap-3">
                 <Label for="port">Port</Label>
-                <Input type="text" v-model="form.port" placeholder="3000" />
+                <Input id="port" type="number" min="1" max="65535" v-model="form.port" placeholder="3000" />
                 <InputError :message="form.errors.port" />
             </div>
 
 
             <div class="flex flex-col gap-3">
                 <Label for="assigned_table">Assigned Table</Label>
-                <Input type="text" :value="selectedTableName" class="w-[100px]" readonly/>
+                <Input id="assigned_table" type="text" :value="selectedTableName" class="w-25" readonly/>
                 <InputError :message="form.errors.port" />
             </div>
 
 
             <div class="flex flex-col">
-                <label class="mb-1 text-sm font-medium">Change Table Assignment</label>
+                <Label for="table_id" class="mb-1">Change Table Assignment</Label>
         
                 <Select v-model="form.table_id">
-                    <SelectTrigger class="w-[180px]">
+                    <SelectTrigger id="table_id" class="w-45">
                         <SelectValue placeholder="Assign a Table" />
                     </SelectTrigger>
                     <SelectContent>
@@ -181,6 +191,23 @@ console.log(selectedTableName)
             </Button>
         </div>
     </SheetFooter>
+
+    <Dialog v-model:open="showTokenDialog">
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Device Token Generated</DialogTitle>
+                <DialogDescription>
+                    This token has been copied to your clipboard. Store it securely.
+                </DialogDescription>
+            </DialogHeader>
+            <div class="rounded-md bg-muted p-4 font-mono text-sm break-all">
+                {{ generatedToken }}
+            </div>
+            <DialogFooter>
+                <Button @click="showTokenDialog = false">Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
 </template>
     font-size: 0.8em;

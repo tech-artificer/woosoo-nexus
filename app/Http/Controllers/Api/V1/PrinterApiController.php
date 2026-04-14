@@ -86,8 +86,9 @@ class PrinterApiController extends Controller
 
         // Do not require a canonical TerminalSession in POS. Treat session_id as
         // an opaque device-local identifier; if provided, we'll filter by it below.
+        // Cast to int for type-safe comparison (session_id is unsignedBigInteger in DB)
 
-        $ordersQuery = DeviceOrder::where('session_id', $sessionId)
+        $ordersQuery = DeviceOrder::where('session_id', (int)$sessionId)
             ->where('is_printed', 0)
             ->whereNotIn('status', ['CANCELLED', 'VOIDED'])
             ->when($since, fn($q) => $q->where('created_at', '>', $since))
@@ -212,7 +213,7 @@ class PrinterApiController extends Controller
 
             // Optionally restrict by session if provided
             if ($request->filled('session_id')) {
-                $eventsQuery->whereHas('deviceOrder', fn($q) => $q->where('session_id', $request->input('session_id')));
+                $eventsQuery->whereHas('deviceOrder', fn($q) => $q->where('session_id', (int)$request->input('session_id')));
             }
 
             $events = $eventsQuery->limit($limit)->get();
@@ -222,7 +223,7 @@ class PrinterApiController extends Controller
                     'id'             => $e->id,
                     'print_event_id' => $e->id,                                  // alias — primary identity key Flutter expects
                     'order_id'       => $e->deviceOrder?->order_id,             // flat mirror of order.order_id
-                    'device_id'      => (string) ($e->deviceOrder?->device_id), // cast to string to match Flutter's deviceId type
+                    'device_id'      => $e->deviceOrder?->device_id !== null ? (string)$e->deviceOrder->device_id : null, // preserve null instead of casting to empty string
                     'session_id'     => $e->deviceOrder?->session_id,
                     'device_order_id' => $e->device_order_id,
                     'event_type' => $e->event_type,
@@ -243,7 +244,7 @@ class PrinterApiController extends Controller
             return response()->json([
                 'success' => true,
                 'count' => $payload->count(),
-                'events' => $payload,
+                'print_events' => $payload,
             ]);
         }
 
@@ -262,7 +263,10 @@ class PrinterApiController extends Controller
                 }
 
                 // authorize device for this event
-                $this->authorizeDeviceForEvent($evt);
+                $authError = $this->authorizeDeviceForEvent($evt);
+                if ($authError) {
+                    return $authError;
+                }
 
                 $res = $this->printEventService->ack($id, $printerId, $printedAt);
 
@@ -287,7 +291,10 @@ class PrinterApiController extends Controller
                     return response()->json(['success' => false, 'message' => 'Event not found'], 404);
                 }
 
-                $this->authorizeDeviceForEvent($evt);
+                $authError = $this->authorizeDeviceForEvent($evt);
+                if ($authError) {
+                    return $authError;
+                }
 
                 $res = $this->printEventService->fail($id, $request->input('error'));
 
@@ -310,19 +317,19 @@ class PrinterApiController extends Controller
         {
             $device = Auth::user();
             if (! $device) {
-                abort(403, 'Unauthenticated device');
+                return response()->json(['success' => false, 'message' => 'Unauthenticated device'], 403);
             }
 
             $order = $evt->deviceOrder;
             if (! $order) {
-                abort(403, 'Event has no associated order');
+                return response()->json(['success' => false, 'message' => 'Event has no associated order'], 403);
             }
 
             if (isset($device->branch_id) && isset($order->branch_id) && $device->branch_id !== $order->branch_id) {
-                abort(403, 'Device not authorized for this branch');
+                return response()->json(['success' => false, 'message' => 'Device not authorized for this branch'], 403);
             }
 
-            return true;
+            return null;
         }
 
     public function heartbeat(PrinterHeartbeatRequest $request)

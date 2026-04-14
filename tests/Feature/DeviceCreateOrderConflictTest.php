@@ -88,6 +88,7 @@ class DeviceCreateOrderConflictTest extends TestCase
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json',
+            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         $response->assertStatus(409);

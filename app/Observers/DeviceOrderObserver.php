@@ -4,6 +4,9 @@ namespace App\Observers;
 
 use App\Models\DeviceOrder;
 use App\Events\Order\OrderStatusUpdated;
+use App\Events\Order\OrderCancelled;
+use App\Events\Order\OrderCompleted;
+use App\Events\Order\OrderVoided;
 use Illuminate\Support\Facades\Log;
 
 class DeviceOrderObserver
@@ -16,8 +19,8 @@ class DeviceOrderObserver
      */
     public function updated(DeviceOrder $deviceOrder): void
     {
-        // Check if status was actually changed (dirty tracking)
-        if ($deviceOrder->isDirty('status')) {
+        // Check if status was actually changed (use post-save change detection)
+        if ($deviceOrder->wasChanged('status')) {
             $oldStatus = $deviceOrder->getOriginal('status');
             $newStatus = $deviceOrder->getAttribute('status');
 
@@ -32,6 +35,19 @@ class DeviceOrderObserver
             // Broadcast OrderStatusUpdated for real-time PWA notification
             // This ensures PWA receives update whether from polling or from status change trigger
             OrderStatusUpdated::dispatch($deviceOrder);
+
+            // Fan-out terminal lifecycle events synchronously (realtime, no queue dependency)
+            if ($newStatusStr === \App\Enums\OrderStatus::COMPLETED->value) {
+                OrderCompleted::dispatch($deviceOrder);
+            }
+
+            if ($newStatusStr === \App\Enums\OrderStatus::VOIDED->value) {
+                OrderVoided::dispatch($deviceOrder);
+            }
+
+            if ($newStatusStr === \App\Enums\OrderStatus::CANCELLED->value) {
+                OrderCancelled::dispatch($deviceOrder);
+            }
         }
     }
 }

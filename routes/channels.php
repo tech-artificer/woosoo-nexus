@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Device;
+use App\Models\DeviceOrder;
 
 // If no broadcasting driver credentials are present (e.g. during CI/composer install),
 // avoid attempting to instantiate the broadcaster (which may construct Pusher)
@@ -15,11 +16,14 @@ if (empty(config('broadcasting.connections.reverb.key')) && empty(config('broadc
 }
 
 Broadcast::channel('device.{deviceId}', function (Device $device, int $deviceId) {
-    return true;
+    return (int) $device->id === (int) $deviceId;
 });
 
 Broadcast::channel('orders.{orderId}', function (Device $device, int $orderId) {
-    return true;
+    return DeviceOrder::query()
+        ->where('order_id', $orderId)
+        ->where('device_id', $device->id)
+        ->exists();
 });
 
 Broadcast::channel('service-requests.{deviceId}', function (User $user, int $deviceId) {

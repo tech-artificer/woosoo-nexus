@@ -45,7 +45,7 @@ function reset() {
         :model-value="search"
         @input="(e: any) => emit('update:search', e.target?.value)"
         @keyup.enter="apply"
-        placeholder="Search requests..."
+        placeholder="Search requests…"
         class="h-8"
       />
     </div>

@@ -20,7 +20,6 @@ use Illuminate\Support\Str;
 // use Illuminate\Routing\Route;
 // use App\Services\Krypton\OrderService;
 // Spatie Roles/Permissions
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -91,7 +90,7 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
         try {
-            if (!DB::connection('mysql')->getPdo() || !Schema::hasTable('roles')) {
+            if (!Schema::hasTable('roles') || !Schema::hasTable('permissions')) {
                 return;
             }
 

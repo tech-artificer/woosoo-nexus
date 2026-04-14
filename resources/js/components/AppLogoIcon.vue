@@ -18,7 +18,7 @@ defineProps<Props>();
 </script>
 
 <template>
-     <img :src="logoPath" alt="Woosoo Logo" />
+     <img :src="logoPath" alt="Woosoo Logo" width="160" height="160" />
 
     <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" :class="className" v-bind="$attrs">
         <path

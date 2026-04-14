@@ -128,7 +128,7 @@ onMounted(() => {
         <div class="flex justify-start mb-5">
           <!-- Image Preview -->
           <div v-if="previewImage" class="flex justify-center">
-            <img :src="previewImage" class="w-32 h-32 object-cover border rounded-lg" alt="Menu Image" />
+            <img :src="previewImage" class="w-32 h-32 object-cover border rounded-lg" alt="Menu Image" width="128" height="128" />
           </div>
         </div>
 

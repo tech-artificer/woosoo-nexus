@@ -35,7 +35,7 @@ const page = usePage();
             <SidebarMenuItem v-for="item in items" :key="item.title">
 
                 <Collapsible v-if="item.hasSubItems"
-                :default-open="page.url.match(item.href) ? true : false"
+                :default-open="page.url.startsWith(item.href) ? true : false"
              
                 class="group/collapsible"
             >
@@ -43,7 +43,7 @@ const page = usePage();
                 <SidebarGroupLabel
                     as-child
                     class="group/label text-sm cursor-pointer"
-                    :is-active="item.href?.match(page.url) ? true : false" 
+                    :is-active="page.url.startsWith(item.href ?? '') ? true : false" 
                     :key="item.title"
                 >  
                     <CollapsibleTrigger class="flex p-0 gap-2">
@@ -56,8 +56,8 @@ const page = usePage();
                     <SidebarGroupContent>
                     <SidebarMenu>
                         <SidebarMenuItem v-for="childItem in item.items" :key="childItem.title">
-                        <SidebarMenuButton as-child :is-active="childItem?.href?.match(page.url) ? true : false" :tooltip="childItem.title">
-                            <Link :is-active="childItem?.href?.match(page.url) ? true : false" :href="childItem.href ?? '#'">
+                        <SidebarMenuButton as-child :is-active="page.url.startsWith(childItem?.href ?? '') ? true : false" :tooltip="childItem.title">
+                            <Link :is-active="page.url.startsWith(childItem?.href ?? '') ? true : false" :href="childItem.href ?? '#'">
                                 <component :is="childItem.icon" class="m-0 h-4 w-4 border-transparent" />
                                 <span class="font-semibold">{{ childItem.title }}</span>
                             </Link>

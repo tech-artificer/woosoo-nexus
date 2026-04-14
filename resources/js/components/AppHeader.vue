@@ -56,13 +56,21 @@ const rightNavItems: NavItem[] = [
 
 import { ref, onMounted, onUnmounted } from 'vue';
 const isScrolled = ref(false);
+
+let scrollHandler: (() => void) | null = null;
+
 onMounted(() => {
-    const handler = () => {
+    scrollHandler = () => {
         isScrolled.value = window.scrollY > 4;
     };
-    window.addEventListener('scroll', handler);
-    handler();
-    onUnmounted(() => window.removeEventListener('scroll', handler));
+    window.addEventListener('scroll', scrollHandler);
+    scrollHandler();
+});
+
+onUnmounted(() => {
+    if (scrollHandler) {
+        window.removeEventListener('scroll', scrollHandler);
+    }
 });
 </script>
 
@@ -144,8 +152,8 @@ onMounted(() => {
                         <AppearanceTabs />
                     </div>
                     <div class="relative flex items-center space-x-1">
-                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                            <Search class="size-5 opacity-80 group-hover:opacity-100" />
+                        <Button variant="ghost" size="icon" aria-label="Search" class="group h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                            <Search class="size-5 opacity-80 group-hover:opacity-100" aria-hidden="true" />
                         </Button>
 
                         <div class="hidden space-x-1 lg:flex">

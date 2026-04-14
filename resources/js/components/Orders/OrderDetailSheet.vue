@@ -7,6 +7,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Clock, Printer, Receipt, RotateCcw, Users } from 'lucide-vue-next'
 
 type OrderItem = OrderedMenu & {
@@ -145,7 +156,23 @@ const itemStatusLabel = (item: OrderItem) => {
             <Button variant="outline" size="sm" @click="emit('print')">
               <Printer class="mr-2 size-4" /> Print Bill
             </Button>
-            <Button size="sm" @click="emit('complete')">Complete Transaction</Button>
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button size="sm">Complete Transaction</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Complete this transaction?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will mark the order as complete and finalize the transaction. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction @click="emit('complete')">Complete Transaction</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 

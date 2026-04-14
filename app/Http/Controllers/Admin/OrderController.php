@@ -27,10 +27,48 @@ class OrderController extends Controller
     /**
      * Render the admin Orders page with live orders, history, devices, and tables.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $orders = DeviceOrder::with(['device', 'table'])
+        $statuses = collect((array) $request->query('status', []))
+            ->flatMap(function ($value) {
+                return is_string($value) ? explode(',', $value) : [$value];
+            })
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->values();
+
+        $search = trim((string) $request->query('search', ''));
+        $deviceId = $request->query('device_id');
+        $tableId = $request->query('table_id');
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+
+        $orders = DeviceOrder::query()
+            ->with(['device', 'table'])
             ->activeOrder()
+            ->when($statuses->isNotEmpty(), function ($query) use ($statuses) {
+                $query->whereIn('status', $statuses->all());
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('order_number', 'like', "%{$search}%")
+                        ->orWhereHas('device', function ($deviceQuery) use ($search) {
+                            $deviceQuery->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($deviceId, function ($query) use ($deviceId) {
+                $query->where('device_id', $deviceId);
+            })
+            ->when($tableId, function ($query) use ($tableId) {
+                $query->where('table_id', $tableId);
+            })
+            ->when($dateFrom, function ($query) use ($dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($query) use ($dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            })
             ->latest()
             ->get();
 
@@ -162,14 +200,6 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Invalid status transition.');
         }
 
-        // Broadcast status update
-        event(new OrderStatusUpdated($order));
-
-        // If completed, also dispatch the completed event
-        if ($newStatus === OrderStatus::COMPLETED) {
-            event(new OrderCompletedEvent($order));
-        }
-
         return redirect()->back()->with('success', true);
     }
 
@@ -192,10 +222,6 @@ class OrderController extends Controller
                 $deviceOrder = DeviceOrder::find($id);
                 if (! $deviceOrder) continue;
                 $deviceOrder->update(['status' => $status]);
-                event(new OrderStatusUpdated($deviceOrder));
-                if ($status === OrderStatus::COMPLETED) {
-                    event(new OrderCompletedEvent($deviceOrder));
-                }
                 $updated++;
             } catch (\Throwable $e) {
                 Log::error('Failed to update order status', ['id' => $id, 'error' => $e->getMessage()]);
@@ -204,5 +230,46 @@ class OrderController extends Controller
         }
 
         return redirect()->back()->with('success', "{$updated} order(s) updated.");
+    }
+
+    /**
+     * Complete a single order (admin action).
+     * Updates status to COMPLETED, observer broadcasts event.
+     */
+    public function complete(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => ['required', 'integer'],
+        ]);
+
+        $order = DeviceOrder::where('order_id', $validated['order_id'])->firstOrFail();
+        
+        // Update status → Observer automatically dispatches OrderCompleted event
+        $order->update(['status' => OrderStatus::COMPLETED]);
+
+        return redirect()->back()->with('success', 'Order completed successfully');
+    }
+
+    /**
+     * Mark order as printed and dispatch print event (admin action).
+     */
+    public function print(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => ['required', 'integer'],
+        ]);
+
+        $order = DeviceOrder::where('order_id', $validated['order_id'])->firstOrFail();
+        
+        // Update is_printed flag
+        $order->update([
+            'is_printed' => true,
+            'printed_at' => now(),
+        ]);
+
+        // Manually dispatch OrderPrinted event for real-time notification
+        \App\Events\Order\OrderPrinted::dispatch($order);
+
+        return redirect()->back()->with('success', 'Print job dispatched');
     }
 }

@@ -77,40 +77,8 @@ class DeviceOrder extends Model
         }
     }
 
-    /**
-     * Set the status attribute, accepting either an OrderStatus enum or a string value.
-     */
-    public function setStatusAttribute($newStatus): void
-    {
-        // Coerce string values to the OrderStatus enum
-        if (is_string($newStatus)) {
-            $newStatus = OrderStatus::from($newStatus);
-        }
-
-        if (!$newStatus instanceof OrderStatus) {
-            $newStatus = OrderStatus::PENDING;
-        }
-
-        // If this is a new model (creating), skip transition validation
-        if (!$this->exists) {
-            $this->attributes['status'] = $newStatus->value;
-            return;
-        }
-
-        $currentStatus = $this->status ?? OrderStatus::PENDING;
-        if (is_string($currentStatus)) {
-            $currentStatus = OrderStatus::from($currentStatus);
-        }
-
-        if (!$currentStatus->canTransitionTo($newStatus)) {
-            throw new \InvalidArgumentException(
-                "Invalid status transition: {$currentStatus->value} → {$newStatus->value}"
-            );
-        }
-
-        // Store the underlying value (string) so casting remains consistent
-        $this->attributes['status'] = $newStatus->value;
-    }
+    // Mutator removed — validation moved to updating event hook in boot()
+    // Laravel's enum casting handles type conversion automatically
 
     public static function generateOrderNumber($orderId): string
     {
@@ -132,13 +100,51 @@ class DeviceOrder extends Model
     {   
         parent::boot();
 
+        // Validate status transitions before saving (replaces mutator logic)
+        static::updating(function (DeviceOrder $model) {
+            // Only validate if status is being changed
+            if ($model->isDirty('status')) {
+                $oldStatus = $model->getOriginal('status');
+                $newStatus = $model->getAttribute('status');
+                
+                // Convert to enums if needed
+                if (is_string($oldStatus)) {
+                    $oldStatus = OrderStatus::from($oldStatus);
+                }
+                if (is_string($newStatus)) {
+                    $newStatus = OrderStatus::from($newStatus);
+                } elseif (!$newStatus instanceof OrderStatus) {
+                    throw new \InvalidArgumentException('Status must be an OrderStatus enum or valid string');
+                }
+                
+                // Validate transition
+                if (!$oldStatus->canTransitionTo($newStatus)) {
+                    throw new \InvalidArgumentException(
+                        "Invalid status transition: {$oldStatus->value} → {$newStatus->value}"
+                    );
+                }
+            }
+        });
+
         static::creating(function ($model) {
-                $model->branch_id = Branch::first()->id;
+            // Auto-assign branch_id from first branch if not set
+            // Skip in testing environment to avoid race conditions
+            if (!$model->branch_id && !app()->environment('testing')) {
+                $firstBranch = Branch::first();
+                if ($firstBranch) {
+                    $model->branch_id = $firstBranch->id;
+                }
+            }
         });
 
         static::creating(function ($model) {
             // Skip auto-generation if order_number already set (e.g., in tests)
             if ($model->order_number) {
+                return;
+            }
+
+            // Skip if order_id is missing (required for generation)
+            if (!$model->order_id) {
                 return;
             }
 
@@ -148,7 +154,7 @@ class DeviceOrder extends Model
             for ($i = 0; $i < $maxAttempts; $i++) {
                 $orderNumber = static::generateOrderNumber($model->order_id);
                 // Check if it already exists to avoid unique constraint violation
-                if (!static::where('order_number', $orderNumber)->exists() && $model->order_id) {
+                if (!static::where('order_number', $orderNumber)->exists()) {
                     $model->order_number = $orderNumber;
                     return; // Number is unique, proceed with creation
                 }

@@ -106,6 +106,7 @@ class KryptonContextService
                     'terminal_service_id' => $terminalService?->id,
                     'employee_id' => $employeeLog?->employee_id,
                     'cashier_employee_id' => $employeeLog?->employee_id,
+                    'server_employee_log_id' => $employeeLog?->id,
                 ];
 
                 return [$currentSessions, $data];

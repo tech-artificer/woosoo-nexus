@@ -2,10 +2,7 @@
 
 namespace App\Broadcasting;
 
-use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 use App\Models\DeviceOrder;
-use Illuminate\Http\Request;
 
 class OrderChannel
 {
@@ -18,18 +15,30 @@ class OrderChannel
     }
 
     /**
-     * Authenticate the user's access to the channel.
+     * Authenticate channel access.
+     *
+     * Channel wildcard value (`$order`) is the order_id from orders.{orderId}.
      */
-        public function join(User $user, $order)
-        {
-        //     // $user = $request->user();
-
-        //     \Log::info('Join check', [
-        //         'user_id' => (int) $user->id,
-        //         'device_id' => (int)$deviceId,
-        //         'is_admin' => $user->is_admin,
-        //     ]);
-
-        //     return t//(int) $user->id === (int) $deviceId || $user->is_admin;
+    public function join($user, $order): bool
+    {
+        if (! $user) {
+            return false;
         }
+
+        if ((bool) ($user->is_admin ?? false)) {
+            return true;
+        }
+
+        $deviceId = (int) ($user->id ?? 0);
+        $orderId = (int) $order;
+
+        if ($deviceId <= 0 || $orderId <= 0) {
+            return false;
+        }
+
+        return DeviceOrder::query()
+            ->where('order_id', $orderId)
+            ->where('device_id', $deviceId)
+            ->exists();
+    }
 }

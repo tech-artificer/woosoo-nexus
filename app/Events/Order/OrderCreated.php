@@ -8,6 +8,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use App\Models\DeviceOrder;
+use App\Helpers\OrderBroadcastPayload;
 
 class OrderCreated implements ShouldBroadcastNow
 {
@@ -41,43 +42,8 @@ class OrderCreated implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
-        $this->deviceOrder->loadMissing(['device', 'table', 'serviceRequests', 'items.menu']);
-        $table = $this->deviceOrder->device->table; // Ensure table relationship is loaded
         return [
-            'order' => [
-                'id' => $this->deviceOrder->id,
-                'order_id' => $this->deviceOrder->order_id,
-                'order_number' => $this->deviceOrder->order_number,
-                'device_id' => $this->deviceOrder->device_id,
-                'table_id' => $this->deviceOrder->table_id,
-                'branch_id' => $this->deviceOrder->branch_id,
-                'session_id' => $this->deviceOrder->session_id,
-                'status' => $this->deviceOrder->status,
-                'items' => $this->deviceOrder->items?->map(fn($it) => [
-                    'id' => $it->id,
-                    'name' => $it->menu?->receipt_name ?? $it->menu?->name ?? null,
-                    'quantity' => $it->quantity ?? null,
-                    'price' => $it->price ?? null,
-                    'is_refill' => $it->is_refill ?? false,
-                ])->values()->all() ?? [],
-                'total' => $this->deviceOrder->total,
-                'tax' => $this->deviceOrder->tax ?? null,
-                'discount' => $this->deviceOrder->discount ?? null,
-                'sub_total' => $this->deviceOrder->sub_total ?? null,
-                'guest_count' => $this->deviceOrder->guest_count ?? null,
-                'created_at' => $this->deviceOrder->created_at?->toIso8601String() ?? null,
-                'updated_at' => $this->deviceOrder->updated_at?->toIso8601String() ?? null,
-                'is_printed' => $this->deviceOrder->is_printed ?? false,
-                'device' => $this->deviceOrder->device ? [
-                    'id' => $this->deviceOrder->device->id,
-                    'name' => $this->deviceOrder->device->name,
-                ] : null,
-                'table' => $table ? [
-                    'id' => $table->id,
-                    'name' => $table->name,
-                ] : null,
-                'serviceRequests' => $this->deviceOrder->serviceRequests ?? [],
-            ],
+            'order' => OrderBroadcastPayload::make($this->deviceOrder),
         ];
     }
 

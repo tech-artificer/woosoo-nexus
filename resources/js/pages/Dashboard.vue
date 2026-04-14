@@ -46,21 +46,21 @@ const breadcrumbs: BreadcrumbItem[] = [
 const dashCards: DashCards[] = [
     {
         title: 'Total Sales Today',
-        value: '₱' + props.totalSales,
+        value: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(props.totalSales)),
         icon: ChartSpline,
-        helpText: '50 Transactions',
+        helpText: `${props.totalOrders} Transactions`,
     },
     {
         title: `Today's Orders`,
         value: props.totalOrders,
         icon: ArrowUp10,
-        helpText: 'Total Orders',
+        helpText: `${props.guestCount} Guests`,
     },
     {
         title: `Total Guests`,
         value: props.guestCount,
         icon: Contact,
-        helpText: 'Total Orders',
+        helpText: `${props.totalOrders} Orders`,
     },
     {
         title: `Monthly Sales`,

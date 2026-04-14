@@ -116,6 +116,7 @@ class OrderRefillTest extends TestCase
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json',
+            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
         ])->postJson('/api/order/1001/refill', $payload);
 
         $response->assertStatus(200)->assertJson(['success' => true]);

@@ -44,15 +44,12 @@ const submit = () => {
                     
                     <Head title="Log in" />
 
-                        <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
+                        <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600" role="status" aria-live="polite">
                             {{ status }}
                         </div> 
 
                     <div class="flex flex-col items-center gap-4">
                         <Link :href="route('home')" class="flex flex-col items-center gap-2 font-medium">
-                            <div class="mb-1 flex h-40 w-40 items-center justify-center rounded-md">
-                                <!-- <AppLogoIcon class="size-40 fill-current text-[var(--foreground)] dark:text-white" /> -->
-                            </div>
                             <span class="sr-only">{{ title }}</span>
                         </Link>
                       
@@ -108,8 +105,8 @@ const submit = () => {
                     </div>
                 </div>
             </div>
-            <div class="relative hidden bg-muted lg:block bg-woosoo-dark-gray">
-                <img src="images/Woosoo Cover Photo_Artboard 1.png" alt="Image"
+            <div class="relative hidden lg:block bg-woosoo-dark-gray">
+                <img src="images/Woosoo Cover Photo_Artboard 1.png" alt="Woosoo restaurant interior" width="1200" height="1600"
                     class="object-contain h-full w-full bg-woosoo-dark-gray">
             </div>
         </div>

@@ -43,7 +43,7 @@ function removeImage() {
 <template>
     <div class="flex flex-col gap-2">
           <div v-if="previewImage" class="flex justify-center">
-            <img :src="previewImage" class="w-32 h-32 object-cover border rounded-lg" />
+            <img :src="previewImage" class="w-32 h-32 object-cover border rounded-lg" width="128" height="128" alt="Preview" />
           </div>
     <form  class="space-y-4">
     <!-- File Input -->
@@ -57,7 +57,7 @@ function removeImage() {
       <!-- <label for="image" class="text-woosoo-dark-gray">Image</label> -->
       <div class="flex gap-2">
         <input type="file" id="image" accept="image/*" class="hidden" @change="onFileChange" ref="fileInput" />
-        <Button class="hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark bg-woosoo-accent cursor-pointer text-gray-100 w-50" @click="onFileChange">
+        <Button class="hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark bg-woosoo-accent cursor-pointer text-gray-100 w-50" @click="($refs as any).fileInput.click()">
           <Upload class="w-4 h-4 mr-2" />
           <span>Upload</span>
         </Button>

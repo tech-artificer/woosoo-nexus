@@ -121,7 +121,9 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
         ->name('device.table');
     Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
     Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
-    Route::post('/devices/create-order', DeviceOrderApiController::class)->name('api.devices.create.order');
+    Route::post('/devices/create-order', DeviceOrderApiController::class)
+        ->middleware('idempotency')
+        ->name('api.devices.create.order');
 
     Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
     Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
@@ -132,8 +134,12 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
     // Refill endpoint (device-authenticated) and alias for print-refill
-    Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->name('api.order.refill');
-    Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->name('api.order.print-refill');
+    Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])
+        ->middleware('idempotency')
+        ->name('api.order.refill');
+    Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])
+        ->middleware('idempotency')
+        ->name('api.order.print-refill');
     
     // Session endpoints for devices
     Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
@@ -172,6 +178,15 @@ Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:de
 // Session alias — PWA calls /api/session/latest; actual route is /api/sessions/current
 Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group(function () {
     Route::get('/session/latest', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.session.latest');
+
+    // Missed-events replay contract for tablet broadcasts.
+    // Returns empty set by default until persistent event-log backfill is introduced.
+    Route::get('/events/missing', function (Request $request) {
+        return response()->json([
+            'events' => [],
+            'hasMore' => false,
+        ]);
+    })->name('api.events.missing');
 });
 
 // Health endpoint — quick check for app DB and POS DB connectivity

@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="asset-base-url" content="{{ asset('') }}">
+        <meta name="theme-color" content="{{ ($appearance ?? 'system') == 'dark' ? '#252525' : '#ffffff' }}" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#252525" media="(prefers-color-scheme: dark)">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -25,10 +27,12 @@
         <style>
             html {
                 background-color: oklch(1 0 0);
+                color-scheme: light;
             }
 
             html.dark {
                 background-color: oklch(0.145 0 0);
+                color-scheme: dark;
             }
         </style>
 
@@ -40,6 +44,9 @@
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap">
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap">
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap">
         <link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
@@ -49,6 +56,9 @@
         @inertiaHead
     </head>
     <body class="font-primary antialiased">
+        <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:rounded focus:shadow-lg">
+            Skip to content
+        </a>
         @inertia
     </body>
 </html>

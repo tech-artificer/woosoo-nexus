@@ -1,30 +1,32 @@
 <template>
   <div class="flex flex-col gap-3">
     <div class="flex items-center gap-2 flex-wrap">
-      <label class="font-medium">Statuses:</label>
-      <div v-for="s in ORDER_STATUS_VALUES" :key="s" class="flex items-center gap-1">
+      <span class="font-medium">Statuses:</span>
+      <label v-for="s in ORDER_STATUS_VALUES" :key="s" class="flex items-center gap-1 cursor-pointer">
         <input type="checkbox" :value="s" v-model="localStatus" @change="apply" />
         <span class="text-sm capitalize">{{ s.replace('_',' ') }}</span>
         <span v-if="counts && counts[s] !== undefined" class="text-xs text-muted-foreground">({{ counts[s] }})</span>
-      </div>
+      </label>
       <button class="ml-2 text-xs px-2 py-1 border rounded" @click="clear">Clear</button>
     </div>
 
     <div class="flex items-center gap-2 flex-wrap">
-      <label class="font-medium">Search:</label>
-      <input class="px-2 py-1 border rounded w-56" type="text" v-model="search" placeholder="Order #, device, table" />
+      <label for="search-input" class="font-medium">Search:</label>
+      <input id="search-input" class="px-2 py-1 border rounded w-56" type="text" v-model="search" placeholder="Order #, device, table…" />
     </div>
 
     <div class="flex items-center gap-2 flex-wrap">
-      <label class="font-medium">Date Range:</label>
-      <input class="px-2 py-1 border rounded" type="date" v-model="date_from" />
+      <span class="font-medium">Date Range:</span>
+      <label for="date-from" class="sr-only">Date from</label>
+      <input id="date-from" class="px-2 py-1 border rounded" type="date" v-model="date_from" />
       <span>to</span>
-      <input class="px-2 py-1 border rounded" type="date" v-model="date_to" />
+      <label for="date-to" class="sr-only">Date to</label>
+      <input id="date-to" class="px-2 py-1 border rounded" type="date" v-model="date_to" />
       <button class="text-xs px-2 py-1 border rounded" @click="apply">Apply</button>
     </div>
 
-    <div class="flex items-center gap-2 flex-wrap" v-if="chips.length">
-      <label class="font-medium">Active:</label>
+    <div class="flex items-center gap-2 flex-wrap" v-if="chips.length" role="status" aria-live="polite">
+      <span class="font-medium">Active:</span>
       <span v-for="c in chips" :key="c" class="text-xs px-2 py-1 bg-muted rounded">{{ c }}</span>
     </div>
   </div>

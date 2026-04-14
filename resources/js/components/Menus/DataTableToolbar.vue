@@ -78,9 +78,9 @@ const handleRefresh = () => {
   <div class="flex items-center justify-between">
     <div class="flex flex-1 flex-wrap items-center gap-2">
       <Input
-        placeholder="Search menus..."
+        placeholder="Search menus…"
         :model-value="(table.getColumn('name')?.getFilterValue() as string) ?? ''"
-        class="h-8 w-[150px] lg:w-[250px]"
+        class="h-8 w-37.5 lg:w-62.5"
         @input="table.getColumn('name')?.setFilterValue($event.target.value)"
       />
 

@@ -4,14 +4,12 @@ namespace App\Events\Order;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-use App\Enums\OrderStatus;
 use App\Models\DeviceOrder;
+use App\Helpers\OrderBroadcastPayload;
 
 class OrderCancelled implements ShouldBroadcastNow
 {
@@ -36,8 +34,7 @@ class OrderCancelled implements ShouldBroadcastNow
     {
         return [
             new Channel('orders.' . $this->deviceOrder->order_id),
-            //  new PrivateChannel('orders.' . $this->deviceOrder->device_id);
-            new PrivateChannel('admin.orders'),
+            new Channel('admin.orders'),
         ];
     }
 
@@ -49,13 +46,7 @@ class OrderCancelled implements ShouldBroadcastNow
     public function broadcastWith()
     {   
         return [
-            'order' => $this->deviceOrder->only([
-                'id', 
-                'order_id', 
-                'order_number', 
-                'device_id', 
-                'status'
-            ])
+            'order' => OrderBroadcastPayload::make($this->deviceOrder),
         ];
     }
 
