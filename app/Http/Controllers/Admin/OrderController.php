@@ -10,11 +10,8 @@ use App\Models\Device;
 use App\Models\Krypton\Table as KryptonTable;
 use App\Enums\OrderStatus;
 use App\Services\Krypton\OrderService;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Enum as EnumRule;
-use App\Events\Order\OrderStatusUpdated;
-use App\Events\Order\OrderCompleted as OrderCompletedEvent;
 use App\Events\PrintOrder;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -205,9 +202,14 @@ class OrderController extends Controller
         $completed = 0;
         foreach ($validated['order_ids'] as $orderId) {
             try {
-                Artisan::call('broadcast:order-completed', [
-                    'order_id' => $orderId
-                ]);
+                $order = DeviceOrder::where('order_id', $orderId)->first();
+                if (! $order) {
+                    Log::warning('bulkComplete: order not found', ['order_id' => $orderId]);
+                    continue;
+                }
+
+                // DeviceOrderObserver dispatches realtime events when status changes.
+                $order->update(['status' => OrderStatus::COMPLETED]);
                 $completed++;
             } catch (\Exception $e) {
                 Log::error("Failed to complete order {$orderId}: " . $e->getMessage());
@@ -263,14 +265,6 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Invalid status transition.');
         }
 
-        // Broadcast status update
-        event(new OrderStatusUpdated($order));
-
-        // If completed, also dispatch the completed event
-        if ($newStatus === OrderStatus::COMPLETED) {
-            event(new OrderCompletedEvent($order));
-        }
-
         return redirect()->back()->with('success', true);
     }
 
@@ -293,10 +287,6 @@ class OrderController extends Controller
                 $deviceOrder = DeviceOrder::find($id);
                 if (! $deviceOrder) continue;
                 $deviceOrder->update(['status' => $status]);
-                event(new OrderStatusUpdated($deviceOrder));
-                if ($status === OrderStatus::COMPLETED) {
-                    event(new OrderCompletedEvent($deviceOrder));
-                }
                 $updated++;
             } catch (\Throwable $e) {
                 Log::error('Failed to update order status', ['id' => $id, 'error' => $e->getMessage()]);
