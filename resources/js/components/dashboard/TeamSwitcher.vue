@@ -94,7 +94,7 @@ const selectedTeam = ref<Team>(groups[0].teams[0])
       <PopoverContent class="w-[200px] p-0">
         <Command>
           <CommandList>
-            <CommandInput placeholder="Search team..." />
+            <CommandInput placeholder="Search team…" />
             <CommandEmpty>No team found.</CommandEmpty>
             <CommandGroup v-for="group in groups" :key="group.label" :heading="group.label">
               <CommandItem

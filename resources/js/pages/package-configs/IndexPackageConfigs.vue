@@ -191,7 +191,7 @@ function confirmDelete() {
     </Dialog>
 
     <!-- Edit dialog -->
-    <Dialog :open="editingId !== null" @update:open="if (!$event) editingId = null">
+    <Dialog :open="editingId !== null" @update:open="(val) => { if (!val) editingId = null }">
       <DialogContent>
         <DialogHeader><DialogTitle>Edit Package</DialogTitle></DialogHeader>
         <form class="flex flex-col gap-4" @submit.prevent="submitEdit">
@@ -224,7 +224,7 @@ function confirmDelete() {
     </Dialog>
 
     <!-- Delete confirmation -->
-    <AlertDialog :open="deleteTarget !== null" @update:open="if (!$event) deleteTarget = null">
+    <AlertDialog :open="deleteTarget !== null" @update:open="(val) => { if (!val) deleteTarget = null }">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete package?</AlertDialogTitle>

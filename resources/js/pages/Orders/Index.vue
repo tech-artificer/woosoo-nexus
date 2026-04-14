@@ -1,6 +1,5 @@
-<!-- Audit Fix (2026-04-06): use named routes for print/complete to match backend route contracts. -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
@@ -10,12 +9,14 @@ import DataTable from '@/components/Orders/DataTable.vue'
 import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue'
 import StatsCards from '@/components/Stats/StatsCards.vue'
 import type { DeviceOrder, ServiceRequest, User} from '@/types/models';
+import { toast } from 'vue-sonner';
 import {
     Tabs,
     TabsContent,
     TabsList,
     TabsTrigger,
 } from "@/components/ui/tabs"
+import { Badge } from '@/components/ui/badge'
 
 interface OrdersPageProps {
   title: string
@@ -52,26 +53,47 @@ const selectedOrder = ref<DeviceOrder | null>(null)
 const isDetailOpen = ref(false)
 // Track which order_id we are currently fetching to avoid race updates
 const ongoingFetchOrderId = ref<number | string | null>(null)
-// AbortController for the current background fetch — cancelled when a new order is opened
-let currentFetchController: AbortController | null = null
+
+// WebSocket connection state: 'connecting' | 'connected' | 'disconnected'
+const echoStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting')
 
 // Track which order IDs have active print animations to prevent duplicate animations
 const animatedOrderIds = new Set<number>()
 
-const ordersMatch = (left?: Partial<DeviceOrder> | null, right?: Partial<DeviceOrder> | null) => {
-  if (!left || !right) {
-    return false
-  }
+// Reactive stats always derived from live local arrays — never stale server snapshot
+const liveStats = computed(() => [
+  {
+    title: 'Live Orders',
+    value: localOrders.value.length,
+    subtitle: 'Pending and in-progress',
+    variant: 'primary' as const,
+  },
+  {
+    title: 'Order History',
+    value: localOrderHistory.value.length,
+    subtitle: 'Completed / voided',
+    variant: 'default' as const,
+  },
+])
 
-  if (left.id && right.id && left.id === right.id) {
-    return true
+// Play a short audio ping for new orders (no external dependency)
+function playNewOrderPing() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12)
+    gain.gain.setValueAtTime(0.35, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.4)
+  } catch {
+    // AudioContext not supported — silent fallback
   }
-
-  if (left.order_uuid && right.order_uuid && left.order_uuid === right.order_uuid) {
-    return true
-  }
-
-  return false
 }
 
 const openOrderDetail = (order: DeviceOrder) => {
@@ -92,15 +114,8 @@ const openOrderDetail = (order: DeviceOrder) => {
     const orderId = String((order as any).order_id || (order as any).id)
     if (!orderId) return
 
-    // Cancel any in-flight fetch for a previously opened order
-    if (currentFetchController) {
-      currentFetchController.abort()
-    }
-    const controller = new AbortController()
-    currentFetchController = controller
-
     ongoingFetchOrderId.value = orderId
-    fetch(`/device-order/by-order-id/${orderId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: controller.signal })
+    fetch(`/device-order/by-order-id/${orderId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(res => {
         if (!res.ok) throw new Error(String(res.status))
         return res.json()
@@ -111,13 +126,10 @@ const openOrderDetail = (order: DeviceOrder) => {
         selectedOrder.value = full
         ;(selectedOrder.value as any).__is_partial = false
         ongoingFetchOrderId.value = null
-        currentFetchController = null
       })
       .catch(err => {
-        if (err.name === 'AbortError') return // intentionally cancelled
         console.warn('Background fetch for full order failed', err)
         ongoingFetchOrderId.value = null
-        currentFetchController = null
       })
   } catch (err) {
     console.error('openOrderDetail error', err)
@@ -129,45 +141,63 @@ const openOrderDetail = (order: DeviceOrder) => {
 const handleDetailPrint = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  router.post(route('orders.print'), { order_id: orderId })
+  router.post('/orders/print', { order_id: orderId }, {
+    preserveState: true,
+    preserveScroll: true,
+  })
 }
 
 const handleDetailComplete = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  router.post(route('orders.complete'), { order_id: orderId })
+  // Close sheet immediately — broadcast will move the row to history
+  isDetailOpen.value = false
+  router.post('/orders/complete', { order_id: orderId }, {
+    preserveState: true,
+    preserveScroll: true,
+    onError: () => {
+      // Re-open on failure so admin can retry
+      isDetailOpen.value = true
+      toast.error('Failed to complete order. Please try again.')
+    },
+  })
 }
 
 // DataTable handles all client-side column filtering
 
 
-const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
-  // Extract order from event (some events wrap in { order: {...} })
-  const incoming = (event.order ? event.order : event) as DeviceOrder
-
-  // Only process orders with confirmed or active status for live orders
+const handleOrderEvent = (event: DeviceOrder) => {
+  const incoming = (event as any)?.order ? (event as any).order : event
+  const incomingStatus = String((incoming as any).status ?? '').toLowerCase()
   const liveStatuses = ['confirmed', 'pending', 'in_progress', 'ready', 'served']
   const terminalStatuses = ['completed', 'voided', 'cancelled', 'archived']
-  const incomingStatus = String((incoming as any).status).toLowerCase()
+  const incomingId = (incoming as any).id ?? (incoming as any).order_id
+  if (!incomingId) return
 
-  // Heuristic: detect "refill" in items. Adjust to your domain's true refill marker.
-  const isRefill = Array.isArray((incoming as any).items ?? (incoming as any).orderedMenus) && ((incoming as any).items ?? (incoming as any).orderedMenus).some((it: any) => {
-    return it.is_refill || (it.name && String(it.name).toLowerCase().includes('refill')) || it.type === 'refill'
-  })
-
-  // Patch: Always update all order fields for real-time sync
   const orderFields = [
-    'items', 'subtotal', 'tax', 'total', 'discount', 'guest_count', 'created_at', 'updated_at', 'is_printed', 'device', 'table', 'serviceRequests', 'order_id', 'order_uuid', 'order_number', 'status', 'id', 'branch_id', 'session_id', 'device_id', 'table_id'
-  ];
+    'items', 'subtotal', 'tax', 'total', 'discount', 'guest_count', 'created_at', 'updated_at', 'is_printed', 'device', 'table', 'serviceRequests', 'order_id', 'order_number', 'status', 'id', 'branch_id', 'session_id', 'device_id', 'table_id', 'printed_at', 'printed_by'
+  ]
 
-  // Update selectedOrder if open
-  if (selectedOrder.value && ordersMatch(selectedOrder.value, incoming)) {
+  const mergeList = (list: any[]) => {
+    const idx = list.findIndex(o => (o.id ?? o.order_id) === incomingId || o.order_number === incoming.order_number)
+    if (idx === -1) return [Object.assign({}, incoming), ...list]
+    const merged = { ...list[idx] }
+    orderFields.forEach(f => { merged[f] = incoming[f] })
+    const next = [...list]
+    next[idx] = merged
+    return next
+  }
+
+  if (selectedOrder.value && ((selectedOrder.value.id ?? selectedOrder.value.order_id) === incomingId || selectedOrder.value.order_number === incoming.order_number)) {
     orderFields.forEach(field => {
-      (selectedOrder.value as any)[field] = (incoming as any)[field];
+      (selectedOrder.value as any)[field] = incoming[field];
     });
   }
 
-  // Refill logic (unchanged)
+  const isRefill = Array.isArray(incoming.items) && incoming.items.some((it: any) => {
+    return it.is_refill || (it.name && String(it.name).toLowerCase().includes('refill')) || it.type === 'refill'
+  })
+
   if (isRefill) {
     try {
       if (window.Notification) {
@@ -203,81 +233,37 @@ const handleOrderEvent = (event: DeviceOrder, isUpdate = false) => {
     }
   }
 
-  // Update localOrders / localOrderHistory - use array reassignment for proper reactivity
   try {
-    const idx = localOrders.value.findIndex(o => ordersMatch(o, incoming))
-    // Patch: Always update all fields
-    if (idx !== -1) {
-      orderFields.forEach(field => {
-        (localOrders.value[idx] as any)[field] = (incoming as any)[field];
-      });
-    }
-
-    // If status indicates completion/void, remove from live and add to history
     if (terminalStatuses.includes(incomingStatus)) {
-      if (idx !== -1) {
-        const removed = localOrders.value[idx]
-        const merged = { ...removed, ...incoming }
-        localOrders.value = localOrders.value.filter((_, i) => i !== idx)
-        const histIdx = localOrderHistory.value.findIndex(o => ordersMatch(o, incoming))
-        if (histIdx === -1) {
-          localOrderHistory.value = [merged, ...localOrderHistory.value]
-        } else {
-          orderFields.forEach(field => {
-            (localOrderHistory.value[histIdx] as any)[field] = (merged as any)[field];
-          });
-        }
-        return
-      } else {
-        const histIdx = localOrderHistory.value.findIndex(o => ordersMatch(o, incoming))
-        if (histIdx === -1) {
-          localOrderHistory.value = [incoming, ...localOrderHistory.value]
-        } else {
-          orderFields.forEach(field => {
-            (localOrderHistory.value[histIdx] as any)[field] = (incoming as any)[field];
-          });
-        }
-        return
+      const liveIdx = localOrders.value.findIndex(o => (o.id ?? o.order_id) === incomingId || o.order_number === incoming.order_number)
+      if (liveIdx !== -1) {
+        localOrders.value = localOrders.value.filter((_, i) => i !== liveIdx)
       }
+      localOrderHistory.value = mergeList(localOrderHistory.value)
+      return
     }
 
-    // For live statuses, update or add to live orders
     if (liveStatuses.includes(incomingStatus)) {
-      if (idx !== -1) {
-        const wasNotPrinted = !localOrders.value[idx].is_printed
-        const isNowPrinted = incoming.is_printed
-        const justPrinted = wasNotPrinted && isNowPrinted
-        // Patch: Always update all fields
-        orderFields.forEach(field => {
-          (localOrders.value[idx] as any)[field] = (incoming as any)[field];
-        });
-        if (justPrinted && incoming.id && !animatedOrderIds.has(incoming.id)) {
-          animatedOrderIds.add(incoming.id)
-          const rowElement = document.querySelector(`[data-order-id="${incoming.id}"]`)
-          if (rowElement) {
-            rowElement.classList.add('print-highlight')
-            setTimeout(() => {
-              rowElement.classList.remove('print-highlight')
-              animatedOrderIds.delete(incoming.id)
-            }, 5000)
-          }
+      const existingIdx = localOrders.value.findIndex(o => (o.id ?? o.order_id) === incomingId || o.order_number === incoming.order_number)
+      const wasNotPrinted = existingIdx !== -1 ? !localOrders.value[existingIdx].is_printed : false
+      localOrders.value = mergeList(localOrders.value)
+      const justPrinted = wasNotPrinted && !!incoming.is_printed
+      if (justPrinted && incomingId && !animatedOrderIds.has(incomingId)) {
+        animatedOrderIds.add(incomingId)
+        const rowElement = document.querySelector(`[data-order-id="${incomingId}"]`)
+        if (rowElement) {
+          rowElement.classList.add('print-highlight')
+          setTimeout(() => {
+            rowElement.classList.remove('print-highlight')
+            animatedOrderIds.delete(incomingId)
+          }, 5000)
         }
-        // Flash ring on any live status update
-        if (isUpdate && incoming.id) {
-          const rowEl = document.querySelector(`[data-order-id="${incoming.id}"]`)
-          if (rowEl && !rowEl.classList.contains('status-flash')) {
-            rowEl.classList.add('status-flash')
-            setTimeout(() => rowEl.classList.remove('status-flash'), 1500)
-          }
-        }
-      } else {
-        localOrders.value = [incoming, ...localOrders.value]
       }
     }
   } catch (err) {
     console.error('Failed to update localOrders in-place', err)
     setTimeout(() => {
-      router.visit(route('orders.index'));
+      router.reload({ only: ['orders', 'orderHistory'] });
     }, 50);
     return
   }
@@ -300,23 +286,59 @@ onMounted(() => {
   const adminOrdersChannel = window.Echo.channel('admin.orders');
   adminOrdersChannel
     .listen('.order.created', (e: DeviceOrder) => {
-      handleOrderEvent(e, false);
+      handleOrderEvent(e);
+      // Notify staff a new order has arrived
+      const order = (e as any)?.order ?? e
+      const label = order?.order_number ? `Order #${order.order_number}` : 'New order'
+      const table = order?.table?.name ? ` — Table ${order.table.name}` : ''
+      toast.success(`${label} placed${table}`, {
+        description: `${order?.guest_count ?? ''} guest(s)`.trim(),
+        duration: 8000,
+      })
+      playNewOrderPing()
     })
     .listen('.order.completed', (e: DeviceOrder) => {
-      handleOrderEvent(e, true);
+      handleOrderEvent(e);
+      const order = (e as any)?.order ?? e
+      toast.info(`Order #${order?.order_number ?? ''} completed`, { duration: 4000 })
+    })
+    .listen('.order.cancelled', (e: DeviceOrder) => {
+      handleOrderEvent(e);
+      const order = (e as any)?.order ?? e
+      toast.warning(`Order #${order?.order_number ?? ''} cancelled`, { duration: 5000 })
     })
     .listen('.order.voided', (e: DeviceOrder) => {
-      handleOrderEvent(e, true);
+      handleOrderEvent(e);
+      const order = (e as any)?.order ?? e
+      toast.warning(`Order #${order?.order_number ?? ''} voided`, { duration: 5000 })
     })
     .listen('.order.updated', (e: DeviceOrder) => {
-      handleOrderEvent(e, true);
+      handleOrderEvent(e);
     })
     .listen('.order.printed', (e: DeviceOrder) => {
-      handleOrderEvent(e, true);
+      handleOrderEvent(e);
     })
     .error((error: unknown) => {
       console.error('[Echo] Error connecting to admin.orders channel:', error);
+      echoStatus.value = 'disconnected'
     });
+
+  // Track Pusher/Reverb connection state for the status pill
+  try {
+    const pusher = (window.Echo as any).connector?.pusher
+    if (pusher) {
+      pusher.connection.bind('connected', () => { echoStatus.value = 'connected' })
+      pusher.connection.bind('disconnected', () => { echoStatus.value = 'disconnected' })
+      pusher.connection.bind('connecting', () => { echoStatus.value = 'connecting' })
+      pusher.connection.bind('unavailable', () => { echoStatus.value = 'disconnected' })
+      // Reflect current state immediately
+      const state = pusher.connection.state
+      if (state === 'connected') echoStatus.value = 'connected'
+      else if (state === 'disconnected' || state === 'unavailable' || state === 'failed') echoStatus.value = 'disconnected'
+    }
+  } catch {
+    // Pusher connector not available (e.g. Reverb native driver) — leave as 'connecting'
+  }
 
   const serviceRequestsChannel = window.Echo.channel('admin.service-requests');
   serviceRequestsChannel
@@ -336,7 +358,7 @@ onMounted(() => {
   orderRefillHandler = (ev: any) => {
     try {
       const payload = (ev && ev.detail) ? ev.detail : ev
-      const idx = localOrders.value.findIndex(o => ordersMatch(o, payload))
+      const idx = localOrders.value.findIndex(o => o.id === payload.id || o.order_number === payload.order_number)
       if (idx !== -1) {
         localOrders.value[idx] = Object.assign({}, localOrders.value[idx], payload, { __is_refill: true })
       } else {
@@ -346,7 +368,7 @@ onMounted(() => {
 
       // clear refill highlight after 20 seconds
       setTimeout(() => {
-        const i = localOrders.value.findIndex(o => ordersMatch(o, payload))
+        const i = localOrders.value.findIndex(o => o.id === payload.id || o.order_number === payload.order_number)
         if (i !== -1 && localOrders.value[i].__is_refill) {
           localOrders.value[i].__is_refill = false
         }
@@ -396,38 +418,68 @@ onUnmounted(() => {
 .print-highlight {
   animation: print-highlight 5s ease-out;
 }
-
-@keyframes status-flash {
-  0%   { box-shadow: inset 0 0 0 2px rgba(246, 181, 109, 0.6); }
-  100% { box-shadow: inset 0 0 0 0px transparent; }
-}
-
-.status-flash {
-  animation: status-flash 1.5s ease-out;
-}
 </style>
 
 <template>
     <Head :title="title" :description="description" />
    
-    <AppLayout :breadcrumbs="breadcrumbs">   
+    <AppLayout :breadcrumbs="breadcrumbs">
       <div class="space-y-4 px-1 sm:px-2">
+        <!-- WebSocket connection status pill -->
+        <div class="flex items-center justify-end">
+          <span
+            :class="[
+              'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+              echoStatus === 'connected'    && 'bg-emerald-50 text-emerald-700',
+              echoStatus === 'connecting'   && 'bg-yellow-50 text-yellow-700',
+              echoStatus === 'disconnected' && 'bg-rose-50 text-rose-700',
+            ]"
+          >
+            <span
+              :class="[
+                'h-1.5 w-1.5 rounded-full',
+                echoStatus === 'connected'    && 'bg-emerald-500',
+                echoStatus === 'connecting'   && 'bg-yellow-500 animate-pulse',
+                echoStatus === 'disconnected' && 'bg-rose-500',
+              ]"
+            />
+            <span v-if="echoStatus === 'connected'">Live</span>
+            <span v-else-if="echoStatus === 'connecting'">Connecting…</span>
+            <span v-else>Disconnected — refresh to reconnect</span>
+          </span>
+        </div>
+
         <Tabs default-value="live_orders" class="space-y-4">
                 <TabsList class="grid h-11 w-full grid-cols-2 p-1">
                     <TabsTrigger value="live_orders">
-                        Live Orders
+                        <span class="flex items-center gap-2">
+                            Live Orders
+                            <Badge
+                              v-if="localOrders.length > 0"
+                              class="h-5 min-w-5 rounded-full px-1.5 text-xs tabular-nums bg-blue-600 text-white"
+                            >
+                              {{ localOrders.length }}
+                            </Badge>
+                        </span>
                     </TabsTrigger>
                     <TabsTrigger value="order_history">
-                        Order History
+                        <span class="flex items-center gap-2">
+                            Order History
+                            <Badge
+                              v-if="localOrderHistory.length > 0"
+                              variant="secondary"
+                              class="h-5 min-w-5 rounded-full px-1.5 text-xs tabular-nums"
+                            >
+                              {{ localOrderHistory.length }}
+                            </Badge>
+                        </span>
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="live_orders" class="pt-3 px-1 sm:px-2 space-y-4">
                   <!-- Filters have been moved into the Orders DataTable toolbar -->
                   <div class="flex flex-wrap items-center justify-between gap-3">
-                    <StatsCards :cards="(stats ?? [
-                      { title: 'Live Orders', value: localOrders.length ?? 0, subtitle: 'Pending and in-progress', variant: 'primary' },
-                      { title: 'Order History', value: localOrderHistory.length ?? 0, subtitle: 'Completed/voided', variant: 'default' },
-                    ])" />
+                    <!-- Always reactive — derived from localOrders/localOrderHistory, never from static server prop -->
+                    <StatsCards :cards="liveStats" />
                   </div>
 
                   <div class="w-full overflow-x-auto">

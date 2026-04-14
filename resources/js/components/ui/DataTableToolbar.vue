@@ -36,7 +36,7 @@ const isAvailableFiltered = computed(() => {
 
     <div class="flex flex-row flex-wrap items-center gap-2">
         <Input
-          placeholder="Filter..."
+          placeholder="Filter…"
           :model-value="hasColumn('name') ? ((table.getColumn('name')?.getFilterValue() as string) ?? '') : ''"
           class="h-8 w-37.5 lg:w-62.5"
           @input="(e: any) => { if (hasColumn('name')) table.getColumn('name')?.setFilterValue(e.target.value) }"

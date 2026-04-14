@@ -65,6 +65,7 @@ class SessionOrderValidationTest extends TestCase
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json',
+            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         // Order creation should succeed with active Krypton session
@@ -151,6 +152,7 @@ class SessionOrderValidationTest extends TestCase
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json',
+            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         // Should return 503 Service Unavailable when session is missing

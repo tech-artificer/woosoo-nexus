@@ -1,9 +1,10 @@
 <!-- resources/js/Pages/Menus/EditMenu.vue -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
-import { Image } from 'lucide-vue-next';
+import { Image, Pencil } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
@@ -92,13 +93,12 @@ function submit() {
   });
 
 }
+
 // Clean up preview URL on unmount
-onMounted(() => {
-  return () => {
-    if (previewImage.value && previewImage.value.startsWith('blob:')) {
-      URL.revokeObjectURL(previewImage.value);
-    }
-  };
+onUnmounted(() => {
+  if (previewImage.value && previewImage.value.startsWith('blob:')) {
+    URL.revokeObjectURL(previewImage.value);
+  }
 });
 
 </script>
@@ -133,12 +133,12 @@ onMounted(() => {
       </Tooltip>
     </TooltipProvider> -->
 
-    <DialogContent class="sm:max-w-150">
+    <DialogContent class="sm:max-w-[600px]">
       <DialogHeader class="flex flex-col gap-2 justify-start">
         <div class="flex justify-start mb-5">
           <!-- Image Preview -->
           <div v-if="previewImage" class="flex justify-center">
-            <img :src="previewImage" class="w-32 h-32 object-cover border rounded-lg" alt="Menu Image" />
+            <img :src="previewImage" class="w-32 h-32 object-cover border rounded-lg" alt="Menu Image" width="128" height="128" />
           </div>
         </div>
 
@@ -151,7 +151,7 @@ onMounted(() => {
         <!-- File Input -->
         <div class="grid gap-2">
           <Label for="image" class="text-woosoo-dark-gray">Featured Image</Label>
-          <Input id="image" type="file" :v-model="form.image" accept="image/*" @change="onFileChange"
+          <Input id="image" type="file" v-model="form.image" accept="image/*" @change="onFileChange"
             @input="form.image = $event.target.files[0]" />
           <progress v-if="form.progress" :value="form.progress.percentage" max="100">
             {{ form.progress.percentage }}%

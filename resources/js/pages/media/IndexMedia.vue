@@ -194,7 +194,7 @@ function formatBytes(bytes: number): string {
     </div>
 
     <!-- Delete confirmation -->
-    <AlertDialog :open="deleteTarget !== null" @update:open="if (!$event) deleteTarget = null">
+    <AlertDialog :open="deleteTarget !== null" @update:open="(val) => { if (!val) deleteTarget = null }">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete file?</AlertDialogTitle>

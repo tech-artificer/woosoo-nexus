@@ -61,7 +61,7 @@ const handleBulkDelete = () => {
   <div class="flex items-center justify-between">
     <div class="flex flex-1 items-center space-x-2">
       <Input
-        placeholder="Filter roles..."
+        placeholder="Filter roles…"
         :model-value="(table.getColumn('name')?.getFilterValue() as string) ?? ''"
         class="h-8 w-37.5 lg:w-62.5"
         @input="table.getColumn('name')?.setFilterValue($event.target.value)"

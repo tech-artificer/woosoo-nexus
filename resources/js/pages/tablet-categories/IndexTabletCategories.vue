@@ -180,7 +180,7 @@ function confirmDelete() {
     </Dialog>
 
     <!-- Edit dialog -->
-    <Dialog :open="editingId !== null" @update:open="if (!$event) editingId = null">
+    <Dialog :open="editingId !== null" @update:open="(val) => { if (!val) editingId = null }">
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Category</DialogTitle>
@@ -211,7 +211,7 @@ function confirmDelete() {
     </Dialog>
 
     <!-- Delete confirmation -->
-    <AlertDialog :open="deleteTarget !== null" @update:open="if (!$event) deleteTarget = null">
+    <AlertDialog :open="deleteTarget !== null" @update:open="(val) => { if (!val) deleteTarget = null }">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete category?</AlertDialogTitle>

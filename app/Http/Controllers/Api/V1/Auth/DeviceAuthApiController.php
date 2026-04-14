@@ -29,6 +29,62 @@ class DeviceAuthApiController extends Controller
 
         return false;
     }
+
+    protected function ipToLong(?string $ip): int|false
+    {
+        return $ip ? ip2long($ip) : false;
+    }
+
+    protected function ipInCidr(string $ip, string $cidr): bool
+    {
+        [$subnet, $mask] = array_pad(explode('/', $cidr, 2), 2, '32');
+        $ipLong = $this->ipToLong($ip);
+        $subnetLong = $this->ipToLong($subnet);
+
+        if ($ipLong === false || $subnetLong === false) {
+            return false;
+        }
+
+        $maskBits = max(0, min(32, (int) $mask));
+        $maskLong = $maskBits === 0 ? 0 : (~0 << (32 - $maskBits));
+
+        return (($ipLong & $maskLong) === ($subnetLong & $maskLong));
+    }
+
+    protected function same24(?string $a, ?string $b): bool
+    {
+        if (! $a || ! $b) return false;
+        $partsA = explode('.', $a);
+        $partsB = explode('.', $b);
+        if (count($partsA) !== 4 || count($partsB) !== 4) return false;
+        return $partsA[0] === $partsB[0] && $partsA[1] === $partsB[1] && $partsA[2] === $partsB[2];
+    }
+
+    protected function shouldTrustClientSuppliedIp(?string $clientSupplied, ?string $requestIp): bool
+    {
+        if (! $clientSupplied || ! $this->isPrivateIp($clientSupplied)) {
+            return false;
+        }
+
+        $enabled = filter_var(env('DEVICE_ALLOW_CLIENT_SUPPLIED_IP', false), FILTER_VALIDATE_BOOL);
+        if (! $enabled) {
+            return false;
+        }
+
+        $raw = trim((string) env('DEVICE_ALLOWED_PRIVATE_SUBNETS', ''));
+        if ($raw !== '') {
+            $subnets = array_filter(array_map('trim', explode(',', $raw)));
+            foreach ($subnets as $cidr) {
+                if ($this->ipInCidr($clientSupplied, $cidr)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Safe fallback: only trust when request IP is private and in same /24.
+        return $this->isPrivateIp($requestIp) && $this->same24($clientSupplied, $requestIp);
+    }
     /**
      * Register a device
      * 
@@ -47,7 +103,7 @@ class DeviceAuthApiController extends Controller
         $requestIp = $request->ip();
 
         $ipToUse = null;
-        if ($clientSupplied && $this->isPrivateIp($clientSupplied)) {
+        if ($this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)) {
             $ipToUse = $clientSupplied;
         } elseif ($this->isPrivateIp($requestIp)) {
             $ipToUse = $requestIp;
@@ -119,7 +175,7 @@ class DeviceAuthApiController extends Controller
         $clientSupplied = $request->input('ip_address');
         $requestIp = $request->ip();
 
-        if ($clientSupplied && $this->isPrivateIp($clientSupplied)) {
+        if ($this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)) {
             $ip = $clientSupplied;
         } else {
             $ip = $requestIp;

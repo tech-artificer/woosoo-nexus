@@ -208,13 +208,14 @@ class OrderService
             'terminal_service_id' => $defaults['terminal_service_id'] ?? null,
             'employee_id' => $defaults['employee_id'] ?? null,
             'cashier_employee_id' => $defaults['cashier_employee_id'] ?? null,
+            'server_employee_log_id' => $defaults['server_employee_log_id'] ?? ($defaults['employee_log_id'] ?? null),
         ];
 
         $params = [
             'start_employee_log_id' => $normalized['employee_log_id'] ?? null,
             'current_employee_log_id' => $normalized['employee_log_id'] ?? null,
             'close_employee_log_id' => $normalized['employee_log_id'] ?? null,
-            'server_employee_log_id' => null,
+            'server_employee_log_id' => $normalized['server_employee_log_id'] ?? null,
             'is_online_order' => false,
             'reference' => '',
         ];

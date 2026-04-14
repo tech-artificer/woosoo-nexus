@@ -12,9 +12,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use App\Models\OrderUpdateLog;
 use App\Models\DeviceOrder;
 use App\Enums\OrderStatus;
-use App\Events\Order\OrderCompleted;
-use App\Events\Order\OrderVoided;
-use App\Services\BroadcastService;
 
 /**
  * PRODUCTION STATUS: DISABLED — 2026-04-07
@@ -91,14 +88,9 @@ class ProcessOrderLogs implements ShouldQueue
 
                     $log->is_processed = true;
                     $log->deviceOrder->save();
-                     $log->save();
-                    if(  $action == 'void' ) {
-                        app(BroadcastService::class)->dispatchBroadcastJob(new OrderVoided($log->deviceOrder));
-                    }else{
-                       app(BroadcastService::class)->dispatchBroadcastJob(new OrderCompleted($log->deviceOrder));
-                    
-                    }
-          
+                    $log->save();
+
+                    // Observer now dispatches terminal events synchronously when status changes
                     $log->delete(); 
                     $processedCount++;
                 

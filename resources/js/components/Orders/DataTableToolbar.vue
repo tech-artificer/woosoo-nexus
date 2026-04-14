@@ -141,7 +141,7 @@ const handleExport = () => {
 
       <!-- Search by order number -->
       <Input
-        placeholder="Search order #..."
+        placeholder="Search order #…"
         :model-value="(table.getColumn('order_number')?.getFilterValue() as string) ?? ''"
         class="h-8 w-37.5 lg:w-50"
         @input="table.getColumn('order_number')?.setFilterValue($event.target.value)"

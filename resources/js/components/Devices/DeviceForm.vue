@@ -1,6 +1,6 @@
 <script setup lang="ts">
-/* eslint-disable vue/valid-v-for */
-import { computed } from 'vue'
+/* eslint-disable @typescript-eslint/no-unused-vars, vue/valid-v-for */
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import axios from 'axios'
 import { useForm } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
+    SelectGroup,
     SelectItem,
     SelectLabel,
     SelectTrigger,
@@ -21,6 +22,14 @@ import {
     SheetFooter,
     SheetClose
 } from '@/components/ui/sheet'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import type { Device, Table } from '@/types/models'
 
 const props = defineProps<{
@@ -36,26 +45,17 @@ const form = useForm({
     table_id: props.device?.table_id ?? undefined
 })
 
-const computedTables = computed(() => props.unassignedTables) // unassigned tables
+const computedTables = computed(() => props.unassignedTables ) // unassigned tables
 
 const selectedTableName = computed(() => {
-    // Always show the device's currently assigned table name
-    // The table_id will be present in unassignedTables when in edit mode
-    if (!form.table_id && !props.device.table) {
-        return ''
-    }
+  // if nothing selected yet, show the originally assigned table name
+  if (!form.table_id) {
+    return props.device.table?.name ?? ''
+  }
 
-    // If form has a table_id, look it up in computedTables
-    if (form.table_id) {
-        const found = computedTables.value.find(t => String(t.id) === String(form.table_id))
-        if (found) {
-            return found.name
-        }
-    }
-
-    // Fall back to the device's loaded table relationship
-    const fallbackName = props.device.table?.name ?? ''
-    return fallbackName
+  // if something is selected, look it up from computedTables
+  const found = computedTables.value.find(t => String(t.id) === String(form.table_id))
+  return found ? found.name : props.device.table?.name ?? ''
 })
 
 const submit = () => {
@@ -94,6 +94,9 @@ const submit = () => {
 }
 
 const isEdit = computed(() => props.formType === 'edit')
+const showTokenDialog = ref(false)
+const generatedToken = ref('')
+
 async function createToken() {
     try {
         const url = route('devices.create.token', props.device?.id)
@@ -101,10 +104,11 @@ async function createToken() {
         if (res?.data?.success && res?.data?.token) {
             const token = res.data.token
             // copy to clipboard then prompt the admin
-            await navigator.clipboard.writeText(token).catch(() => { })
-            // Show success via toast + token in alert for easy copying
+            await navigator.clipboard.writeText(token).catch(() => {})
+            // Show success via toast + token in dialog for easy copying
             toast('Device token copied to clipboard', { description: 'Token issued and ready to paste into the device app.' })
-            alert('Device token:\n' + token + '\n\nThis token was also copied to your clipboard.');
+            generatedToken.value = token
+            showTokenDialog.value = true
         } else {
             toast('Failed to create device token', { description: res?.data?.message ?? 'Unknown error' })
         }
@@ -116,70 +120,94 @@ async function createToken() {
 </script>
 
 <template>
-    <div class="flex flex-col">
+    <div class="flex flex-col gap-3">
         <Separator class="my-0" />
-        <form class="px-4 sm:px-6 py-6 flex flex-col gap-6">
-            <div class="space-y-2">
-                <Label for="name">Name <span class="text-destructive">*</span></Label>
-                <Input id="name" type="text" v-model="form.name" placeholder="Print Bridge 01" />
+        <form  class="p-4 flex flex-col gap-4">
+            <div class="flex flex-col gap-3">
+                <Label for="name">Name</Label>
+                <Input id="name" type="text" v-model="form.name" placeholder="John Doe" />
                 <InputError :message="form.errors.name" />
             </div>
 
-            <div class="space-y-2">
-                <Label for="ip_address">IP Address <span class="text-destructive">*</span></Label>
-                <Input id="ip_address" type="text" v-model="form.ip_address" placeholder="192.168.1.100" />
+            <div class="flex flex-col gap-3">
+                <Label for="ip_address">IP Address</Label>
+                <Input id="ip_address" type="text" inputmode="numeric" v-model="form.ip_address" placeholder="127.0.0.1" />
                 <InputError :message="form.errors.ip_address" />
             </div>
 
-            <div class="space-y-2">
+            <div class="flex flex-col gap-3">
                 <Label for="port">Port</Label>
-                <Input id="port" type="text" v-model="form.port" placeholder="3000" />
+                <Input id="port" type="number" min="1" max="65535" v-model="form.port" placeholder="3000" />
                 <InputError :message="form.errors.port" />
             </div>
 
 
-            <div class="space-y-2">
+            <div class="flex flex-col gap-3">
                 <Label for="assigned_table">Assigned Table</Label>
-                <Input id="assigned_table" type="text" :model-value="selectedTableName" readonly
-                    :key="`table-${form.table_id}`" class="bg-muted" />
-                <InputError :message="form.errors.table_id" />
+                <Input id="assigned_table" type="text" :value="selectedTableName" class="w-25" readonly/>
+                <InputError :message="form.errors.port" />
             </div>
 
-            <div class="space-y-2">
-                <Label for="table_assignment">Change Table Assignment</Label>
+
+            <div class="flex flex-col">
+                <Label for="table_id" class="mb-1">Change Table Assignment</Label>
+        
                 <Select v-model="form.table_id">
-                    <SelectTrigger id="table_assignment">
+                    <SelectTrigger id="table_id" class="w-45">
                         <SelectValue placeholder="Assign a Table" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectLabel>Tables</SelectLabel>
-                        <SelectItem v-for="table in computedTables" :key="table.id" :value="table.id">
-                            {{ table.name }}
-                        </SelectItem>
+                        <!-- <SelectGroup> -->
+                            <SelectLabel>Tables</SelectLabel>
+                            <SelectItem v-for="table in computedTables" :value="table.id">
+                                {{ table.name }}
+                            </SelectItem>
+                        <!-- </SelectGroup> -->
                     </SelectContent>
                 </Select>
-                <InputError :message="form.errors.table_id" />
+
+                <div v-if="form.errors.table_id" class="text-sm text-red-500 mt-1">{{ form.errors.table_id }}</div>
             </div>
 
 
 
 
         </form>
-        <SheetFooter class="px-4 sm:px-6 py-4 border-t bg-muted/30">
-            <div class="flex items-center gap-3 w-full">
-                <SheetClose as-child>
-                    <Button type="button" variant="outline">
+    </div>
+    <SheetFooter>
+        <div class="flex items-start flex-row gap-2 p-4">
+            <SheetClose as-child>
+                    <Button type="button" variant="destructive" class="cursor-pointer ">
                         Cancel
                     </Button>
                 </SheetClose>
-                <div class="flex-1"></div>
-                <Button v-if="isEdit" type="button" variant="secondary" @click.prevent="createToken">
+                <Button v-if="isEdit" type="button" variant="default" @click.prevent="createToken" class="text-sm">
                     Generate Token
                 </Button>
-                <Button type="button" @click.prevent="submit" :disabled="form.processing">
-                    {{ form.processing ? 'Saving…' : (formType === 'create' ? 'Create Device' : 'Save Changes') }}
-                </Button>
+            <Button type="button" @click.prevent="submit" variant="outline"
+                class="hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark text-woosoo-primary-dark cursor-pointer"
+                :disabled="form.processing">
+                Save Changes
+            </Button>
+        </div>
+    </SheetFooter>
+
+    <Dialog v-model:open="showTokenDialog">
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Device Token Generated</DialogTitle>
+                <DialogDescription>
+                    This token has been copied to your clipboard. Store it securely.
+                </DialogDescription>
+            </DialogHeader>
+            <div class="rounded-md bg-muted p-4 font-mono text-sm break-all">
+                {{ generatedToken }}
             </div>
-        </SheetFooter>
-    </div>
+            <DialogFooter>
+                <Button @click="showTokenDialog = false">Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
 </template>
+    font-size: 0.8em;
