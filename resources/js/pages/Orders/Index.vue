@@ -8,7 +8,7 @@ import { columns } from '@/components/Orders/columns';
 import DataTable from '@/components/Orders/DataTable.vue'
 import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue'
 import StatsCards from '@/components/Stats/StatsCards.vue'
-import type { DeviceOrder, ServiceRequest, User} from '@/types/models';
+import type { DeviceOrder, User} from '@/types/models';
 import { toast } from 'vue-sonner';
 import {
     Tabs,
@@ -42,7 +42,6 @@ const props = defineProps<OrdersPageProps>()
 
 const orders = props.orders ?? []
 const orderHistory = props.orderHistory ?? []
-const stats = props.stats ?? null
 const devices = props.devices ?? []
 const tables = props.tables ?? []
 
@@ -342,14 +341,14 @@ onMounted(() => {
 
   const serviceRequestsChannel = window.Echo.channel('admin.service-requests');
   serviceRequestsChannel
-    .listen('.service-request.notification', (_e: ServiceRequest) => {})
+    .listen('.service-request.notification', () => {})
     .error((error: unknown) => {
       console.error('[Echo] Error connecting to admin.service-requests channel:', error);
     });
   
   const printChannel = window.Echo.channel('admin.print');
   printChannel
-    .listen('.order.printed', (_e: DeviceOrder) => {})
+    .listen('.order.printed', () => {})
     .error((error: unknown) => {
       console.error('[Echo] Error connecting to admin.print channel:', error);
     });

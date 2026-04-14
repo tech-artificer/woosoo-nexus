@@ -32,7 +32,7 @@ interface PackageConfigVm {
   sort_order: number
 }
 
-const props = defineProps<{ packages: PackageConfigVm[] }>()
+defineProps<{ packages: PackageConfigVm[] }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Package Configs', href: route('package-configs.index') },

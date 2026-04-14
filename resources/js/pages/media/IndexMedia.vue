@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { toast } from 'vue-sonner'
 import { Upload, Trash2, ImageIcon, Search } from 'lucide-vue-next'
@@ -7,7 +7,6 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import type { BreadcrumbItem } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -181,14 +180,14 @@ function formatBytes(bytes: number): string {
       <!-- Pagination -->
       <div v-if="files.last_page > 1" class="flex justify-center gap-1">
         <template v-for="link in files.links" :key="link.label">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             :disabled="!link.url"
+            class="inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
             :class="{ 'bg-primary text-primary-foreground': link.active }"
             @click="link.url && router.visit(link.url)"
             v-html="link.label"
-          />
+          ></button>
         </template>
       </div>
     </div>

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
@@ -31,7 +31,7 @@ interface CategoryVm {
   is_active: boolean
 }
 
-const props = defineProps<{ categories: CategoryVm[] }>()
+defineProps<{ categories: CategoryVm[] }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Tablet Categories', href: route('tablet-categories.index') },

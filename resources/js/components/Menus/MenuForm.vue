@@ -151,7 +151,7 @@ onUnmounted(() => {
         <!-- File Input -->
         <div class="grid gap-2">
           <Label for="image" class="text-woosoo-dark-gray">Featured Image</Label>
-          <Input id="image" type="file" v-model="form.image" accept="image/*" @change="onFileChange"
+          <Input id="image" type="file" accept="image/*" @change="onFileChange"
             @input="form.image = $event.target.files[0]" />
           <progress v-if="form.progress" :value="form.progress.percentage" max="100">
             {{ form.progress.percentage }}%

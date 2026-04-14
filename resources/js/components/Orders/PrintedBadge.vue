@@ -23,11 +23,6 @@ const relativeTime = computed(() => {
     return null
   }
 })
-
-const printerLabel = computed(() => {
-  if (!props.printerId) return null
-  return `Printed by: ${props.printerId}`
-})
 </script>
 
 <template>

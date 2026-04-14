@@ -4,7 +4,6 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItemType } from '@/types';
 // import MainNav from '@/components/dashboard/MainNav.vue'
 // import UserNav from '@/components/dashboard/UserNav.vue';
-import NavUser from '@/components/NavUser.vue';
 
 withDefaults(
     defineProps<{

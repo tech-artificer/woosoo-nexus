@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { computed } from 'vue'
 import { columns as defaultColumns } from './columns'
 import { Button } from '@/components/ui/button'
