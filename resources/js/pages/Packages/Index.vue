@@ -280,7 +280,7 @@ function executeDelete() {
                   <Checkbox
                     :id="`modifier-${menu.id}`"
                     :checked="isModifierSelected(menu.id)"
-                    @update:checked="(value) => toggleModifier(menu.id, Boolean(value))"
+                    @update:checked="(value: boolean | 'indeterminate') => toggleModifier(menu.id, value === true)"
                   />
                   <Label :for="`modifier-${menu.id}`" class="cursor-pointer leading-tight">
                     <span class="font-medium">{{ menu.name }}</span>
