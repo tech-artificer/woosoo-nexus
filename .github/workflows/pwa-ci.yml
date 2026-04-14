@@ -41,9 +41,10 @@ jobs:
         run: npm ci
         working-directory: tablet-ordering-pwa
 
-      - name: Ensure esbuild binary is available
+      - name: Ensure esbuild binary is available (best effort)
         if: steps.detect_pwa.outputs.present == 'true'
-        run: npm run rebuild:esbuild --if-present --silent || true
+        continue-on-error: true
+        run: npm run rebuild:esbuild --if-present --silent
         working-directory: tablet-ordering-pwa
 
       - name: Run unit tests (Vitest)
