@@ -158,9 +158,9 @@ class OrderController extends Controller
         }
 
         try {
+            // DeviceOrderObserver::updated() automatically dispatches OrderStatusUpdated
+            // and OrderCompleted when status changes — no manual dispatch needed here.
             $order->update(['status' => OrderStatus::COMPLETED]);
-            event(new OrderStatusUpdated($order));
-            event(new OrderCompletedEvent($order));
         } catch (\Throwable $e) {
             Log::error('Failed to complete order', [
                 'order_id' => $validated['order_id'],
