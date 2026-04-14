@@ -1,9 +1,16 @@
-<!-- Audit Fix (2026-04-06): expose package management page in admin sidebar. -->
 <script setup lang="ts">
 import { computed } from 'vue'
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+} from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
@@ -12,14 +19,22 @@ import {
     UserCog,
     MonitorSmartphone,
     UtensilsCrossed,
-    ShieldCheck,
-    Key,
-    Lock,
+    Package,
     Bell,
     Building2,
     Accessibility,
     FileText,
     Activity,
+    ShieldCheck,
+    Lock,
+    Key,
+    TrendingUp,
+    BarChart2,
+    Clock,
+    Users,
+    Printer,
+    Tag,
+    Monitor,
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
@@ -31,9 +46,9 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: route('dashboard'),
+        icon: LayoutDashboard,
         isActive: false,
         hasSubItems: false,
-        icon: LayoutDashboard,
     },
     {
         title: 'Orders',
@@ -46,6 +61,13 @@ const mainNavItems: NavItem[] = [
         title: 'Menus',
         href: route('menus'),
         icon: UtensilsCrossed,
+        isActive: false,
+        hasSubItems: false,
+    },
+    {
+        title: 'Packages',
+        href: route('packages.index'),
+        icon: Package,
         isActive: false,
         hasSubItems: false,
     },
@@ -72,6 +94,27 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+// All report routes exist under /reports prefix
+const analyticsNavItems: NavItem[] = [
+    {
+        title: 'Reports',
+        href: route('reports.index'),
+        icon: TrendingUp,
+        isActive: false,
+        hasSubItems: true,
+        items: [
+            { title: 'Overview',       href: route('reports.index'),        icon: TrendingUp },
+            { title: 'Daily Sales',    href: route('reports.daily-sales'),  icon: BarChart2 },
+            { title: 'Hourly Sales',   href: route('reports.hourly-sales'), icon: Clock },
+            { title: 'Guest Count',    href: route('reports.guest-count'),  icon: Users },
+            { title: 'Menu Items',     href: route('reports.menu-items'),   icon: UtensilsCrossed },
+            { title: 'Order Status',   href: route('reports.order-status'), icon: ListOrdered },
+            { title: 'Print Audit',    href: route('reports.print-audit'),  icon: Printer },
+            { title: 'Discount & Tax', href: route('reports.discount-tax'), icon: Tag },
+        ],
+    },
+];
+
 const configNavItems: NavItem[] = [
     {
         title: 'Branches',
@@ -87,16 +130,8 @@ const configNavItems: NavItem[] = [
         isActive: false,
         hasSubItems: true,
         items: [
-            {
-                title: 'Roles',
-                href: route('roles.index'),
-                icon: Lock,
-            },
-            {
-                title: 'Permissions',
-                href: route('permissions.index'),
-                icon: Key,
-            },
+            { title: 'Roles',        href: route('roles.index'),        icon: Lock },
+            { title: 'Permissions',  href: route('permissions.index'),  icon: Key },
         ],
     },
     {
@@ -120,16 +155,19 @@ const configNavItems: NavItem[] = [
         isActive: false,
         hasSubItems: false,
     },
+    {
+        title: 'Monitoring',
+        href: route('monitoring.index'),
+        icon: Monitor,
+        isActive: false,
+        hasSubItems: false,
+    },
 ];
-
-// Reports nav — routes not yet implemented on the backend
-// const reportNavItems: NavItem[] = [ ... ];
-
 </script>
 
 <template>
     <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader class="">
+        <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton as-child>
@@ -143,9 +181,9 @@ const configNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="isAdmin ? mainNavItems : [mainNavItems[0]]" title="Main" />
-            <!-- Reports section: enable once backend routes are ready -->
-            <!-- <NavMain v-if="isAdmin" :items="reportNavItems" title="Reports" /> -->
+            <NavMain v-if="isAdmin" :items="analyticsNavItems" title="Analytics" />
         </SidebarContent>
+
         <SidebarFooter>
             <NavMain v-if="isAdmin" :items="configNavItems" title="Configuration" />
             <NavUser />
