@@ -19,14 +19,13 @@ use App\Http\Controllers\Admin\{
     PackageController,
     PackageConfigController,
     TabletCategoryController,
-    MediaController,
+    MediaLibraryController,
     BranchController,
     ReverbController,
     MonitoringController
 };
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\EventLogController;
-use App\Http\Controllers\Admin\PosIntegrationController;
 
 use App\Http\Controllers\Admin\Reports\{
     SalesController,
@@ -94,12 +93,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/tablet-categories/{tabletCategory}/menus/{menuId}/featured', [TabletCategoryController::class, 'toggleFeatured'])->name('tablet-categories.menus.featured');
         Route::put('/tablet-categories/{tabletCategory}/menus/order', [TabletCategoryController::class, 'updateMenuOrder'])->name('tablet-categories.menus.order');
         // Media Library
-        Route::get('/media', [MediaController::class, 'index'])->name('media.index');
-        Route::post('/media', [MediaController::class, 'store'])->name('media.store');
-        Route::delete('/media/{medium}', [MediaController::class, 'destroy'])->name('media.destroy');
-        Route::post('/media/from-url', [MediaController::class, 'createFromUrl'])->name('media.from-url');
-        Route::post('/media/{medium}/attach', [MediaController::class, 'attachToMenu'])->name('media.attach');
-        Route::delete('/media/{medium}/detach', [MediaController::class, 'detachFromMenu'])->name('media.detach');
+        Route::get('/media', [MediaLibraryController::class, 'index'])->name('media.index');
+        Route::post('/media', [MediaLibraryController::class, 'store'])->name('media.store');
+        Route::delete('/media/{medium}', [MediaLibraryController::class, 'destroy'])->name('media.destroy');
+        Route::post('/media/from-url', [MediaLibraryController::class, 'createFromUrl'])->name('media.from-url');
+        Route::post('/media/{medium}/attach', [MediaLibraryController::class, 'attachToMenu'])->name('media.attach');
+        Route::delete('/media/{medium}/detach', [MediaLibraryController::class, 'detachFromMenu'])->name('media.detach');
 
         // Admin settings (branch-backed JSON settings)
         $settingsDefaults = [
@@ -150,15 +149,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/settings', function () {
             return Inertia::render('Admin/Settings');
         })->name('admin.settings.page');
-
-        // POS Integration settings
-        Route::prefix('integrations/pos')->name('integrations.pos.')->group(function () {
-            Route::get('/',                [PosIntegrationController::class, 'index'])->name('index');
-            Route::post('/',               [PosIntegrationController::class, 'store'])->name('store');
-            Route::post('/test',           [PosIntegrationController::class, 'testConnection'])->name('test');
-            Route::put('/{integration}',   [PosIntegrationController::class, 'update'])->name('update');
-            Route::delete('/{integration}',[PosIntegrationController::class, 'destroy'])->name('destroy');
-        });
 
         // User
         Route::resource('/users', UserController::class);
