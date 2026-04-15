@@ -145,13 +145,20 @@ class OrderController extends Controller
     public function complete(Request $request)
     {
         $validated = $request->validate([
-            'order_id' => ['required'],
+            'order_id' => ['required', 'integer', 'min:1'],
         ]);
 
-        $order = DeviceOrder::where('order_id', $validated['order_id'])->first();
+        $order = DeviceOrder::where('order_id', $validated['order_id'])
+            ->lockForUpdate()
+            ->first();
 
         if (! $order) {
             return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        // Idempotency check: prevent double-completion from concurrent requests
+        if ($order->status === OrderStatus::COMPLETED) {
+            return redirect()->back()->with('info', 'Order already completed.');
         }
 
         try {
@@ -161,6 +168,8 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             Log::error('Failed to complete order', [
                 'order_id' => $validated['order_id'],
+                'current_status' => $order->status->value ?? 'unknown',
+                'exception_class' => get_class($e),
                 'error' => $e->getMessage(),
             ]);
 
@@ -176,7 +185,7 @@ class OrderController extends Controller
     public function print(Request $request)
     {
         $validated = $request->validate([
-            'order_id' => ['required'],
+            'order_id' => ['required', 'integer', 'min:1'],
         ]);
 
         $order = DeviceOrder::where('order_id', $validated['order_id'])->first();
