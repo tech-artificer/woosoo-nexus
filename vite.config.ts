@@ -9,7 +9,7 @@ import { defineConfig } from 'vite';
 process.env.TAILWIND_DISABLE_OXIDE = '1';
 
 const devPort = Number(process.env.VITE_DEV_PORT) || 5173;
-const devHost = process.env.VITE_DEV_HOST || '192.168.100.7';
+const devHost = process.env.VITE_DEV_HOST || 'localhost';
 const devHttpsEnabled = (process.env.VITE_DEV_HTTPS ?? 'true') === 'true';
 const devSslKeyPath = process.env.VITE_DEV_SSL_KEY || path.resolve(__dirname, '../../certs/legacy/server-key.pem');
 const devSslCertPath = process.env.VITE_DEV_SSL_CERT || path.resolve(__dirname, '../../certs/legacy/server.pem');
