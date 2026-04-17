@@ -30,7 +30,8 @@ class TransactionRollbackTest extends TestCase
         ]);
 
         // Seed an active POS session so KryptonContextService can resolve a
-        // valid session_id without throwing SessionNotFoundException.
+        // valid session_id and order creation does not later fail due to
+        // missing context.
         $this->createTestSession();
     }
 
