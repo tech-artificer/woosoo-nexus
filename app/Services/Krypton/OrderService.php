@@ -201,7 +201,7 @@ class OrderService
             'service_type_id' => $defaults['service_type_id'] ?? 1,
             'revenue_id' => $defaults['revenue_id'] ?? 1,
             'terminal_id' => $defaults['terminal_id'] ?? 1,
-            'session_id' => $defaults['session_id'] ?? null,  // REQUIRED - null triggers SessionNotFoundException in CreateOrder
+            'session_id' => $defaults['session_id'] ?? null,  // null propagates to CreateOrder which throws SessionNotFoundException
             'terminal_session_id' => $defaults['terminal_session_id'] ?? null,
             'employee_log_id' => $defaults['employee_log_id'] ?? null,
             'cash_tray_session_id' => $defaults['cash_tray_session_id'] ?? null,
