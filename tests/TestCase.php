@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
 {
+    private const TEST_KRYPTON_SESSION_CACHE_KEY = 'testing.krypton.session_id';
+
     /**
      * Setup the test environment and ensure the `pos` connection is
      * mapped to an in-memory sqlite database to avoid remote MySQL
@@ -22,7 +24,7 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         if (defined('PHPUNIT_COMPOSER_INSTALL') || defined('__PHPUNIT_PHAR__') || $this->app->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
-            Cache::forget('testing.krypton.session_id');
+            Cache::forget(self::TEST_KRYPTON_SESSION_CACHE_KEY);
 
             // Map the `pos` connection to the testing sqlite connection so
             // tests do not accidentally attempt to connect to the external
@@ -330,7 +332,7 @@ abstract class TestCase extends BaseTestCase
             'date_time_closed' => null,  // Active (not closed)
         ], $attributes));
 
-        Cache::put('testing.krypton.session_id', $sessionId, now()->addHour());
+        Cache::put(self::TEST_KRYPTON_SESSION_CACHE_KEY, $sessionId, now()->addHour());
 
         return $sessionId;
     }

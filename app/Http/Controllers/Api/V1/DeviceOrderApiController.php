@@ -22,6 +22,9 @@ use Throwable;
  */
 class DeviceOrderApiController extends Controller
 {
+    private const POS_SQLSTATE_GENERAL_ERROR = 'HY000';
+    private const POS_CONNECTION_REFUSED_ERROR_CODE = 2002;
+
     /**
      * Handle the incoming order request from a specific device.
      *
@@ -189,8 +192,14 @@ class DeviceOrderApiController extends Controller
             return false;
         }
 
-        return str_contains($message, 'sqlstate[hy000] [2002]')
-            || str_contains($message, 'connection refused')
+        $sqlState = strtoupper((string) ($e->errorInfo[0] ?? ''));
+        $driverCode = (int) ($e->errorInfo[1] ?? 0);
+
+        if ($sqlState === self::POS_SQLSTATE_GENERAL_ERROR && $driverCode === self::POS_CONNECTION_REFUSED_ERROR_CODE) {
+            return true;
+        }
+
+        return str_contains($message, 'connection refused')
             || str_contains($message, 'server has gone away')
             || str_contains($message, 'no such file or directory');
     }

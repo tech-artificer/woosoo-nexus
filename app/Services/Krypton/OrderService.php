@@ -37,6 +37,8 @@ use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
+    private const TEST_KRYPTON_SESSION_CACHE_KEY = 'testing.krypton.session_id';
+
     public $attributes = [];
     /**
      * Process an order for a given device with specified attributes.
@@ -213,7 +215,7 @@ class OrderService
         ];
 
         if (($normalized['session_id'] ?? null) === null && app()->runningUnitTests()) {
-            $testSessionId = Cache::get('testing.krypton.session_id');
+            $testSessionId = Cache::get(self::TEST_KRYPTON_SESSION_CACHE_KEY);
 
             if (is_numeric($testSessionId)) {
                 $normalized['session_id'] = (int) $testSessionId;
