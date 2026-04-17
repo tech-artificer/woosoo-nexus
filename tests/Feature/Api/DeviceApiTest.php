@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Device;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\PermissionRegistrar;
 
 class DeviceApiTest extends TestCase
 {
@@ -29,6 +30,9 @@ class DeviceApiTest extends TestCase
                 ['name' => $permission, 'guard_name' => 'web']
             );
         }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $user->givePermissionTo($permissions);
 
         Sanctum::actingAs($user, [], 'sanctum');
