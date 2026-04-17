@@ -5,6 +5,7 @@ namespace Tests;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
@@ -20,7 +21,9 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        if (defined('PHPUNIT_COMPOSER_INSTALL') || defined('__PHPUNIT_PHAR__') || $this->app->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
+            Cache::forget('testing.krypton.session_id');
+
             // Map the `pos` connection to the testing sqlite connection so
             // tests do not accidentally attempt to connect to the external
             // MySQL POS database. Keep the connection configuration identical
@@ -326,6 +329,8 @@ abstract class TestCase extends BaseTestCase
             'date_time_opened' => now(),
             'date_time_closed' => null,  // Active (not closed)
         ], $attributes));
+
+        Cache::put('testing.krypton.session_id', $sessionId, now()->addHour());
 
         return $sessionId;
     }

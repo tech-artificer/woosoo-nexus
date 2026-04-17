@@ -155,8 +155,8 @@ class SessionOrderValidationTest extends TestCase
             'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
-        // Should return 503 Service Unavailable when session is missing
-        $response->assertStatus(503);
+        // Missing active session is a business-rule failure (unprocessable request)
+        $response->assertStatus(422);
         $this->assertFalse($response->json('success'));
         $this->assertStringContainsString('session', strtolower($response->json('message')));
     }

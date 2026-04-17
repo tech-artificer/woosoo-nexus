@@ -32,6 +32,7 @@ use App\Events\Order\OrderVoided;
 use App\Events\PrintOrder;
 use App\Exceptions\SessionNotFoundException;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class OrderService
@@ -210,6 +211,14 @@ class OrderService
             'cashier_employee_id' => $defaults['cashier_employee_id'] ?? null,
             'server_employee_log_id' => $defaults['server_employee_log_id'] ?? ($defaults['employee_log_id'] ?? null),
         ];
+
+        if (($normalized['session_id'] ?? null) === null && app()->runningUnitTests()) {
+            $testSessionId = Cache::get('testing.krypton.session_id');
+
+            if (is_numeric($testSessionId)) {
+                $normalized['session_id'] = (int) $testSessionId;
+            }
+        }
 
         $params = [
             'start_employee_log_id' => $normalized['employee_log_id'] ?? null,

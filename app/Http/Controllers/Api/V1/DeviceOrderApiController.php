@@ -11,6 +11,7 @@ use App\Services\Krypton\OrderService;
 use App\Exceptions\SessionNotFoundException;
 use App\Enums\OrderStatus;
 use App\Services\AuditLogService;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -79,7 +80,7 @@ class DeviceOrderApiController extends Controller
                 'success' => false,
                 'message' => 'Order processing failed.',
                 'errors' => $errors,
-            ], 500);
+            ], 422);
         }
 
         try {
@@ -143,12 +144,29 @@ class DeviceOrderApiController extends Controller
 
             return response()->json($responseBody, 201);
         } catch (SessionNotFoundException $e) {
-            // Transaction aborted: No active POS session
+            // Business rule violation: no active POS session for this order request
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
                 'code' => 'SESSION_NOT_FOUND',
-            ], 503);
+            ], 422);
+        } catch (QueryException $e) {
+            Log::error('Order creation failed', [
+                'device_id' => $device?->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($this->isPosServiceUnavailable($e)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order service is temporarily unavailable.',
+                ], 503);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Order creation failed.',
+            ], 500);
         } catch (Throwable $e) {
             Log::error('Order creation failed', [
                 'device_id' => $device?->id,
@@ -163,6 +181,19 @@ class DeviceOrderApiController extends Controller
     
     }
 
+    private function isPosServiceUnavailable(QueryException $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        if (! str_contains($message, 'connection: pos')) {
+            return false;
+        }
+
+        return str_contains($message, 'sqlstate[hy000] [2002]')
+            || str_contains($message, 'connection refused')
+            || str_contains($message, 'server has gone away')
+            || str_contains($message, 'no such file or directory');
+    }
+
 
 }
-
