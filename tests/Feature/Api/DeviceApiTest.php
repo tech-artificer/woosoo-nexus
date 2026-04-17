@@ -318,7 +318,7 @@ class DeviceApiTest extends TestCase
         $resp->assertStatus(200);
         $json = $resp->json();
         $this->assertArrayHasKey('branches', $json);
-        $this->assertCount(2, $json['branches']);
+        $this->assertCount(3, $json['branches']); // 2 created + 1 seeded
         $this->assertEquals('Active Branch', $json['branches'][0]['name']);
     }
 }
