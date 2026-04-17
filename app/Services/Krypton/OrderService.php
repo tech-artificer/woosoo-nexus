@@ -193,15 +193,15 @@ class OrderService
         $contextService = app(KryptonContextService::class);
         $defaults = $contextService->getData();
 
-        // session_id is MANDATORY from Krypton - no fallback to null or defaults allowed
-        // terminal_session_id, terminal_id, revenue_id have sensible fallbacks if missing from POS context
+        // Allow session_id to remain null so CreateOrder can throw SessionNotFoundException.
+        // Other POS context values may still use sensible fallbacks when unavailable.
         $normalized = [
             'price_level_id' => $defaults['price_level_id'] ?? null,
             'tax_set_id' => $defaults['tax_set_id'] ?? null,
             'service_type_id' => $defaults['service_type_id'] ?? 1,
             'revenue_id' => $defaults['revenue_id'] ?? 1,
             'terminal_id' => $defaults['terminal_id'] ?? 1,
-            'session_id' => $defaults['session_id'],  // REQUIRED - no fallback, exception thrown by KryptonContextService if missing
+            'session_id' => $defaults['session_id'] ?? null,  // null propagates to CreateOrder which throws SessionNotFoundException
             'terminal_session_id' => $defaults['terminal_session_id'] ?? null,
             'employee_log_id' => $defaults['employee_log_id'] ?? null,
             'cash_tray_session_id' => $defaults['cash_tray_session_id'] ?? null,
