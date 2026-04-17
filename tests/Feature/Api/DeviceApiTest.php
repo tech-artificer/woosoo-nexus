@@ -20,6 +20,17 @@ class DeviceApiTest extends TestCase
     private function actingAsAdmin(): void
     {
         $user = User::factory()->create();
+
+        // Create device management permissions if they don't exist, then grant
+        // them to the test user so DevicePolicy checks don't throw PermissionDoesNotExist.
+        $permissions = ['view devices', 'create devices', 'update devices', 'delete devices'];
+        foreach ($permissions as $permission) {
+            \Spatie\Permission\Models\Permission::firstOrCreate(
+                ['name' => $permission, 'guard_name' => 'web']
+            );
+        }
+        $user->givePermissionTo($permissions);
+
         Sanctum::actingAs($user, [], 'sanctum');
     }
 

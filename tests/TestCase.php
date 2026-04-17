@@ -121,6 +121,65 @@ abstract class TestCase extends BaseTestCase
                 });
             }
 
+            // Additional POS tables required by KryptonContextService::load()
+            // so that queries inside Cache::remember don't throw "no such table"
+            // and abort the entire context load.
+
+            if (! $schema->hasTable('terminals')) {
+                $schema->create('terminals', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->string('name')->nullable();
+                });
+                // Insert a default terminal row so Terminal::where('id', 1)->first()
+                // returns a model instead of null.
+                DB::connection('pos')->table('terminals')->insert(['id' => 1, 'name' => 'Test Terminal']);
+            }
+
+            if (! $schema->hasTable('terminal_sessions')) {
+                $schema->create('terminal_sessions', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->integer('terminal_id')->nullable();
+                    $table->integer('session_id')->nullable();
+                    $table->dateTime('date_time_opened')->nullable();
+                    $table->dateTime('date_time_closed')->nullable();
+                });
+            }
+
+            if (! $schema->hasTable('employee_logs')) {
+                $schema->create('employee_logs', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->integer('employee_id')->nullable();
+                    $table->integer('terminal_id')->nullable();
+                    $table->dateTime('date_time_in')->nullable();
+                    $table->dateTime('date_time_out')->nullable();
+                });
+            }
+
+            if (! $schema->hasTable('cash_tray_sessions')) {
+                $schema->create('cash_tray_sessions', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->integer('session_id')->nullable();
+                });
+            }
+
+            if (! $schema->hasTable('terminal_services')) {
+                $schema->create('terminal_services', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->integer('terminal_id')->nullable();
+                    $table->integer('revenue_id')->nullable();
+                    $table->integer('service_type_id')->nullable();
+                });
+            }
+
+            if (! $schema->hasTable('revenues')) {
+                $schema->create('revenues', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->boolean('is_active')->default(false);
+                    $table->integer('price_level_id')->nullable();
+                    $table->integer('tax_set_id')->nullable();
+                });
+            }
+
             // Some Eloquent queries use `whereHas('table')` which generates
             // subqueries referencing the `tables` table on the default DB
             // connection. To avoid cross-connection missing-table errors in

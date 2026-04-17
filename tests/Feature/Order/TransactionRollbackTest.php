@@ -28,6 +28,10 @@ class TransactionRollbackTest extends TestCase
             'receipt_name' => 'Test Item',
             'price' => 100.00,
         ]);
+
+        // Seed an active POS session so KryptonContextService can resolve a
+        // valid session_id without throwing SessionNotFoundException.
+        $this->createTestSession();
     }
 
     /** @test */
