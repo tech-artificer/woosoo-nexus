@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\Krypton\{
     TerminalSessionApiController,
 };
 
+use App\Helpers\BroadcastConfig;
 use App\Models\DeviceOrder;
 use App\Events\PrintOrder;
 
@@ -45,6 +46,15 @@ Route::get('/device/ip', function (Request $request) {
         'user_agent' => $request->userAgent()
     ]);
 });
+
+// Public config endpoint — provides client-safe broadcasting config for cold-start
+// (before auth). Cacheable; never includes secrets.
+Route::get('/config', function () {
+    return response()->json([
+        'broadcasting' => BroadcastConfig::clientPayload(),
+        'app_version'  => config('app.version', env('APP_VERSION', '1.0.0')),
+    ])->header('Cache-Control', 'public, max-age=300');
+})->name('api.config');
 
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 

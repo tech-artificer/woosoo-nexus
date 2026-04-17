@@ -91,32 +91,42 @@ onMounted(() => {
                 <h1 class="text-2xl font-bold tracking-tight">Overview</h1>
                 <p class="text-muted-foreground">Welcome to the main dashboard</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card v-for="dashCard in dashCards" :key="dashCard.title" class="border-0">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card v-for="dashCard in dashCards" :key="dashCard.title" class="border-0 transition-shadow hover:shadow-md">
                     <CardHeader class="flex flex-row items-center justify-between p-4 pb-2">
-                        <CardTitle class="text-sm font-medium">
+                        <CardTitle class="text-sm font-medium text-muted-foreground">
                         {{ dashCard.title }}
                         </CardTitle>
-                        <component :is="dashCard.icon" class="text-woosoo-green " />   
+                        <component :is="dashCard.icon" class="size-5 text-woosoo-green shrink-0" />   
                     </CardHeader>
-                    <CardContent>
-                        <div class="text-2xl font-bold">
+                    <CardContent class="p-4 pt-0">
+                        <div class="text-2xl font-bold tabular-nums tracking-tight">
                         {{ dashCard.value }}
                         </div>
-                        <p class="text-xs text-muted-foreground">
+                        <p class="text-xs text-muted-foreground mt-1">
                         {{ dashCard.helpText }}
                         </p>
                     </CardContent>
                 </Card>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <LineChart />
-                </div>
-                  <div class="flex justify-center items-center">
-                    <DonutChart />
-                </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card class="border-0">
+                    <CardHeader class="p-4 pb-2">
+                        <CardTitle class="text-sm font-medium">Sales Trend</CardTitle>
+                    </CardHeader>
+                    <CardContent class="p-4 pt-0">
+                        <LineChart />
+                    </CardContent>
+                </Card>
+                <Card class="border-0">
+                    <CardHeader class="p-4 pb-2">
+                        <CardTitle class="text-sm font-medium">Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent class="p-4 pt-0 flex justify-center items-center">
+                        <DonutChart />
+                    </CardContent>
+                </Card>
             </div>
         </div>
     </AppLayout>

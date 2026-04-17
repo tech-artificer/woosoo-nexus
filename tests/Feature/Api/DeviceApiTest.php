@@ -8,11 +8,16 @@ use App\Models\Branch;
 use App\Models\Device;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
-use Spatie\Permission\PermissionRegistrar;
 
 class DeviceApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed();
+    }
 
     // -------------------------------------------------------------------------
     // Helpers
@@ -20,21 +25,9 @@ class DeviceApiTest extends TestCase
 
     private function actingAsAdmin(): void
     {
-        $user = User::factory()->create();
-
-        // Create device management permissions if they don't exist, then grant
-        // them to the test user so DevicePolicy checks don't throw PermissionDoesNotExist.
-        $permissions = ['view devices', 'create devices', 'update devices', 'delete devices'];
-        foreach ($permissions as $permission) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(
-                ['name' => $permission, 'guard_name' => 'web']
-            );
-        }
-
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        $user->givePermissionTo($permissions);
-
+        $user = User::factory()->create(['is_admin' => true]);
+        $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+        $user->assignRole($adminRole);
         Sanctum::actingAs($user, [], 'sanctum');
     }
 
