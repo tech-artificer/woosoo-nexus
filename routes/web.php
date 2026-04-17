@@ -59,12 +59,16 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::post('/orders/print', [OrderController::class, 'print'])->name('orders.print');
         Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
-        Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
-        Route::post('/orders/bulk-void', [OrderController::class, 'bulkVoid'])->name('orders.bulk-void');
+        
+        // Bulk operations with rate limiting (60 requests/min to prevent abuse)
+        Route::middleware(['throttle:60,1'])->group(function () {
+            Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
+            Route::post('/orders/bulk-void', [OrderController::class, 'bulkVoid'])->name('orders.bulk-void');
+            Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
+        });
+        
         // Admin: update single order status
         Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
-        // Admin: bulk update order statuses
-        Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
         // Device order API for strict verification
         Route::get('/device-order/by-order-id/{orderId}', [OrderController::class, 'byOrderId'])->name('device-order.by-order-id');
         // Menu

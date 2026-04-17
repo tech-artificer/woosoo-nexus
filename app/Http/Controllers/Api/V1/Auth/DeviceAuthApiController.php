@@ -11,6 +11,7 @@ use App\Actions\Device\RegisterDevice;
 use App\Http\Requests\DeviceRegisterRequest;
 use App\Models\DeviceRegistrationCode;
 use App\Services\AuditLogService;
+use App\Helpers\BroadcastConfig;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
@@ -140,6 +141,7 @@ class DeviceAuthApiController extends Controller
                 'message' => 'Device already registered',
                 'device' => $existing,
                 'ip_used' => $ipToUse,
+                'broadcasting' => BroadcastConfig::clientPayload(),
             ], 409);
         }
 
@@ -159,6 +161,7 @@ class DeviceAuthApiController extends Controller
             'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ipToUse,
+            'broadcasting' => BroadcastConfig::clientPayload(),
         ], 201);
     }
     /**
@@ -214,6 +217,7 @@ class DeviceAuthApiController extends Controller
             'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ip,
+            'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
     }
 
@@ -249,6 +253,7 @@ class DeviceAuthApiController extends Controller
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
             'expires_at' => $expiresAt->toDateTimeString(),
+            'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
 }
 
@@ -303,7 +308,11 @@ class DeviceAuthApiController extends Controller
         $device = Device::where('ip_address', $ip)->where('is_active', true)->first();
 
         if (! $device) {
-            return response()->json(['found' => false, 'ip_used' => $ip], 200);
+            return response()->json([
+                'found' => false,
+                'ip_used' => $ip,
+                'broadcasting' => BroadcastConfig::clientPayload(),
+            ], 200);
         }
 
         // Update last seen and IP tracking
@@ -329,6 +338,7 @@ class DeviceAuthApiController extends Controller
                 'bluetooth_address' => null,
             ],
             'ip_used' => $ip,
+            'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
     }
 

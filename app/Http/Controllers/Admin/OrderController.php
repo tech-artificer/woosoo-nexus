@@ -200,58 +200,103 @@ class OrderController extends Controller
     }
 
     /**
-     * Bulk complete orders
+     * Bulk complete orders with race condition protection.
      */
     public function bulkComplete(Request $request) {
         $validated = $request->validate([
             'order_ids' => ['required', 'array'],
-            'order_ids.*' => ['required', 'integer'],
+            'order_ids.*' => ['required', 'integer', 'min:1'],
         ]);
 
         $completed = 0;
+        $skipped = 0;
+        $failed = [];
+
         foreach ($validated['order_ids'] as $orderId) {
             try {
-                $order = DeviceOrder::where('order_id', $orderId)->first();
+                $order = DeviceOrder::where('order_id', $orderId)
+                    ->lockForUpdate()
+                    ->first();
+
                 if (! $order) {
                     Log::warning('bulkComplete: order not found', ['order_id' => $orderId]);
+                    $failed[] = $orderId;
+                    continue;
+                }
+
+                // Idempotency check: skip already completed orders
+                if ($order->status === OrderStatus::COMPLETED) {
+                    $skipped++;
                     continue;
                 }
 
                 // DeviceOrderObserver dispatches realtime events when status changes.
                 $order->update(['status' => OrderStatus::COMPLETED]);
                 $completed++;
-            } catch (\Exception $e) {
-                Log::error("Failed to complete order {$orderId}: " . $e->getMessage());
+            } catch (\Throwable $e) {
+                Log::error('bulkComplete: failed to complete order', [
+                    'order_id' => $orderId,
+                    'error' => $e->getMessage(),
+                    'exception_class' => get_class($e),
+                ]);
+                $failed[] = $orderId;
             }
         }
 
-        return redirect()->back()->with('success', "{$completed} order(s) completed successfully.");
+        $message = "{$completed} order(s) completed";
+        if ($skipped > 0) {
+            $message .= ", {$skipped} already completed";
+        }
+        if (count($failed) > 0) {
+            $message .= ", " . count($failed) . " failed";
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**
-     * Bulk void orders
+     * Bulk void orders (standardized to use order_id for API consistency).
      */
     public function bulkVoid(Request $request) {
         $validated = $request->validate([
-            'ids' => ['required', 'array'],
-            'ids.*' => ['required', 'integer', 'exists:device_orders,id'],
+            'order_ids' => ['required', 'array'],
+            'order_ids.*' => ['required', 'integer', 'min:1'],
         ]);
 
         $voided = 0;
-        foreach ($validated['ids'] as $id) {
+        $failed = [];
+
+        foreach ($validated['order_ids'] as $orderId) {
             try {
-                $deviceOrder = DeviceOrder::find($id);
-                if ($deviceOrder) {
-                    $deviceOrder->update(['status' => OrderStatus::VOIDED]);
-                    $this->orderService->voidOrder($deviceOrder);
-                    $voided++;
+                $deviceOrder = DeviceOrder::where('order_id', $orderId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $deviceOrder) {
+                    Log::warning('bulkVoid: order not found', ['order_id' => $orderId]);
+                    $failed[] = $orderId;
+                    continue;
                 }
-            } catch (\Exception $e) {
-                Log::error("Failed to void order {$id}: " . $e->getMessage());
+
+                $deviceOrder->update(['status' => OrderStatus::VOIDED]);
+                $this->orderService->voidOrder($deviceOrder);
+                $voided++;
+            } catch (\Throwable $e) {
+                Log::error('bulkVoid: failed to void order', [
+                    'order_id' => $orderId,
+                    'error' => $e->getMessage(),
+                    'exception_class' => get_class($e),
+                ]);
+                $failed[] = $orderId;
             }
         }
 
-        return redirect()->back()->with('success', "{$voided} order(s) voided successfully.");
+        $message = "{$voided} order(s) voided";
+        if (count($failed) > 0) {
+            $message .= ", " . count($failed) . " failed";
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**
