@@ -20,6 +20,7 @@ class TransactionRollbackTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed();
 
         // Seed a test menu item for order creation
         Menu::factory()->create([

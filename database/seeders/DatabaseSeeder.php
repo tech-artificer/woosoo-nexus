@@ -103,6 +103,8 @@ class DatabaseSeeder extends Seeder
             // Device
             'devices.view',
             'devices.register',
+            'devices.update',
+            'devices.restore',
             'devices.assign.table',
             'devices.unassign.table',
             'devices.delete',

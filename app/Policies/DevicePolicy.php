@@ -12,7 +12,7 @@ class DevicePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('view devices');
+        return $user->hasPermissionTo('devices.view');
     }
 
     /**
@@ -20,7 +20,7 @@ class DevicePolicy
      */
     public function view(User $user, Device $device): bool
     {
-        return $user->hasPermissionTo('view devices');
+        return $user->hasPermissionTo('devices.view');
     }
 
     /**
@@ -28,7 +28,7 @@ class DevicePolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create devices');
+        return $user->hasPermissionTo('devices.register');
     }
 
     /**
@@ -37,7 +37,7 @@ class DevicePolicy
      */
     public function update(User $user, Device $device): bool
     {
-        return $user->hasPermissionTo('update devices');
+        return $user->hasPermissionTo('devices.update');
     }
 
     /**
@@ -45,7 +45,7 @@ class DevicePolicy
      */
     public function delete(User $user, Device $device): bool
     {
-        return $user->hasPermissionTo('delete devices');
+        return $user->hasPermissionTo('devices.delete');
     }
 
     /**
@@ -53,7 +53,7 @@ class DevicePolicy
      */
     public function restore(User $user, Device $device): bool
     {
-        return $user->hasPermissionTo('delete devices');
+        return $user->hasPermissionTo('devices.restore');
     }
 
     /**
@@ -61,6 +61,6 @@ class DevicePolicy
      */
     public function forceDelete(User $user, Device $device): bool
     {
-        return $user->hasPermissionTo('delete devices');
+        return $user->hasPermissionTo('devices.delete');
     }
 }
