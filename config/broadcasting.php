@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\PublicOrigin;
+
 return [
 
     /*
@@ -40,10 +42,10 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => env('REVERB_HOST'),
-                'port' => env('REVERB_PORT', 6001),
-                'scheme' => env('REVERB_SCHEME', 'https'),
-                'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                'host' => value(static fn (): string => trim((string) env('REVERB_PUBLIC_HOST')) ?: PublicOrigin::host()),
+                'port' => env('REVERB_PORT', 8080),
+                'scheme' => env('REVERB_SCHEME', PublicOrigin::scheme()),
+                'useTLS' => env('REVERB_SCHEME', PublicOrigin::scheme()) === 'https',
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html

@@ -146,7 +146,7 @@ const totalInitialItems = computed(() => {
   </div>
 
   <Tabs v-else default-value="summary" class="w-full">
-    <TabsList class="grid w-full grid-cols-3">
+    <TabsList class="inline-flex h-11 w-auto p-1">
       <TabsTrigger value="summary">Summary</TabsTrigger>
       <TabsTrigger value="items">Items</TabsTrigger>
       <TabsTrigger value="history">History</TabsTrigger>

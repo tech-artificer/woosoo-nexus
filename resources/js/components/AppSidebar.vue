@@ -166,25 +166,31 @@ const configNavItems: NavItem[] = [
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton as-child>
-                        <Link :href="route('dashboard')">
-                            <AppLogo />
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
+    <Sidebar
+        collapsible="icon"
+        variant="inset"
+        class="border-none"
+    >
+        <SidebarHeader class="px-3 pt-3">
+            <div class="overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.04))] p-3 text-white shadow-[0_26px_65px_-42px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton as-child size="lg" class="rounded-[22px] bg-white/8 hover:bg-white/12 data-[active=true]:bg-white data-[active=true]:text-woosoo-dark-gray">
+                            <Link :href="route('dashboard')">
+                                <AppLogo />
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </div>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent class="px-2 pb-2 pt-3">
             <NavMain :items="isAdmin ? mainNavItems : [mainNavItems[0]]" title="Main" />
             <NavMain v-if="isAdmin" :items="analyticsNavItems" title="Analytics" />
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter class="px-2 pb-3 pt-2">
             <NavMain v-if="isAdmin" :items="configNavItems" title="Configuration" />
             <NavUser />
         </SidebarFooter>

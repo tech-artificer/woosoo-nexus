@@ -107,11 +107,6 @@ class Device extends Authenticatable
         return $this->belongsTo(Branch::class, 'branch_id');
     }
 
-    public function registrationCode(): HasOne
-    {
-        return $this->hasOne(DeviceRegistrationCode::class, 'used_by_device_id', 'id');
-    }
-
     public function heartbeats(): HasMany
     {
         return $this->hasMany(DeviceHeartbeat::class, 'device_id')->orderByDesc('recorded_at');

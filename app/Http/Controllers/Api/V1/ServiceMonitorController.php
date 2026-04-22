@@ -12,7 +12,6 @@ class ServiceMonitorController extends Controller
     {
         return response()->json([
             'reverb' => $this->isProcessRunning('reverb'),
-            'deviceCodes' => 'Completed', // This could be a DB flag or config
             'paymentTrigger' => 'Completed', // Could also be dynamic
             'scheduler' => $this->isProcessRunning('schedule:work'),
         ]);
@@ -23,7 +22,6 @@ class ServiceMonitorController extends Controller
         $service = $request->service;
         $commands = [
             'reverb' => 'app:start-reverb',
-            // 'deviceCodes' => 'devices:generate-codes',
             // 'paymentTrigger' => 'pos:setup-payment-trigger',
             'scheduler' => 'schedule:work',
         ];

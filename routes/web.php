@@ -22,7 +22,8 @@ use App\Http\Controllers\Admin\{
     MediaLibraryController,
     BranchController,
     ReverbController,
-    MonitoringController
+    MonitoringController,
+    PosConnectionController
 };
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\EventLogController;
@@ -154,6 +155,11 @@ Route::middleware(['auth'])->group(function () {
             return Inertia::render('Admin/Settings');
         })->name('admin.settings.page');
 
+        // Configuration hub page
+        Route::get('/configuration', function () {
+            return Inertia::render('Configuration');
+        })->name('configuration.index');
+
         // User
         Route::resource('/users', UserController::class);
         Route::prefix('users')->name('users.')->group(function () {
@@ -190,7 +196,6 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('{id}/restore', [DeviceController::class, 'restore'])->name('restore');
             Route::post('/{device}/assign-table', [DeviceController::class, 'assignTable'])->name('device.assign.table');
             Route::post('/{device}/token', [DeviceController::class, 'createToken'])->name('create.token');
-            Route::post('/generate-codes', [DeviceController::class, 'generateCodes'])->name('generate.codes');
         });
 
         Route::get('/accessibility', [AccessibilityController::class, 'index'])->name('accessibility.index');
@@ -279,31 +284,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/purge-print-events', [MonitoringController::class, 'purgePrintEvents'])->name('purge-print-events');
     });
 
+    // POS Connection — admin-only configuration for the 3rd-party Krypton database.
+    Route::middleware(['can:admin'])->prefix('configuration/pos-connection')->name('pos-connection.')->group(function () {
+        Route::get('/', [PosConnectionController::class, 'index'])->name('index');
+        Route::put('/', [PosConnectionController::class, 'update'])->name('update');
+        Route::post('/test', [PosConnectionController::class, 'test'])->name('test');
+    });
+
 });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
-
-// Dev-only helper route: unauthenticated generator for quick local testing
-// SECURITY: Only enabled in local/development environments (not production, even with APP_DEBUG)
-if (app()->environment(['local', 'development'])) {
-    // GET avoids CSRF middleware so it's easy to call from curl/browser during local testing
-    Route::get('/dev/generate-codes', function (\Illuminate\Http\Request $request) {
-        $count = (int) ($request->query('count', 15));
-        $count = max(1, min(100, $count));
-        $created = [];
-        $attempts = 0;
-        while (count($created) < $count && $attempts < $count * 5) {
-            $attempts++;
-            $code = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(6));
-            try {
-                $model = \App\Models\DeviceRegistrationCode::create(["code" => $code]);
-                $created[] = $model->code;
-            } catch (\Exception $e) {
-                continue;
-            }
-        }
-
-        return response()->json(["success" => true, "codes" => $created]);
-    });
-}

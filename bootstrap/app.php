@@ -5,6 +5,7 @@ use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequestId;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use App\Http\Middleware\TrustProxies;
 use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -28,7 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
     // )
     ->withMiddleware(function (Middleware $middleware) {
         // ✅ Global middleware (runs on all routes)
+        // TrustProxies must be first — it normalises X-Forwarded-Proto before
+        // any URL generation (assets, redirects, CSRF) reads the request scheme.
         $middleware->prepend([
+            TrustProxies::class,
             HandleCors::class,
             RequestId::class,
         ]);

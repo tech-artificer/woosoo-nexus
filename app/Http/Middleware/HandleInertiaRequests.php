@@ -48,9 +48,16 @@ class HandleInertiaRequests extends Middleware
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),
-                'location' => $request->url(),
+                // Use url()->current() so URL::forceScheme('https') is respected,
+                // rather than $request->url() which reads the raw Symfony request
+                // scheme (http) before TrustProxies can rewrite it.
+                'location' => url()->current(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'flash' => [
+                'warning' => fn () => $request->session()->get('warning'),
+                'success' => fn () => $request->session()->get('success'),
+            ],
         ];
     }
 }

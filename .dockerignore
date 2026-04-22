@@ -1,0 +1,70 @@
+# ============================================
+# Laravel Backend - Docker Build Exclusions
+# ============================================
+# Excludes files from Docker build context to:
+# - Reduce build context size
+# - Prevent host artifacts contaminating container
+# - Speed up builds
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (installed in container)
+/vendor
+/node_modules
+
+# Environment files (mounted at runtime)
+.env
+.env.*
+!.env.example
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Laravel storage (mounted as volume)
+/storage/*.key
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/app/public/*
+
+# Build artifacts
+/public/hot
+/public/storage
+/public/build
+/public/mix-manifest.json
+
+# Testing
+/tests
+/.phpunit.cache
+phpunit.xml
+.phpunit.result.cache
+
+# Documentation
+README.md
+CHANGELOG.md
+*.md
+!database/**/*.md
+
+# Docker files (not needed in image)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Cache
+/bootstrap/cache/*.php
+/.php-cs-fixer.cache
+/.php_cs.cache

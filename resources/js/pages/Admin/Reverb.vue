@@ -6,7 +6,6 @@ import { Head } from '@inertiajs/vue3'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
-    Radio,
     CheckCircle,
     XCircle,
     AlertCircle,
@@ -89,16 +88,6 @@ onUnmounted(() => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-6">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    <Radio class="h-6 w-6" />
-                    Reverb WebSocket Service
-                </h1>
-                <p class="text-muted-foreground">
-                    WebSocket server status (super-admin access required)
-                </p>
-            </div>
-
             <!-- Status Card -->
             <Card class="max-w-2xl">
                 <CardHeader>

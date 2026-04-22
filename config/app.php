@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\PublicOrigin;
+
 return [
 
     /*
@@ -52,7 +54,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
+    'url' => env('APP_URL', PublicOrigin::appUrl()),
 
     /*
     |--------------------------------------------------------------------------

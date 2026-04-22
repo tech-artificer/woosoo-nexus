@@ -221,11 +221,6 @@ function executeDelete() {
     <Head :title="title" />
 
     <div class="space-y-6 p-6">
-      <div>
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-        <p class="text-sm text-muted-foreground">{{ description }}</p>
-      </div>
-
       <!-- Create / Edit form -->
       <Card>
         <CardHeader>

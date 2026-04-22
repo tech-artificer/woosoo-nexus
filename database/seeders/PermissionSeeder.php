@@ -53,6 +53,7 @@ class PermissionSeeder extends Seeder
             'restore devices',
             'assign tables',
             'manage accessibility',
+            'view horizon',
             'view pulse',
         ];
 

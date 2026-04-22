@@ -9,6 +9,7 @@ use App\Observers\OrderUpdateLogObserver;
 use App\Observers\DeviceOrderObserver;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\LocalBranchResolver;
+use App\Services\PosConnectionService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\URL;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -40,6 +42,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(KryptonContextService::class, fn () => new KryptonContextService());
         $this->app->singleton(LocalBranchResolver::class, fn () => new LocalBranchResolver());
+        $this->app->singleton(PosConnectionService::class, fn () => new PosConnectionService());
         // Register test-only service provider when running tests so we can
         // bind POS/Krypton repositories to fakes for isolation.
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
@@ -50,8 +53,19 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(KryptonContextService $contextService): void
+    public function boot(KryptonContextService $contextService, PosConnectionService $posConnection): void
     {
+        // Force HTTPS URL generation when APP_URL is configured for HTTPS.
+        // This ensures Ziggy, route(), asset(), and all URL helpers produce
+        // https:// URLs even when the inner nginx→PHP-FPM chain does not
+        // forward X-Forwarded-Proto in a form that TrustProxies can detect.
+        if (str_starts_with(config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
+
+        // Apply DB-stored POS credentials to the 'pos' connection (overrides .env defaults).
+        $posConnection->applyFromDatabase();
+
         RateLimiter::for('device-order-create', function (Request $request) {
             $deviceId = $request->user('device')?->id ?? $request->user()?->id;
             $tokenKey = $request->bearerToken();
@@ -75,15 +89,26 @@ class AppServiceProvider extends ServiceProvider
             Log::warning("Skipping context share: " . $e->getMessage());
         }
         
-        // API Docs (Scramble config)
-        Scramble::configure()
-            ->routes(fn (Route $route) => Str::startsWith($route->uri, 'api/'))
-            ->withDocumentTransformers(function (OpenApi $openApi) {
-                $openApi->secure(SecurityScheme::http('bearer'));
-            });
+        // API docs: disable runtime docs routes in production to avoid
+        // request-time generation failures on constrained or unstable datasources.
+        if (app()->environment('production')) {
+            Scramble::ignoreDefaultRoutes();
+        } else {
+            Scramble::configure()
+                ->routes(fn (Route $route) => Str::startsWith($route->uri, 'api/'))
+                ->withDocumentTransformers(function (OpenApi $openApi) {
+                    $openApi->secure(SecurityScheme::http('bearer'));
+                });
+        }
 
         // 🔹 Gates
-        Gate::define('viewPulse', fn (User $user) => $user->is_admin);
+        Gate::define('viewPulse', function (?User $user = null) {
+            if (! $user) {
+                return false;
+            }
+
+            return (bool) ($user->is_admin || $user->can('view pulse'));
+        });
         // Backwards-compatible shorthand used by middleware: `can:admin`
         Gate::define('admin', fn (User $user) => $user->is_admin);
 

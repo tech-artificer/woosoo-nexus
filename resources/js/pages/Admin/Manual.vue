@@ -70,8 +70,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     <div class="space-y-6">
       <!-- Header -->
       <div class="rounded-lg border bg-card p-6 shadow-sm">
-        <h1 class="text-2xl font-semibold">Manual & Guides</h1>
-        <p class="mt-2 text-sm text-muted-foreground">
+        <p class="text-sm text-muted-foreground">
           Comprehensive documentation for all three systems: Admin Dashboard, Tablet Ordering, and Printer Relay.
         </p>
         <p class="mt-2 text-xs text-muted-foreground">
@@ -81,7 +80,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
       <!-- Tabbed Interface -->
       <Tabs default-value="admin" class="w-full">
-        <TabsList class="grid w-full grid-cols-3">
+        <TabsList class="inline-flex h-11 w-auto p-1">
           <TabsTrigger value="admin">Admin Dashboard</TabsTrigger>
           <TabsTrigger value="tablet">Tablet Ordering</TabsTrigger>
           <TabsTrigger value="relay">Printer Relay</TabsTrigger>

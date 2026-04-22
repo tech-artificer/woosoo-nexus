@@ -83,14 +83,22 @@ export const columns: ColumnDef<Device, any>[] = [
     }
   }, 
   {
-    accessorKey: 'registration_code',
-    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Code', class: 'max-w-[200px]' }),
+    id: 'security_status',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Security', class: 'max-w-[200px]' }),
     enableColumnFilter: false,
     enableSorting: false,
     cell: ({ row }) => {
-      const code = row.original.registration_code?.code;
+      const hasSecurityCode = Boolean(row.original.security_code_generated_at)
       return h('div', { class: 'w-20 flex space-x-2' }, [
-        h('span', { class: ' font-medium' }, code),
+        h(
+          'span',
+          {
+            class: hasSecurityCode
+              ? 'inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700'
+              : 'inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700',
+          },
+          hasSecurityCode ? 'Set' : 'Not Set'
+        ),
       ])
     }
   },   

@@ -13,10 +13,9 @@ return [
     |
     */
 
-    // Production default: 'sync' (no queue worker required).
-    // Switch to 'database' only after running `php artisan queue:table && artisan migrate`
-    // and starting a managed `php artisan queue:work` service (see STABILITY_PLAN docs).
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    // Woosoo Nexus runs Redis-backed queues in Docker and production environments.
+    // Tests override this to `sync` in phpunit.xml for deterministic execution.
+    'default' => env('QUEUE_CONNECTION', 'redis'),
 
     /*
     |--------------------------------------------------------------------------

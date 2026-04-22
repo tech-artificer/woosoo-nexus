@@ -67,7 +67,11 @@ class OrderController extends Controller
             ->get();
 
         $devices = Device::select('id', 'name')->get();
-        $tables  = KryptonTable::select('id', 'name')->get();
+        try {
+            $tables = KryptonTable::select('id', 'name')->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $tables = collect([]);
+        }
 
         return Inertia::render('Orders/Index', [
             'title'        => 'Orders',

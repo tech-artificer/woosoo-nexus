@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\PublicOrigin;
+
 return [
 
     /*
@@ -18,7 +20,15 @@ return [
     'allowed_methods' => ['*'],
     // Restrict to known origins in production. Set CORS_ALLOWED_ORIGINS in .env.
     // Default '*' is only safe in closed on-prem networks; still prefer explicit allowlist.
-    'allowed_origins' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', '*'))),
+    'allowed_origins' => value(static function (): array {
+        $origins = env('CORS_ALLOWED_ORIGINS');
+
+        if (is_string($origins) && trim($origins) !== '') {
+            return array_values(array_filter(array_map('trim', explode(',', $origins))));
+        }
+
+        return PublicOrigin::corsOrigins();
+    }),
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
     'max_age' => 86400,

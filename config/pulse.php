@@ -81,7 +81,7 @@ return [
     */
 
     'ingest' => [
-        'driver' => env('PULSE_INGEST_DRIVER', 'storage'),
+        'driver' => env('PULSE_INGEST_DRIVER', 'redis'),
 
         'buffer' => env('PULSE_INGEST_BUFFER', 5_000),
 
@@ -107,7 +107,7 @@ return [
     |
     */
 
-    'cache' => env('PULSE_CACHE_DRIVER'),
+    'cache' => env('PULSE_CACHE_DRIVER', env('CACHE_STORE', env('CACHE_DRIVER', 'redis'))),
 
     /*
     |--------------------------------------------------------------------------
@@ -168,7 +168,7 @@ return [
 
         Recorders\Servers::class => [
             'server_name' => env('PULSE_SERVER_NAME', gethostname()),
-            'directories' => explode(':', env('PULSE_SERVER_DIRECTORIES', '/')),
+            'directories' => explode(':', env('PULSE_SERVER_DIRECTORIES', '/var/www/html:/tmp')),
         ],
 
         Recorders\SlowJobs::class => [

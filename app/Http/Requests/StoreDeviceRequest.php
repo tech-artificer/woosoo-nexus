@@ -19,6 +19,7 @@ class StoreDeviceRequest extends FormRequest
             'ip_address' => ['required', 'ip', \Illuminate\Validation\Rule::unique('devices', 'ip_address')],
             'port' => ['nullable', 'integer'],
             'table_id' => ['nullable', 'integer', Rule::exists('pos.tables', 'id')],
+            'security_code' => ['required', 'string', 'regex:/^\d{6}$/'],
         ];
     }
 }

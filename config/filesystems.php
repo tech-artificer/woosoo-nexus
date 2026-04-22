@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\PublicOrigin;
+
 return [
 
     /*
@@ -41,7 +43,7 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL'),
+            'url' => env('APP_URL', PublicOrigin::appUrl()),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

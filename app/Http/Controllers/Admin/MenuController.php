@@ -16,7 +16,12 @@ class MenuController extends Controller
 {
     public function index() 
     {
-        $menus = Menu::with(['image', 'category', 'group', 'course'])->orderBy('name')->get();
+        try {
+            $menus = Menu::with(['image', 'category', 'group', 'course'])->orderBy('name')->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            session()->flash('warning', 'Menu data is unavailable — POS system is currently offline.');
+            $menus = collect([]);
+        }
 
         $menus = $menus->map(function ($menu) {
             return [

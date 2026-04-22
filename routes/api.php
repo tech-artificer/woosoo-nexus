@@ -205,6 +205,7 @@ Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:sa
     Route::get('/devices/{device}/heartbeats', [DeviceV2ApiController::class, 'heartbeats'])->name('api.v2.devices.heartbeats');
     Route::post('/devices/{device}/status', [DeviceV2ApiController::class, 'toggleStatus'])->name('api.v2.devices.status');
     Route::post('/devices/{device}/security-code', [DeviceV2ApiController::class, 'regenerateSecurityCode'])->name('api.v2.devices.security-code');
+    Route::patch('/devices/{device}/rotate-security-code', [DeviceV2ApiController::class, 'rotateSecurityCode'])->name('api.v2.devices.rotate-security-code');
 });
 
 // Session alias — PWA calls /api/session/latest; actual route is /api/sessions/current
