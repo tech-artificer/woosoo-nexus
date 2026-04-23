@@ -44,7 +44,9 @@ return [
             'options' => [
                 'host' => value(static fn (): string => trim((string) env('REVERB_PUBLIC_HOST')) ?: PublicOrigin::host()),
                 'port' => env('REVERB_PORT', 8080),
+                'public_port' => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 8080)),
                 'scheme' => env('REVERB_SCHEME', PublicOrigin::scheme()),
+                'public_scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', PublicOrigin::scheme())),
                 'useTLS' => env('REVERB_SCHEME', PublicOrigin::scheme()) === 'https',
             ],
             'client_options' => [
