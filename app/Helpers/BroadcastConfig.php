@@ -22,9 +22,9 @@ class BroadcastConfig
         return [
             'driver' => 'reverb',
             'key'    => $reverb['key'],
-            'host'   => env('REVERB_PUBLIC_HOST', $reverb['options']['host'] ?? null),
-            'port'   => (int) env('VITE_REVERB_PORT', 443),
-            'scheme' => env('VITE_REVERB_SCHEME', $reverb['options']['scheme'] ?? 'https'),
+            'host'   => $reverb['options']['host'] ?? null,
+            'port'   => $reverb['options']['port'] ?? 443,
+            'scheme' => $reverb['options']['scheme'] ?? 'https',
             'auth_endpoint' => '/broadcasting/auth',
         ];
     }
