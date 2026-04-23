@@ -5,10 +5,13 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use Tests\Traits\MocksKryptonSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use App\Models\Device;
 use App\Models\Branch;
 use App\Models\Krypton\Menu;
+use App\Services\Krypton\OrderService;
+use PDOException;
 
 class SessionOrderValidationTest extends TestCase
 {
@@ -159,5 +162,106 @@ class SessionOrderValidationTest extends TestCase
         $response->assertStatus(503);
         $this->assertFalse($response->json('success'));
         $this->assertStringContainsString('session', strtolower($response->json('message')));
+    }
+
+    public function test_order_creation_uses_cached_test_session_fallback_when_context_session_missing()
+    {
+        $this->mockKryptonSessionWith([
+            'session_id' => null,
+            'terminal_id' => 1,
+            'branch_id' => 1,
+            'user_id' => 1,
+            'terminal_name' => 'TEST_TERMINAL',
+            'cashier_name' => 'Test Cashier',
+        ]);
+
+        Branch::create(['name' => 'Main', 'location' => 'HQ']);
+
+        $device = Device::create([
+            'name' => 'Device D',
+            'ip_address' => '192.168.1.13',
+            'is_active' => true,
+            'table_id' => 4,
+        ]);
+
+        $this->createTestSession();
+        $token = $device->createToken('test-token')->plainTextToken;
+
+        $payload = [
+            'guest_count' => 1,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total_amount' => 1.00,
+            'items' => [
+                [
+                    'menu_id' => 1,
+                    'name' => 'Test Item',
+                    'quantity' => 1,
+                    'price' => 1.00,
+                    'subtotal' => 1.00,
+                ],
+            ],
+        ];
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+        ])->postJson('/api/devices/create-order', $payload);
+
+        $response->assertStatus(201);
+        $this->assertTrue($response->json('success'));
+    }
+
+    public function test_order_creation_returns_503_when_pos_connection_is_unavailable()
+    {
+        $this->mockActiveKryptonSession();
+
+        Branch::create(['name' => 'Main', 'location' => 'HQ']);
+
+        $device = Device::create([
+            'name' => 'Device E',
+            'ip_address' => '192.168.1.14',
+            'is_active' => true,
+            'table_id' => 5,
+        ]);
+
+        $token = $device->createToken('test-token')->plainTextToken;
+
+        $payload = [
+            'guest_count' => 1,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total_amount' => 1.00,
+            'items' => [
+                [
+                    'menu_id' => 1,
+                    'name' => 'Test Item',
+                    'quantity' => 1,
+                    'price' => 1.00,
+                    'subtotal' => 1.00,
+                ],
+            ],
+        ];
+
+        $previous = new PDOException('SQLSTATE[HY000] [2002] Connection refused (Connection: pos)');
+        $previous->errorInfo = ['HY000', 2002, 'Connection refused'];
+
+        $this->mock(OrderService::class, function ($mock) use ($previous) {
+            $mock->shouldReceive('processOrder')
+                ->once()
+                ->andThrow(new QueryException('pos', 'insert into orders ...', [], $previous));
+        });
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+        ])->postJson('/api/devices/create-order', $payload);
+
+        $response->assertStatus(503);
+        $this->assertFalse($response->json('success'));
     }
 }
