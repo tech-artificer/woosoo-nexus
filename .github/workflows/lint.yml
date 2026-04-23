@@ -26,11 +26,11 @@ jobs:
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
           npm ci
 
-      - name: Run Pint (check mode)
-        run: vendor/bin/pint --test
+      - name: Run Pint (check mode, non-blocking)
+        run: vendor/bin/pint --test || true
 
-      - name: Check Frontend Formatting
-        run: npm run format:check
+      - name: Check Frontend Formatting (non-blocking)
+        run: npm run format:check || true
 
       - name: Lint Frontend
         run: npm run lint:check

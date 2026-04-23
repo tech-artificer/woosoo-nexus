@@ -6,30 +6,29 @@ use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use App\Models\Device;
 use App\Models\Krypton\Table;
-use App\Models\DeviceRegistrationCode;
 use App\Http\Requests\StoreDeviceRequest;
 use App\Http\Requests\UpdateDeviceRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
 class DeviceController extends Controller
 {
     public function index()
     {
-     $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
+        $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
         // Fetch tables from 3rd-party DB that are NOT assigned
-        $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
-        $devices = Device::active()->with('table', 'branch', 'registrationCode')->get(); 
-        $registrationCodes = DeviceRegistrationCode::with(['device'])->get();
-        $availableRegistrationCodesCount = DeviceRegistrationCode::query()
-            ->whereNull('used_by_device_id')
-            ->whereNull('used_at')
-            ->count();
+        try {
+            $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            session()->flash('warning', 'Table data is unavailable — POS system is currently offline.');
+            $unassignedTables = collect([]);
+        }
+        $devices = Device::active()->with('table', 'branch')->get();
+        $securityReadyCount = $devices->whereNotNull('security_code_generated_at')->count();
 
         inertia()->share('unassignedTables', $unassignedTables);
 
-        // Device stats: total, registration codes, sparkline of devices created in last 7 days
+        // Device stats: total, security-ready count, sparkline of devices created in last 7 days
         $today = \Carbon\Carbon::today();
         $start = $today->copy()->subDays(6)->startOfDay();
 
@@ -48,14 +47,13 @@ class DeviceController extends Controller
 
         $stats = [
             [ 'title' => 'Total Devices', 'value' => $devices->count(), 'subtitle' => 'Registered devices', 'variant' => 'primary', 'sparkline' => $spark ],
-            [ 'title' => 'Registration Codes', 'value' => $availableRegistrationCodesCount, 'subtitle' => 'Available codes', 'variant' => 'accent' ],
+            [ 'title' => 'Security Ready', 'value' => $securityReadyCount, 'subtitle' => 'Devices with security code', 'variant' => 'accent' ],
         ];
 
         return Inertia::render('Devices/Index', [
             'title' => 'Device',
             'description' => 'List of Registered Devices',
             'devices' => $devices,
-            'registrationCodes' => $registrationCodes,
             'stats' => $stats,
         ]);
     }
@@ -66,7 +64,11 @@ class DeviceController extends Controller
     public function create()
     {
         $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
-        $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
+        try {
+            $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $unassignedTables = collect([]);
+        }
 
         return Inertia::render('Devices/Create', [
             'title' => 'Create Device',
@@ -82,15 +84,35 @@ class DeviceController extends Controller
     {
         $data = $request->validated();
 
+        // Check for existing device with this security code (Batch 2: Uniqueness Enforcement)
+        if (isset($data['security_code']) && $data['security_code']) {
+            if (Device::get()->contains(function ($device) use ($data) {
+                return \Illuminate\Support\Facades\Hash::check($data['security_code'], $device->security_code ?? '');
+            })) {
+                return back()->withErrors([
+                    'security_code' => 'This security code is already assigned to another device.'
+                ]);
+            }
+        }
+
         $device = Device::create([
             'name' => $data['name'],
-            'ip_address' => $data['ip_address'],
+            'ip_address' => $data['ip_address'] ?? null,
             'port' => $data['port'] ?? null,
             'table_id' => $data['table_id'] ?? null,
+            'security_code' => isset($data['security_code']) && $data['security_code'] 
+                ? \Illuminate\Support\Facades\Hash::make($data['security_code'])
+                : null,
+            'security_code_generated_at' => isset($data['security_code']) && $data['security_code'] 
+                ? now()
+                : null,
             'is_active' => true,
         ]);
 
-        return redirect()->route('devices.index')->with('success', 'Device created.');
+        return redirect()
+            ->route('devices.index')
+            ->with('success', 'Device created.')
+            ->with('security_code_reveal', $data['security_code']);
     }
 
     /**
@@ -105,12 +127,16 @@ class DeviceController extends Controller
             ->where('id', '!=', $device->id)
             ->pluck('table_id');
         
-        $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
+        try {
+            $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $unassignedTables = collect([]);
+        }
 
         return Inertia::render('Devices/Edit', [
             'title' => 'Edit Device',
             'description' => 'Edit device details',
-            'device' => $device->load('table', 'branch', 'registrationCode'),
+            'device' => $device->load('table', 'branch'),
             'unassignedTables' => $unassignedTables,
         ]);
     }
@@ -255,35 +281,4 @@ class DeviceController extends Controller
         return redirect()->route('devices.index')->with('device_token', $plain)->with('success', 'Device token created.');
     }
 
-    /**
-     * Generate registration codes (web action).
-     */
-    public function generateCodes(Request $request)
-    {
-        $count = (int) $request->input('count', 10);
-        $count = max(1, min(1000, $count));
-
-        $created = [];
-        for ($i = 0; $i < $count; $i++) {
-            // ensure uniqueness
-            do {
-                $code = Str::upper(Str::random(6));
-            } while (DeviceRegistrationCode::where('code', $code)->exists());
-
-            $created[] = DeviceRegistrationCode::create([
-                'code' => $code,
-            ]);
-        }
-
-        // If this was an AJAX / JSON request, return the created codes directly
-        if ($request->wantsJson() || $request->ajax() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return response()->json([
-                'success' => true,
-                'count' => $count,
-                'created' => array_map(function($c) { return ['id' => $c->id, 'code' => $c->code, 'used_by_device_id' => $c->used_by_device_id ?? null, 'used_at' => $c->used_at ?? null]; }, $created)
-            ], 201);
-        }
-
-        return redirect()->route('devices.index')->with('success', "Generated {$count} device codes.");
-    }
 }

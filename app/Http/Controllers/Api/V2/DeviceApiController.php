@@ -8,6 +8,7 @@ use App\Models\Device;
 use App\Models\DeviceHeartbeat;
 use App\Services\LocalBranchResolver;
 use App\Http\Requests\Api\StoreDeviceApiRequest;
+use App\Http\Requests\Api\RotateDeviceSecurityCodeRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -31,6 +32,8 @@ class DeviceApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $query = Device::query()->with('branch');
 
         if ($request->filled('status')) {
@@ -72,6 +75,8 @@ class DeviceApiController extends Controller
      */
     public function metadata(): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $resolved = $this->branchResolver->resolve();
 
         // On-prem default: exactly one local branch. Fallback to full list for
@@ -89,6 +94,8 @@ class DeviceApiController extends Controller
      */
     public function statistics(): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $onlineThreshold = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
         $total   = Device::count();
         $active  = Device::where('is_active', true)->count();
@@ -118,6 +125,8 @@ class DeviceApiController extends Controller
      */
     public function byStatus(): JsonResponse
     {
+        $this->authorize('viewAny', Device::class);
+
         $threshold = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
 
         $online  = Device::where('last_seen_at', '>=', $threshold)->with('branch')->get();
@@ -151,6 +160,18 @@ class DeviceApiController extends Controller
             return response()->json(['message' => 'No branch found.'], 422);
         }
 
+        // Check for existing device with this security code (Batch 2: Uniqueness Enforcement)
+        // Since codes are stored as hashes, check against each existing device
+        $plainCode = $data['security_code'];
+        if (Device::get()->contains(function ($device) use ($plainCode) {
+            return Hash::check($plainCode, $device->security_code ?? '');
+        })) {
+            return response()->json([
+                'message' => 'Security code already assigned to another device',
+                'errors' => ['security_code' => 'This code is in use']
+            ], 409);
+        }
+
         $plain  = $data['security_code'];
         $device = Device::create([
             'name'                       => $data['name'],
@@ -174,6 +195,8 @@ class DeviceApiController extends Controller
      */
     public function show(Device $device): JsonResponse
     {
+        $this->authorize('view', $device);
+
         $device->load(['branch', 'latestHeartbeat']);
         return response()->json($this->formatDevice($device, withHeartbeat: true));
     }
@@ -184,6 +207,8 @@ class DeviceApiController extends Controller
      */
     public function heartbeats(Request $request, Device $device): JsonResponse
     {
+        $this->authorize('view', $device);
+
         $days  = min((int) $request->input('days', 1), 30);
         $limit = min((int) $request->input('limit', 100), 500);
 
@@ -202,6 +227,8 @@ class DeviceApiController extends Controller
      */
     public function health(Device $device): JsonResponse
     {
+        $this->authorize('view', $device);
+
         $hb     = $device->latestHeartbeat;
         $online = $device->last_seen_at
             && $device->last_seen_at->gte(now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
@@ -225,6 +252,8 @@ class DeviceApiController extends Controller
      */
     public function regenerateSecurityCode(Device $device): JsonResponse
     {
+        $this->authorize('update', $device);
+
         $plain = (string) random_int(100000, 999999);
         $device->update([
             'security_code'              => Hash::make($plain),
@@ -240,10 +269,50 @@ class DeviceApiController extends Controller
      */
     public function toggleStatus(Request $request, Device $device): JsonResponse
     {
+        $this->authorize('update', $device);
+
         $request->validate(['is_active' => ['required', 'boolean']]);
         $device->update(['is_active' => $request->boolean('is_active')]);
 
         return response()->json(['is_active' => $device->is_active]);
+    }
+
+    /**
+     * PATCH /api/v2/devices/{device}/rotate-security-code
+     * Rotate a device's security code to a new unique code.
+     * Checks for uniqueness before accepting new code.
+     * Returns plain code once (Batch 2: Uniqueness Enforcement).
+     */
+    public function rotateSecurityCode(
+        RotateDeviceSecurityCodeRequest $request,
+        Device $device
+    ): JsonResponse {
+        $data = $request->validated();
+        $newCode = $data['security_code'];
+
+        // Check if another device already has this code
+        // Allow the device to keep its own code (in case of retry)
+        if (Device::where('id', '!=', $device->id)
+                  ->get()
+                  ->contains(function ($otherDevice) use ($newCode) {
+                      return Hash::check($newCode, $otherDevice->security_code ?? '');
+                  })) {
+            return response()->json([
+                'message' => 'Security code already assigned to another device',
+                'errors' => ['security_code' => 'This code is in use']
+            ], 409);
+        }
+
+        // Update device with new code
+        $device->update([
+            'security_code' => Hash::make($newCode),
+            'security_code_generated_at' => now(),
+        ]);
+
+        return response()->json([
+            'data' => $this->formatDevice($device),
+            'message' => 'Security code rotated successfully'
+        ], 200);
     }
 
     // -------------------------------------------------------------------------
@@ -256,15 +325,17 @@ class DeviceApiController extends Controller
             && $device->last_seen_at->gte(now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
 
         $out = [
-            'id'           => $device->id,
-            'device_uuid'  => $device->device_uuid,
-            'name'         => $device->name,
-            'type'         => $device->type,
-            'is_active'    => $device->is_active,
-            'online'       => $online,
-            'last_seen_at' => $device->last_seen_at?->toIso8601String(),
-            'ip_address'   => $device->ip_address,
-            'branch'       => $device->relationLoaded('branch') ? [
+            'id'                        => $device->id,
+            'device_uuid'               => $device->device_uuid,
+            'name'                      => $device->name,
+            'type'                      => $device->type,
+            'is_active'                 => $device->is_active,
+            'online'                    => $online,
+            'last_seen_at'              => $device->last_seen_at?->toIso8601String(),
+            'ip_address'                => $device->ip_address,
+            'last_ip_address'           => $device->last_ip_address,
+            'security_code_generated_at' => $device->security_code_generated_at?->toIso8601String(),
+            'branch'                    => $device->relationLoaded('branch') ? [
                 'id'   => $device->branch?->id,
                 'name' => $device->branch?->name,
             ] : null,

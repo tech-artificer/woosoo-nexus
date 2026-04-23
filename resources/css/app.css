@@ -143,6 +143,7 @@
     --warning: #f59e0b;
     --error: #ef4444;
     --info: #3b82f6;
+    --focus-visible: var(--color-woosoo-primary-dark);
     --background: #FFFFFF;
     --foreground: var(--color-woosoo-dark-gray);
     --card: hsl(0 0% 100%);
@@ -155,7 +156,7 @@
     --secondary: hsl(0 0% 92.1%);
     --secondary-foreground: hsl(0 0% 9%);
     --muted: hsl(0 0% 96.1%);
-    --muted-foreground: hsl(0 0% 45.1%);
+    --muted-foreground: hsl(0 0% 38%);
     --accent: var(--color-woosoo-accent);
     --accent-foreground: var(--color-woosoo-white);
     --destructive: hsl(0 84.2% 60.2%);
@@ -171,15 +172,15 @@
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
     --radius: 0.5rem;
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(0 0% 12%);
+    --sidebar-background: hsl(20 5% 10%);
+    --sidebar-foreground: hsl(0 0% 95.9%);
     --sidebar-primary: var(--color-woosoo-primary-dark);
     --sidebar-primary-foreground: var(--color-woosoo-white);
-     --sidebar-accent: hsl(0 0% 94%);
-    --sidebar-accent-foreground: hsl(0 0% 12%);
-    --sidebar-border: hsl(0 0% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(0 0% 98%);
+    --sidebar-accent: hsl(20 6% 18%);
+    --sidebar-accent-foreground: hsl(0 0% 95.9%);
+    --sidebar-border: hsl(20 6% 18%);
+    --sidebar-ring: var(--color-woosoo-accent);
+    --sidebar: hsl(20 5% 10%);
 }
 
 .dark {
@@ -188,7 +189,7 @@
     --foreground: hsl(30 10% 93%);
 
     /* Cards sit visibly above the background */
-    --card: hsl(20 7% 9%);
+    --card: hsl(20 8% 13%);
     --card-foreground: hsl(30 10% 93%);
 
     --popover: hsl(20 7% 10%);
@@ -227,8 +228,8 @@
     --sidebar-foreground: hsl(0 0% 95.9%);
     --sidebar-primary: var(--color-woosoo-accent);
     --sidebar-primary-foreground: var(--color-woosoo-dark-gray);
-    --sidebar-accent: var(--color-woosoo-accent);
-    --sidebar-accent-foreground: var(--color-woosoo-dark-gray);
+    --sidebar-accent: hsl(20 6% 18%);
+    --sidebar-accent-foreground: hsl(0 0% 95.9%);
     --sidebar-border: hsl(20 6% 16%);
     --sidebar-ring: var(--color-woosoo-accent);
     --sidebar: hsl(20 5% 8%);
@@ -242,8 +243,28 @@
     * {
         @apply border-border outline-ring/50;
     }
+    html {
+        min-height: 100%;
+    }
     body {
-        @apply bg-background text-foreground;
+        @apply min-h-screen bg-background text-foreground;
+        background-image:
+            radial-gradient(circle at top left, rgb(246 181 109 / 0.18), transparent 24%),
+            radial-gradient(circle at top right, rgb(176 128 71 / 0.12), transparent 22%),
+            linear-gradient(180deg, #f5ede3 0%, #fffaf5 18%, #ffffff 42%, #f7f5f2 100%);
+        background-attachment: fixed;
+    }
+
+    .dark body {
+        background-image:
+            radial-gradient(circle at top left, rgb(246 181 109 / 0.12), transparent 25%),
+            radial-gradient(circle at bottom right, rgb(103 234 152 / 0.08), transparent 20%),
+            linear-gradient(180deg, #17120f 0%, #120f0d 38%, #0e0c0a 100%);
+    }
+
+    ::selection {
+        background: rgb(246 181 109 / 0.35);
+        color: var(--color-woosoo-dark-gray);
     }
 
     /* Modern thin scrollbar — webkit */

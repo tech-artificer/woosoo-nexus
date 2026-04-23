@@ -35,6 +35,18 @@ flowchart LR
 - New detail view: resources/js/components/Orders/OrderDetailSheet.vue
 - UI primitives: resources/js/components/ui/*
 
+### Addendum: Transaction Stability Carry-Forward (April 23, 2026)
+
+- Preserved device order error contract for missing POS session as `503` + `SESSION_NOT_FOUND` semantics.
+- Added explicit POS-unavailable mapping for relevant DB connection failures to avoid ambiguous client behavior.
+- Verified `/docs/api` production availability fix via runtime cache-flow correction.
+- Verified admin fallback behavior for Krypton/POS-unavailable paths to avoid hard failures in key pages.
+
+**Learnings captured**
+- Keep external transaction contracts stable while hardening backend internals.
+- Prefer superseding clean branches over merging mixed/superseded branches with scope drift.
+- Validate both source and served runtime behavior before declaring a fix complete.
+
 ### Addendum: Dashboard 500
 
 - Symptom: `/dashboard` returns HTTP 500 in production.

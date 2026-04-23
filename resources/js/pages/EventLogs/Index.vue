@@ -70,11 +70,6 @@ const filteredLogs = computed(() => {
     <Head :title="title" />
     
     <div class="space-y-6">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">Event Logs</h1>
-        <p class="text-muted-foreground">{{ description }}</p>
-      </div>
-
       <div class="flex flex-col sm:flex-row gap-3">
         <Input 
           v-model="searchQuery" 

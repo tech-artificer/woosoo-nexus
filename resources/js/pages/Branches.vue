@@ -39,10 +39,6 @@ const handleEdit = (branch: Branch) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="p-6 space-y-6">
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight">Branches</h1>
-                <p class="text-muted-foreground">Manage your branch locations and settings</p>
-            </div>
             <DataTable
                 :data="branches"
                 @add="handleAdd"

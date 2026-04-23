@@ -2,7 +2,7 @@
 import type { HTMLAttributes } from 'vue';
 import { asset } from '@/lib/utils';
 
-const logoPath = asset('images/Woosoo Profile Photo-03.png');
+const logoPath = asset('images/woosoo-icon.png');
 
 defineOptions({
     inheritAttrs: false,
@@ -18,7 +18,7 @@ defineProps<Props>();
 </script>
 
 <template>
-     <img :src="logoPath" alt="Woosoo Logo" width="160" height="160" />
+    <img :src="logoPath" alt="Woosoo Logo" width="160" height="160" v-bind="$attrs" />
 
     <!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" :class="className" v-bind="$attrs">
         <path

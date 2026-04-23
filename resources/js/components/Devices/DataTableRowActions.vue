@@ -3,6 +3,7 @@ import type { Row } from '@tanstack/vue-table'
 import { Ellipsis } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { router } from '@inertiajs/vue3'
+import axios from 'axios'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +33,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 import { usePage } from '@inertiajs/vue3'
 
@@ -56,8 +65,33 @@ const openSheet = () => {
 }
 
 const showDialog = ref(false);
+const showSecurityCodeDialog = ref(false)
+const rotatedSecurityCode = ref('')
 const openDialog = () => {
   showDialog.value = true
+}
+
+const rotateSecurityCode = async (device: Device) => {
+  try {
+    const response = await axios.post(`/api/v2/devices/${device.id}/security-code`, {}, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+
+    const securityCode = response?.data?.security_code
+    if (!securityCode) {
+      toast.error('Security code rotation failed')
+      return
+    }
+
+    rotatedSecurityCode.value = String(securityCode)
+    showSecurityCodeDialog.value = true
+    await navigator.clipboard.writeText(rotatedSecurityCode.value).catch(() => {})
+    toast.success('Security code rotated and copied to clipboard')
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message ?? 'Security code rotation failed')
+  }
 }
 
 const deactivateAccount = (computedDevice: Device) => {
@@ -99,9 +133,10 @@ const restore = (computedDevice: Device) => {
         <span class="sr-only">Open menu</span>
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" class="w-40">
+    <DropdownMenuContent align="end" class="w-56">
 
       <DropdownMenuItem class="cursor-pointer" @click="openSheet">Edit Device</DropdownMenuItem>
+      <DropdownMenuItem class="cursor-pointer" @click="rotateSecurityCode(computedDevice)">Regenerate Security Code</DropdownMenuItem>
       
         
       <DropdownMenuItem 
@@ -154,6 +189,25 @@ const restore = (computedDevice: Device) => {
        <DeviceForm :device="computedDevice" :unassignedTables="unassignedTables"  />
     </SheetContent>
   </Sheet>
+
+  <Dialog v-model:open="showSecurityCodeDialog">
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>New Security Code</DialogTitle>
+        <DialogDescription>
+          This code is shown once. It was copied to your clipboard for immediate assignment.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="rounded-md bg-muted p-4 text-center font-mono text-xl tracking-widest">
+        {{ rotatedSecurityCode }}
+      </div>
+
+      <DialogFooter>
+        <Button type="button" @click="showSecurityCodeDialog = false">Close</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 
   </div>
 

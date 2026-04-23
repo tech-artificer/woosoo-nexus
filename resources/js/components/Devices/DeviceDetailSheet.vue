@@ -95,8 +95,8 @@ const statusVariant = computed(() => {
 
         <Card class="md:col-span-2">
           <CardHeader>
-            <CardTitle class="text-sm text-muted-foreground">Assignment</CardTitle>
-            <CardDescription>Branch and table mapping</CardDescription>
+            <CardTitle class="text-sm text-muted-foreground">Assignment & Security</CardTitle>
+            <CardDescription>Branch mapping and security-code readiness</CardDescription>
           </CardHeader>
           <CardContent class="grid gap-3 text-sm md:grid-cols-2">
             <div class="rounded-md border p-3">
@@ -109,8 +109,11 @@ const statusVariant = computed(() => {
             </div>
             <Separator class="md:col-span-2" />
             <div class="rounded-md border p-3 md:col-span-2">
-              <div class="mb-2 text-muted-foreground">Registration Code</div>
-              <div class="font-semibold">{{ safeText(device?.registration_code?.code) }}</div>
+              <div class="mb-2 text-muted-foreground">Security Status</div>
+              <div class="font-semibold">{{ rawDevice?.security_code_generated_at ? 'Set' : 'Not Set' }}</div>
+              <div class="mt-1 text-xs text-muted-foreground">
+                Generated: {{ safeText(rawDevice?.security_code_generated_at, 'Never') }}
+              </div>
             </div>
           </CardContent>
         </Card>

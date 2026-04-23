@@ -1,4 +1,6 @@
 # 🎯 CHUYA HANDOFF: Frontend Quality Remediation — Phase 1+2 (P0 Only)
+> Superseded historical handoff. Mission-6 is closed; use `HANDOVER_PROTOCOL.md` and `vault/Mission-6-Frontend-Quality-Audit-COMPLETE.md` as canonical references.
+
 **Mission:** Fix broken functionality + memory leaks  
 **Assigned Detective:** Chuya Nakahara  
 **Priority:** P0 / CRITICAL  

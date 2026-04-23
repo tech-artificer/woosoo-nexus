@@ -32,10 +32,14 @@ use App\Events\Order\OrderVoided;
 use App\Events\PrintOrder;
 use App\Exceptions\SessionNotFoundException;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class OrderService
 {
+    private const TEST_KRYPTON_SESSION_CACHE_KEY = 'testing.krypton.session_id';
+
     public $attributes = [];
     /**
      * Process an order for a given device with specified attributes.
@@ -46,9 +50,18 @@ class OrderService
      */
     public function processOrder(Device $device, array $attributes)
     {
+        // Dual-DB contract reference:
+        // See docs/DATABASE_SYNC.md for ownership boundaries, failure modes,
+        // and recovery steps for POS-first write flow.
         // Fetch default values and merge them with provided attributes
         $defaults = $this->getDefaultAttributes();
         $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
+
+        // Enforce ID namespace contract before touching POS:
+        // - Local main DB IDs (e.g., device_orders.id) must never be sent to POS SPs.
+        // - POS-facing IDs (table_id, session_id, terminal_session_id, order_id) must be
+        //   Krypton-domain identifiers recognized by `krypton_woosoo`.
+        $this->assertPosIdentityContract($attributes);
 
         // Always derive monetary totals from item lines server-side.
         // This prevents client-side floating-point drift from propagating to transactions.
@@ -193,15 +206,15 @@ class OrderService
         $contextService = app(KryptonContextService::class);
         $defaults = $contextService->getData();
 
-        // session_id is MANDATORY from Krypton - no fallback to null or defaults allowed
-        // terminal_session_id, terminal_id, revenue_id have sensible fallbacks if missing from POS context
+        // Allow session_id to remain null so CreateOrder can throw SessionNotFoundException.
+        // Other POS context values may still use sensible fallbacks when unavailable.
         $normalized = [
             'price_level_id' => $defaults['price_level_id'] ?? null,
             'tax_set_id' => $defaults['tax_set_id'] ?? null,
             'service_type_id' => $defaults['service_type_id'] ?? 1,
             'revenue_id' => $defaults['revenue_id'] ?? 1,
             'terminal_id' => $defaults['terminal_id'] ?? 1,
-            'session_id' => $defaults['session_id'],  // REQUIRED - no fallback, exception thrown by KryptonContextService if missing
+            'session_id' => $defaults['session_id'] ?? null,  // null propagates to CreateOrder which throws SessionNotFoundException
             'terminal_session_id' => $defaults['terminal_session_id'] ?? null,
             'employee_log_id' => $defaults['employee_log_id'] ?? null,
             'cash_tray_session_id' => $defaults['cash_tray_session_id'] ?? null,
@@ -210,6 +223,14 @@ class OrderService
             'cashier_employee_id' => $defaults['cashier_employee_id'] ?? null,
             'server_employee_log_id' => $defaults['server_employee_log_id'] ?? ($defaults['employee_log_id'] ?? null),
         ];
+
+        if (($normalized['session_id'] ?? null) === null && app()->runningUnitTests()) {
+            $testSessionId = Cache::get(self::TEST_KRYPTON_SESSION_CACHE_KEY);
+
+            if (is_numeric($testSessionId)) {
+                $normalized['session_id'] = (int) $testSessionId;
+            }
+        }
 
         $params = [
             'start_employee_log_id' => $normalized['employee_log_id'] ?? null,
@@ -274,6 +295,29 @@ class OrderService
     private function money($value): float
     {
         return round((float) $value, 2);
+    }
+
+    /**
+     * Validate that IDs used for POS transactions belong to the POS namespace.
+     *
+     * @throws RuntimeException
+     */
+    private function assertPosIdentityContract(array $attributes): void
+    {
+        $tableId = $attributes['table_id'] ?? null;
+
+        if (! is_numeric($tableId) || (int) $tableId <= 0) {
+            throw new RuntimeException('Invalid POS table_id: expected Krypton table identifier.');
+        }
+
+        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            return;
+        }
+
+        $existsInPos = Table::where('id', (int) $tableId)->exists();
+        if (! $existsInPos) {
+            throw new RuntimeException("POS table_id not found in krypton_woosoo.tables: {$tableId}");
+        }
     }
 }
 

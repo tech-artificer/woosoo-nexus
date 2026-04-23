@@ -72,7 +72,6 @@ return [
 
         'pos' => [
             'driver' => 'mysql',
-            // 'host' => env('DB_POS_HOST', '127.0.0.1'),
             'host' => env('DB_POS_HOST', '127.0.0.1'),
             'port' => env('DB_POS_PORT', '3306'),
             'database' => env('DB_POS_DATABASE', 'krypton_woosoo'),
@@ -84,6 +83,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? [
+                PDO::ATTR_TIMEOUT => 5,
+            ] : [],
         ],
 
         // Test-safe alias for legacy Krypton connection name used in some tests/models.

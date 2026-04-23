@@ -11,6 +11,7 @@ use App\Services\Krypton\OrderService;
 use App\Exceptions\SessionNotFoundException;
 use App\Enums\OrderStatus;
 use App\Services\AuditLogService;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,6 +22,9 @@ use Throwable;
  */
 class DeviceOrderApiController extends Controller
 {
+    private const POS_SQLSTATE_GENERAL_ERROR = 'HY000';
+    private const POS_CONNECTION_REFUSED_ERROR_CODE = 2002;
+
     /**
      * Handle the incoming order request from a specific device.
      *
@@ -149,6 +153,23 @@ class DeviceOrderApiController extends Controller
                 'message' => $e->getMessage(),
                 'code' => 'SESSION_NOT_FOUND',
             ], 503);
+        } catch (QueryException $e) {
+            Log::error('Order creation failed', [
+                'device_id' => $device?->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($this->isPosServiceUnavailable($e)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order service is temporarily unavailable.',
+                ], 503);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Order creation failed.',
+            ], 500);
         } catch (Throwable $e) {
             Log::error('Order creation failed', [
                 'device_id' => $device?->id,
@@ -161,6 +182,26 @@ class DeviceOrderApiController extends Controller
             ], 500);
         }
     
+    }
+
+    private function isPosServiceUnavailable(QueryException $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        if (! str_contains($message, 'connection: pos')) {
+            return false;
+        }
+
+        $sqlState = strtoupper((string) ($e->errorInfo[0] ?? ''));
+        $driverCode = (int) ($e->errorInfo[1] ?? 0);
+
+        if ($sqlState === self::POS_SQLSTATE_GENERAL_ERROR && $driverCode === self::POS_CONNECTION_REFUSED_ERROR_CODE) {
+            return true;
+        }
+
+        return str_contains($message, 'connection refused')
+            || str_contains($message, 'server has gone away')
+            || str_contains($message, 'no such file or directory');
     }
 
 

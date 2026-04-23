@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Device;
-use App\Actions\Device\RegisterDevice;
 // use App\Http\Resources\DeviceResource;
 use App\Http\Requests\DeviceRegisterRequest;
-use App\Models\DeviceRegistrationCode;
 use App\Services\AuditLogService;
+use App\Helpers\BroadcastConfig;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
@@ -88,6 +89,13 @@ class DeviceAuthApiController extends Controller
     /**
      * Register a device
      * 
+     * Batch 1: Security-code-first registration flow
+     * 
+     * Match-count logic:
+     * - 0 matches: Create new device and return token (200)
+     * - 1 match: Claim device, update ip_address/last_seen_at, return token (200)
+     * - 2+ matches: Ambiguous state, reject with 409 Conflict
+     * 
      * @unauthenticated
      * 
      * @param DeviceRegisterRequest $request
@@ -97,8 +105,10 @@ class DeviceAuthApiController extends Controller
     public function register(DeviceRegisterRequest $request)
     {
         $validated = $request->validated();
+        $securityCode = $validated['security_code'] ?? ($validated['code'] ?? null);
 
-        // Prefer client-supplied ip_address when it looks like a LAN/private IP.
+        // IP address resolution: prefer client-supplied private IP,
+        // fall back to request IP, then null
         $clientSupplied = $request->input('ip_address');
         $requestIp = $request->ip();
 
@@ -108,49 +118,70 @@ class DeviceAuthApiController extends Controller
         } elseif ($this->isPrivateIp($requestIp)) {
             $ipToUse = $requestIp;
         } else {
-            // If neither is private, prefer request ip (still usable), or null
             $ipToUse = $requestIp;
         }
 
-        // Attach ip_address for RegisterDevice action
-        $validated['ip_address'] = $ipToUse;
-
-        // Avoid accidental collisions: if code provided, prefer code-based uniqueness.
-        // The `code` column lives in `device_registration_codes` table — lookup that
-        // table and if the code has already been claimed (used_by_device_id) return
-        // the owning device as an existing registration.
-        if (! empty($validated['code'])) {
-            $codeRow = DeviceRegistrationCode::where('code', $validated['code'])->first();
-            if ($codeRow && ! empty($codeRow->used_by_device_id)) {
-                $existing = Device::find($codeRow->used_by_device_id);
-            } else {
-                $existing = null;
-            }
-        } else {
-            $existing = null;
-        }
-
-        if (!$existing && $ipToUse) {
-            $existing = Device::where('ip_address', $ipToUse)->first();
-        }
-
-        if ($existing) {
+        if (! $securityCode) {
             return response()->json([
                 'success' => false,
-                'message' => 'Device already registered',
-                'device' => $existing,
+                'message' => 'Security code is required',
                 'ip_used' => $ipToUse,
+                'broadcasting' => BroadcastConfig::clientPayload(),
+            ], 422);
+        }
+
+        $matchingDeviceIds = Device::active()
+            ->whereNotNull('security_code')
+            ->get(['id', 'security_code'])
+            ->filter(fn (Device $device) => Hash::check($securityCode, $device->security_code))
+            ->pluck('id')
+            ->values();
+
+        $matchCount = $matchingDeviceIds->count();
+
+        if ($matchCount === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid security code',
+                'ip_used' => $ipToUse,
+                'broadcasting' => BroadcastConfig::clientPayload(),
+            ], 422);
+        }
+
+        if ($matchCount > 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ambiguous registration: multiple devices with this security code',
+                'match_count' => $matchCount,
+                'ip_used' => $ipToUse,
+                'broadcasting' => BroadcastConfig::clientPayload(),
             ], 409);
         }
 
-        $device = RegisterDevice::run($validated);
+        $deviceId = (int) $matchingDeviceIds->first();
+
+        $token = DB::transaction(function () use ($deviceId, $ipToUse) {
+            /** @var Device $device */
+            $device = Device::whereKey($deviceId)->lockForUpdate()->firstOrFail();
+
+            $device->update([
+                'ip_address' => $ipToUse,
+                'last_ip_address' => $ipToUse,
+                'last_seen_at' => now(),
+            ]);
+
+            // Keep active sessions and remove only expired tokens.
+            $device->tokens()->where('expires_at', '<', now())->delete();
+
+            return $device->createToken(
+                name: 'device-auth',
+                expiresAt: now()->addDays(30)
+            )->plainTextToken;
+        });
+
+        $device = Device::findOrFail($deviceId);
 
         AuditLogService::deviceRegistered($request, $device->id);
-
-        $token = $device->createToken(
-            name: 'device-auth',
-            expiresAt: now()->addDays(30)
-        )->plainTextToken;
 
         return response()->json([
             'success' => true,
@@ -159,7 +190,8 @@ class DeviceAuthApiController extends Controller
             'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ipToUse,
-        ], 201);
+            'broadcasting' => BroadcastConfig::clientPayload(),
+        ], 200);
     }
     /**
      * Login a device
@@ -214,6 +246,7 @@ class DeviceAuthApiController extends Controller
             'table' => $device->table()->first(['id', 'name']),
             'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ip,
+            'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
     }
 
@@ -249,6 +282,7 @@ class DeviceAuthApiController extends Controller
             'device' => $device,
             'table' => $device->table()->first(['id', 'name']),
             'expires_at' => $expiresAt->toDateTimeString(),
+            'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
 }
 
@@ -303,7 +337,11 @@ class DeviceAuthApiController extends Controller
         $device = Device::where('ip_address', $ip)->where('is_active', true)->first();
 
         if (! $device) {
-            return response()->json(['found' => false, 'ip_used' => $ip], 200);
+            return response()->json([
+                'found' => false,
+                'ip_used' => $ip,
+                'broadcasting' => BroadcastConfig::clientPayload(),
+            ], 200);
         }
 
         // Update last seen and IP tracking
@@ -329,6 +367,7 @@ class DeviceAuthApiController extends Controller
                 'bluetooth_address' => null,
             ],
             'ip_used' => $ip,
+            'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
     }
 

@@ -42,7 +42,8 @@ const form = useForm({
     name: props.device?.name ?? '',
     ip_address: props.device?.ip_address ?? '',
     port: props.device?.port ?? undefined,
-    table_id: props.device?.table_id ?? undefined
+    table_id: props.device?.table_id ?? undefined,
+    security_code: '',
 })
 
 const computedTables = computed(() => props.unassignedTables ) // unassigned tables
@@ -139,6 +140,21 @@ async function createToken() {
                 <Label for="port">Port</Label>
                 <Input id="port" type="number" min="1" max="65535" v-model="form.port" placeholder="3000" />
                 <InputError :message="form.errors.port" />
+            </div>
+
+            <div v-if="!isEdit" class="flex flex-col gap-3">
+                <Label for="security_code">Security Code</Label>
+                <Input
+                    id="security_code"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    minlength="6"
+                    v-model="form.security_code"
+                    placeholder="123456"
+                />
+                <p class="text-xs text-muted-foreground">Enter a unique 6-digit numeric code.</p>
+                <InputError :message="form.errors.security_code" />
             </div>
 
 

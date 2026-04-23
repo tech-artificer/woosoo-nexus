@@ -57,12 +57,16 @@ export interface TableOrder {
 export interface Device {
   id: number;
     name: string;
-    table_id: number;
-    branch_id: number;
+        table_id: number | null;
+        branch_id: number;
     is_active: boolean;
+        device_uuid?: string;
     ip_address?: string;
+        last_ip_address?: string;
+        last_seen_at?: string;
+        type?: string;
+        security_code_generated_at?: string;
     deleted_at?: string;
-    registration_code?: DeviceRegistrationCode;
     port?: number;
     branch?: Branch;
     table?: Table;

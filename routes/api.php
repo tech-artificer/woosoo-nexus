@@ -26,11 +26,13 @@ use App\Http\Controllers\Api\V1\Auth\{
 };
 
 use App\Http\Controllers\Api\V2\TabletApiController;
+use App\Http\Controllers\Api\V2\DeviceApiController as DeviceV2ApiController;
 
 use App\Http\Controllers\Api\V1\Krypton\{
     TerminalSessionApiController,
 };
 
+use App\Helpers\BroadcastConfig;
 use App\Models\DeviceOrder;
 use App\Events\PrintOrder;
 
@@ -44,6 +46,15 @@ Route::get('/device/ip', function (Request $request) {
         'user_agent' => $request->userAgent()
     ]);
 });
+
+// Public config endpoint — provides client-safe broadcasting config for cold-start
+// (before auth). Cacheable; never includes secrets.
+Route::get('/config', function () {
+    return response()->json([
+        'broadcasting' => BroadcastConfig::clientPayload(),
+        'app_version'  => config('app.version', env('APP_VERSION', '1.0.0')),
+    ])->header('Cache-Control', 'public, max-age=300');
+})->name('api.config');
 
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 
@@ -180,6 +191,21 @@ Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:de
     Route::get('/tablet/meat-categories', [TabletApiController::class, 'meatCategories'])->name('api.v2.tablet.meat-categories');
     Route::get('/tablet/categories', [TabletApiController::class, 'categories'])->name('api.v2.tablet.categories');
     Route::get('/tablet/categories/{slug}/menus', [TabletApiController::class, 'categoryMenus'])->name('api.v2.tablet.category.menus');
+});
+
+// Device management API v2 — admin/sanctum endpoints
+Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:sanctum'])->group(function () {
+    Route::get('/devices', [DeviceV2ApiController::class, 'index'])->name('api.v2.devices.index');
+    Route::post('/devices', [DeviceV2ApiController::class, 'store'])->name('api.v2.devices.store');
+    Route::get('/devices/metadata', [DeviceV2ApiController::class, 'metadata'])->name('api.v2.devices.metadata');
+    Route::get('/devices/statistics', [DeviceV2ApiController::class, 'statistics'])->name('api.v2.devices.statistics');
+    Route::get('/devices/by-status', [DeviceV2ApiController::class, 'byStatus'])->name('api.v2.devices.by-status');
+    Route::get('/devices/{device}', [DeviceV2ApiController::class, 'show'])->name('api.v2.devices.show');
+    Route::get('/devices/{device}/health', [DeviceV2ApiController::class, 'health'])->name('api.v2.devices.health');
+    Route::get('/devices/{device}/heartbeats', [DeviceV2ApiController::class, 'heartbeats'])->name('api.v2.devices.heartbeats');
+    Route::post('/devices/{device}/status', [DeviceV2ApiController::class, 'toggleStatus'])->name('api.v2.devices.status');
+    Route::post('/devices/{device}/security-code', [DeviceV2ApiController::class, 'regenerateSecurityCode'])->name('api.v2.devices.security-code');
+    Route::patch('/devices/{device}/rotate-security-code', [DeviceV2ApiController::class, 'rotateSecurityCode'])->name('api.v2.devices.rotate-security-code');
 });
 
 // Session alias — PWA calls /api/session/latest; actual route is /api/sessions/current

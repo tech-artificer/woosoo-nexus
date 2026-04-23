@@ -174,11 +174,6 @@ const openRequestDetail = (request: any) => {
     <Head :title="props.title" :description="props.description" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-6 px-1 sm:px-2">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">Service Requests</h1>
-                <p class="text-muted-foreground">Manage and track customer service requests in real-time</p>
-            </div>
-
             <DataTableToolbar
                 v-model:search="search"
                 v-model:status="statusFilter"

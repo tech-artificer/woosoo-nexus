@@ -21,21 +21,25 @@ class PackageController extends Controller
             ->orderBy('id')
             ->get();
 
-        $menuOptions = Menu::query()
-            ->select('id', 'name', 'receipt_name', 'is_modifier_only', 'is_available')
-            ->where('is_available', true)
-            ->orderBy('name')
-            ->limit(3000)
-            ->get()
-            ->map(static function (Menu $menu): array {
-                return [
-                    'id' => (int) $menu->id,
-                    'name' => $menu->name ?: $menu->receipt_name ?: ('Menu #' . $menu->id),
-                    'receipt_name' => $menu->receipt_name,
-                    'is_modifier_only' => (bool) $menu->is_modifier_only,
-                ];
-            })
-            ->values();
+        try {
+            $menuOptions = Menu::query()
+                ->select('id', 'name', 'receipt_name', 'is_modifier_only', 'is_available')
+                ->where('is_available', true)
+                ->orderBy('name')
+                ->limit(3000)
+                ->get()
+                ->map(static function (Menu $menu): array {
+                    return [
+                        'id' => (int) $menu->id,
+                        'name' => $menu->name ?: $menu->receipt_name ?: ('Menu #' . $menu->id),
+                        'receipt_name' => $menu->receipt_name,
+                        'is_modifier_only' => (bool) $menu->is_modifier_only,
+                    ];
+                })
+                ->values();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $menuOptions = collect([]);
+        }
 
         return Inertia::render('Packages/Index', [
             'title' => 'Packages',

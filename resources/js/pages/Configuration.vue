@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldCheck, Monitor, FileText, Wrench } from 'lucide-vue-next';
+import { ShieldCheck, Monitor, FileText, Wrench, DatabaseZap } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -45,6 +45,13 @@ const configModules = [
         href: route('service-requests.index'),
         icon: Wrench,
         action: 'Open service requests',
+    },
+    {
+        title: 'POS Database Connection',
+        description: 'Configure the host, port, and credentials for the Krypton POS database.',
+        href: route('pos-connection.index'),
+        icon: DatabaseZap,
+        action: 'Configure POS connection',
     },
 ]
 

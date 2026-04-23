@@ -9,6 +9,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Schedule::command('pulse:check')->everyMinute();
+Schedule::command('horizon:snapshot')->everyFiveMinutes();
+
 // REMOVED 2026-04-07: ProcessOrderLogs schedule disabled for production hardening.
 // The job depends on `order_update_logs`, which does not exist in production DB.
 // Do NOT re-enable periodic dispatch without a migration + queue architecture plan.

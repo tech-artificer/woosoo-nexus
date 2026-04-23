@@ -13,13 +13,21 @@ class DeviceApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed();
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
     private function actingAsAdmin(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['is_admin' => true]);
+        $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+        $user->assignRole($adminRole);
         Sanctum::actingAs($user, [], 'sanctum');
     }
 
@@ -310,7 +318,7 @@ class DeviceApiTest extends TestCase
         $resp->assertStatus(200);
         $json = $resp->json();
         $this->assertArrayHasKey('branches', $json);
-        $this->assertCount(2, $json['branches']);
+        $this->assertCount(3, $json['branches']); // 2 created + 1 seeded
         $this->assertEquals('Active Branch', $json['branches'][0]['name']);
     }
 }

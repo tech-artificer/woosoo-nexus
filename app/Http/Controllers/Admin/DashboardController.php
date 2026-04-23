@@ -27,8 +27,8 @@ class DashboardController extends Controller
 
     protected function getReverbStatus(): array
     {
-        $host = (string) (config('reverb.apps.apps.0.options.host') ?? '127.0.0.1');
-        $port = (int) (config('reverb.apps.apps.0.options.port') ?? 6001);
+        $host = '127.0.0.1';
+        $port = (int) config('reverb.servers.reverb.port', 8080);
         $timeout = 0.3;
         $start = microtime(true);
         $errno = 0;
@@ -71,13 +71,22 @@ class DashboardController extends Controller
 
         $reverbStatus = $this->getReverbStatus();
 
-        if( !$session ) {
+        if (! $session) {
+            session()->flash('warning', 'Dashboard data is unavailable — POS system is currently offline.');
             return Inertia::render('Dashboard', [
-                'title' => 'Dashboard',
-                'description' => 'Analytics',
-                'tableOrders' => [],
-                'openOrders' => [],
+                'title'        => 'Dashboard',
+                'description'  => 'Analytics',
+                'tableOrders'  => [],
+                'openOrders'   => [],
                 'reverbStatus' => $reverbStatus,
+                'sessionId'    => null,
+                'totalSales'   => '0.00',
+                'totalOrders'  => 0,
+                'guestCount'   => 0,
+                'monthlySales' => '0.00',
+                'salesData'    => [],
+                'topItems'     => [],
+                'devices'      => [],
             ]);
         }
 

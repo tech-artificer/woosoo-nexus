@@ -19,14 +19,14 @@ use App\Http\Controllers\Admin\{
     PackageController,
     PackageConfigController,
     TabletCategoryController,
-    MediaController,
+    MediaLibraryController,
     BranchController,
     ReverbController,
-    MonitoringController
+    MonitoringController,
+    PosConnectionController
 };
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\EventLogController;
-use App\Http\Controllers\Admin\PosIntegrationController;
 
 use App\Http\Controllers\Admin\Reports\{
     SalesController,
@@ -60,12 +60,16 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::post('/orders/print', [OrderController::class, 'print'])->name('orders.print');
         Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
-        Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
-        Route::post('/orders/bulk-void', [OrderController::class, 'bulkVoid'])->name('orders.bulk-void');
+        
+        // Bulk operations with rate limiting (60 requests/min to prevent abuse)
+        Route::middleware(['throttle:60,1'])->group(function () {
+            Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
+            Route::post('/orders/bulk-void', [OrderController::class, 'bulkVoid'])->name('orders.bulk-void');
+            Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
+        });
+        
         // Admin: update single order status
         Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
-        // Admin: bulk update order statuses
-        Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
         // Device order API for strict verification
         Route::get('/device-order/by-order-id/{orderId}', [OrderController::class, 'byOrderId'])->name('device-order.by-order-id');
         // Menu
@@ -94,12 +98,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/tablet-categories/{tabletCategory}/menus/{menuId}/featured', [TabletCategoryController::class, 'toggleFeatured'])->name('tablet-categories.menus.featured');
         Route::put('/tablet-categories/{tabletCategory}/menus/order', [TabletCategoryController::class, 'updateMenuOrder'])->name('tablet-categories.menus.order');
         // Media Library
-        Route::get('/media', [MediaController::class, 'index'])->name('media.index');
-        Route::post('/media', [MediaController::class, 'store'])->name('media.store');
-        Route::delete('/media/{medium}', [MediaController::class, 'destroy'])->name('media.destroy');
-        Route::post('/media/from-url', [MediaController::class, 'createFromUrl'])->name('media.from-url');
-        Route::post('/media/{medium}/attach', [MediaController::class, 'attachToMenu'])->name('media.attach');
-        Route::delete('/media/{medium}/detach', [MediaController::class, 'detachFromMenu'])->name('media.detach');
+        Route::get('/media', [MediaLibraryController::class, 'index'])->name('media.index');
+        Route::post('/media', [MediaLibraryController::class, 'store'])->name('media.store');
+        Route::delete('/media/{medium}', [MediaLibraryController::class, 'destroy'])->name('media.destroy');
+        Route::post('/media/from-url', [MediaLibraryController::class, 'createFromUrl'])->name('media.from-url');
+        Route::post('/media/{medium}/attach', [MediaLibraryController::class, 'attachToMenu'])->name('media.attach');
+        Route::delete('/media/{medium}/detach', [MediaLibraryController::class, 'detachFromMenu'])->name('media.detach');
 
         // Admin settings (branch-backed JSON settings)
         $settingsDefaults = [
@@ -151,14 +155,10 @@ Route::middleware(['auth'])->group(function () {
             return Inertia::render('Admin/Settings');
         })->name('admin.settings.page');
 
-        // POS Integration settings
-        Route::prefix('integrations/pos')->name('integrations.pos.')->group(function () {
-            Route::get('/',                [PosIntegrationController::class, 'index'])->name('index');
-            Route::post('/',               [PosIntegrationController::class, 'store'])->name('store');
-            Route::post('/test',           [PosIntegrationController::class, 'testConnection'])->name('test');
-            Route::put('/{integration}',   [PosIntegrationController::class, 'update'])->name('update');
-            Route::delete('/{integration}',[PosIntegrationController::class, 'destroy'])->name('destroy');
-        });
+        // Configuration hub page
+        Route::get('/configuration', function () {
+            return Inertia::render('Configuration');
+        })->name('configuration.index');
 
         // User
         Route::resource('/users', UserController::class);
@@ -196,7 +196,6 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('{id}/restore', [DeviceController::class, 'restore'])->name('restore');
             Route::post('/{device}/assign-table', [DeviceController::class, 'assignTable'])->name('device.assign.table');
             Route::post('/{device}/token', [DeviceController::class, 'createToken'])->name('create.token');
-            Route::post('/generate-codes', [DeviceController::class, 'generateCodes'])->name('generate.codes');
         });
 
         Route::get('/accessibility', [AccessibilityController::class, 'index'])->name('accessibility.index');
@@ -285,31 +284,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/purge-print-events', [MonitoringController::class, 'purgePrintEvents'])->name('purge-print-events');
     });
 
+    // POS Connection — admin-only configuration for the 3rd-party Krypton database.
+    Route::middleware(['can:admin'])->prefix('configuration/pos-connection')->name('pos-connection.')->group(function () {
+        Route::get('/', [PosConnectionController::class, 'index'])->name('index');
+        Route::put('/', [PosConnectionController::class, 'update'])->name('update');
+        Route::post('/test', [PosConnectionController::class, 'test'])->name('test');
+    });
+
 });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
-
-// Dev-only helper route: unauthenticated generator for quick local testing
-// SECURITY: Only enabled in local/development environments (not production, even with APP_DEBUG)
-if (app()->environment(['local', 'development'])) {
-    // GET avoids CSRF middleware so it's easy to call from curl/browser during local testing
-    Route::get('/dev/generate-codes', function (\Illuminate\Http\Request $request) {
-        $count = (int) ($request->query('count', 15));
-        $count = max(1, min(100, $count));
-        $created = [];
-        $attempts = 0;
-        while (count($created) < $count && $attempts < $count * 5) {
-            $attempts++;
-            $code = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(6));
-            try {
-                $model = \App\Models\DeviceRegistrationCode::create(["code" => $code]);
-                $created[] = $model->code;
-            } catch (\Exception $e) {
-                continue;
-            }
-        }
-
-        return response()->json(["success" => true, "codes" => $created]);
-    });
-}

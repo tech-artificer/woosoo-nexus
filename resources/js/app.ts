@@ -1,31 +1,3 @@
-// Register service worker only in production. In dev, unregister stale workers
-// so Vite HMR requests are never intercepted or cached.
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-        if (import.meta.env.DEV) {
-            try {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(registrations.map(registration => registration.unregister()));
-
-                if ('caches' in window) {
-                    const cacheKeys = await caches.keys();
-                    await Promise.all(
-                        cacheKeys
-                            .filter(key => key.startsWith('woosoo-nexus-'))
-                            .map(key => caches.delete(key))
-                    );
-                }
-            } catch (err) {
-                console.warn('Service worker cleanup in dev failed:', err);
-            }
-            return;
-        }
-
-        navigator.serviceWorker.register('/service-worker.js').catch(err => {
-            console.warn('Service worker registration failed:', err);
-        });
-    });
-}
 import '../css/app.css';
 // import './bootstrap';
 import axios from 'axios'
@@ -73,8 +45,8 @@ try {
         key: import.meta.env.VITE_REVERB_APP_KEY,
         wsHost: import.meta.env.VITE_REVERB_HOST,
         wssHost: import.meta.env.VITE_REVERB_HOST,
-        wsPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
-        wssPort: import.meta.env.VITE_REVERB_PORT ?? 6001,
+        wsPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+        wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
         forceTLS: true, // Always use secure WebSocket when certificate is present
         disableStats: true,
         encrypted: true,

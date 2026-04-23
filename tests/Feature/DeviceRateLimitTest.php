@@ -5,7 +5,8 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Branch;
-use App\Models\DeviceRegistrationCode;
+use App\Models\Device;
+use Illuminate\Support\Facades\Hash;
 
 class DeviceRateLimitTest extends TestCase
 {
@@ -20,14 +21,19 @@ class DeviceRateLimitTest extends TestCase
         $codes = [];
         for ($i = 0; $i < 11; $i++) {
             $code = str_pad((string) (100000 + $i), 6, '0', STR_PAD_LEFT);
-            DeviceRegistrationCode::create(['code' => $code]);
+            Device::create([
+                'branch_id' => 1,
+                'name' => 'Rate Limit Device Seed ' . $i,
+                'security_code' => Hash::make($code),
+                'is_active' => true,
+            ]);
             $codes[] = $code;
         }
 
         for ($i = 0; $i < 10; $i++) {
             $payload = [
                 'name' => 'Rate Limit Device ' . $i,
-                'code' => $codes[$i],
+                'security_code' => $codes[$i],
                 'app_version' => '1.0.0',
             ];
             $this->withServerVariables($server)
@@ -36,7 +42,7 @@ class DeviceRateLimitTest extends TestCase
 
         $payload = [
             'name' => 'Rate Limit Device 10',
-            'code' => $codes[10],
+            'security_code' => $codes[10],
             'app_version' => '1.0.0',
         ];
 

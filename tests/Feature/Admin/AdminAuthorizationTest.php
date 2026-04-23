@@ -37,11 +37,11 @@ test('non-admin users cannot access branches index', function () {
 test('admins with branch permission can access branches index', function () {
     $this->withoutVite();
 
-    Permission::findOrCreate('view branches', 'web');
+    Permission::findOrCreate('branches.view', 'web');
     Branch::create(['name' => 'Main', 'location' => 'HQ']);
 
     $admin = User::factory()->admin()->create();
-    $admin->givePermissionTo('view branches');
+    $admin->givePermissionTo('branches.view');
 
     $this->actingAs($admin)
         ->get('/branches')
@@ -51,7 +51,7 @@ test('admins with branch permission can access branches index', function () {
 test('admins without create branch permission cannot create branches', function () {
     $this->withoutVite();
 
-    Permission::findOrCreate('create branches', 'web');
+    Permission::findOrCreate('branches.create', 'web');
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
@@ -65,9 +65,9 @@ test('admins without create branch permission cannot create branches', function 
 test('admins with create branch permission can create branches', function () {
     $this->withoutVite();
 
-    Permission::findOrCreate('create branches', 'web');
+    Permission::findOrCreate('branches.create', 'web');
     $admin = User::factory()->admin()->create();
-    $admin->givePermissionTo('create branches');
+    $admin->givePermissionTo('branches.create');
 
     $this->actingAs($admin)
         ->from('/branches')
@@ -86,11 +86,11 @@ test('admins with create branch permission can create branches', function () {
 test('admins cannot create a second branch in a single-branch install', function () {
     $this->withoutVite();
 
-    Permission::findOrCreate('create branches', 'web');
+    Permission::findOrCreate('branches.create', 'web');
     Branch::create(['name' => 'Main', 'location' => 'HQ']);
 
     $admin = User::factory()->admin()->create();
-    $admin->givePermissionTo('create branches');
+    $admin->givePermissionTo('branches.create');
 
     $this->actingAs($admin)
         ->from('/branches')
@@ -107,10 +107,10 @@ test('admins cannot create a second branch in a single-branch install', function
 test('admins with update branch permission can update branches', function () {
     $this->withoutVite();
 
-    Permission::findOrCreate('update branches', 'web');
+    Permission::findOrCreate('branches.edit', 'web');
     $branch = Branch::create(['name' => 'Main', 'location' => 'HQ']);
     $admin = User::factory()->admin()->create();
-    $admin->givePermissionTo('update branches');
+    $admin->givePermissionTo('branches.edit');
 
     $this->actingAs($admin)
         ->from('/branches')
@@ -130,11 +130,11 @@ test('admins with update branch permission can update branches', function () {
 test('admins with delete branch permission can delete branches', function () {
     $this->withoutVite();
 
-    Permission::findOrCreate('delete branches', 'web');
+    Permission::findOrCreate('branches.delete', 'web');
     Branch::create(['name' => 'Main', 'location' => 'HQ']);
     $branch = Branch::create(['name' => 'Overflow', 'location' => 'Legacy']);
     $admin = User::factory()->admin()->create();
-    $admin->givePermissionTo('delete branches');
+    $admin->givePermissionTo('branches.delete');
 
     $this->actingAs($admin)
         ->from('/branches')
@@ -149,10 +149,10 @@ test('admins with delete branch permission can delete branches', function () {
 test('admins cannot delete the only branch in a single-branch install', function () {
     $this->withoutVite();
 
-    Permission::findOrCreate('delete branches', 'web');
+    Permission::findOrCreate('branches.delete', 'web');
     $branch = Branch::create(['name' => 'Main', 'location' => 'HQ']);
     $admin = User::factory()->admin()->create();
-    $admin->givePermissionTo('delete branches');
+    $admin->givePermissionTo('branches.delete');
 
     $this->actingAs($admin)
         ->from('/branches')

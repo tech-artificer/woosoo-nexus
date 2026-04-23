@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\PublicOrigin;
+
 return [
 
     /*
@@ -29,8 +31,8 @@ return [
     'servers' => [
 
         'reverb' => [
-            'host' => env('REVERB_SERVER_HOST', '127.0.0.1'),
-            'port' => env('REVERB_SERVER_PORT', 6001),
+            'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
+            'port' => env('REVERB_SERVER_PORT', 8080),
             'path' => env('REVERB_SERVER_PATH', ''),
             'hostname' => env('REVERB_HOST'),
             'options' => [],
@@ -80,12 +82,14 @@ return [
                 'secret' => env('REVERB_APP_SECRET'),
                 'app_id' => env('REVERB_APP_ID'),
                 'options' => [
-                    'host' => env('REVERB_HOST'),
-                    'port' => env('REVERB_PORT', 6001),
-                    'scheme' => env('REVERB_SCHEME', 'http'),
-                    'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
+                    'host' => value(static fn (): string => trim((string) env('REVERB_PUBLIC_HOST')) ?: PublicOrigin::host()),
+                    'port' => env('REVERB_PORT', 8080),
+                    'scheme' => env('REVERB_SCHEME', PublicOrigin::scheme()),
+                    'useTLS' => env('REVERB_SCHEME', PublicOrigin::scheme()) === 'https',
                 ],
-                'allowed_origins' => ['*'],
+                'allowed_origins' => array_filter(
+                    explode(',', env('REVERB_ALLOWED_ORIGINS', implode(',', PublicOrigin::corsOrigins())))
+                ),
                 'capacity' => null,
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),

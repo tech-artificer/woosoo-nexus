@@ -27,10 +27,15 @@ Woosoo Nexus is a comprehensive restaurant management system consisting of three
 git clone <repository-url> woosoo-nexus
 cd woosoo-nexus
 
-# Install dependencies & setup
-composer install
-npm ci
+# Copy env before installing (needed for artisan post-install hooks)
 cp .env.example .env
+
+# Install dependencies
+composer install
+npm install
+
+# Generate app key and set up database
+# (SQLite is auto-created; for MySQL: create the DB first)
 php artisan key:generate
 php artisan migrate --seed
 

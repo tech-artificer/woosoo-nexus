@@ -221,11 +221,6 @@ function executeDelete() {
     <Head :title="title" />
 
     <div class="space-y-6 p-6">
-      <div>
-        <h1 class="text-2xl font-semibold">{{ title }}</h1>
-        <p class="text-sm text-muted-foreground">{{ description }}</p>
-      </div>
-
       <!-- Create / Edit form -->
       <Card>
         <CardHeader>
@@ -280,7 +275,7 @@ function executeDelete() {
                   <Checkbox
                     :id="`modifier-${menu.id}`"
                     :checked="isModifierSelected(menu.id)"
-                    @update:checked="(value) => toggleModifier(menu.id, Boolean(value))"
+                    @update:checked="(value: boolean | 'indeterminate') => toggleModifier(menu.id, value === true)"
                   />
                   <Label :for="`modifier-${menu.id}`" class="cursor-pointer leading-tight">
                     <span class="font-medium">{{ menu.name }}</span>

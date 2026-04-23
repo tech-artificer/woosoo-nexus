@@ -20,24 +20,44 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect embedded PWA workspace
+        id: detect_pwa
+        run: |
+          if [ -f "tablet-ordering-pwa/package.json" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
+        if: steps.detect_pwa.outputs.present == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
       - name: Install PWA dependencies
+        if: steps.detect_pwa.outputs.present == 'true'
         run: npm ci
         working-directory: tablet-ordering-pwa
 
-      - name: Ensure esbuild binary is available
-        run: npm run rebuild:esbuild --if-present --silent || true
+      - name: Ensure esbuild binary is available (best effort)
+        if: steps.detect_pwa.outputs.present == 'true'
+        continue-on-error: true
+        run: npm run rebuild:esbuild --if-present --silent
         working-directory: tablet-ordering-pwa
 
       - name: Run unit tests (Vitest)
+        if: steps.detect_pwa.outputs.present == 'true'
         # Ensure Vitest runs once in CI (non-watch). Pass `--run` to Vitest.
         run: npm test --if-present --silent -- --run
         working-directory: tablet-ordering-pwa
+
       - name: Build PWA
+        if: steps.detect_pwa.outputs.present == 'true'
         run: npm run build --if-present
         working-directory: tablet-ordering-pwa
+
+      - name: Skip message when PWA app is external
+        if: steps.detect_pwa.outputs.present != 'true'
+        run: echo "No local tablet-ordering-pwa workspace in this repository. Skipping PWA CI job."

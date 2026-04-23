@@ -77,6 +77,112 @@ class OrderActionsTest extends TestCase
         Event::assertDispatchedTimes(OrderCompleted::class, 2);
     }
 
+    public function test_bulk_complete_handles_idempotency_correctly(): void
+    {
+        [$admin, $order] = $this->seedAdminAndOrder(5005, OrderStatus::COMPLETED);
+
+        Event::fake([OrderStatusUpdated::class, OrderCompleted::class]);
+
+        // Attempt to complete already-completed order
+        $response = $this->actingAs($admin)->post('/orders/bulk-complete', [
+            'order_ids' => [$order->order_id],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        // Should skip, not trigger events
+        Event::assertNotDispatched(OrderStatusUpdated::class);
+        Event::assertNotDispatched(OrderCompleted::class);
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::COMPLETED->value, $order->status->value);
+    }
+
+    public function test_bulk_complete_rejects_invalid_order_ids(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Test negative ID
+        $response = $this->actingAs($admin)->post('/orders/bulk-complete', [
+            'order_ids' => [-1],
+        ]);
+        $response->assertSessionHasErrors('order_ids.0');
+
+        // Test zero ID
+        $response = $this->actingAs($admin)->post('/orders/bulk-complete', [
+            'order_ids' => [0],
+        ]);
+        $response->assertSessionHasErrors('order_ids.0');
+
+        // Test string ID
+        $response = $this->actingAs($admin)->post('/orders/bulk-complete', [
+            'order_ids' => ['DROP TABLE'],
+        ]);
+        $response->assertSessionHasErrors('order_ids.0');
+    }
+
+    public function test_bulk_void_uses_order_id_for_api_consistency(): void
+    {
+        [$admin, $order] = $this->seedAdminAndOrder(5006, OrderStatus::CONFIRMED);
+
+        Event::fake([OrderStatusUpdated::class]);
+
+        // Use order_id parameter (not internal 'id')
+        $response = $this->actingAs($admin)->post('/orders/bulk-void', [
+            'order_ids' => [$order->order_id],
+        ]);
+
+        $response->assertRedirect();
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::VOIDED->value, $order->status->value);
+    }
+
+    public function test_bulk_void_rejects_invalid_order_ids(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Test negative ID
+        $response = $this->actingAs($admin)->post('/orders/bulk-void', [
+            'order_ids' => [-999],
+        ]);
+        $response->assertSessionHasErrors('order_ids.0');
+
+        // Test zero ID
+        $response = $this->actingAs($admin)->post('/orders/bulk-void', [
+            'order_ids' => [0],
+        ]);
+        $response->assertSessionHasErrors('order_ids.0');
+    }
+
+    public function test_concurrent_bulk_complete_prevents_double_broadcast(): void
+    {
+        [$admin, $order] = $this->seedAdminAndOrder(5007, OrderStatus::CONFIRMED);
+
+        Event::fake([OrderStatusUpdated::class, OrderCompleted::class]);
+
+        // Simulate concurrent requests by making the same call twice rapidly
+        $response1 = $this->actingAs($admin)->post('/orders/bulk-complete', [
+            'order_ids' => [$order->order_id],
+        ]);
+
+        $response2 = $this->actingAs($admin)->post('/orders/bulk-complete', [
+            'order_ids' => [$order->order_id],
+        ]);
+
+        $response1->assertRedirect();
+        $response2->assertRedirect();
+
+        // Only ONE set of events should be dispatched (first request)
+        // Second request skipped due to idempotency
+        Event::assertDispatchedTimes(OrderStatusUpdated::class, 1);
+        Event::assertDispatchedTimes(OrderCompleted::class, 1);
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::COMPLETED->value, $order->status->value);
+    }
+
     /**
      * @return array{0: User, 1: DeviceOrder}
      */

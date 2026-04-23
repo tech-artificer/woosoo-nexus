@@ -20,6 +20,7 @@ class TransactionRollbackTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed();
 
         // Seed a test menu item for order creation
         Menu::factory()->create([
@@ -28,6 +29,11 @@ class TransactionRollbackTest extends TestCase
             'receipt_name' => 'Test Item',
             'price' => 100.00,
         ]);
+
+        // Seed an active POS session so KryptonContextService can resolve a
+        // valid session_id and order creation does not later fail due to
+        // missing context.
+        $this->createTestSession();
     }
 
     /** @test */

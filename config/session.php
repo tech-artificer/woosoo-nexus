@@ -156,7 +156,17 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN', ''),
+    'domain' => value(static function (): ?string {
+        $domain = env('SESSION_DOMAIN');
+
+        if (! is_string($domain)) {
+            return $domain ?: null;
+        }
+
+        $domain = trim($domain);
+
+        return $domain === '' || strcasecmp($domain, 'null') === 0 ? null : $domain;
+    }),
 
     /*
     |--------------------------------------------------------------------------

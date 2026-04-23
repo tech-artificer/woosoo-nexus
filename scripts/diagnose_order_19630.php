@@ -127,9 +127,9 @@ echo "   Start-Service woosoo-scheduler\n";
 echo "   Start-Service woosoo-queue-worker\n";
 echo "   Start-Service woosoo-reverb\n\n";
 echo "   # Check recent scheduler logs:\n";
-echo "   Get-Content C:\\deployment-manager-legacy\\logs\\scheduler\\scheduler.log -Tail 50\n\n";
+echo "   Get-Content E:\\Projects\\woosoo-integrated-stack\\woosoo-nexus\\storage\\logs\\scheduler.log -Tail 50\n\n";
 echo "   # Check Laravel logs for errors:\n";
-echo "   Get-Content C:\\deployment-manager-legacy\\apps\\woosoo-nexus\\storage\\logs\\laravel.log -Tail 50\n";
+echo "   Get-Content E:\\Projects\\woosoo-integrated-stack\\woosoo-nexus\\storage\\logs\\laravel.log -Tail 50\n";
 echo "   ═══════════════════════════════════════════════════════════\n\n";
 
 // 6. Summary

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\PublicOrigin;
 use Laravel\Sanctum\Sanctum;
 
 return [
@@ -15,12 +16,20 @@ return [
     |
     */
 
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-        Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
-    ))),
+    'stateful' => value(static function (): array {
+        $domains = env('SANCTUM_STATEFUL_DOMAINS');
+
+        if (is_string($domains) && trim($domains) !== '') {
+            return array_values(array_filter(array_map('trim', explode(',', $domains))));
+        }
+
+        return array_values(array_unique(array_filter([
+            ...PublicOrigin::statefulDomains(),
+            Sanctum::currentApplicationUrlWithPort(),
+            // Sanctum::currentRequestHost(),
+            '::1',
+        ])));
+    }),
 
     /*
     |--------------------------------------------------------------------------
