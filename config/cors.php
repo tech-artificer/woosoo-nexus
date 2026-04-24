@@ -16,7 +16,7 @@ return [
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
     */
-    'paths' => ['api/*', 'auth/broadcasting'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'logout', 'auth/broadcasting'],
     'allowed_methods' => ['*'],
     // Restrict to known origins in production. Set CORS_ALLOWED_ORIGINS in .env.
     // Default '*' is only safe in closed on-prem networks; still prefer explicit allowlist.

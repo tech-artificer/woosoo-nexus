@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Session\TokenMismatchException;
 use Inertia\Inertia;
 use Throwable;
 
@@ -56,6 +57,18 @@ class Handler extends ExceptionHandler
                 'title' => 'Forbidden',
                 'description' => 'You do not have permission to access this page'
             ])->toResponse($request)->setStatusCode(403);
+        }
+
+        if ($exception instanceof TokenMismatchException) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Your session expired. Please sign in again.',
+                ], 419);
+            }
+
+            return redirect()
+                ->back()
+                ->with('warning', 'Your session expired. Please sign in again.');
         }
 
         return parent::render($request, $exception);

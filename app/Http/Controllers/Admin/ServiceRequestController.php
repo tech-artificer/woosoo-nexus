@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\ServiceRequest;
 use App\Models\TableService;
-use App\Enums\ServiceRequestStatus;
 use App\Http\Resources\ServiceRequestResource;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class ServiceRequestController extends Controller
 {
@@ -18,6 +18,10 @@ class ServiceRequestController extends Controller
      */
     public function index(Request $request)
     {
+        $hasStatusColumn = Schema::hasColumn('service_requests', 'status');
+        $hasPriorityColumn = Schema::hasColumn('service_requests', 'priority');
+        $hasAcknowledgedAtColumn = Schema::hasColumn('service_requests', 'acknowledged_at');
+
         $query = ServiceRequest::with([
             'tableService', 
             'deviceOrder.table', 
@@ -28,11 +32,11 @@ class ServiceRequestController extends Controller
         ]);
 
         // Apply filters
-        if ($request->has('status') && $request->status !== 'all') {
+        if ($hasStatusColumn && $request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('priority') && $request->priority !== 'all') {
+        if ($hasPriorityColumn && $request->has('priority') && $request->priority !== 'all') {
             $query->where('priority', $request->priority);
         }
 
@@ -45,7 +49,7 @@ class ServiceRequestController extends Controller
         }
 
         // Default to showing active requests
-        if (!$request->has('show_all') || !$request->boolean('show_all')) {
+        if ($hasStatusColumn && (!$request->has('show_all') || !$request->boolean('show_all'))) {
             $query->active();
         }
 
@@ -55,15 +59,17 @@ class ServiceRequestController extends Controller
 
         // Get statistics
         $stats = [
-            'total_pending' => ServiceRequest::pending()->count(),
-            'total_active' => ServiceRequest::active()->count(),
+            'total_pending' => $hasStatusColumn ? ServiceRequest::pending()->count() : ServiceRequest::count(),
+            'total_active' => $hasStatusColumn ? ServiceRequest::active()->count() : ServiceRequest::count(),
             'total_today' => ServiceRequest::whereDate('created_at', today())->count(),
-            'avg_response_time' => ServiceRequest::whereNotNull('acknowledged_at')
-                ->whereDate('created_at', today())
-                ->get()
-                ->avg(function ($request) {
-                    return $request->created_at->diffInMinutes($request->acknowledged_at);
-                }),
+            'avg_response_time' => $hasAcknowledgedAtColumn
+                ? ServiceRequest::whereNotNull('acknowledged_at')
+                    ->whereDate('created_at', today())
+                    ->get()
+                    ->avg(function ($request) {
+                        return $request->created_at->diffInMinutes($request->acknowledged_at);
+                    })
+                : 0,
         ];
 
         $tableServices = TableService::all();

@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, vue/valid-v-for */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import axios from 'axios'
-import { useForm } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Input } from "@/components/ui/input"
 import InputError from '@/components/InputError.vue';
@@ -36,6 +36,7 @@ const props = defineProps<{
     device: Device
     unassignedTables: Table[]
     formType?: 'create' | 'edit'
+    inSheet?: boolean
 }>()
 
 const form = useForm({
@@ -139,21 +140,16 @@ async function createToken() {
             <div class="flex flex-col gap-3">
                 <Label for="port">Port</Label>
                 <Input id="port" type="number" min="1" max="65535" v-model="form.port" placeholder="3000" />
+                <p class="text-xs text-muted-foreground">
+                    Optional. Leave blank unless this device listens on a custom app port (valid range: 1-65535).
+                </p>
                 <InputError :message="form.errors.port" />
             </div>
 
             <div v-if="!isEdit" class="flex flex-col gap-3">
                 <Label for="security_code">Security Code</Label>
-                <Input
-                    id="security_code"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="6"
-                    minlength="6"
-                    v-model="form.security_code"
-                    placeholder="123456"
-                />
-                <p class="text-xs text-muted-foreground">Enter a unique 6-digit numeric code.</p>
+                <Input id="security_code" type="text" value="Auto-generated on save" readonly />
+                <p class="text-xs text-muted-foreground">A unique 6-digit security code will be generated automatically when you create the device.</p>
                 <InputError :message="form.errors.security_code" />
             </div>
 
@@ -190,23 +186,38 @@ async function createToken() {
 
         </form>
     </div>
-    <SheetFooter>
+    <div class="border-t bg-muted/30">
         <div class="flex items-start flex-row gap-2 p-4">
-            <SheetClose as-child>
+            <SheetFooter v-if="inSheet">
+                <SheetClose as-child>
                     <Button type="button" variant="destructive" class="cursor-pointer ">
                         Cancel
                     </Button>
                 </SheetClose>
-                <Button v-if="isEdit" type="button" variant="default" @click.prevent="createToken" class="text-sm">
-                    Generate Token
-                </Button>
-            <Button type="button" @click.prevent="submit" variant="outline"
+            </SheetFooter>
+            <Button
+                v-else
+                type="button"
+                variant="destructive"
+                class="cursor-pointer"
+                @click="router.get(route('devices.index'))"
+            >
+                Cancel
+            </Button>
+            <Button v-if="isEdit" type="button" variant="default" @click.prevent="createToken" class="text-sm">
+                Generate Token
+            </Button>
+            <Button
+                type="button"
+                @click.prevent="submit"
+                variant="outline"
                 class="hover:bg-woosoo-primary-light hover:text-woosoo-primary-dark text-woosoo-primary-dark cursor-pointer"
-                :disabled="form.processing">
+                :disabled="form.processing"
+            >
                 Save Changes
             </Button>
         </div>
-    </SheetFooter>
+    </div>
 
     <Dialog v-model:open="showTokenDialog">
         <DialogContent>
@@ -226,4 +237,3 @@ async function createToken() {
     </Dialog>
 
 </template>
-    font-size: 0.8em;

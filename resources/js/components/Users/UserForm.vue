@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useForm, usePage } from '@inertiajs/vue3';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import { toast } from 'vue-sonner'
 import { Checkbox } from "@/components/ui/checkbox"
@@ -17,6 +17,7 @@ const roles = page.props.roles as Role[];
 const props = defineProps<{
   user?: User
   formType: 'create' | 'edit'
+  inSheet?: boolean
 }>();
 
 const form = useForm({
@@ -126,18 +127,29 @@ onMounted(() => {
 
     </form>
   </div>
-  <SheetFooter>
-    <div class="flex items-center gap-3 px-4 sm:px-6 py-4 border-t bg-muted/30">
-      <SheetClose as-child>
-        <Button type="button" variant="outline" class="cursor-pointer">
-          Cancel
-        </Button>
-      </SheetClose>
+  <div class="px-4 sm:px-6 py-4 border-t bg-muted/30">
+    <div class="flex items-center gap-3">
+      <SheetFooter v-if="inSheet">
+        <SheetClose as-child>
+          <Button type="button" variant="outline" class="cursor-pointer">
+            Cancel
+          </Button>
+        </SheetClose>
+      </SheetFooter>
+      <Button
+        v-else
+        type="button"
+        variant="outline"
+        class="cursor-pointer"
+        @click="router.get(route('users.index'))"
+      >
+        Cancel
+      </Button>
       <Button type="button" @click.prevent="submit"
         :disabled="form.processing">
         {{ form.processing ? 'Saving…' : (formType === 'create' ? 'Create User' : 'Save Changes') }}
       </Button>
     </div>
-  </SheetFooter>
+  </div>
 
 </template>

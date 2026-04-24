@@ -9,10 +9,12 @@ import { Label } from '@/components/ui/label';
 import { asset } from '@/lib/utils';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowRight, CheckCircle2, LoaderCircle, ShieldCheck } from 'lucide-vue-next';
+import axios from 'axios';
 
 defineProps<{
     title?: string;
     status?: string;
+    warning?: string;
     canResetPassword: boolean;
 }>();
 
@@ -24,7 +26,9 @@ const form = useForm({
 
 const coverImage = asset('images/Woosoo Cover Photo_Artboard 1.png');
 
-const submit = () => {
+const submit = async () => {
+    // Ensure CSRF cookie is fresh before submitting — prevents 419 on cold sessions.
+    await axios.get('/sanctum/csrf-cookie');
     form.post(route('login'), {
         onFinish: () => form.reset('password'),
     });
@@ -36,14 +40,24 @@ const submit = () => {
 
     <main
         id="main-content"
-        class="relative flex min-h-svh overflow-hidden bg-[linear-gradient(180deg,#fff8f0_0%,#fff4e7_42%,#f7efe6_100%)] text-foreground"
+        class="relative flex min-h-svh overflow-hidden bg-[linear-gradient(180deg,rgba(255,249,243,1)_0%,rgba(247,243,237,1)_48%,rgba(242,240,236,1)_100%)] text-foreground"
     >
-        <div class="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top_left,rgba(246,181,109,0.28),transparent_58%)]" />
-        <div class="absolute inset-y-0 right-0 hidden w-2/5 bg-[radial-gradient(circle_at_center,rgba(37,37,37,0.14),transparent_70%)] lg:block" />
+        <div class="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top_left,rgba(246,181,109,0.2),transparent_58%)]" />
+        <div class="absolute inset-y-0 right-0 hidden w-2/5 bg-[radial-gradient(circle_at_center,rgba(37,37,37,0.08),transparent_70%)] lg:block" />
 
         <div class="relative mx-auto flex w-full max-w-[1360px] flex-1 flex-col justify-center px-5 py-4 sm:px-8 sm:py-6 lg:px-10 lg:py-6 xl:py-8">
+
+                        <div
+                            v-if="warning"
+                            data-testid="session-warning"
+                            class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            {{ warning }}
+                        </div>
             <div class="grid flex-1 items-center gap-5 xl:grid-cols-[minmax(0,0.96fr)_minmax(460px,0.88fr)] 2xl:gap-6">
-                <section class="relative hidden self-stretch overflow-hidden rounded-[2rem] border border-white/65 bg-[#252525] text-white shadow-[0_24px_80px_rgba(37,37,37,0.22)] xl:flex xl:max-h-[calc(100svh-4rem)]">
+                <section class="relative hidden self-stretch overflow-hidden rounded-[2rem] border border-black/8 bg-[#252525] text-white shadow-[0_24px_80px_rgba(37,37,37,0.22)] xl:flex xl:max-h-[calc(100svh-4rem)]">
                     <img
                         :src="coverImage"
                         alt="Woosoo restaurant interior"
@@ -95,21 +109,21 @@ const submit = () => {
                 </section>
 
                 <section class="flex items-center justify-center xl:justify-end">
-                    <div class="w-full max-w-[540px] rounded-[2rem] border border-[#f0dcc4] bg-white/92 p-6 shadow-[0_22px_60px_rgba(176,128,71,0.14)] backdrop-blur-xl sm:p-7 lg:p-8">
+                    <div class="w-full max-w-[540px] rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_22px_60px_rgba(37,37,37,0.14)] backdrop-blur-xl sm:p-7 lg:p-8">
                         <div class="flex flex-col gap-4">
                             <div class="flex items-center gap-3">
-                                <div class="rounded-2xl bg-[#fff1df] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                                <div class="rounded-2xl bg-[#fff6ea] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
                                     <AppLogoIcon class="h-12 w-12 rounded-[1rem] object-cover" />
                                 </div>
                                 <div>
-                                    <p class="text-sm font-medium text-[#7a6c5d]">Restaurant operations workspace</p>
+                                    <p class="text-sm font-medium text-muted-foreground">Restaurant operations workspace</p>
                                 </div>
                             </div>
 
                             <div>
                                 <p class="text-sm font-semibold tracking-[0.24em] text-[#b08047] uppercase">Admin access</p>
-                                <h2 class="mt-2 font-header text-3xl font-semibold tracking-tight text-[#252525]">Welcome back</h2>
-                                <p class="mt-2 max-w-md text-sm leading-6 text-[#6f6255] sm:text-[15px]">
+                                <h2 class="mt-2 font-header text-3xl font-semibold tracking-tight text-foreground">Welcome back</h2>
+                                <p class="mt-2 max-w-md text-sm leading-6 text-muted-foreground sm:text-[15px]">
                                     Sign in to manage daily operations, monitor active services, and keep the restaurant stack in sync.
                                 </p>
                             </div>
@@ -117,7 +131,7 @@ const submit = () => {
 
                         <div
                             v-if="status"
-                            class="mt-6 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"
+                            class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
                             role="status"
                             aria-live="polite"
                         >
@@ -126,7 +140,7 @@ const submit = () => {
 
                         <form @submit.prevent="submit" class="mt-6 space-y-5" novalidate>
                             <div class="space-y-2.5">
-                                <Label for="email" class="text-sm font-semibold text-[#3b3228]">Email address</Label>
+                                <Label for="email" class="text-sm font-semibold text-foreground">Email address</Label>
                                 <Input
                                     id="email"
                                     v-model="form.email"
@@ -135,7 +149,7 @@ const submit = () => {
                                     autofocus
                                     autocomplete="email"
                                     placeholder="manager@woosoo.com"
-                                    class="h-12 rounded-2xl border-[#e7c49a] bg-[#fffaf4] px-4 text-[15px] shadow-none transition focus-visible:border-[#b08047] focus-visible:ring-4 focus-visible:ring-[#f6b56d]/25"
+                                    class="h-12 rounded-2xl border-black/10 bg-white/90 px-4 text-[15px] shadow-none transition focus-visible:border-[#b08047] focus-visible:ring-4 focus-visible:ring-[#f6b56d]/20 dark:border-white/10 dark:bg-white/[0.06]"
                                     :tabindex="1"
                                     :aria-invalid="Boolean(form.errors.email)"
                                 />
@@ -144,7 +158,7 @@ const submit = () => {
 
                             <div class="space-y-2.5">
                                 <div class="flex items-center justify-between gap-4">
-                                    <Label for="password" class="text-sm font-semibold text-[#3b3228]">Password</Label>
+                                    <Label for="password" class="text-sm font-semibold text-foreground">Password</Label>
                                     <TextLink
                                         v-if="canResetPassword"
                                         :href="route('password.request')"
@@ -161,15 +175,15 @@ const submit = () => {
                                     required
                                     autocomplete="current-password"
                                     placeholder="Enter your password"
-                                    class="h-12 rounded-2xl border-[#e7c49a] bg-[#fffaf4] px-4 text-[15px] shadow-none transition focus-visible:border-[#b08047] focus-visible:ring-4 focus-visible:ring-[#f6b56d]/25"
+                                    class="h-12 rounded-2xl border-black/10 bg-white/90 px-4 text-[15px] shadow-none transition focus-visible:border-[#b08047] focus-visible:ring-4 focus-visible:ring-[#f6b56d]/20 dark:border-white/10 dark:bg-white/[0.06]"
                                     :tabindex="2"
                                     :aria-invalid="Boolean(form.errors.password)"
                                 />
                                 <InputError :message="form.errors.password" />
                             </div>
 
-                            <div class="flex flex-col gap-3 border-y border-[#f4e4d0] py-3 sm:flex-row sm:items-center sm:justify-between">
-                                <Label for="remember" class="inline-flex cursor-pointer items-center gap-3 text-sm text-[#5f5348]">
+                            <div class="flex flex-col gap-3 border-y border-black/8 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10">
+                                <Label for="remember" class="inline-flex cursor-pointer items-center gap-3 text-sm text-muted-foreground">
                                     <Checkbox
                                         id="remember"
                                         v-model="form.remember"
@@ -178,12 +192,12 @@ const submit = () => {
                                     />
                                     <span>Keep me signed in on this device</span>
                                 </Label>
-                                <p class="text-sm text-[#8b7b6a]">Authorized staff only</p>
+                                <p class="text-sm text-muted-foreground">Authorized staff only</p>
                             </div>
 
                             <Button
                                 type="submit"
-                                class="h-12 w-full rounded-2xl bg-[#252525] text-sm font-semibold tracking-[0.12em] text-white uppercase shadow-[0_16px_30px_rgba(37,37,37,0.18)] transition hover:bg-[#1a1a1a] focus-visible:ring-4 focus-visible:ring-[#f6b56d]/25 disabled:cursor-not-allowed disabled:opacity-70"
+                                class="h-12 w-full rounded-2xl bg-foreground text-sm font-semibold tracking-[0.12em] text-background uppercase shadow-[0_16px_30px_rgba(37,37,37,0.16)] transition hover:bg-foreground/90 focus-visible:ring-4 focus-visible:ring-[#f6b56d]/20 disabled:cursor-not-allowed disabled:opacity-70"
                                 :tabindex="4"
                                 :disabled="form.processing"
                             >
@@ -193,7 +207,7 @@ const submit = () => {
                             </Button>
                         </form>
 
-                        <div class="mt-6 rounded-[1.5rem] border border-[#f3e1cd] bg-[#fff8f1] px-5 py-4 text-sm leading-6 text-[#6f6255]">
+                        <div class="mt-6 rounded-[1.5rem] border border-black/8 bg-black/[0.02] px-5 py-4 text-sm leading-6 text-muted-foreground dark:border-white/10 dark:bg-white/[0.04]">
                             Use your assigned staff credentials. If you cannot access the workspace, contact the system administrator before creating a new account.
                         </div>
                     </div>

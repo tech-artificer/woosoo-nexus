@@ -1,9 +1,9 @@
 <template>
-  <div class="mb-4 flex items-center justify-between">
-    <div class="flex-1">
+  <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0 flex-1">
       <slot />
     </div>
-    <div class="ml-4">
+    <div class="shrink-0">
       <slot name="right" />
     </div>
   </div>

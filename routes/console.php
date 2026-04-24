@@ -10,7 +10,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('pulse:check')->everyMinute();
-Schedule::command('horizon:snapshot')->everyFiveMinutes();
+// Schedule::command('horizon:snapshot')->everyFiveMinutes(); // Horizon not installed
 
 // REMOVED 2026-04-07: ProcessOrderLogs schedule disabled for production hardening.
 // The job depends on `order_update_logs`, which does not exist in production DB.

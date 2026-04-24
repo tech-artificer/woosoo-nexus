@@ -33,7 +33,7 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
 
         <div class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
             <aside class="w-full">
-                <div class="rounded-[26px] border border-black/8 bg-white/76 p-3 shadow-[0_24px_70px_-42px_rgba(37,37,37,0.35)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04]">
+                <div class="rounded-[26px] border border-black/8 bg-white/78 p-3 shadow-[0_24px_70px_-42px_rgba(37,37,37,0.35)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.05]">
                 <nav class="flex flex-col gap-1.5">
                     <Button
                         v-for="item in sidebarNavItems"
@@ -42,7 +42,7 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
                         :class="[
                             'h-11 w-full justify-start rounded-2xl px-4 text-sm font-medium',
                             currentPath === item.href
-                                ? 'bg-[#f6b56d]/18 text-foreground shadow-[0_14px_35px_-26px_rgba(176,128,71,0.6)] hover:bg-[#f6b56d]/22'
+                                ? 'border border-[#f6b56d]/25 bg-[#f6b56d]/12 text-foreground shadow-[0_14px_35px_-26px_rgba(176,128,71,0.45)] hover:bg-[#f6b56d]/16'
                                 : 'text-muted-foreground hover:bg-black/4 hover:text-foreground dark:hover:bg-white/[0.05]'
                         ]"
                         as-child
@@ -58,7 +58,7 @@ const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.locati
             <Separator class="my-6 md:hidden" />
 
             <div class="flex-1">
-                <section class="max-w-2xl space-y-12 rounded-[28px] border border-black/8 bg-white/76 px-5 py-6 shadow-[0_24px_70px_-42px_rgba(37,37,37,0.35)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] md:px-8 md:py-8">
+                <section class="max-w-2xl space-y-12 rounded-[28px] border border-black/8 bg-white/78 px-5 py-6 shadow-[0_24px_70px_-42px_rgba(37,37,37,0.35)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.05] md:px-8 md:py-8">
                     <slot />
                 </section>
             </div>

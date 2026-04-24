@@ -1,28 +1,5 @@
 import '../css/app.css';
-// import './bootstrap';
-import axios from 'axios'
-
-declare global {
-  interface Window {
-    axios: typeof axios;
-  }
-}
-
-// Configure Axios CSRF + credentials globally
-axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
-
-const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-if (token) {
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = token
-} else {
-    console.warn('⚠️ CSRF token not found in <meta> tag!')
-}
-
-// Important if you’re using cookies/sessions
-axios.defaults.withCredentials = true
-
-// Make Axios globally accessible if needed
-window.axios = axios
+import './bootstrap';
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -32,13 +9,22 @@ import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+
+declare global {
+    interface Window {
+        Pusher: typeof Pusher;
+        Echo: Echo;
+        config: { baseUrl: string };
+    }
+}
+
 // Make Pusher globally available for Echo
 window.Pusher = Pusher;
 
- // Get the CSRF token
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };
+
 try {
     window.Echo = new Echo({
         broadcaster: import.meta.env.VITE_BROADCAST_DRIVER ?? 'reverb',
@@ -47,13 +33,12 @@ try {
         wssHost: import.meta.env.VITE_REVERB_HOST,
         wsPort: import.meta.env.VITE_REVERB_PORT ?? 443,
         wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-        forceTLS: true, // Always use secure WebSocket when certificate is present
+        forceTLS: true,
         disableStats: true,
         encrypted: true,
-        enabledTransports: ['wss'], // Only allow secure transport
+        enabledTransports: ['wss'],
         withCredentials: true,
     });
-    
 } catch (error) {
     console.warn('[BOOTSTRAP] Error initializing Echo:', error);
 }
@@ -75,4 +60,4 @@ createInertiaApp({
 });
 
 // This will set light / dark mode on page load...
-initializeTheme();  
+initializeTheme();

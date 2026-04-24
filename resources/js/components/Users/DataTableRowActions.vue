@@ -83,7 +83,6 @@ const restoreUser = (computedUser: User) => {
   })
 }
 
-console.log(route('users.restore', 3))
 </script>
 
 <template>
@@ -152,7 +151,7 @@ console.log(route('users.restore', 3))
           Edit the user's information.
         </SheetDescription>
       </SheetHeader>
-      <UserForm :user="computedUser" form-type="edit" />
+      <UserForm :user="computedUser" form-type="edit" :in-sheet="true" />
     </SheetContent>
   </Sheet>
 

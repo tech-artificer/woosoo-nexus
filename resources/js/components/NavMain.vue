@@ -19,6 +19,7 @@ import {
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { ChevronRight } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 defineProps<{
     title: string;
@@ -27,12 +28,23 @@ defineProps<{
 
 const page = usePage();
 
+const currentPath = computed(() => normalizePath(page.url))
+
 function isActive(href?: string) {
     if (!href) {
         return false
     }
 
-    return page.url === href || page.url.startsWith(`${href}/`)
+    const targetPath = normalizePath(href)
+    return currentPath.value === targetPath || currentPath.value.startsWith(`${targetPath}/`)
+}
+
+function normalizePath(value: string) {
+    try {
+        return new URL(value, 'http://localhost').pathname.replace(/\/+$/, '') || '/'
+    } catch {
+        return value.split('?')[0].replace(/\/+$/, '') || '/'
+    }
 }
 </script>
 

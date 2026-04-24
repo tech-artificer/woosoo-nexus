@@ -32,6 +32,7 @@ class Device extends Authenticatable
         'type',                 // Task 2.7: 'tablet' | 'printer_relay' | null
         'app_version',
         'ip_address',
+        'port',
         'last_ip_address',
         'last_seen_at',
         'last_heartbeat_at',    // Task 2.7: relay device heartbeat timestamp
@@ -70,13 +71,31 @@ class Device extends Authenticatable
 
         // Assign UUID on creation if not already set
         static::creating(function ($model) {
+            \Log::info('Device creating hook triggered', [
+                'model_attributes' => $model->getAttributes(),
+                'model_branch_id' => $model->branch_id ?? 'null',
+            ]);
+
             if (empty($model->device_uuid)) {
                 $model->device_uuid = (string) Str::uuid();
             }
 
-            if (empty($model->branch_id)) {
+            $attributes = $model->getAttributes();
+            $branchProvided = array_key_exists('branch_id', $attributes) && $attributes['branch_id'] !== null;
+
+            \Log::info('Device branch check', [
+                'branch_provided' => $branchProvided,
+                'branch_in_attributes' => array_key_exists('branch_id', $attributes),
+                'branch_value' => $attributes['branch_id'] ?? 'null',
+            ]);
+
+            if (! $branchProvided) {
                 $model->branch_id = app(LocalBranchResolver::class)->requireId();
             }
+
+            \Log::info('Device creating hook finished', [
+                'final_branch_id' => $model->branch_id,
+            ]);
         });
 
         // Prevent device_uuid from being modified after creation (immutability guard)

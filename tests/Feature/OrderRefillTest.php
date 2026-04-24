@@ -11,6 +11,7 @@ use Mockery;
 use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceOrder;
+use App\Models\PrintEvent;
 use App\Services\Krypton\KryptonContextService;
 use App\Enums\OrderStatus;
 
@@ -160,5 +161,97 @@ class OrderRefillTest extends TestCase
             'quantity' => 2,
             'price' => 399.00,
         ]);
+    }
+
+    public function test_refill_endpoint_creates_only_one_print_event(): void
+    {
+        Branch::create(['name' => 'Main', 'location' => 'HQ']);
+
+        $device = Device::create([
+            'name' => 'Refill Device',
+            'ip_address' => '127.0.0.1',
+            'is_active' => true,
+            'table_id' => 1,
+        ]);
+
+        $sessionId = $this->createTestSession();
+
+        $deviceOrder = DeviceOrder::create([
+            'device_id' => $device->id,
+            'table_id' => $device->table_id,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'order_id' => 2002,
+            'order_number' => 'ORD-2002-2002',
+            'status' => OrderStatus::PENDING->value,
+            'subtotal' => 0,
+            'tax' => 0,
+            'discount' => 0,
+            'total' => 0,
+            'guest_count' => 1,
+        ]);
+
+        $kctxMock = Mockery::mock(KryptonContextService::class);
+        $kctxMock->shouldReceive('getData')->andReturn(['employee_log_id' => 12]);
+        $this->app->instance(KryptonContextService::class, $kctxMock);
+
+        $qb = Mockery::mock();
+        $qb->shouldReceive('insertGetId')->andReturn(9003);
+        $qb->shouldReceive('where')->andReturnSelf();
+        $qb->shouldReceive('whereIn')->andReturnSelf();
+        $qb->shouldReceive('delete')->andReturn(true);
+        $qb->shouldReceive('first')->andReturn((object)[
+            'id' => 9003,
+            'order_id' => 2002,
+            'menu_id' => 46,
+            'quantity' => 2,
+            'employee_log_id' => 12,
+            'unit_price' => 399.00,
+        ]);
+
+        $posConn = Mockery::mock();
+        $posConn->shouldReceive('table')->with('ordered_menus')->andReturn($qb);
+
+        $realDb = DB::getFacadeRoot();
+        DB::shouldReceive('getDefaultConnection')->andReturn('testing');
+        DB::shouldReceive('connection')->andReturnUsing(function ($name = null) use ($posConn, $realDb) {
+            if ($name === 'pos') {
+                return $posConn;
+            }
+
+            return $realDb->connection($name);
+        });
+        DB::shouldReceive('transaction')->andReturnUsing(function ($callback) {
+            return $callback();
+        });
+        DB::shouldReceive('afterCommit')->andReturnUsing(function ($callback) {
+            $callback();
+        });
+
+        $token = $device->createToken('test-token')->plainTextToken;
+
+        $payload = [
+            'items' => [
+                [
+                    'menu_id' => 46,
+                    'name' => 'Classic Feast',
+                    'quantity' => 2,
+                    'price' => 399.00,
+                    'index' => 1,
+                    'seat_number' => 1,
+                    'note' => 'Refill',
+                ]
+            ]
+        ];
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+        ])->postJson('/api/order/2002/refill', $payload);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+
+        $this->assertSame(1, PrintEvent::query()->where('device_order_id', $deviceOrder->id)->where('event_type', 'REFILL')->count());
     }
 }
