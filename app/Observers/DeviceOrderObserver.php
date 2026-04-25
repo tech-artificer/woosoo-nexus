@@ -8,6 +8,7 @@ use App\Events\Order\OrderCancelled;
 use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderVoided;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class DeviceOrderObserver
 {
@@ -32,22 +33,24 @@ class DeviceOrderObserver
             $timestamp = now()->toIso8601String();
             Log::info("[🔔 DeviceOrder Status Change] order_id={$deviceOrder->order_id} status={$oldStatusStr} → {$newStatusStr} at {$timestamp}");
 
-            // Broadcast OrderStatusUpdated for real-time PWA notification
-            // This ensures PWA receives update whether from polling or from status change trigger
-            OrderStatusUpdated::dispatch($deviceOrder);
+            DB::afterCommit(function () use ($deviceOrder, $newStatusStr): void {
+                // Broadcast OrderStatusUpdated for real-time PWA notification
+                // only after persistence commits to avoid phantom/stale events.
+                OrderStatusUpdated::dispatch($deviceOrder);
 
-            // Fan-out terminal lifecycle events synchronously (realtime, no queue dependency)
-            if ($newStatusStr === \App\Enums\OrderStatus::COMPLETED->value) {
-                OrderCompleted::dispatch($deviceOrder);
-            }
+                // Fan-out terminal lifecycle events synchronously after commit.
+                if ($newStatusStr === \App\Enums\OrderStatus::COMPLETED->value) {
+                    OrderCompleted::dispatch($deviceOrder);
+                }
 
-            if ($newStatusStr === \App\Enums\OrderStatus::VOIDED->value) {
-                OrderVoided::dispatch($deviceOrder);
-            }
+                if ($newStatusStr === \App\Enums\OrderStatus::VOIDED->value) {
+                    OrderVoided::dispatch($deviceOrder);
+                }
 
-            if ($newStatusStr === \App\Enums\OrderStatus::CANCELLED->value) {
-                OrderCancelled::dispatch($deviceOrder);
-            }
+                if ($newStatusStr === \App\Enums\OrderStatus::CANCELLED->value) {
+                    OrderCancelled::dispatch($deviceOrder);
+                }
+            });
         }
     }
 }

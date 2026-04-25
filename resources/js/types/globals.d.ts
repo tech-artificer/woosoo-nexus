@@ -30,7 +30,7 @@ declare module '@vue/runtime-core' {
 declare global {
     interface Window {
         Pusher: typeof Pusher, // Declare Pusher if you're assigning it to window.Pusher
-        Echo: Echo, 
+        Echo: Echo<any>, 
         Axios: any // Or import Axios types if available
         config: {
             baseUrl: string,

@@ -49,6 +49,11 @@ const form = useForm({
 
 const computedTables = computed(() => props.unassignedTables ) // unassigned tables
 
+const branchContextError = computed(() => {
+    const errors = form.errors as Record<string, string | undefined>
+    return errors.branch
+})
+
 const selectedTableName = computed(() => {
   // if nothing selected yet, show the originally assigned table name
   if (!form.table_id) {
@@ -124,6 +129,10 @@ async function createToken() {
 <template>
     <div class="flex flex-col gap-3">
         <Separator class="my-0" />
+        <!-- Branch context error — server-resolved, shown when install has no unambiguous branch -->
+        <div v-if="branchContextError" class="mx-4 mt-3 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {{ branchContextError }}
+        </div>
         <form  class="p-4 flex flex-col gap-4">
             <div class="flex flex-col gap-3">
                 <Label for="name">Name</Label>
