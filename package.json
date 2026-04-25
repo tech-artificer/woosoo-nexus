@@ -32,7 +32,7 @@
         "@inertiajs/core": "^2.2.19",
         "@inertiajs/vue3": "^2.3.6",
         "@internationalized/date": "^3.12.1",
-        "@tailwindcss/vite": "^4.1.1",
+        "@tailwindcss/vite": "^4.2.4",
         "@tanstack/vue-table": "^8.21.3",
         "@tiptap/extension-image": "^3.22.2",
         "@tiptap/extension-link": "^3.22.2",
