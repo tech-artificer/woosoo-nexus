@@ -112,14 +112,12 @@ class DeviceAuthApiController extends Controller
         $clientSupplied = $request->input('ip_address');
         $requestIp = $request->ip();
 
-        $ipToUse = null;
-        if ($this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)) {
-            $ipToUse = $clientSupplied;
-        } elseif ($this->isPrivateIp($requestIp)) {
-            $ipToUse = $requestIp;
-        } else {
-            $ipToUse = $requestIp;
-        }
+        // Use client-supplied private IP when trust gate passes, otherwise use server-observed IP.
+        // Both paths store whatever IP we have — even a public/Docker IP — so the device record
+        // always reflects the last known source address for diagnostics.
+        $ipToUse = $this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)
+            ? $clientSupplied
+            : $requestIp;
 
         if (! $securityCode) {
             return response()->json([
@@ -165,9 +163,11 @@ class DeviceAuthApiController extends Controller
             $device = Device::whereKey($deviceId)->lockForUpdate()->firstOrFail();
 
             $device->update([
-                'ip_address' => $ipToUse,
-                'last_ip_address' => $ipToUse,
-                'last_seen_at' => now(),
+                'ip_address'                 => $ipToUse,
+                'last_ip_address'            => $ipToUse,
+                'last_seen_at'               => now(),
+                'security_code'              => null, // Consume code — re-registration requires admin to generate a new one
+                'security_code_generated_at' => null,
             ]);
 
             // Keep active sessions and remove only expired tokens.
@@ -215,7 +215,7 @@ class DeviceAuthApiController extends Controller
 
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
 
-        if(  !$device ) {
+        if (!$device) {
             AuditLogService::authFailed($request, 'device_not_found_or_inactive');
 
             return response()->json([
@@ -223,6 +223,18 @@ class DeviceAuthApiController extends Controller
                 'error' => 'Device not found',
                 'ip_address' => $ip
             ], 404);
+        }
+
+        // Reject IP-only auth for unclaimed devices (security_code still set means it was never registered).
+        // Only claimed devices (code consumed by register()) may reconnect via IP alone.
+        if ($device->security_code !== null) {
+            AuditLogService::authFailed($request, 'device_not_yet_registered');
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Device not yet registered. Use the security code to register first.',
+                'ip_address' => $ip
+            ], 403);
         }
 
         $device->update([
@@ -268,13 +280,13 @@ class DeviceAuthApiController extends Controller
             $request->user()->tokens()->where('id', $currentToken->id)->delete();
         }
 
-        // Create new token (with 7 days expiry for parity with register/auth)
+        // Create new token — 30 days, consistent with register() and authenticate()
         $newToken = $device->createToken(
             name: 'device-auth',
-            expiresAt: now()->addDays(7)
+            expiresAt: now()->addDays(30)
         )->plainTextToken;
 
-        $expiresAt = now()->addDays(7);
+        $expiresAt = now()->addDays(30);
 
         return response()->json([
             'success' => true,

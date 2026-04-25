@@ -47,6 +47,11 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 })->name('home');
 
+// Public endpoint: tablets/devices must be able to install the local CA
+// certificate without requiring dashboard authentication.
+Route::get('/devices/download-certificate', [DeviceController::class, 'downloadCertificate'])
+    ->name('devices.download-certificate');
+
 Route::middleware(['auth'])->group(function () {
     // Dashboard is available to any authenticated user
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -186,9 +191,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/devices/download-apk/{channel?}', [DeviceController::class, 'downloadApk'])
             ->where('channel', 'release|debug')
             ->name('devices.download-apk');
-
-        Route::get('/devices/download-certificate', [DeviceController::class, 'downloadCertificate'])
-            ->name('devices.download-certificate');
 
         Route::resource('/devices', DeviceController::class);
         Route::prefix('devices')->name('devices.')->group(function () {
