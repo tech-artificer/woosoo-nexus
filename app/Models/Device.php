@@ -71,11 +71,6 @@ class Device extends Authenticatable
 
         // Assign UUID on creation if not already set
         static::creating(function ($model) {
-            \Log::info('Device creating hook triggered', [
-                'model_attributes' => $model->getAttributes(),
-                'model_branch_id' => $model->branch_id ?? 'null',
-            ]);
-
             if (empty($model->device_uuid)) {
                 $model->device_uuid = (string) Str::uuid();
             }
@@ -83,19 +78,9 @@ class Device extends Authenticatable
             $attributes = $model->getAttributes();
             $branchProvided = array_key_exists('branch_id', $attributes) && $attributes['branch_id'] !== null;
 
-            \Log::info('Device branch check', [
-                'branch_provided' => $branchProvided,
-                'branch_in_attributes' => array_key_exists('branch_id', $attributes),
-                'branch_value' => $attributes['branch_id'] ?? 'null',
-            ]);
-
             if (! $branchProvided) {
                 $model->branch_id = app(LocalBranchResolver::class)->requireId();
             }
-
-            \Log::info('Device creating hook finished', [
-                'final_branch_id' => $model->branch_id,
-            ]);
         });
 
         // Prevent device_uuid from being modified after creation (immutability guard)
