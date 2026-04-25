@@ -1,17 +1,161 @@
 services:
-  woosoo:
-    build: .
-    container_name: woosoo-admin
+
+  # ── Reverse proxy + TLS termination ──────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"       # HTTP → HTTPS redirect
+      - "443:443"     # Woosoo Nexus admin panel + Reverb WebSocket
+      - "4443:4443"   # Tablet Ordering PWA
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+      - .:/var/www/html:ro
+    depends_on:
+      - app
+      - reverb
+      - tablet-pwa
+    networks:
+      - woosoo
+
+  # ── Laravel app (PHP-FPM) ─────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
     volumes:
       - .:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+      - storage_data:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "echo 'ok';"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - woosoo
 
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-      - "8443:443"
+  # ── Queue worker ──────────────────────────────────────────────────────
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--max-time=3600"]
+    env_file: .env
     volumes:
-      - ./nginx:/etc/nginx/conf.d
+      - .:/var/www/html
+      - storage_data:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - woosoo
+
+  # ── Task scheduler ────────────────────────────────────────────────────
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    env_file: .env
+    volumes:
+      - .:/var/www/html
+      - storage_data:/var/www/html/storage
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - woosoo
+
+  # ── Reverb WebSocket server ───────────────────────────────────────────
+  reverb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080", "--no-interaction"]
+    env_file: .env
+    volumes:
       - .:/var/www/html
     depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
       - woosoo
+
+  # ── Tablet Ordering PWA ───────────────────────────────────────────────
+  # Expects tablet-ordering-pwa repo to be a sibling directory:
+  #   parent/
+  #   ├── woosoo-nexus/
+  #   └── tablet-ordering-pwa/
+  tablet-pwa:
+    build:
+      context: ../tablet-ordering-pwa
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      MAIN_API_URL: https://${PUBLIC_HOST:-192.168.100.7}
+      NUXT_PUBLIC_PUSHER_KEY: ${REVERB_APP_KEY:-your_reverb_key_here}
+      NUXT_PUBLIC_PUSHER_CLUSTER: mt1
+      NUXT_PUBLIC_REVERB_HOST: ${PUBLIC_HOST:-192.168.100.7}
+      NUXT_PUBLIC_REVERB_PORT: "443"
+      NUXT_PUBLIC_REVERB_SCHEME: https
+    networks:
+      - woosoo
+
+  # ── MySQL ─────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_DATABASE:-woosoo}
+      MYSQL_USER: ${DB_USERNAME:-woosoo}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_this_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - woosoo
+
+  # ── Redis ─────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - woosoo
+
+volumes:
+  mysql_data:
+  redis_data:
+  storage_data:
+
+networks:
+  woosoo:
+    driver: bridge
