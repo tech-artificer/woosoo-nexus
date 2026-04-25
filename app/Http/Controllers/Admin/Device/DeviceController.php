@@ -10,6 +10,9 @@ use App\Http\Requests\StoreDeviceRequest;
 use App\Http\Requests\UpdateDeviceRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Models\Branch;
+use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class DeviceController extends Controller
 {
@@ -84,35 +87,126 @@ class DeviceController extends Controller
     {
         $data = $request->validated();
 
-        // Check for existing device with this security code (Batch 2: Uniqueness Enforcement)
-        if (isset($data['security_code']) && $data['security_code']) {
-            if (Device::get()->contains(function ($device) use ($data) {
-                return \Illuminate\Support\Facades\Hash::check($data['security_code'], $device->security_code ?? '');
-            })) {
-                return back()->withErrors([
-                    'security_code' => 'This security code is already assigned to another device.'
+        \Log::info('Device store requested', ['data' => $data]);
+
+        $branchId = $this->resolveBranchIdForDeviceCreate($request);
+
+        \Log::info('Branch resolved', ['branch_id' => $branchId]);
+
+        if ($branchId === null) {
+            \Log::warning('Branch ID is null, rejecting device creation');
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'branch' => 'Cannot create device: no branch context is available. Assign the user to a branch or keep exactly one branch in this install.',
                 ]);
-            }
         }
 
-        $device = Device::create([
+        $plainSecurityCode = trim((string) ($data['security_code'] ?? ''));
+
+        if ($plainSecurityCode === '') {
+            $plainSecurityCode = $this->generateUniqueSecurityCode();
+        }
+
+        \Log::info('Security code generated', ['code_length' => strlen($plainSecurityCode)]);
+
+        // Check for existing device with this security code (Batch 2: Uniqueness Enforcement)
+        if ($this->securityCodeExists($plainSecurityCode)) {
+            \Log::warning('Security code already exists, rejecting device creation');
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'security_code' => 'This security code is already assigned to another device.'
+                ]);
+        }
+
+        \Log::info('About to create device with payload', [
             'name' => $data['name'],
+            'branch_id' => $branchId,
             'ip_address' => $data['ip_address'] ?? null,
             'port' => $data['port'] ?? null,
             'table_id' => $data['table_id'] ?? null,
-            'security_code' => isset($data['security_code']) && $data['security_code'] 
-                ? \Illuminate\Support\Facades\Hash::make($data['security_code'])
-                : null,
-            'security_code_generated_at' => isset($data['security_code']) && $data['security_code'] 
-                ? now()
-                : null,
-            'is_active' => true,
         ]);
+
+        try {
+            $device = Device::create([
+                'name' => $data['name'],
+                'branch_id' => $branchId,
+                'ip_address' => $data['ip_address'] ?? null,
+                'port' => $data['port'] ?? null,
+                'table_id' => $data['table_id'] ?? null,
+                'security_code' => Hash::make($plainSecurityCode),
+                'security_code_generated_at' => now(),
+                'is_active' => true,
+            ]);
+
+            \Log::info('Device created successfully', ['device_id' => $device->id]);
+        } catch (RuntimeException $e) {
+            \Log::error('RuntimeException caught during device creation', ['message' => $e->getMessage()]);
+
+            if (str_contains($e->getMessage(), 'Local install must have exactly one branch record')) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'branch' => 'Cannot create device: no branch context is available. Assign the user to a branch or keep exactly one branch in this install.',
+                    ]);
+            }
+
+            throw $e;
+        }
+
+        \Log::info('About to redirect to devices.index');
 
         return redirect()
             ->route('devices.index')
             ->with('success', 'Device created.')
-            ->with('security_code_reveal', $data['security_code']);
+            ->with('security_code_reveal', $plainSecurityCode);
+    }
+
+    private function securityCodeExists(string $plainSecurityCode): bool
+    {
+        return Device::query()
+            ->whereNotNull('security_code')
+            ->get(['id', 'security_code'])
+            ->contains(fn (Device $device) => Hash::check($plainSecurityCode, (string) $device->security_code));
+    }
+
+    private function generateUniqueSecurityCode(int $maxAttempts = 20): string
+    {
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $candidate = (string) random_int(100000, 999999);
+
+            if (! $this->securityCodeExists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw new \RuntimeException('Unable to generate a unique security code. Please try again.');
+    }
+
+    private function resolveBranchIdForDeviceCreate(Request $request): ?int
+    {
+        $user = $request->user();
+
+        if ($user && method_exists($user, 'branches')) {
+            try {
+                $userBranchId = $user->branches()->select('branches.id')->value('branches.id');
+
+                if ($userBranchId !== null) {
+                    return (int) $userBranchId;
+                }
+            } catch (\Throwable $e) {
+                // Fallback to install-level branch resolution below.
+            }
+        }
+
+        $branchCount = Branch::query()->count();
+
+        if ($branchCount === 1) {
+            return (int) Branch::query()->value('id');
+        }
+
+        return null;
     }
 
     /**

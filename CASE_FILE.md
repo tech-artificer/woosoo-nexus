@@ -1,3 +1,46 @@
+# CASE FILE — Stale browser cache / service worker persistence
+
+## Summary
+
+Normal browser tabs were serving stale app behavior while incognito worked. The issue is not Laravel `optimize`; it is a stale browser cache layer, specifically a service worker plus a long-lived immutable cache rule for `service-worker.js`.
+
+## Evidence
+
+- `woosoo-nexus/public/service-worker.js` exists and caches same-origin `GET` responses.
+- `woosoo-nexus/docker/nginx/default.conf` serves `*.js` with `expires 1y` and `Cache-Control: public, immutable`.
+- Runtime header check for `http://127.0.0.1:8000/service-worker.js` returned:
+  - `Cache-Control: max-age=31536000`
+  - `Cache-Control: public, immutable`
+- Incognito works, which strongly indicates the problem is client-side cached state rather than backend logic.
+
+## Root Cause
+
+The browser can keep an outdated service worker script and its cached responses for a long time because the worker file itself is served as an immutable one-year asset. Once a normal tab has an old worker, that worker can continue serving stale same-origin GET responses.
+
+## Solution
+
+1. Stop long-term caching for `/service-worker.js`.
+2. Make the worker clear stale caches and unregister itself.
+3. Keep static asset caching for real build artifacts, but exclude the worker bootstrap file.
+
+## Mermaid
+
+```mermaid
+flowchart TD
+    A[Normal browser tab] --> B[Old service worker already installed]
+    B --> C[service-worker.js served as immutable 1-year asset]
+    C --> D[Browser keeps old worker / update check stays stale]
+    B --> E[Stale same-origin GET responses]
+    E --> F[Normal tab shows old behavior]
+    G[Incognito tab] --> H[No existing service worker]
+    H --> I[Fresh load works]
+```
+
+## Validation Plan
+
+- Re-check response headers for `/service-worker.js` after the nginx change.
+- Confirm the worker no longer caches app responses.
+- Verify a normal browser tab after clearing site data or reloading the updated worker.
 # CASE_FILE: Orders Detail View Alignment
 **Last Updated:** March 25, 2026
 **Lead Detective:** Ranpo Edogawa

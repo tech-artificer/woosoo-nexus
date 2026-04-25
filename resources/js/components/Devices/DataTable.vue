@@ -18,6 +18,8 @@ import {
 } from '@tanstack/vue-table'
 import { ref } from 'vue'
 import { valueUpdater } from '@/lib/utils'
+import { Link } from '@inertiajs/vue3'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -32,6 +34,8 @@ import DataTableToolbar from '@/components/ui/DataTableToolbar.vue'
 interface DataTableProps {
   columns: ColumnDef<Device, any>[]
   data: Device[] | any[]
+  emptyActionHref?: string
+  emptyActionLabel?: string
 }
 const props = defineProps<DataTableProps>()
 const emit = defineEmits<{
@@ -113,9 +117,22 @@ const handleRowClick = (event: MouseEvent, device: Device) => {
           <TableRow v-else>
             <TableCell
               :colspan="columns.length"
-              class="h-24 text-center"
+              class="py-10 text-center"
             >
-              No results.
+              <div class="mx-auto flex max-w-md flex-col items-center gap-4 rounded-2xl border border-dashed border-border/70 bg-muted/30 px-6 py-8 text-center">
+                <div class="space-y-2">
+                  <p class="text-base font-medium text-foreground">No devices yet.</p>
+                  <p class="text-sm leading-6 text-muted-foreground">
+                    Create the first device to generate a security code and make it available for tablet registration.
+                  </p>
+                </div>
+
+                <Button v-if="emptyActionHref && emptyActionLabel" as-child>
+                  <Link :href="emptyActionHref">
+                    {{ emptyActionLabel }}
+                  </Link>
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         </TableBody>

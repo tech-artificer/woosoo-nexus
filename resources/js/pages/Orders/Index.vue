@@ -385,9 +385,9 @@ onUnmounted(() => {
     try {
       // gracefully leave channels we joined
       if (typeof (window.Echo as any).leave === 'function') {
-        (window.Echo as any).leave('admin.orders')
-        (window.Echo as any).leave('admin.service-requests')
-        (window.Echo as any).leave('admin.print')
+        ;(window.Echo as any).leave('admin.orders')
+        ;(window.Echo as any).leave('admin.service-requests')
+        ;(window.Echo as any).leave('admin.print')
       }
     } catch (e) {
       console.warn('Error leaving Echo channels', e)

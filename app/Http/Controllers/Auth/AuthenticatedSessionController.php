@@ -22,6 +22,7 @@ class AuthenticatedSessionController extends Controller
             'title' => 'Woosoo Admin',
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
+            'warning' => $request->session()->get('warning'),
         ]);
     }
 

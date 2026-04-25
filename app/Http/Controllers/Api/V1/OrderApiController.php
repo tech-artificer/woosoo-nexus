@@ -327,6 +327,12 @@ class OrderApiController extends Controller
             
             Log::info('Refill metaItems constructed', ['meta_items' => $metaItems]);
 
+            $refillEventMeta = [
+                'items' => $metaItems,
+                'refill_count' => count($mappedItems),
+                'refilled_at' => now()->toIso8601String(),
+            ];
+
             // Build local payload for each POS item.
             // Each payload mirrors a POS ordered_menu into local device_order_items.
             $localPayloads = [];
@@ -362,21 +368,21 @@ class OrderApiController extends Controller
 
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 try {
-                    DB::transaction(function () use ($deviceOrder, $posItems, $metaItems, $localPayloads) {
+                    DB::transaction(function () use ($deviceOrder, $posItems, $metaItems, $localPayloads, $refillEventMeta) {
                         // Batch insert all payloads in one query.
                         if (!empty($localPayloads)) {
                             \App\Models\DeviceOrderItems::query()->insert($localPayloads);
                         }
 
                         // After successful local transaction, schedule print/broadcast.
-                        DB::afterCommit(function () use ($deviceOrder, $metaItems, $posItems) {
+                        DB::afterCommit(function () use ($deviceOrder, $refillEventMeta, $posItems) {
                             try {
-                                // PHASE 2 FIX (C1): Wrap PrintEvent::create() + broadcast in transaction
-                                DB::transaction(function () use ($deviceOrder, $metaItems, $posItems) {
+                                // Create exactly one refill print event after the local mirror commits.
+                                DB::transaction(function () use ($deviceOrder, $refillEventMeta, $posItems) {
                                     app(PrintEventService::class)->createForOrder(
                                         $deviceOrder,
                                         'REFILL',
-                                        ['items' => $metaItems]
+                                        $refillEventMeta
                                     );
                                     // Reload to pick up printEvent relation
                                     $deviceOrder->refresh();
@@ -408,16 +414,6 @@ class OrderApiController extends Controller
                         'error' => $e->getMessage(),
                     ]);
                 }
-            }
-
-            // Emit a PrintEvent for the relay device to consume
-            try {
-                app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'REFILL', [
-                    'refill_count' => count($mappedItems),
-                    'refilled_at' => now()->toIso8601String(),
-                ]);
-            } catch (\Throwable $e) {
-                report($e);
             }
 
             $responseBody = ['success' => true, 'created' => $created];

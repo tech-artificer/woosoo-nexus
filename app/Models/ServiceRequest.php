@@ -35,11 +35,41 @@ class ServiceRequest extends Model
         'completed_at' => 'datetime',
     ];
 
-    protected $appends = ['table_service_name'];
+    protected $appends = [
+        'table_service_name',
+        'table_name',
+        'description',
+        'is_active',
+        'is_archived',
+    ];
 
     public function getTableServiceNameAttribute()
     {
         return $this->tableService?->name ?? null;
+    }
+
+    public function getTableNameAttribute()
+    {
+        return data_get($this->deviceOrder, 'table.name')
+            ?? data_get($this->deviceOrder, 'device.name')
+            ?? null;
+    }
+
+    public function getDescriptionAttribute()
+    {
+        return $this->attributes['description']
+            ?? $this->tableService?->name
+            ?? null;
+    }
+
+    public function getIsActiveAttribute(): bool
+    {
+        return in_array($this->status ?? 'pending', ['pending', 'in_progress'], true);
+    }
+
+    public function getIsArchivedAttribute(): bool
+    {
+        return false;
     }
 
     /**

@@ -20,6 +20,9 @@ class TrustProxies extends Middleware
      *
      * @var int
      */
-    // Use numeric constant for forwarded headers (HEADER_X_FORWARDED_ALL = 15)
-    protected $headers = 15;
+    protected $headers =
+        \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_FOR |
+        \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_HOST |
+        \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PORT |
+        \Symfony\Component\HttpFoundation\Request::HEADER_X_FORWARDED_PROTO;
 }

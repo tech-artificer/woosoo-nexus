@@ -53,7 +53,7 @@ const submit = () => {
 
                 <div
                     v-if="isDefaultAdminEmail"
-                    class="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 dark:border-yellow-900/40 dark:bg-yellow-950/30 dark:text-yellow-100"
+                    class="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/25 dark:text-amber-100"
                 >
                     This account is still using the default admin email. Update it to a real address so password recovery and verification emails reach the correct owner.
                 </div>
@@ -61,7 +61,7 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="name">Name</Label>
-                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" />
+                        <Input id="name" class="mt-1 block h-11 w-full rounded-2xl border-black/10 bg-white/85 px-4 shadow-none focus-visible:ring-4 focus-visible:ring-[#f6b56d]/20 dark:border-white/10 dark:bg-white/[0.06]" v-model="form.name" required autocomplete="name" placeholder="Full name" />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
@@ -70,7 +70,7 @@ const submit = () => {
                         <Input
                             id="email"
                             type="email"
-                            class="mt-1 block w-full"
+                            class="mt-1 block h-11 w-full rounded-2xl border-black/10 bg-white/85 px-4 shadow-none focus-visible:ring-4 focus-visible:ring-[#f6b56d]/20 dark:border-white/10 dark:bg-white/[0.06]"
                             v-model="form.email"
                             required
                             autocomplete="username"
@@ -98,7 +98,7 @@ const submit = () => {
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing">Save</Button>
+                        <Button :disabled="form.processing" class="rounded-2xl px-5">Save changes</Button>
 
                         <Transition
                             enter-active-class="transition ease-in-out"
@@ -106,7 +106,7 @@ const submit = () => {
                             leave-active-class="transition ease-in-out"
                             leave-to-class="opacity-0"
                         >
-                            <p v-show="form.recentlySuccessful" class="text-sm text-neutral-600">Saved.</p>
+                            <p v-show="form.recentlySuccessful" class="text-sm text-muted-foreground">Saved.</p>
                         </Transition>
                     </div>
                 </form>

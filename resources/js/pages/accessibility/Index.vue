@@ -72,28 +72,28 @@ watch(selectedRole, (newRoleName) => {
 </script>
 
 <template>
-    <Card class="border-0">
-      <CardHeader class="text-center6 border-b border-gray-200 dark:border-gray-700">
-        <CardTitle class="text-3xl font-body font-semibold border-0">
+    <Card class="overflow-hidden border-black/8 bg-white/80 shadow-[0_24px_70px_-42px_rgba(37,37,37,0.32)] dark:border-white/10 dark:bg-white/[0.05]">
+      <CardHeader class="border-b border-black/8 px-6 py-5 dark:border-white/10">
+        <CardTitle class="text-2xl font-semibold tracking-tight text-foreground">
           Accessibility
         </CardTitle>
-        <CardDescription class="text-muted-foreground">
+        <CardDescription class="max-w-2xl text-sm leading-6 text-muted-foreground">
           Manage what each role can access across the system.
         </CardDescription>
       </CardHeader>
-      <!-- Content -->
-      <CardContent class="space-y-8 pt-3">
-        <!-- Role Selection -->
-        <div class="flex flex-col md:flex-row md:items-center gap-4">
-          <Label htmlFor="role-select" class="text-base font-semibold text-gray-700 dark:text-gray-300">
-            Select a Role
-          </Label>
+      <CardContent class="space-y-8 px-6 py-6">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end">
+          <div class="space-y-2">
+            <Label for="role-select" class="text-sm font-semibold text-foreground/80">
+              Select a role
+            </Label>
+            <p class="text-sm text-muted-foreground">Choose a role to review and update its permissions.</p>
+          </div>
           <Select v-model="selectedRole">
-            <SelectTrigger
-              class="w-full md:w-[240px] bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg">
+            <SelectTrigger id="role-select" class="w-full rounded-2xl border-black/10 bg-white/85 shadow-none md:w-[280px] dark:border-white/10 dark:bg-white/[0.06]">
               <SelectValue placeholder="Choose a role" />
             </SelectTrigger>
-            <SelectContent class="bg-white dark:bg-gray-700 rounded-lg shadow-lg">
+            <SelectContent class="rounded-2xl border-black/8 bg-white shadow-xl dark:border-white/10 dark:bg-[#1f1f1f]">
               <SelectGroup>
                 <SelectLabel>Roles</SelectLabel>
                 <SelectItem v-for="role in props.roles" :key="role.id" :value="role" class="capitalize">
@@ -103,47 +103,38 @@ watch(selectedRole, (newRoleName) => {
             </SelectContent>
           </Select>
         </div>
-        <!-- Permissions -->
+
         <div v-if="selectedRole" class="grid gap-8">
           <div v-for="(permissions, groupName) in props.groupedPermissions" :key="groupName" class="space-y-3">
-            <!-- Section header -->
-            <h3 class="text-lg font-semibold capitalize text-gray-700 dark:text-gray-200 flex items-center">
-              <span class="w-2 h-2 rounded-full bg-accent mr-2"></span>
+            <h3 class="flex items-center gap-2 text-lg font-semibold capitalize text-foreground">
+              <span class="h-2 w-2 rounded-full bg-[#f6b56d]"></span>
               {{ groupName }}
             </h3>
 
-            <!-- Permission switches -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <div v-for="permission in permissions" :key="permission.id"
-                class="flex flex-row items-center justify-between p-4 bg-gray-100 dark:bg-gray-700 rounded-xl border border-transparent hover:border-woosoo-primary-light transition">
-                <div>
-                  <Label :for="`permission-${permission.id}`"
-                    class="text-sm font-medium text-gray-700 dark:text-gray-200 capitalize">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div v-for="permission in permissions" :key="permission.id" class="flex items-center justify-between rounded-[22px] border border-black/8 bg-white/82 p-4 transition hover:border-[#f6b56d]/30 hover:shadow-[0_18px_44px_-34px_rgba(37,37,37,0.42)] dark:border-white/10 dark:bg-white/[0.06]">
+                <div class="min-w-0 pr-4">
+                  <Label :for="`permission-${permission.id}`" class="block truncate text-sm font-medium text-foreground">
                     {{ permission.label }}
                   </Label>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                  <p class="mt-1 text-xs text-muted-foreground">
                     {{ permission.guard_name }}
                   </p>
                 </div>
-                <Switch :id="`permission-${permission.id}`" :model-value="permissionsState.includes(permission.name)"
-                  @update:model-value="handleTogglePermission(permission.name, $event)" :disabled="isSubmitting"
-                  class="scale-110" />
+                <Switch :id="`permission-${permission.id}`" :model-value="permissionsState.includes(permission.name)" @update:model-value="handleTogglePermission(permission.name, $event)" :disabled="isSubmitting" class="shrink-0 scale-110" />
               </div>
             </div>
           </div>
 
-          <!-- Save button -->
           <div class="sticky bottom-4 flex justify-end">
-            <Button @click.prevent="savePermissions" :disabled="isSubmitting" variant="default"
-              class="px-6 py-3 rounded cursor-pointer border-1 border-woosoo-accent bg-woosoo-primary-light hover:bg-woosoo-primary-dark hover:text-woosoo-white transition">
-              <!-- 💾 Save Changes -->
-              Save Changes
+            <Button @click.prevent="savePermissions" :disabled="isSubmitting" class="rounded-2xl px-6 py-3">
+              Save changes
             </Button>
           </div>
         </div>
-        <!-- No role selected -->
-        <div v-else class="">
-          <p class=""> Please select a role to manage its permissions.</p>
+
+        <div v-else class="rounded-[22px] border border-dashed border-black/10 bg-black/[0.02] p-6 text-sm leading-6 text-muted-foreground dark:border-white/10 dark:bg-white/[0.04]">
+          Please select a role to manage its permissions.
         </div>
       </CardContent>
     </Card>

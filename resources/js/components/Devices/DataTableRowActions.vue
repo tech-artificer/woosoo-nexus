@@ -186,7 +186,7 @@ const restore = (computedDevice: Device) => {
           Edit the user's information.
         </SheetDescription>
       </SheetHeader>
-       <DeviceForm :device="computedDevice" :unassignedTables="unassignedTables"  />
+      <DeviceForm :device="computedDevice" :unassignedTables="unassignedTables" :in-sheet="true" />
     </SheetContent>
   </Sheet>
 

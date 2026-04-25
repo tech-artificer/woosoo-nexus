@@ -322,11 +322,11 @@ class DeviceAuthApiController extends Controller
      */
     public function lookupByIp(Request $request)
     {
-        // Prefer client-supplied private IP, otherwise use request IP
+        // Prefer client-supplied private IP only when the same trust gate used by registration allows it.
         $clientSupplied = $request->input('ip_address');
         $requestIp = $request->ip();
 
-        if ($clientSupplied && $this->isPrivateIp($clientSupplied)) {
+        if ($this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)) {
             $ip = $clientSupplied;
         } elseif ($this->isPrivateIp($requestIp)) {
             $ip = $requestIp;

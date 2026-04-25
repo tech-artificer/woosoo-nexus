@@ -27,7 +27,20 @@ const props = withDefaults(defineProps<Props>(), {
 const page = usePage();
 const auth = computed(() => page.props.auth);
 
-const isCurrentRoute = computed(() => (url: string) => page.url === url);
+const currentPath = computed(() => normalizePath(page.url))
+
+function normalizePath(value: string) {
+    try {
+        return new URL(value, 'http://localhost').pathname.replace(/\/+$/, '') || '/'
+    } catch {
+        return value.split('?')[0].replace(/\/+$/, '') || '/'
+    }
+}
+
+const isCurrentRoute = computed(() => (url: string) => {
+    const targetPath = normalizePath(url)
+    return currentPath.value === targetPath || currentPath.value.startsWith(`${targetPath}/`)
+});
 
 const activeItemStyles = computed(
     () => (url: string) => (isCurrentRoute.value(url) ? 'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100' : ''),
