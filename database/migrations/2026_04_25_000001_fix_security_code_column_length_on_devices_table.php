@@ -16,7 +16,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('devices', function (Blueprint $table): void {
-            $table->string('security_code', 32)->nullable()->change();
+            // Non-lossy rollback: keep 255 to avoid truncating persisted hashed values.
+            $table->string('security_code', 255)->nullable()->change();
         });
     }
 };

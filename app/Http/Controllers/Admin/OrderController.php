@@ -193,23 +193,13 @@ class OrderController extends Controller
             'order_id' => ['required', 'integer', 'min:1'],
         ]);
 
-        $order = null;
-
-        DB::transaction(function () use ($validated, &$order) {
-            $order = DeviceOrder::where('order_id', $validated['order_id'])
-                ->lockForUpdate()
-                ->first();
-
-            if (! $order) {
-                return;
-            }
-
-            PrintOrder::dispatch($order);
-        });
+        $order = DeviceOrder::where('order_id', $validated['order_id'])->first();
 
         if (! $order) {
             return redirect()->back()->with('error', 'Order not found.');
         }
+
+        PrintOrder::dispatch($order);
 
         return redirect()->back()->with('success', 'Order sent to printer.');
     }
