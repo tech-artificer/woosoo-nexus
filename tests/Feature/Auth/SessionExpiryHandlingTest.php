@@ -19,7 +19,7 @@ test('token mismatch redirects back with a warning for web requests', function (
     $response = app(Handler::class)->render($request, new TokenMismatchException());
 
     expect($response->getStatusCode())->toBe(302);
-        expect($response->headers->get('Location'))->toBe('http://127.0.0.1');
+        expect($response->headers->get('Location'))->toBe(url('/'));
     expect($session->get('warning'))->toBe('Your session expired. Please sign in again.');
 });
 
