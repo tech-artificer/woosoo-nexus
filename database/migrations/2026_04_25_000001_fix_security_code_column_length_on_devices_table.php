@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('devices', function (Blueprint $table): void {
+            $table->string('security_code', 255)->nullable()->change();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('devices', function (Blueprint $table): void {
+            // Non-lossy rollback: keep 255 to avoid truncating persisted hashed values.
+            $table->string('security_code', 255)->nullable()->change();
+        });
+    }
+};

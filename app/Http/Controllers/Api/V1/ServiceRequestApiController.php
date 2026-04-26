@@ -52,31 +52,29 @@ class ServiceRequestApiController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            $serviceRequest = DB::transaction(function () use ($deviceOrder, $validatedData) {
+                $serviceRequest = $deviceOrder->serviceRequests()->create([
+                    'table_service_id' => $validatedData['table_service_id'],
+                    'order_id' => $validatedData['order_id'],
+                ]);
 
-            $deviceOrder->serviceRequests()->create([
-                'table_service_id' => $validatedData['table_service_id'],
-                'order_id' => $validatedData['order_id'],
-            ]);
+                DB::afterCommit(function () use ($serviceRequest) {
+                    // Broadcast only after transaction commit to avoid phantom events.
+                    broadcast(new ServiceRequestNotification($serviceRequest))->toOthers();
+                });
 
-            $serviceRequest = $deviceOrder->serviceRequests()->latest()->first();
+                return $serviceRequest;
+            });
 
             if (! $serviceRequest) {
-                DB::rollBack();
                 return ApiResponse::error('Service request could not be sent', null, 400);
             }
-
-            // Broadcast to other listeners
-            broadcast(new ServiceRequestNotification($serviceRequest))->toOthers();
-
-            DB::commit();
 
             return ApiResponse::success([
                 'service_request' => new ServiceRequestResource($serviceRequest),
             ], 'Service sent successfully', 201);
 
         } catch (\Throwable $e) {
-            DB::rollBack();
             report($e);
             return ApiResponse::error('Failed to send service request', null, 500);
         }

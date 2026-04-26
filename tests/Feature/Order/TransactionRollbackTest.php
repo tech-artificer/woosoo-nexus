@@ -221,6 +221,7 @@ class TransactionRollbackTest extends TestCase
     public function it_logs_errors_when_transaction_fails()
     {
         Log::shouldReceive('withContext')->zeroOrMoreTimes();
+        Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('error')
             ->atLeast()->once()
             ->withArgs(function ($message, $context) {

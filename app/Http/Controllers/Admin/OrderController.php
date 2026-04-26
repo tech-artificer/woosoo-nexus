@@ -11,6 +11,7 @@ use App\Models\Krypton\Table as KryptonTable;
 use App\Enums\OrderStatus;
 use App\Services\Krypton\OrderService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Enum as EnumRule;
 use App\Events\PrintOrder;
 use Illuminate\Database\Eloquent\Builder;
@@ -218,25 +219,27 @@ class OrderController extends Controller
 
         foreach ($validated['order_ids'] as $orderId) {
             try {
-                $order = DeviceOrder::where('order_id', $orderId)
-                    ->lockForUpdate()
-                    ->first();
+                DB::transaction(function () use ($orderId, &$completed, &$skipped, &$failed) {
+                    $order = DeviceOrder::where('order_id', $orderId)
+                        ->lockForUpdate()
+                        ->first();
 
-                if (! $order) {
-                    Log::warning('bulkComplete: order not found', ['order_id' => $orderId]);
-                    $failed[] = $orderId;
-                    continue;
-                }
+                    if (! $order) {
+                        Log::warning('bulkComplete: order not found', ['order_id' => $orderId]);
+                        $failed[] = $orderId;
+                        return;
+                    }
 
-                // Idempotency check: skip already completed orders
-                if ($order->status === OrderStatus::COMPLETED) {
-                    $skipped++;
-                    continue;
-                }
+                    // Idempotency check: skip already completed orders
+                    if ($order->status === OrderStatus::COMPLETED) {
+                        $skipped++;
+                        return;
+                    }
 
-                // DeviceOrderObserver dispatches realtime events when status changes.
-                $order->update(['status' => OrderStatus::COMPLETED]);
-                $completed++;
+                    // DeviceOrderObserver dispatches realtime events when status changes.
+                    $order->update(['status' => OrderStatus::COMPLETED]);
+                    $completed++;
+                });
             } catch (\Throwable $e) {
                 Log::error('bulkComplete: failed to complete order', [
                     'order_id' => $orderId,
@@ -272,19 +275,21 @@ class OrderController extends Controller
 
         foreach ($validated['order_ids'] as $orderId) {
             try {
-                $deviceOrder = DeviceOrder::where('order_id', $orderId)
-                    ->lockForUpdate()
-                    ->first();
+                DB::transaction(function () use ($orderId, &$voided, &$failed) {
+                    $deviceOrder = DeviceOrder::where('order_id', $orderId)
+                        ->lockForUpdate()
+                        ->first();
 
-                if (! $deviceOrder) {
-                    Log::warning('bulkVoid: order not found', ['order_id' => $orderId]);
-                    $failed[] = $orderId;
-                    continue;
-                }
+                    if (! $deviceOrder) {
+                        Log::warning('bulkVoid: order not found', ['order_id' => $orderId]);
+                        $failed[] = $orderId;
+                        return;
+                    }
 
-                $deviceOrder->update(['status' => OrderStatus::VOIDED]);
-                $this->orderService->voidOrder($deviceOrder);
-                $voided++;
+                    $this->orderService->voidOrder($deviceOrder);
+                    $deviceOrder->update(['status' => OrderStatus::VOIDED]);
+                    $voided++;
+                });
             } catch (\Throwable $e) {
                 Log::error('bulkVoid: failed to void order', [
                     'order_id' => $orderId,
