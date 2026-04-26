@@ -321,25 +321,25 @@ class DeviceController extends Controller
      */
     public function downloadCertificate()
     {
-        // Prefer DER (better Android install UX); fall back to PEM if missing
-        $derPath = storage_path('app/public/certificates/woosoo-ca.der');
-        $pemPath = storage_path('app/public/certificates/CAROOT.pem');
+        // Prefer DER (better Android install UX); then PEM fallbacks.
+        $candidatePaths = [
+            storage_path('app/public/certificates/woosoo-ca.der'),
+            storage_path('app/public/certificates/CAROOT.pem'),
+            // Root stack certs directory fallback (workspace/docker deployments)
+            base_path('certs/ca.crt'),
+            base_path('../certs/ca.crt'),
+        ];
 
-        if (file_exists($derPath)) {
-            return response()->download($derPath, 'woosoo-ca.crt', [
-                'Content-Type' => 'application/x-x509-ca-cert',
-            ]);
+        foreach ($candidatePaths as $path) {
+            if (file_exists($path)) {
+                return response()->download($path, 'woosoo-ca.crt', [
+                    'Content-Type' => 'application/x-x509-ca-cert',
+                ]);
+            }
         }
 
-        if (file_exists($pemPath)) {
-            return response()->download($pemPath, 'woosoo-ca.crt', [
-                'Content-Type' => 'application/x-x509-ca-cert',
-            ]);
-        }
-
-        return redirect()
-            ->route('devices.index')
-            ->with('error', 'CA certificate not found. Contact system administrator.');
+        return response('CA certificate not found. Contact system administrator.', 404)
+            ->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 
     /**
