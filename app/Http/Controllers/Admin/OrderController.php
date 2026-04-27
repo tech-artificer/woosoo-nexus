@@ -1,26 +1,27 @@
 <?php
+
 // Audit Fix (2026-04-06): restore missing admin order actions and route handlers used by Orders UI.
+
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\DeviceOrder;
-use App\Models\Device;
-use App\Models\Krypton\Table as KryptonTable;
 use App\Enums\OrderStatus;
-use App\Services\Krypton\OrderService;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rules\Enum as EnumRule;
 use App\Events\PrintOrder;
+use App\Http\Controllers\Controller;
+use App\Models\Device;
+use App\Models\DeviceOrder;
+use App\Models\Krypton\Table as KryptonTable;
+use App\Services\Krypton\OrderService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rules\Enum as EnumRule;
+use Inertia\Inertia;
 
 class OrderController extends Controller
 {
-    public function __construct(private readonly OrderService $orderService)
-    {
-    }
+    public function __construct(private readonly OrderService $orderService) {}
 
     public function index(Request $request)
     {
@@ -41,10 +42,10 @@ class OrderController extends Controller
 
         if ($search !== '') {
             $ordersQuery->where(function (Builder $query) use ($search) {
-                $query->where('order_number', 'like', '%' . $search . '%')
-                    ->orWhere('order_id', 'like', '%' . $search . '%')
+                $query->where('order_number', 'like', '%'.$search.'%')
+                    ->orWhere('order_id', 'like', '%'.$search.'%')
                     ->orWhereHas('device', function (Builder $deviceQuery) use ($search) {
-                        $deviceQuery->where('name', 'like', '%' . $search . '%');
+                        $deviceQuery->where('name', 'like', '%'.$search.'%');
                     });
             });
         }
@@ -70,17 +71,17 @@ class OrderController extends Controller
         $devices = Device::select('id', 'name')->get();
         try {
             $tables = KryptonTable::select('id', 'name')->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $tables = collect([]);
         }
 
         return Inertia::render('Orders/Index', [
-            'title'        => 'Orders',
-            'description'  => 'Manage and monitor live orders',
-            'orders'       => $orders,
+            'title' => 'Orders',
+            'description' => 'Manage and monitor live orders',
+            'orders' => $orders,
             'orderHistory' => $orderHistory,
-            'devices'      => $devices,
-            'tables'       => $tables,
+            'devices' => $devices,
+            'tables' => $tables,
         ]);
     }
 
@@ -103,6 +104,7 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             Log::debug('byOrderId: failed to inspect items', ['order_id' => $orderId, 'error' => $e->getMessage()]);
         }
+
         return response()->json($deviceOrder);
     }
 
@@ -153,32 +155,43 @@ class OrderController extends Controller
             'order_id' => ['required', 'integer', 'min:1'],
         ]);
 
-        $order = DeviceOrder::where('order_id', $validated['order_id'])
-            ->lockForUpdate()
-            ->first();
-
-        if (! $order) {
-            return redirect()->back()->with('error', 'Order not found.');
-        }
-
-        // Idempotency check: prevent double-completion from concurrent requests
-        if ($order->status === OrderStatus::COMPLETED) {
-            return redirect()->back()->with('info', 'Order already completed.');
-        }
-
         try {
-            // DeviceOrderObserver::updated() automatically dispatches OrderStatusUpdated
-            // and OrderCompleted when status changes — no manual dispatch needed here.
-            $order->update(['status' => OrderStatus::COMPLETED]);
+            $result = DB::transaction(function () use ($validated) {
+                $order = DeviceOrder::where('order_id', $validated['order_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $order) {
+                    return 'not_found';
+                }
+
+                // Idempotency check: prevent double-completion from concurrent requests
+                if ($order->status === OrderStatus::COMPLETED) {
+                    return 'already_done';
+                }
+
+                // DeviceOrderObserver::updated() automatically dispatches OrderStatusUpdated
+                // and OrderCompleted when status changes — no manual dispatch needed here.
+                $order->update(['status' => OrderStatus::COMPLETED]);
+
+                return 'ok';
+            });
         } catch (\Throwable $e) {
             Log::error('Failed to complete order', [
                 'order_id' => $validated['order_id'],
-                'current_status' => $order->status->value ?? 'unknown',
                 'exception_class' => get_class($e),
                 'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()->with('error', 'Failed to complete order.');
+        }
+
+        if ($result === 'not_found') {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        if ($result === 'already_done') {
+            return redirect()->back()->with('info', 'Order already completed.');
         }
 
         return redirect()->back()->with('success', 'Order completed successfully.');
@@ -207,7 +220,8 @@ class OrderController extends Controller
     /**
      * Bulk complete orders with race condition protection.
      */
-    public function bulkComplete(Request $request) {
+    public function bulkComplete(Request $request)
+    {
         $validated = $request->validate([
             'order_ids' => ['required', 'array'],
             'order_ids.*' => ['required', 'integer', 'min:1'],
@@ -227,12 +241,14 @@ class OrderController extends Controller
                     if (! $order) {
                         Log::warning('bulkComplete: order not found', ['order_id' => $orderId]);
                         $failed[] = $orderId;
+
                         return;
                     }
 
                     // Idempotency check: skip already completed orders
                     if ($order->status === OrderStatus::COMPLETED) {
                         $skipped++;
+
                         return;
                     }
 
@@ -255,7 +271,7 @@ class OrderController extends Controller
             $message .= ", {$skipped} already completed";
         }
         if (count($failed) > 0) {
-            $message .= ", " . count($failed) . " failed";
+            $message .= ', '.count($failed).' failed';
         }
 
         return redirect()->back()->with('success', $message);
@@ -264,7 +280,8 @@ class OrderController extends Controller
     /**
      * Bulk void orders (standardized to use order_id for API consistency).
      */
-    public function bulkVoid(Request $request) {
+    public function bulkVoid(Request $request)
+    {
         $validated = $request->validate([
             'order_ids' => ['required', 'array'],
             'order_ids.*' => ['required', 'integer', 'min:1'],
@@ -283,6 +300,7 @@ class OrderController extends Controller
                     if (! $deviceOrder) {
                         Log::warning('bulkVoid: order not found', ['order_id' => $orderId]);
                         $failed[] = $orderId;
+
                         return;
                     }
 
@@ -302,7 +320,7 @@ class OrderController extends Controller
 
         $message = "{$voided} order(s) voided";
         if (count($failed) > 0) {
-            $message .= ", " . count($failed) . " failed";
+            $message .= ', '.count($failed).' failed';
         }
 
         return redirect()->back()->with('success', $message);
@@ -325,6 +343,7 @@ class OrderController extends Controller
             $order->update(['status' => $newStatus]);
         } catch (\InvalidArgumentException $e) {
             Log::warning('Invalid status transition attempted', ['order' => $order->id, 'error' => $e->getMessage()]);
+
             return redirect()->back()->with('error', 'Invalid status transition.');
         }
 
@@ -348,11 +367,14 @@ class OrderController extends Controller
         foreach ($validated['ids'] as $id) {
             try {
                 $deviceOrder = DeviceOrder::find($id);
-                if (! $deviceOrder) continue;
+                if (! $deviceOrder) {
+                    continue;
+                }
                 $deviceOrder->update(['status' => $status]);
                 $updated++;
             } catch (\Throwable $e) {
                 Log::error('Failed to update order status', ['id' => $id, 'error' => $e->getMessage()]);
+
                 continue;
             }
         }

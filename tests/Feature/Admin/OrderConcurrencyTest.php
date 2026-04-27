@@ -10,8 +10,8 @@ use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 /**
@@ -32,7 +32,7 @@ class OrderConcurrencyTest extends TestCase
         $admin = User::factory()->admin()->create();
         $branch = Branch::factory()->create();
         $device = Device::factory()->create(['branch_id' => $branch->id]);
-        
+
         $order = DeviceOrder::factory()->create([
             'order_id' => 9001,
             'device_id' => $device->id,
@@ -50,7 +50,7 @@ class OrderConcurrencyTest extends TestCase
         }
 
         // Verify: At least one request succeeded
-        $successCount = collect($responses)->filter(fn($r) => $r->isRedirect())->count();
+        $successCount = collect($responses)->filter(fn ($r) => $r->isRedirect())->count();
         $this->assertGreaterThanOrEqual(1, $successCount, 'At least one completion request should succeed');
 
         // Critical: Verify database contains exactly ONE completed order (no duplicates)
@@ -59,7 +59,7 @@ class OrderConcurrencyTest extends TestCase
 
         // Critical: Verify EXACTLY ONE OrderStatusUpdated event dispatched (no double-broadcast)
         Event::assertDispatchedTimes(OrderStatusUpdated::class, 1);
-        
+
         // Critical: Verify EXACTLY ONE OrderCompleted event dispatched (no double-broadcast)
         Event::assertDispatchedTimes(OrderCompleted::class, 1);
     }
@@ -73,7 +73,7 @@ class OrderConcurrencyTest extends TestCase
         $admin = User::factory()->admin()->create();
         $branch = Branch::factory()->create();
         $device = Device::factory()->create(['branch_id' => $branch->id]);
-        
+
         $order = DeviceOrder::factory()->create([
             'order_id' => 9002,
             'device_id' => $device->id,
@@ -164,6 +164,35 @@ class OrderConcurrencyTest extends TestCase
     }
 
     /**
+     * Test bulkComplete: concurrent calls for the same order_id produce exactly one event pair
+     */
+    public function test_bulk_complete_concurrent_calls_produce_exactly_one_event_pair(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $branch = Branch::factory()->create();
+        $device = Device::factory()->create(['branch_id' => $branch->id]);
+
+        $order = DeviceOrder::factory()->create([
+            'order_id' => 9010,
+            'device_id' => $device->id,
+            'status' => OrderStatus::CONFIRMED,
+        ]);
+
+        Event::fake([OrderStatusUpdated::class, OrderCompleted::class]);
+
+        // First call completes the order; second call is an idempotent no-op
+        $this->actingAs($admin)->post('/orders/bulk-complete', ['order_ids' => [$order->order_id]]);
+        $this->actingAs($admin)->post('/orders/bulk-complete', ['order_ids' => [$order->order_id]]);
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::COMPLETED->value, $order->status->value);
+
+        // The idempotency guard inside DB::transaction must prevent a second dispatch
+        Event::assertDispatchedTimes(OrderStatusUpdated::class, 1);
+        Event::assertDispatchedTimes(OrderCompleted::class, 1);
+    }
+
+    /**
      * Test database transaction isolation: verify lockForUpdate actually locks row
      */
     public function test_lock_for_update_prevents_dirty_reads(): void
@@ -171,7 +200,7 @@ class OrderConcurrencyTest extends TestCase
         $admin = User::factory()->admin()->create();
         $branch = Branch::factory()->create();
         $device = Device::factory()->create(['branch_id' => $branch->id]);
-        
+
         $order = DeviceOrder::factory()->create([
             'order_id' => 9003,
             'device_id' => $device->id,
@@ -181,7 +210,7 @@ class OrderConcurrencyTest extends TestCase
         Event::fake();
 
         // Start transaction with lockForUpdate
-        DB::transaction(function () use ($order, $admin) {
+        DB::transaction(function () use ($order) {
             $lockedOrder = DeviceOrder::where('order_id', $order->order_id)
                 ->lockForUpdate()
                 ->first();
