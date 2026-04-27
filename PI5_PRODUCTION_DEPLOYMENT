@@ -904,6 +904,51 @@ sudo -u www-data php /srv/woosoo/nexus/artisan route:cache
 
 ---
 
+## Updating
+Step 1 — Pull woosoo-nexus (backend)
+
+
+sudo git config --global --add safe.directory /srv/woosoo/nexus
+sudo git -C /srv/woosoo/nexus pull origin staging
+sudo -u www-data composer install --no-dev --optimize-autoloader --working-dir=/srv/woosoo/nexus
+sudo -u www-data php /srv/woosoo/nexus/artisan migrate --force
+sudo chown -R woosoo:woosoo /srv/woosoo/nexus/node_modules /srv/woosoo/nexus/public/build 2>/dev/null || true
+cd /srv/woosoo/nexus && npm ci
+sudo chmod 644 /etc/woosoo/.env && npm run build && sudo chmod 640 /etc/woosoo/.env
+sudo chown -R www-data:www-data /srv/woosoo/nexus/public/build /srv/woosoo/nexus/node_modules
+sudo -u www-data php /srv/woosoo/nexus/artisan config:cache
+sudo -u www-data php /srv/woosoo/nexus/artisan route:cache
+sudo -u www-data php /srv/woosoo/nexus/artisan view:cache
+sudo supervisorctl restart all
+Step 2 — Pull tablet-ordering-pwa (frontend)
+
+
+cd /tmp
+git clone https://github.com/tech-artificer/tablet-ordering-pwa.git pwa-build
+cd /tmp/pwa-build
+git checkout staging
+npm ci
+REVERB_KEY=$(sudo grep '^REVERB_APP_KEY=' /etc/woosoo/.env | cut -d= -f2)
+NODE_ENV=production \
+NUXT_PUBLIC_API_BASE_URL=/api \
+NUXT_PUBLIC_REVERB_APP_KEY=$REVERB_KEY \
+NUXT_PUBLIC_REVERB_HOST= \
+NUXT_PUBLIC_REVERB_PORT=443 \
+NUXT_PUBLIC_REVERB_SCHEME=https \
+NUXT_PUBLIC_REVERB_PATH=/app \
+npx --yes nuxi generate
+sudo rm -rf /srv/woosoo/pwa/*
+sudo cp -r /tmp/pwa-build/.output/public/* /srv/woosoo/pwa/
+sudo chown -R www-data:www-data /srv/woosoo/pwa/
+cd ~ && rm -rf /tmp/pwa-build
+Step 3 — Verify
+
+
+curl -sk https://woosoo.local/up -o /dev/null -w "%{http_code}\n"
+curl -sk https://woosoo.local/ -o /dev/null -w "%{http_code}\n"
+sudo supervisorctl status
+Both should return 200 and all 4 workers RUNNING.
+
 **Last Verified:** 2026-04-24
 **Deployed On:** Raspberry Pi 5, Debian Trixie, 192.168.100.42 (home network)
 **Next Step:** PWA build deployment + GitHub Actions CI/CD
