@@ -16,7 +16,7 @@ class StoreDeviceRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'ip_address' => ['required', 'ip', \Illuminate\Validation\Rule::unique('devices', 'ip_address')],
+            'ip_address' => ['required', 'ip', Rule::unique('devices', 'ip_address')->whereNull('deleted_at')],
             'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'table_id' => ['nullable', 'integer', Rule::exists('pos.tables', 'id')],
             // Optional for admin web flow: if omitted, code is auto-generated server-side.

@@ -37,6 +37,7 @@ class Device extends Authenticatable
         'last_seen_at',
         'last_heartbeat_at',    // Task 2.7: relay device heartbeat timestamp
         'security_code',
+        'security_code_lookup',
         'security_code_generated_at',
     ];
 

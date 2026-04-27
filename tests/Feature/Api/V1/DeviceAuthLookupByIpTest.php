@@ -28,12 +28,18 @@ class DeviceAuthLookupByIpTest extends TestCase
 
         putenv('DEVICE_ALLOW_CLIENT_SUPPLIED_IP=0');
         putenv('DEVICE_ALLOWED_PRIVATE_SUBNETS=');
+
+        config()->set('device.allow_client_supplied_ip', false);
+        config()->set('device.allowed_private_subnets', '');
     }
 
     protected function tearDown(): void
     {
         $this->restoreEnv('DEVICE_ALLOW_CLIENT_SUPPLIED_IP', $this->previousAllowClientSuppliedIp);
         $this->restoreEnv('DEVICE_ALLOWED_PRIVATE_SUBNETS', $this->previousAllowedPrivateSubnets);
+
+        config()->set('device.allow_client_supplied_ip', false);
+        config()->set('device.allowed_private_subnets', '');
 
         parent::tearDown();
     }

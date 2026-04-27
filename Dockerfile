@@ -2,7 +2,7 @@ FROM php:8.2-fpm-alpine
 
 # System dependencies
 RUN apk add --no-cache \
-    git curl zip unzip \
+    git curl zip unzip gettext \
     libpng-dev libxml2-dev libzip-dev \
     oniguruma-dev icu-dev \
     mysql-client
@@ -28,11 +28,14 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interactio
 
 COPY . .
 
+# PHP-FPM pool must listen on shared Unix socket for nginx fastcgi_pass
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
+
 RUN composer run-script post-autoload-dump 2>/dev/null || true \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 9000

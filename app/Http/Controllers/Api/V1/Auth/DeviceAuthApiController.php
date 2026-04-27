@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Device;
-// use App\Http\Resources\DeviceResource;
-use App\Http\Requests\DeviceRegisterRequest;
-use App\Services\AuditLogService;
 use App\Helpers\BroadcastConfig;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\DeviceRegisterRequest;
+use App\Models\Device;
+use App\Services\AuditLogService;
+use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
@@ -19,16 +17,27 @@ class DeviceAuthApiController extends Controller
     // Utility: check for private/local IPv4 (10.*, 192.168.*, 172.16-31.*, 169.254.*)
     protected function isPrivateIp(?string $ip): bool
     {
-        if (!$ip) return false;
-        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) return false;
+        if (! $ip) {
+            return false;
+        }
 
-        // Private ranges
-        if (str_starts_with($ip, '10.')) return true;
-        if (str_starts_with($ip, '192.168.')) return true;
-        if (preg_match('/^172\\.(1[6-9]|2[0-9]|3[0-1])\\./', $ip)) return true;
-        if (str_starts_with($ip, '169.254.')) return true;
+        if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return false;
+        }
 
-        return false;
+        if (str_starts_with($ip, '10.')) {
+            return true;
+        }
+
+        if (str_starts_with($ip, '192.168.')) {
+            return true;
+        }
+
+        if (preg_match('/^172\\.(1[6-9]|2[0-9]|3[0-1])\\./', $ip)) {
+            return true;
+        }
+
+        return str_starts_with($ip, '169.254.');
     }
 
     protected function ipToLong(?string $ip): int|false
@@ -54,11 +63,20 @@ class DeviceAuthApiController extends Controller
 
     protected function same24(?string $a, ?string $b): bool
     {
-        if (! $a || ! $b) return false;
+        if (! $a || ! $b) {
+            return false;
+        }
+
         $partsA = explode('.', $a);
         $partsB = explode('.', $b);
-        if (count($partsA) !== 4 || count($partsB) !== 4) return false;
-        return $partsA[0] === $partsB[0] && $partsA[1] === $partsB[1] && $partsA[2] === $partsB[2];
+
+        if (count($partsA) !== 4 || count($partsB) !== 4) {
+            return false;
+        }
+
+        return $partsA[0] === $partsB[0]
+            && $partsA[1] === $partsB[1]
+            && $partsA[2] === $partsB[2];
     }
 
     protected function shouldTrustClientSuppliedIp(?string $clientSupplied, ?string $requestIp): bool
@@ -67,119 +85,151 @@ class DeviceAuthApiController extends Controller
             return false;
         }
 
-        $enabled = filter_var(env('DEVICE_ALLOW_CLIENT_SUPPLIED_IP', false), FILTER_VALIDATE_BOOL);
+        $enabled = filter_var(config('device.allow_client_supplied_ip', false), FILTER_VALIDATE_BOOL);
         if (! $enabled) {
             return false;
         }
 
-        $raw = trim((string) env('DEVICE_ALLOWED_PRIVATE_SUBNETS', ''));
+        $raw = trim((string) config('device.allowed_private_subnets', ''));
         if ($raw !== '') {
             $subnets = array_filter(array_map('trim', explode(',', $raw)));
+
             foreach ($subnets as $cidr) {
                 if ($this->ipInCidr($clientSupplied, $cidr)) {
                     return true;
                 }
             }
+
             return false;
         }
 
-        // Safe fallback: only trust when request IP is private and in same /24.
         return $this->isPrivateIp($requestIp) && $this->same24($clientSupplied, $requestIp);
     }
+
+    protected function resolveClientSuppliedIp(Request $request): ?string
+    {
+        // Primary contract: ip_address
+        // Legacy compatibility: ip
+        return $request->input('ip_address') ?: $request->input('ip');
+    }
+
     /**
-     * Register a device
-     * 
-     * Batch 1: Security-code-first registration flow
-     * 
-     * Match-count logic:
-     * - 0 matches: Create new device and return token (200)
-     * - 1 match: Claim device, update ip_address/last_seen_at, return token (200)
-     * - 2+ matches: Ambiguous state, reject with 409 Conflict
-     * 
-     * @unauthenticated
-     * 
-     * @param DeviceRegisterRequest $request
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     * Register a device.
+     *
+     * Global passcode registration flow.
+     *
+     * The caller provides a shared passcode from config('device.auth_passcode').
+     * On success the device is created (new IP) or reused (existing IP).
      */
     public function register(DeviceRegisterRequest $request)
     {
         $validated = $request->validated();
-        $securityCode = $validated['security_code'] ?? ($validated['code'] ?? null);
 
-        // IP address resolution: prefer client-supplied private IP,
-        // fall back to request IP, then null
-        $clientSupplied = $request->input('ip_address');
-        $requestIp = $request->ip();
+        // Accept passcode, or legacy aliases security_code / code.
+        $passcode = $validated['passcode'] ?? ($validated['security_code'] ?? ($validated['code'] ?? null));
 
-        // Use client-supplied private IP when trust gate passes, otherwise use server-observed IP.
-        // Both paths store whatever IP we have — even a public/Docker IP — so the device record
-        // always reflects the last known source address for diagnostics.
-        $ipToUse = $this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)
-            ? $clientSupplied
-            : $requestIp;
+        // In passcode-authenticated flows the client-supplied ip_address is the
+        // device identity, so trust it directly and fall back to request IP.
+        $ipToUse = $this->resolveClientSuppliedIp($request) ?: $request->ip();
 
-        if (! $securityCode) {
+        $configuredPasscode = config('device.auth_passcode');
+        if (! $configuredPasscode || $passcode !== $configuredPasscode) {
             return response()->json([
                 'success' => false,
-                'message' => 'Security code is required',
+                'message' => 'Invalid passcode',
                 'ip_used' => $ipToUse,
                 'broadcasting' => BroadcastConfig::clientPayload(),
             ], 422);
         }
 
-        $matchingDeviceIds = Device::active()
-            ->whereNotNull('security_code')
-            ->get(['id', 'security_code'])
-            ->filter(fn (Device $device) => Hash::check($securityCode, $device->security_code))
-            ->pluck('id')
-            ->values();
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            try {
+                $registration = DB::transaction(function () use ($validated, $ipToUse): array {
+                    /** @var Device|null $device */
+                    $device = Device::withTrashed()
+                        ->where('ip_address', $ipToUse)
+                        ->lockForUpdate()
+                        ->first();
 
-        $matchCount = $matchingDeviceIds->count();
+                    if ($device && ($device->trashed() || ! $device->is_active)) {
+                        return [
+                            'status' => 409,
+                            'payload' => [
+                                'success' => false,
+                                'message' => 'Device IP is registered but inactive. Reactivate it before registering.',
+                                'ip_used' => $ipToUse,
+                                'broadcasting' => BroadcastConfig::clientPayload(),
+                            ],
+                        ];
+                    }
 
-        if ($matchCount === 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid security code',
-                'ip_used' => $ipToUse,
-                'broadcasting' => BroadcastConfig::clientPayload(),
-            ], 422);
+                    if (! $device) {
+                        $nameConflict = Device::withTrashed()
+                            ->where('name', $validated['name'])
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($nameConflict) {
+                            return [
+                                'status' => 409,
+                                'payload' => [
+                                    'success' => false,
+                                    'message' => 'Device name is already registered.',
+                                    'ip_used' => $ipToUse,
+                                    'broadcasting' => BroadcastConfig::clientPayload(),
+                                ],
+                            ];
+                        }
+
+                        $device = Device::create([
+                            'name' => $validated['name'],
+                            'type' => 'tablet',
+                            'ip_address' => $ipToUse,
+                            'is_active' => true,
+                            'last_seen_at' => now(),
+                        ]);
+                    }
+
+                    $device->update([
+                        'ip_address' => $ipToUse,
+                        'last_ip_address' => $ipToUse,
+                        'last_seen_at' => now(),
+                    ]);
+
+                    $device->tokens()->where('expires_at', '<', now())->delete();
+
+                    $token = $device->createToken(
+                        name: 'device-auth',
+                        expiresAt: now()->addDays(30)
+                    )->plainTextToken;
+
+                    return [
+                        'status' => 200,
+                        'device_id' => $device->id,
+                        'token' => $token,
+                    ];
+                }, 3);
+
+                if (($registration['status'] ?? 200) !== 200) {
+                    return response()->json($registration['payload'], $registration['status']);
+                }
+
+                $device = Device::findOrFail($registration['device_id']);
+                $token = $registration['token'];
+                break;
+            } catch (QueryException $e) {
+                if ($attempt === 0 && $this->isUniqueConstraintViolation($e)) {
+                    continue;
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Device registration conflicts with an existing device.',
+                    'ip_used' => $ipToUse,
+                    'broadcasting' => BroadcastConfig::clientPayload(),
+                ], 409);
+            }
         }
-
-        if ($matchCount > 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ambiguous registration: multiple devices with this security code',
-                'match_count' => $matchCount,
-                'ip_used' => $ipToUse,
-                'broadcasting' => BroadcastConfig::clientPayload(),
-            ], 409);
-        }
-
-        $deviceId = (int) $matchingDeviceIds->first();
-
-        $token = DB::transaction(function () use ($deviceId, $ipToUse) {
-            /** @var Device $device */
-            $device = Device::whereKey($deviceId)->lockForUpdate()->firstOrFail();
-
-            $device->update([
-                'ip_address'                 => $ipToUse,
-                'last_ip_address'            => $ipToUse,
-                'last_seen_at'               => now(),
-                'security_code'              => null, // Consume code — re-registration requires admin to generate a new one
-                'security_code_generated_at' => null,
-            ]);
-
-            // Keep active sessions and remove only expired tokens.
-            $device->tokens()->where('expires_at', '<', now())->delete();
-
-            return $device->createToken(
-                name: 'device-auth',
-                expiresAt: now()->addDays(30)
-            )->plainTextToken;
-        });
-
-        $device = Device::findOrFail($deviceId);
 
         AuditLogService::deviceRegistered($request, $device->id);
 
@@ -193,47 +243,60 @@ class DeviceAuthApiController extends Controller
             'broadcasting' => BroadcastConfig::clientPayload(),
         ], 200);
     }
+
     /**
-     * Login a device
-     * 
-     * @unauthenticated
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * Login a device.
+     *
+     * When a passcode is supplied it is validated against config('device.auth_passcode')
+     * and the client-supplied ip_address is used as the device identity directly.
+     * When no passcode is supplied the legacy IP-trust path is preserved for
+     * backward compatibility with tablets not yet sending the passcode field.
      */
     public function authenticate(Request $request)
     {
-        // Prefer client-supplied ip_address when private, otherwise request->ip()
-        $clientSupplied = $request->input('ip_address');
-        $requestIp = $request->ip();
+        $passcode = $request->input('passcode');
 
-        if ($this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)) {
-            $ip = $clientSupplied;
+        if ($passcode !== null) {
+            $configuredPasscode = config('device.auth_passcode');
+            if (! $configuredPasscode || $passcode !== $configuredPasscode) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid passcode',
+                ], 422);
+            }
+
+            $ip = $this->resolveClientSuppliedIp($request) ?: $request->ip();
         } else {
-            $ip = $requestIp;
+            $clientSupplied = $this->resolveClientSuppliedIp($request);
+            $requestIp = $request->ip();
+
+            if ($this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)) {
+                $ip = $clientSupplied;
+            } else {
+                $ip = $requestIp;
+            }
         }
 
         $device = Device::where(['ip_address' => $ip, 'is_active' => true])->first();
 
-        if (!$device) {
+        if (! $device) {
             AuditLogService::authFailed($request, 'device_not_found_or_inactive');
 
             return response()->json([
                 'success' => false,
                 'error' => 'Device not found',
-                'ip_address' => $ip
+                'ip_address' => $ip,
             ], 404);
         }
 
-        // Reject IP-only auth for unclaimed devices (security_code still set means it was never registered).
-        // Only claimed devices (code consumed by register()) may reconnect via IP alone.
+        // Reject IP-only auth for unclaimed devices.
         if ($device->security_code !== null) {
             AuditLogService::authFailed($request, 'device_not_yet_registered');
 
             return response()->json([
                 'success' => false,
                 'error' => 'Device not yet registered. Use the security code to register first.',
-                'ip_address' => $ip
+                'ip_address' => $ip,
             ], 403);
         }
 
@@ -241,16 +304,14 @@ class DeviceAuthApiController extends Controller
             'last_seen_at' => now(),
             'last_ip_address' => $ip,
         ]);
-        // H3 fix 2026-04-08: only revoke expired tokens so concurrent device connections
-        // (e.g., print bridge) are not disconnected when a tablet re-authenticates via IP.
+
         $device->tokens()->where('expires_at', '<', now())->delete();
 
-         // Create token with device info
         $token = $device->createToken(
             name: 'device-auth',
             expiresAt: now()->addDays(30)
         )->plainTextToken;
-        
+
         return response()->json([
             'success' => true,
             'token' => $token,
@@ -265,28 +326,22 @@ class DeviceAuthApiController extends Controller
     /**
      * Revoke the current token and issue a new one with the same
      * abilities and expiration time.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function refresh(Request $request)
     {
-        $device = $request->user(); // Sanctum resolves Device model
+        $device = $request->user();
 
-        // Revoke current token safely
-        // Delete the current access token via the tokens relationship to appease static analyzers
         $currentToken = $request->user()?->currentAccessToken();
         if ($currentToken) {
             $request->user()->tokens()->where('id', $currentToken->id)->delete();
         }
 
-        // Create new token — 30 days, consistent with register() and authenticate()
         $newToken = $device->createToken(
             name: 'device-auth',
-            expiresAt: now()->addDays(30)
+            expiresAt: now()->addDays(7)
         )->plainTextToken;
 
-        $expiresAt = now()->addDays(30);
+        $expiresAt = now()->addDays(7);
 
         return response()->json([
             'success' => true,
@@ -296,46 +351,36 @@ class DeviceAuthApiController extends Controller
             'expires_at' => $expiresAt->toDateTimeString(),
             'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
-}
-
+    }
 
     /**
      * Revoke the token of the device that made the request and logout.
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function logout(Request $request) {
-        // Delete current access token via relation (avoid static analyzer warning on token model)
+    public function logout(Request $request)
+    {
         $current = $request->user()?->currentAccessToken();
         if ($current) {
             $request->user()->tokens()->where('id', $current->id)->delete();
         }
 
         return response()->json([
-            'message' => 'Successfully logged out'
+            'message' => 'Successfully logged out',
         ]);
-
     }
 
     /**
      * Look up a device by the request IP and issue a short-lived token.
      *
      * Called by the print-bridge on startup (GET /api/device/lookup-by-ip).
-     * No authentication required — the device is identified purely by IP.
+     * No authentication required - the device is identified purely by IP.
      *
      * Response shape the print-bridge expects:
      *   { found: true,  device: { device_id, auth_token, printer_name, bluetooth_address } }
      *   { found: false }
-     *
-     * @unauthenticated
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function lookupByIp(Request $request)
     {
-        // Prefer client-supplied private IP only when the same trust gate used by registration allows it.
-        $clientSupplied = $request->input('ip_address');
+        $clientSupplied = $this->resolveClientSuppliedIp($request);
         $requestIp = $request->ip();
 
         if ($this->shouldTrustClientSuppliedIp($clientSupplied, $requestIp)) {
@@ -346,9 +391,36 @@ class DeviceAuthApiController extends Controller
             $ip = $requestIp;
         }
 
-        $device = Device::where('ip_address', $ip)->where('is_active', true)->first();
+        $lookup = DB::transaction(function () use ($ip): ?array {
+            /** @var Device|null $device */
+            $device = Device::where('ip_address', $ip)
+                ->where('is_active', true)
+                ->lockForUpdate()
+                ->first();
 
-        if (! $device) {
+            if (! $device) {
+                return null;
+            }
+
+            $device->update([
+                'last_seen_at' => now(),
+                'last_ip_address' => $ip,
+            ]);
+
+            $device->tokens()->where('name', 'device-auth')->delete();
+
+            $token = $device->createToken(
+                name: 'device-auth',
+                expiresAt: now()->addDays(7)
+            )->plainTextToken;
+
+            return [
+                'device_id' => (string) $device->id,
+                'auth_token' => $token,
+            ];
+        }, 3);
+
+        if (! $lookup) {
             return response()->json([
                 'found' => false,
                 'ip_used' => $ip,
@@ -356,26 +428,12 @@ class DeviceAuthApiController extends Controller
             ], 200);
         }
 
-        // Update last seen and IP tracking
-        $device->update([
-            'last_seen_at' => now(),
-            'last_ip_address' => $ip,
-        ]);
-
-        // Revoke stale tokens to keep the token table tidy, then issue a fresh one
-        $device->tokens()->where('name', 'device-auth')->delete();
-
-        $token = $device->createToken(
-            name: 'device-auth',
-            expiresAt: now()->addDays(7)
-        )->plainTextToken;
-
         return response()->json([
-            'found'  => true,
+            'found' => true,
             'device' => [
-                'device_id'         => (string) $device->id,
-                'auth_token'        => $token,
-                'printer_name'      => null,
+                'device_id' => $lookup['device_id'],
+                'auth_token' => $lookup['auth_token'],
+                'printer_name' => null,
                 'bluetooth_address' => null,
             ],
             'ip_used' => $ip,
@@ -385,9 +443,6 @@ class DeviceAuthApiController extends Controller
 
     /**
      * Verify a bearer token and return its validity and associated device.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function verifyToken(Request $request)
     {
@@ -422,5 +477,13 @@ class DeviceAuthApiController extends Controller
             'created_at' => $token->created_at,
             'expires_at' => $token->expires_at ?? null,
         ]);
+    }
+
+    private function isUniqueConstraintViolation(QueryException $e): bool
+    {
+        $sqlState = (string) ($e->errorInfo[0] ?? '');
+        $driverCode = (string) ($e->errorInfo[1] ?? '');
+
+        return $sqlState === '23000' || $driverCode === '1062' || $driverCode === '19';
     }
 }

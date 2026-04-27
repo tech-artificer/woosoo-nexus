@@ -33,14 +33,14 @@ const isAvailableFiltered = computed(() => {
 
 <template>
   <div class="flex flex-row flex-wrap items-center justify-between gap-3 px-1 py-1">
-
     <div class="flex flex-row flex-wrap items-center gap-2">
-        <Input
-          placeholder="Filter…"
-          :model-value="hasColumn('name') ? ((table.getColumn('name')?.getFilterValue() as string) ?? '') : ''"
-          class="h-8 w-37.5 lg:w-62.5"
-          @input="(e: any) => { if (hasColumn('name')) table.getColumn('name')?.setFilterValue(e.target.value) }"
-        />
+      <Input
+        placeholder="Filter name or IP..."
+        :model-value="hasColumn('name') ? ((table.getColumn('name')?.getFilterValue() as string) ?? '') : ''"
+        class="h-8 w-37.5 lg:w-62.5"
+        @input="(e: any) => { if (hasColumn('name')) table.getColumn('name')?.setFilterValue(e.target.value) }"
+      />
+
       <DataTableFacetedFilter
         v-if="hasCourseColumn"
         :column="table.getColumn('course')"
@@ -78,13 +78,13 @@ const isAvailableFiltered = computed(() => {
       </Button>
 
       <Button
-      v-if="isFiltered"
-      variant="outline"
-      class="h-8 px-2 lg:px-3 flex justify-between items-center"
-      @click="table.resetColumnFilters()"
-    >
-      <RefreshCcw class="text-green h-3 w-3" />
-    </Button>
+        v-if="isFiltered"
+        variant="outline"
+        class="h-8 px-2 lg:px-3 flex justify-between items-center"
+        @click="table.resetColumnFilters()"
+      >
+        <RefreshCcw class="text-green h-3 w-3" />
+      </Button>
     </div>
 
     <div class="flex flex-row flex-wrap items-center gap-2">

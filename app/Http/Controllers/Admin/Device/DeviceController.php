@@ -11,7 +11,9 @@ use App\Http\Requests\UpdateDeviceRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Branch;
-use Illuminate\Support\Facades\Hash;
+use App\Support\DeviceSecurityCode;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class DeviceController extends Controller
@@ -26,7 +28,12 @@ class DeviceController extends Controller
             session()->flash('warning', 'Table data is unavailable — POS system is currently offline.');
             $unassignedTables = collect([]);
         }
-        $devices = Device::active()->with('table', 'branch')->get();
+        // Include soft-deleted rows so admins can reactivate previously deactivated
+        // devices directly from the Devices page.
+        $devices = Device::withTrashed()
+            ->with('table', 'branch')
+            ->get()
+            ->each(fn (Device $device) => $device->makeVisible('deleted_at'));
         $securityReadyCount = $devices->whereNotNull('security_code_generated_at')->count();
 
         inertia()->share('unassignedTables', $unassignedTables);
@@ -102,45 +109,139 @@ class DeviceController extends Controller
                 ]);
         }
 
-        $plainSecurityCode = trim((string) ($data['security_code'] ?? ''));
+        $ipAddress = $data['ip_address'] ?? null;
+        $requestedSecurityCode = trim((string) ($data['security_code'] ?? ''));
+        $isGeneratedCode = $requestedSecurityCode === '';
+        $result = null;
 
-        if ($plainSecurityCode === '') {
-            $plainSecurityCode = $this->generateUniqueSecurityCode();
-        }
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $plainSecurityCode = $isGeneratedCode
+                ? $this->generateUniqueSecurityCode()
+                : $requestedSecurityCode;
 
-        \Log::info('Security code generated', ['code_length' => strlen($plainSecurityCode)]);
-
-        // Check for existing device with this security code (Batch 2: Uniqueness Enforcement)
-        if ($this->securityCodeExists($plainSecurityCode)) {
-            \Log::warning('Security code already exists, rejecting device creation');
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'security_code' => 'This security code is already assigned to another device.'
-                ]);
-        }
-
-        \Log::info('About to create device with payload', [
-            'name' => $data['name'],
-            'branch_id' => $branchId,
-            'ip_address' => $data['ip_address'] ?? null,
-            'port' => $data['port'] ?? null,
-            'table_id' => $data['table_id'] ?? null,
-        ]);
-
-        try {
-            $device = Device::create([
+            \Log::info('Security code generated', ['code_length' => strlen($plainSecurityCode)]);
+            \Log::info('About to create device with payload', [
                 'name' => $data['name'],
                 'branch_id' => $branchId,
                 'ip_address' => $data['ip_address'] ?? null,
                 'port' => $data['port'] ?? null,
                 'table_id' => $data['table_id'] ?? null,
-                'security_code' => Hash::make($plainSecurityCode),
-                'security_code_generated_at' => now(),
-                'is_active' => true,
             ]);
 
-            \Log::info('Device created successfully', ['device_id' => $device->id]);
+            try {
+                $result = DB::transaction(function () use ($data, $branchId, $ipAddress, $plainSecurityCode): array {
+                    if (DeviceSecurityCode::isAssigned($plainSecurityCode)) {
+                        throw new RuntimeException('security_code_assigned');
+                    }
+
+                    $deviceWithIp = Device::withTrashed()
+                        ->where('ip_address', $ipAddress)
+                        ->lockForUpdate()
+                        ->first();
+
+                    $nameConflict = Device::withTrashed()
+                        ->where('name', $data['name'])
+                        ->when($deviceWithIp, fn ($query) => $query->whereKeyNot($deviceWithIp->id))
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($nameConflict) {
+                        throw new RuntimeException('name_assigned');
+                    }
+
+                    $attributes = array_merge([
+                        'name' => $data['name'],
+                        'branch_id' => $branchId,
+                        'ip_address' => $ipAddress,
+                        'port' => $data['port'] ?? null,
+                        'table_id' => $data['table_id'] ?? null,
+                        'is_active' => true,
+                    ], DeviceSecurityCode::attributesFor($plainSecurityCode));
+
+                    if ($deviceWithIp) {
+                        if (! $deviceWithIp->trashed()) {
+                            throw new RuntimeException('ip_address_assigned');
+                        }
+
+                        $deviceWithIp->restore();
+                        $deviceWithIp->update($attributes);
+
+                        return ['device' => $deviceWithIp, 'restored' => true];
+                    }
+
+                    $device = Device::create($attributes);
+
+                    return ['device' => $device, 'restored' => false];
+                }, 3);
+
+                $device = $result['device'];
+                \Log::info('Device stored successfully', ['device_id' => $device->id, 'restored' => $result['restored']]);
+
+                break;
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'security_code_assigned') {
+                    \Log::warning('Security code already exists, rejecting device creation');
+
+                    if ($isGeneratedCode) {
+                        continue;
+                    }
+
+                    return back()
+                        ->withInput()
+                        ->withErrors([
+                            'security_code' => 'This security code is already assigned to another device.'
+                        ]);
+                }
+
+                if ($e->getMessage() === 'ip_address_assigned') {
+                    return back()
+                        ->withInput()
+                        ->withErrors([
+                            'ip_address' => 'This IP is already assigned to an active device.',
+                        ]);
+                }
+
+                if ($e->getMessage() === 'name_assigned') {
+                    return back()
+                        ->withInput()
+                        ->withErrors([
+                            'name' => 'This device name is already assigned.',
+                        ]);
+                }
+
+                throw $e;
+            } catch (QueryException $e) {
+                if ($this->isUniqueConstraintViolation($e)) {
+                    if ($isGeneratedCode) {
+                        continue;
+                    }
+
+                    return back()
+                        ->withInput()
+                        ->withErrors([
+                            'ip_address' => 'A device with this IP, name, or security code already exists.',
+                        ]);
+                }
+
+                throw $e;
+            }
+        }
+
+        if ($result === null) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'security_code' => 'Unable to generate a unique security code. Please try again.',
+                ]);
+        }
+
+        try {
+            if ($result['restored']) {
+                return redirect()
+                    ->route('devices.index')
+                    ->with('success', 'Deactivated device reactivated.')
+                    ->with('security_code_reveal', $plainSecurityCode);
+            }
         } catch (RuntimeException $e) {
             \Log::error('RuntimeException caught during device creation', ['message' => $e->getMessage()]);
 
@@ -165,10 +266,7 @@ class DeviceController extends Controller
 
     private function securityCodeExists(string $plainSecurityCode): bool
     {
-        return Device::query()
-            ->whereNotNull('security_code')
-            ->get(['id', 'security_code'])
-            ->contains(fn (Device $device) => Hash::check($plainSecurityCode, (string) $device->security_code));
+        return DeviceSecurityCode::isAssigned($plainSecurityCode);
     }
 
     private function generateUniqueSecurityCode(int $maxAttempts = 20): string
@@ -209,6 +307,14 @@ class DeviceController extends Controller
         return null;
     }
 
+    private function isUniqueConstraintViolation(QueryException $e): bool
+    {
+        $sqlState = (string) ($e->errorInfo[0] ?? '');
+        $driverCode = (string) ($e->errorInfo[1] ?? '');
+
+        return $sqlState === '23000' || $driverCode === '1062' || $driverCode === '19';
+    }
+
     /**
      * Show the form for editing the specified device.
      */
@@ -239,9 +345,23 @@ class DeviceController extends Controller
 
         $data = $request->validated();
 
+        $ipAddress = $data['ip_address'];
+        $conflictingTrashedDevice = Device::onlyTrashed()
+            ->where('ip_address', $ipAddress)
+            ->where('id', '!=', $device->id)
+            ->first();
+
+        if ($conflictingTrashedDevice) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'ip_address' => 'This IP belongs to a deactivated device. Reactivate that device instead of reassigning the IP.',
+                ]);
+        }
+
         $device->update([
             'name' => $data['name'],
-            'ip_address' => $data['ip_address'],
+            'ip_address' => $ipAddress,
             'port' => $data['port'] ?? null,
             'table_id' => $data['table_id'] ?? null,
         ]);

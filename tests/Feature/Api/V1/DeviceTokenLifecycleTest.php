@@ -7,7 +7,6 @@ namespace Tests\Feature\Api\V1;
 use App\Models\Branch;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
@@ -19,6 +18,7 @@ class DeviceTokenLifecycleTest extends TestCase
     {
         parent::setUp();
         Branch::create(['name' => 'Test Branch', 'location' => 'Test Location']);
+        config()->set('device.auth_passcode', '123456');
     }
 
     /**
@@ -28,13 +28,14 @@ class DeviceTokenLifecycleTest extends TestCase
     public function test_register_issues_token_with_30_day_expiry(): void
     {
         $device = Device::factory()->create([
-            'security_code' => Hash::make('123456'),
             'is_active'     => true,
+            'ip_address'    => '192.168.100.160',
         ]);
 
         $response = $this->postJson('/api/devices/register', [
             'name'          => 'Test Tablet',
-            'security_code' => '123456',
+            'passcode'      => '123456',
+            'ip_address'    => '192.168.100.160',
         ]);
 
         $response->assertStatus(200)
@@ -62,8 +63,8 @@ class DeviceTokenLifecycleTest extends TestCase
     public function test_register_purges_expired_tokens_on_reregister(): void
     {
         $device = Device::factory()->create([
-            'security_code' => Hash::make('123456'),
             'is_active'     => true,
+            'ip_address'    => '192.168.100.161',
         ]);
 
         // Seed an already-expired token
@@ -74,7 +75,8 @@ class DeviceTokenLifecycleTest extends TestCase
         // Re-register
         $response = $this->postJson('/api/devices/register', [
             'name'          => 'Test Tablet',
-            'security_code' => '123456',
+            'passcode'      => '123456',
+            'ip_address'    => '192.168.100.161',
         ]);
 
         $response->assertStatus(200);
@@ -157,5 +159,32 @@ class DeviceTokenLifecycleTest extends TestCase
         $newPlain = $response->json('token');
         $this->assertNotEmpty($newPlain);
         $this->assertNotEquals($plainToken, $newPlain, 'Refreshed token should differ from old token');
+    }
+
+    public function test_login_requires_valid_global_passcode_and_existing_ip_match(): void
+    {
+        $device = Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.162',
+        ]);
+
+        $response = $this->getJson('/api/devices/login?ip_address=192.168.100.162&passcode=123456');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('device.id', $device->id);
+    }
+
+    public function test_login_rejects_invalid_global_passcode(): void
+    {
+        Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.163',
+        ]);
+
+        $response = $this->getJson('/api/devices/login?ip_address=192.168.100.163&passcode=999999');
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'Invalid passcode');
     }
 }
