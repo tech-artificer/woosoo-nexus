@@ -22,9 +22,9 @@ class DeviceRegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            // Primary contract: passcode (global shared passcode from config)
-            // Legacy aliases: security_code and code (same format — any one is sufficient)
+            'name' => ['nullable', 'string', 'max:255'],
+            // Primary contract: security_code. passcode/code are accepted as
+            // short-lived aliases for older tablet bundles.
             'passcode'      => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without_all:security_code,code'],
             'security_code' => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without_all:passcode,code'],
             'code'          => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without_all:passcode,security_code'],
@@ -41,12 +41,11 @@ class DeviceRegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'passcode.required'      => 'A passcode is required.',
-            'passcode.regex'         => 'The passcode must be a 6-digit numeric code.',
+            'passcode.required'      => 'A security code is required.',
+            'passcode.regex'         => 'The security code must be a 6-digit numeric code.',
             'security_code.required' => 'The security code is required.',
             'security_code.regex'    => 'The security code must be a 6-digit numeric code.',
-            'code.regex'             => 'The code alias must be a 6-digit numeric code.',
-            'name.required'          => 'Device name is required.',
+            'code.regex'             => 'The security code must be a 6-digit numeric code.',
         ];
     }
 }

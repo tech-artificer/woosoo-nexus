@@ -8,6 +8,7 @@ use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Device;
 use App\Models\Branch;
+use App\Support\DeviceSecurityCode;
 
 class DeviceAuthRegisterTest extends TestCase
 {
@@ -23,17 +24,22 @@ class DeviceAuthRegisterTest extends TestCase
             'location' => 'Test Location',
         ]);
 
-        config()->set('device.auth_passcode', '123456');
     }
 
-    public function test_register_with_valid_global_passcode_creates_device_for_new_ip_and_returns_token(): void
+    public function test_register_claims_precreated_device_by_security_code_and_updates_ip_metadata(): void
     {
-        $incomingIp = '192.168.100.150';
+        $device = Device::create(array_merge([
+            'name' => 'Table 7 Tablet',
+            'type' => 'tablet',
+            'device_uuid' => 'uuid-claim-001',
+            'ip_address' => '192.168.100.10',
+            'is_active' => true,
+        ], DeviceSecurityCode::attributesFor('123456')));
+
         $response = $this->postJson('/api/devices/register', [
-            'name' => 'Test Tablet',
-            'passcode' => '123456',
+            'security_code' => '123456',
             'app_version' => '1.0.0',
-            'ip_address' => $incomingIp,
+            'ip_address' => '192.168.100.150',
         ]);
 
         $response->assertStatus(200);
@@ -41,68 +47,54 @@ class DeviceAuthRegisterTest extends TestCase
         $this->assertTrue($json['success']);
         $this->assertArrayHasKey('token', $json);
         $this->assertNotEmpty($json['token']);
-
-        $this->assertCount(1, Device::all());
-        $updatedDevice = Device::query()->first();
-        $this->assertNotNull($updatedDevice);
-        $this->assertSame('Test Tablet', $updatedDevice->name);
-        $this->assertSame('tablet', $updatedDevice->type);
-        $this->assertEquals($json['ip_used'], $updatedDevice->ip_address);
-        $this->assertNotNull($updatedDevice->last_seen_at);
-    }
-
-    public function test_register_with_valid_global_passcode_reuses_existing_device_by_ip(): void
-    {
-        $device = Device::create([
-            'name' => 'Existing Tablet',
-            'type' => 'tablet',
-            'device_uuid' => 'uuid-001',
-            'ip_address' => '192.168.100.151',
-            'is_active' => true,
-        ]);
-
-        $response = $this->postJson('/api/devices/register', [
-            'name' => 'Existing Tablet',
-            'passcode' => '123456',
-            'app_version' => '1.0.0',
-            'ip_address' => '192.168.100.151',
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJsonPath('success', true);
+        $this->assertSame($device->id, $json['device']['id']);
+        $this->assertSame('192.168.100.150', $json['ip_used']);
 
         $this->assertCount(1, Device::all());
         $updatedDevice = Device::find($device->id);
         $this->assertNotNull($updatedDevice);
+        $this->assertSame('Table 7 Tablet', $updatedDevice->name);
+        $this->assertSame('tablet', $updatedDevice->type);
+        $this->assertSame('192.168.100.150', $updatedDevice->ip_address);
+        $this->assertSame('192.168.100.150', $updatedDevice->last_ip_address);
         $this->assertNotNull($updatedDevice->last_seen_at);
+        $this->assertNull($updatedDevice->security_code);
+        $this->assertNull($updatedDevice->security_code_lookup);
     }
 
-    public function test_register_rejects_invalid_global_passcode(): void
+    public function test_register_rejects_unknown_security_code_without_creating_device(): void
     {
         $response = $this->postJson('/api/devices/register', [
-            'name' => 'New Tablet',
-            'passcode' => '654321',
+            'security_code' => '654321',
             'app_version' => '1.0.0',
         ]);
 
         $response->assertStatus(422);
         $json = $response->json();
         $this->assertFalse($json['success'] ?? true);
-        $this->assertStringContainsString('Invalid passcode', $json['message'] ?? '');
+        $this->assertStringContainsString('Invalid security code', $json['message'] ?? '');
         $this->assertCount(0, Device::all());
     }
 
-    public function test_legacy_security_code_alias_maps_to_global_passcode(): void
+    public function test_register_accepts_passcode_field_as_setup_code_alias(): void
     {
-        $response = $this->postJson('/api/devices/register', [
+        $device = Device::create(array_merge([
             'name' => 'Alias Tablet',
-            'security_code' => '123456',
+            'type' => 'tablet',
+            'device_uuid' => 'uuid-alias-001',
+            'ip_address' => '192.168.100.151',
+            'is_active' => true,
+        ], DeviceSecurityCode::attributesFor('123456')));
+
+        $response = $this->postJson('/api/devices/register', [
+            'passcode' => '123456',
             'app_version' => '1.0.0',
             'ip_address' => '192.168.100.152',
         ]);
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
+        $response->assertJsonPath('device.id', $device->id);
         $this->assertArrayHasKey('token', $response->json());
     }
 
@@ -127,27 +119,30 @@ class DeviceAuthRegisterTest extends TestCase
         $response->assertStatus(422);
     }
 
-    public function test_register_uses_ip_address_and_updates_last_seen(): void
+    public function test_register_supports_legacy_hashed_security_code_without_lookup_hash(): void
     {
         $device = Device::create([
-            'name' => 'Old Device',
+            'name' => 'Legacy Code Tablet',
             'type' => 'tablet',
-            'device_uuid' => 'uuid-old',
+            'device_uuid' => 'uuid-legacy-code',
             'is_active' => true,
             'ip_address' => '10.0.0.1',
+            'security_code' => \Illuminate\Support\Facades\Hash::make('123456'),
             'last_seen_at' => now()->subHours(5),
         ]);
 
         $response = $this->postJson('/api/devices/register', [
-            'name' => 'Old Device',
-            'passcode' => '123456',
+            'security_code' => '123456',
             'app_version' => '1.0.0',
-            'ip_address' => '10.0.0.1',
+            'ip_address' => '10.0.0.2',
         ]);
 
         $response->assertStatus(200);
+        $response->assertJsonPath('device.id', $device->id);
+
         $updatedDevice = Device::find($device->id);
-        $this->assertSame('10.0.0.1', $updatedDevice?->ip_address);
+        $this->assertSame('10.0.0.2', $updatedDevice?->ip_address);
+        $this->assertNull($updatedDevice?->security_code);
         $this->assertNotNull($updatedDevice?->last_seen_at);
     }
 }

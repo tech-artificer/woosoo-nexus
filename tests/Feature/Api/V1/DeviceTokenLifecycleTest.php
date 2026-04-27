@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use App\Support\DeviceSecurityCode;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
@@ -19,7 +20,6 @@ class DeviceTokenLifecycleTest extends TestCase
     {
         parent::setUp();
         Branch::create(['name' => 'Test Branch', 'location' => 'Test Location']);
-        config()->set('device.auth_passcode', '123456');
     }
 
     /**
@@ -32,10 +32,10 @@ class DeviceTokenLifecycleTest extends TestCase
             'is_active'     => true,
             'ip_address'    => '192.168.100.160',
         ]);
+        $device->update(DeviceSecurityCode::attributesFor('123456'));
 
         $response = $this->postJson('/api/devices/register', [
-            'name'          => 'Test Tablet',
-            'passcode'      => '123456',
+            'security_code' => '123456',
             'ip_address'    => '192.168.100.160',
         ]);
 
@@ -67,6 +67,7 @@ class DeviceTokenLifecycleTest extends TestCase
             'is_active'     => true,
             'ip_address'    => '192.168.100.161',
         ]);
+        $device->update(DeviceSecurityCode::attributesFor('123456'));
 
         // Seed an already-expired token
         $device->createToken('old-expired', expiresAt: now()->subDay());
@@ -75,8 +76,7 @@ class DeviceTokenLifecycleTest extends TestCase
 
         // Re-register
         $response = $this->postJson('/api/devices/register', [
-            'name'          => 'Test Tablet',
-            'passcode'      => '123456',
+            'security_code' => '123456',
             'ip_address'    => '192.168.100.161',
         ]);
 
@@ -162,21 +162,29 @@ class DeviceTokenLifecycleTest extends TestCase
         $this->assertNotEquals($plainToken, $newPlain, 'Refreshed token should differ from old token');
     }
 
-    public function test_login_requires_valid_global_passcode_and_existing_ip_match(): void
+    public function test_claimed_tablet_can_login_by_trusted_ip_without_setup_code(): void
     {
+        config()->set('device.allow_client_supplied_ip', true);
+        config()->set('device.allowed_private_subnets', '192.168.100.0/24');
+
         $device = Device::factory()->create([
             'is_active' => true,
             'ip_address' => '192.168.100.162',
+            'security_code' => null,
+            'security_code_lookup' => null,
         ]);
 
-        $response = $this->getJson('/api/devices/login?ip_address=192.168.100.162&passcode=123456');
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '127.0.0.1',
+        ])->getJson('/api/devices/login?ip_address=192.168.100.162');
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
-            ->assertJsonPath('device.id', $device->id);
+            ->assertJsonPath('device.id', $device->id)
+            ->assertJsonPath('ip_used', '192.168.100.162');
     }
 
-    public function test_preregistered_tablet_can_login_by_trusted_ip_without_passcode(): void
+    public function test_unclaimed_tablet_cannot_login_by_trusted_ip_without_setup_code(): void
     {
         config()->set('device.allow_client_supplied_ip', true);
         config()->set('device.allowed_private_subnets', '192.168.100.0/24');
@@ -185,6 +193,7 @@ class DeviceTokenLifecycleTest extends TestCase
             'is_active' => true,
             'ip_address' => '192.168.100.164',
             'security_code' => Hash::make('123456'),
+            'security_code_lookup' => DeviceSecurityCode::lookupHash('123456'),
             'security_code_generated_at' => now(),
         ]);
 
@@ -192,10 +201,10 @@ class DeviceTokenLifecycleTest extends TestCase
             'REMOTE_ADDR' => '127.0.0.1',
         ])->getJson('/api/devices/login?ip_address=192.168.100.164');
 
-        $response->assertStatus(200)
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('device.id', $device->id)
-            ->assertJsonPath('ip_used', '192.168.100.164');
+        $response->assertStatus(403)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('error', 'Device not yet registered with security code')
+            ->assertJsonPath('device_id', $device->id);
     }
 
     public function test_login_rejects_invalid_global_passcode(): void

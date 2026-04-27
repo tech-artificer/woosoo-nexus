@@ -7,9 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DeviceRegisterRequest;
 use App\Models\Device;
 use App\Services\AuditLogService;
+use App\Support\DeviceSecurityCode;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
@@ -114,114 +116,80 @@ class DeviceAuthApiController extends Controller
     }
 
     /**
-     * Register a device.
+     * Register a device by claiming a pre-created setup code.
      *
-     * Global passcode registration flow.
-     *
-     * The caller provides a shared passcode from config('device.auth_passcode').
-     * On success the device is created (new IP) or reused (existing IP).
+     * The setup code is the first-use identity gate. IP address is recorded as
+     * mutable operational metadata and must not decide which device is claimed.
      */
     public function register(DeviceRegisterRequest $request)
     {
         $validated = $request->validated();
 
-        // Accept passcode, or legacy aliases security_code / code.
-        $passcode = $validated['passcode'] ?? ($validated['security_code'] ?? ($validated['code'] ?? null));
-
-        // In passcode-authenticated flows the client-supplied ip_address is the
-        // device identity, so trust it directly and fall back to request IP.
+        // Accept security_code, or legacy aliases passcode / code.
+        $securityCode = $validated['security_code'] ?? ($validated['passcode'] ?? ($validated['code'] ?? null));
         $ipToUse = $this->resolveClientSuppliedIp($request) ?: $request->ip();
 
-        $configuredPasscode = config('device.auth_passcode');
-        if (! $configuredPasscode || $passcode !== $configuredPasscode) {
+        if (! $securityCode) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid passcode',
+                'message' => 'Security code is required',
                 'ip_used' => $ipToUse,
                 'broadcasting' => BroadcastConfig::clientPayload(),
             ], 422);
         }
 
-        for ($attempt = 0; $attempt < 2; $attempt++) {
-            try {
-                $registration = DB::transaction(function () use ($validated, $ipToUse): array {
-                    /** @var Device|null $device */
-                    $device = Device::withTrashed()
-                        ->where('ip_address', $ipToUse)
-                        ->lockForUpdate()
-                        ->first();
+        try {
+            $registration = DB::transaction(function () use ($securityCode, $ipToUse): array {
+                $device = $this->findDeviceForSecurityCode((string) $securityCode);
 
-                    if ($device && ($device->trashed() || ! $device->is_active)) {
-                        return [
-                            'status' => 409,
-                            'payload' => [
-                                'success' => false,
-                                'message' => 'Device IP is registered but inactive. Reactivate it before registering.',
-                                'ip_used' => $ipToUse,
-                                'broadcasting' => BroadcastConfig::clientPayload(),
-                            ],
-                        ];
-                    }
-
-                    if (! $device) {
-                        $nameConflict = Device::withTrashed()
-                            ->where('name', $validated['name'])
-                            ->lockForUpdate()
-                            ->first();
-
-                        if ($nameConflict) {
-                            return [
-                                'status' => 409,
-                                'payload' => [
-                                    'success' => false,
-                                    'message' => 'Device name is already registered.',
-                                    'ip_used' => $ipToUse,
-                                    'broadcasting' => BroadcastConfig::clientPayload(),
-                                ],
-                            ];
-                        }
-
-                        $device = Device::create([
-                            'name' => $validated['name'],
-                            'type' => 'tablet',
-                            'ip_address' => $ipToUse,
-                            'is_active' => true,
-                            'last_seen_at' => now(),
-                        ]);
-                    }
-
-                    $device->update([
-                        'ip_address' => $ipToUse,
-                        'last_ip_address' => $ipToUse,
-                        'last_seen_at' => now(),
-                    ]);
-
-                    $device->tokens()->where('expires_at', '<', now())->delete();
-
-                    $token = $device->createToken(
-                        name: 'device-auth',
-                        expiresAt: now()->addDays(30)
-                    )->plainTextToken;
-
+                if (! $device) {
                     return [
-                        'status' => 200,
-                        'device_id' => $device->id,
-                        'token' => $token,
+                        'status' => 422,
+                        'payload' => [
+                            'success' => false,
+                            'message' => 'Invalid security code',
+                            'ip_used' => $ipToUse,
+                            'broadcasting' => BroadcastConfig::clientPayload(),
+                        ],
                     ];
-                }, 3);
-
-                if (($registration['status'] ?? 200) !== 200) {
-                    return response()->json($registration['payload'], $registration['status']);
                 }
 
-                $device = Device::findOrFail($registration['device_id']);
-                $token = $registration['token'];
-                break;
-            } catch (QueryException $e) {
-                if ($attempt === 0 && $this->isUniqueConstraintViolation($e)) {
-                    continue;
+                if ($device->trashed() || ! $device->is_active) {
+                    return [
+                        'status' => 409,
+                        'payload' => [
+                            'success' => false,
+                            'message' => 'Device is registered but inactive. Reactivate it before registering.',
+                            'ip_used' => $ipToUse,
+                            'broadcasting' => BroadcastConfig::clientPayload(),
+                        ],
+                    ];
                 }
 
+                $device->update([
+                    'ip_address' => $ipToUse,
+                    'last_ip_address' => $ipToUse,
+                    'last_seen_at' => now(),
+                    'security_code' => null,
+                    'security_code_lookup' => null,
+                    'security_code_generated_at' => null,
+                ]);
+
+                $device->tokens()->where('expires_at', '<', now())->delete();
+
+                $token = $device->createToken(
+                    name: 'device-auth',
+                    expiresAt: now()->addDays(30)
+                )->plainTextToken;
+
+                return [
+                    'status' => 200,
+                    'device_id' => $device->id,
+                    'token' => $token,
+                ];
+            }, 3);
+        } catch (QueryException $e) {
+            if ($this->isUniqueConstraintViolation($e)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Device registration conflicts with an existing device.',
@@ -229,7 +197,16 @@ class DeviceAuthApiController extends Controller
                     'broadcasting' => BroadcastConfig::clientPayload(),
                 ], 409);
             }
+
+            throw $e;
         }
+
+        if (($registration['status'] ?? 200) !== 200) {
+            return response()->json($registration['payload'], $registration['status']);
+        }
+
+        $device = Device::findOrFail($registration['device_id']);
+        $token = $registration['token'];
 
         AuditLogService::deviceRegistered($request, $device->id);
 
@@ -247,10 +224,8 @@ class DeviceAuthApiController extends Controller
     /**
      * Login a device.
      *
-     * When a passcode is supplied it is validated against config('device.auth_passcode')
-     * and the client-supplied ip_address is used as the device identity directly.
-     * When no passcode is supplied the legacy IP-trust path is preserved for
-     * backward compatibility with tablets not yet sending the passcode field.
+     * IP login is a fallback for already-claimed devices only. It must not
+     * bypass first-use security-code registration.
      */
     public function authenticate(Request $request)
     {
@@ -287,6 +262,17 @@ class DeviceAuthApiController extends Controller
                 'error' => 'Device not found',
                 'ip_address' => $ip,
             ], 404);
+        }
+
+        if ($device->security_code !== null || $device->security_code_lookup !== null) {
+            AuditLogService::authFailed($request, 'device_not_registered');
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Device not yet registered with security code',
+                'device_id' => $device->id,
+                'ip_address' => $ip,
+            ], 403);
         }
 
         $device->update([
@@ -391,6 +377,13 @@ class DeviceAuthApiController extends Controller
                 return null;
             }
 
+            if ($device->security_code !== null || $device->security_code_lookup !== null) {
+                return [
+                    'unclaimed' => true,
+                    'device_id' => (string) $device->id,
+                ];
+            }
+
             $device->update([
                 'last_seen_at' => now(),
                 'last_ip_address' => $ip,
@@ -412,6 +405,16 @@ class DeviceAuthApiController extends Controller
         if (! $lookup) {
             return response()->json([
                 'found' => false,
+                'ip_used' => $ip,
+                'broadcasting' => BroadcastConfig::clientPayload(),
+            ], 200);
+        }
+
+        if (($lookup['unclaimed'] ?? false) === true) {
+            return response()->json([
+                'found' => false,
+                'error' => 'Device not yet registered with security code',
+                'device_id' => $lookup['device_id'],
                 'ip_used' => $ip,
                 'broadcasting' => BroadcastConfig::clientPayload(),
             ], 200);
@@ -474,5 +477,26 @@ class DeviceAuthApiController extends Controller
         $driverCode = (string) ($e->errorInfo[1] ?? '');
 
         return $sqlState === '23000' || $driverCode === '1062' || $driverCode === '19';
+    }
+
+    private function findDeviceForSecurityCode(string $securityCode): ?Device
+    {
+        $lookupHash = DeviceSecurityCode::lookupHash($securityCode);
+
+        $device = Device::withTrashed()
+            ->where('security_code_lookup', $lookupHash)
+            ->lockForUpdate()
+            ->first();
+
+        if ($device) {
+            return $device;
+        }
+
+        return Device::withTrashed()
+            ->whereNotNull('security_code')
+            ->whereNull('security_code_lookup')
+            ->lockForUpdate()
+            ->get()
+            ->first(fn (Device $candidate): bool => Hash::check($securityCode, (string) $candidate->security_code));
     }
 }
