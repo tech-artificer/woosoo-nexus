@@ -7,6 +7,7 @@ namespace Tests\Feature\Api\V1;
 use App\Models\Branch;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
@@ -173,6 +174,28 @@ class DeviceTokenLifecycleTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
             ->assertJsonPath('device.id', $device->id);
+    }
+
+    public function test_preregistered_tablet_can_login_by_trusted_ip_without_passcode(): void
+    {
+        config()->set('device.allow_client_supplied_ip', true);
+        config()->set('device.allowed_private_subnets', '192.168.100.0/24');
+
+        $device = Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.164',
+            'security_code' => Hash::make('123456'),
+            'security_code_generated_at' => now(),
+        ]);
+
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '127.0.0.1',
+        ])->getJson('/api/devices/login?ip_address=192.168.100.164');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('device.id', $device->id)
+            ->assertJsonPath('ip_used', '192.168.100.164');
     }
 
     public function test_login_rejects_invalid_global_passcode(): void

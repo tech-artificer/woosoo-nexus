@@ -289,17 +289,6 @@ class DeviceAuthApiController extends Controller
             ], 404);
         }
 
-        // Reject IP-only auth for unclaimed devices.
-        if ($device->security_code !== null) {
-            AuditLogService::authFailed($request, 'device_not_yet_registered');
-
-            return response()->json([
-                'success' => false,
-                'error' => 'Device not yet registered. Use the security code to register first.',
-                'ip_address' => $ip,
-            ], 403);
-        }
-
         $device->update([
             'last_seen_at' => now(),
             'last_ip_address' => $ip,
