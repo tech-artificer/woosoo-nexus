@@ -125,8 +125,8 @@ class DeviceAuthApiController extends Controller
     {
         $validated = $request->validated();
 
-        // Accept security_code, or legacy aliases passcode / code.
-        $securityCode = $validated['security_code'] ?? ($validated['passcode'] ?? ($validated['code'] ?? null));
+        // Accept security_code, or legacy alias passcode. `code` alias removed.
+        $securityCode = $validated['security_code'] ?? ($validated['passcode'] ?? null);
         $ipToUse = $this->resolveClientSuppliedIp($request) ?: $request->ip();
 
         if (! $securityCode) {
