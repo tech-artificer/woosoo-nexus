@@ -2,6 +2,25 @@
 
 use App\Support\PublicOrigin;
 
+$rawAllowedOrigins = explode(',', env('REVERB_ALLOWED_ORIGINS', implode(',', PublicOrigin::websocketAllowedOriginHosts())));
+
+$allowedOriginHosts = array_values(array_unique(array_filter(array_map(
+    static function (string $origin): string {
+        $origin = trim($origin);
+
+        if ($origin === '' || $origin === '*') {
+            return $origin;
+        }
+
+        if (str_contains($origin, '://')) {
+            return (string) (parse_url($origin, PHP_URL_HOST) ?: '');
+        }
+
+        return preg_replace('/:\\d+$/', '', $origin) ?: '';
+    },
+    $rawAllowedOrigins
+))));
+
 return [
 
     /*
@@ -87,9 +106,7 @@ return [
                     'scheme' => env('REVERB_SCHEME', PublicOrigin::scheme()),
                     'useTLS' => env('REVERB_SCHEME', PublicOrigin::scheme()) === 'https',
                 ],
-                'allowed_origins' => array_filter(
-                    explode(',', env('REVERB_ALLOWED_ORIGINS', implode(',', PublicOrigin::corsOrigins())))
-                ),
+                'allowed_origins' => $allowedOriginHosts,
                 'capacity' => null,
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),

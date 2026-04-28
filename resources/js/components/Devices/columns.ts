@@ -19,10 +19,29 @@ export const columns: ColumnDef<Device, any>[] = [
   {
     accessorKey: 'name',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Name', class: 'w-[100px]' }),
+    filterFn: (row, columnId, filterValue) => {
+      const query = String(filterValue ?? '').trim().toLowerCase()
+      if (!query) return true
+
+      const name = String(row.getValue(columnId) ?? '').toLowerCase()
+      const ipAddress = String(row.original.ip_address ?? '').toLowerCase()
+
+      return name.includes(query) || ipAddress.includes(query)
+    },
 
     cell: ({ row }) => {
+      const isDeactivated = Boolean(row.original.deleted_at)
       return h('div', { class: 'flex space-x-2' }, [
         h('span', { class: ' font-medium capitalize' }, row.getValue('name')),
+        isDeactivated
+          ? h(
+              'span',
+              {
+                class: 'inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800',
+              },
+              'Deactivated'
+            )
+          : null,
       ])
     },
   },

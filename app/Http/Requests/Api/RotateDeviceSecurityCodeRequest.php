@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,15 +16,13 @@ class RotateDeviceSecurityCodeRequest extends FormRequest
 
     public function rules(): array
     {
-        $deviceId = $this->route('device')?->id;
-
         return [
             'security_code' => [
                 'required',
                 'string',
                 'regex:/^\d{6}$/',
-                // Unique except for this device's own ID (in case of retry)
-                "unique:devices,security_code,{$deviceId}",
+                // Codes are stored hashed, so SQL unique checks cannot validate duplicates.
+                // Controller-level hash checks enforce uniqueness.
             ],
         ];
     }

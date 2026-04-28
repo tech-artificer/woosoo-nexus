@@ -9,9 +9,11 @@ use App\Models\DeviceHeartbeat;
 use App\Services\LocalBranchResolver;
 use App\Http\Requests\Api\StoreDeviceApiRequest;
 use App\Http\Requests\Api\RotateDeviceSecurityCodeRequest;
+use App\Support\DeviceSecurityCode;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class DeviceApiController extends Controller
 {
@@ -160,28 +162,43 @@ class DeviceApiController extends Controller
             return response()->json(['message' => 'No branch found.'], 422);
         }
 
-        // Check for existing device with this security code (Batch 2: Uniqueness Enforcement)
-        // Since codes are stored as hashes, check against each existing device
         $plainCode = $data['security_code'];
-        if (Device::get()->contains(function ($device) use ($plainCode) {
-            return Hash::check($plainCode, $device->security_code ?? '');
-        })) {
+
+        try {
+            $device = DB::transaction(function () use ($data, $branch, $plainCode): Device {
+                if (DeviceSecurityCode::isAssigned($plainCode)) {
+                    throw new \RuntimeException('security_code_assigned');
+                }
+
+                return Device::create(array_merge([
+                    'name'                       => $data['name'],
+                    'type'                       => $data['type'],
+                    'branch_id'                  => $branch->id,
+                    'ip_address'                 => $data['ip_address'] ?? null,
+                    'is_active'                  => true,
+                ], DeviceSecurityCode::attributesFor($plainCode)));
+            }, 3);
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() !== 'security_code_assigned') {
+                throw $e;
+            }
+
             return response()->json([
                 'message' => 'Security code already assigned to another device',
                 'errors' => ['security_code' => 'This code is in use']
             ], 409);
+        } catch (QueryException $e) {
+            if (! $this->isUniqueConstraintViolation($e)) {
+                throw $e;
+            }
+
+            return response()->json([
+                'message' => 'Device conflicts with an existing record',
+                'errors' => ['device' => 'A device with this IP, name, or security code already exists']
+            ], 409);
         }
 
-        $plain  = $data['security_code'];
-        $device = Device::create([
-            'name'                       => $data['name'],
-            'type'                       => $data['type'],
-            'branch_id'                  => $branch->id,
-            'ip_address'                 => $data['ip_address'] ?? null,
-            'security_code'              => Hash::make($plain),
-            'security_code_generated_at' => now(),
-            'is_active'                  => true,
-        ]);
+        $plain = $plainCode;
 
         return response()->json([
             'device'        => $this->formatDevice($device),
@@ -254,13 +271,38 @@ class DeviceApiController extends Controller
     {
         $this->authorize('update', $device);
 
-        $plain = (string) random_int(100000, 999999);
-        $device->update([
-            'security_code'              => Hash::make($plain),
-            'security_code_generated_at' => now(),
-        ]);
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $plain = (string) random_int(100000, 999999);
 
-        return response()->json(['security_code' => $plain]);
+            try {
+                DB::transaction(function () use ($device, $plain): void {
+                    if (DeviceSecurityCode::isAssigned($plain, (int) $device->id)) {
+                        throw new \RuntimeException('security_code_assigned');
+                    }
+
+                    Device::whereKey($device->id)
+                        ->lockForUpdate()
+                        ->firstOrFail()
+                        ->update(DeviceSecurityCode::attributesFor($plain));
+                }, 3);
+
+                return response()->json(['security_code' => $plain]);
+            } catch (\RuntimeException $e) {
+                if ($e->getMessage() === 'security_code_assigned') {
+                    continue;
+                }
+
+                throw $e;
+            } catch (QueryException $e) {
+                if ($this->isUniqueConstraintViolation($e)) {
+                    continue;
+                }
+
+                throw $e;
+            }
+        }
+
+        return response()->json(['message' => 'Unable to generate a unique security code.'], 409);
     }
 
     /**
@@ -290,27 +332,39 @@ class DeviceApiController extends Controller
         $data = $request->validated();
         $newCode = $data['security_code'];
 
-        // Check if another device already has this code
-        // Allow the device to keep its own code (in case of retry)
-        if (Device::where('id', '!=', $device->id)
-                  ->get()
-                  ->contains(function ($otherDevice) use ($newCode) {
-                      return Hash::check($newCode, $otherDevice->security_code ?? '');
-                  })) {
+        try {
+            DB::transaction(function () use ($device, $newCode): void {
+                if (DeviceSecurityCode::isAssigned($newCode, (int) $device->id)) {
+                    throw new \RuntimeException('security_code_assigned');
+                }
+
+                Device::whereKey($device->id)
+                    ->lockForUpdate()
+                    ->firstOrFail()
+                    ->update(DeviceSecurityCode::attributesFor($newCode));
+            }, 3);
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() !== 'security_code_assigned') {
+                throw $e;
+            }
+
+            return response()->json([
+                'message' => 'Security code already assigned to another device',
+                'errors' => ['security_code' => 'This code is in use']
+            ], 409);
+        } catch (QueryException $e) {
+            if (! $this->isUniqueConstraintViolation($e)) {
+                throw $e;
+            }
+
             return response()->json([
                 'message' => 'Security code already assigned to another device',
                 'errors' => ['security_code' => 'This code is in use']
             ], 409);
         }
 
-        // Update device with new code
-        $device->update([
-            'security_code' => Hash::make($newCode),
-            'security_code_generated_at' => now(),
-        ]);
-
         return response()->json([
-            'data' => $this->formatDevice($device),
+            'data' => $this->formatDevice($device->fresh()),
             'message' => 'Security code rotated successfully'
         ], 200);
     }
@@ -353,5 +407,13 @@ class DeviceApiController extends Controller
         }
 
         return $out;
+    }
+
+    private function isUniqueConstraintViolation(QueryException $e): bool
+    {
+        $sqlState = (string) ($e->errorInfo[0] ?? '');
+        $driverCode = (string) ($e->errorInfo[1] ?? '');
+
+        return $sqlState === '23000' || $driverCode === '1062' || $driverCode === '19';
     }
 }

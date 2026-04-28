@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Api;
 
 use App\Models\Device;
@@ -18,7 +20,9 @@ class StoreDeviceApiRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', 'string', Rule::in(['tablet', 'relay_printer', 'print_bridge', 'direct_printer'])],
-            'security_code' => ['required', 'string', 'regex:/^\d{6}$/', 'unique:devices,security_code'],
+            // Codes are stored hashed, so SQL unique checks cannot validate duplicates.
+            // Controller-level hash checks enforce uniqueness.
+            'security_code' => ['required', 'string', 'regex:/^\d{6}$/'],
             'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')],
             'ip_address' => ['nullable', 'ip'],
         ];

@@ -49,6 +49,38 @@ final class PublicOrigin
     /**
      * @return array<int, string>
      */
+    public static function websocketOrigins(): array
+    {
+        $host = self::host();
+        $https = self::httpsPort();
+        $http = self::httpPort();
+
+        return array_values(array_unique(array_filter([
+            // Canonical origins (without default ports)
+            self::origin('https', $https),
+            self::origin('http', $http),
+
+            // Explicit port variants for strict origin checks in some clients/proxies
+            sprintf('https://%s:%d', $host, $https),
+            sprintf('http://%s:%d', $host, $http),
+        ])));
+    }
+
+    /**
+     * Reverb matches WebSocket origins by host name only.
+     *
+     * @return array<int, string>
+     */
+    public static function websocketAllowedOriginHosts(): array
+    {
+        return array_values(array_unique(array_filter([
+            self::host(),
+        ])));
+    }
+
+    /**
+     * @return array<int, string>
+     */
     public static function statefulDomains(): array
     {
         $host = self::host();

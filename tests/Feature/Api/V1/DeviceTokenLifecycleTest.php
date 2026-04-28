@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use App\Support\DeviceSecurityCode;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
@@ -28,13 +29,14 @@ class DeviceTokenLifecycleTest extends TestCase
     public function test_register_issues_token_with_30_day_expiry(): void
     {
         $device = Device::factory()->create([
-            'security_code' => Hash::make('123456'),
             'is_active'     => true,
+            'ip_address'    => '192.168.100.160',
         ]);
+        $device->update(DeviceSecurityCode::attributesFor('123456'));
 
         $response = $this->postJson('/api/devices/register', [
-            'name'          => 'Test Tablet',
             'security_code' => '123456',
+            'ip_address'    => '192.168.100.160',
         ]);
 
         $response->assertStatus(200)
@@ -62,9 +64,10 @@ class DeviceTokenLifecycleTest extends TestCase
     public function test_register_purges_expired_tokens_on_reregister(): void
     {
         $device = Device::factory()->create([
-            'security_code' => Hash::make('123456'),
             'is_active'     => true,
+            'ip_address'    => '192.168.100.161',
         ]);
+        $device->update(DeviceSecurityCode::attributesFor('123456'));
 
         // Seed an already-expired token
         $device->createToken('old-expired', expiresAt: now()->subDay());
@@ -73,8 +76,8 @@ class DeviceTokenLifecycleTest extends TestCase
 
         // Re-register
         $response = $this->postJson('/api/devices/register', [
-            'name'          => 'Test Tablet',
             'security_code' => '123456',
+            'ip_address'    => '192.168.100.161',
         ]);
 
         $response->assertStatus(200);
@@ -157,5 +160,63 @@ class DeviceTokenLifecycleTest extends TestCase
         $newPlain = $response->json('token');
         $this->assertNotEmpty($newPlain);
         $this->assertNotEquals($plainToken, $newPlain, 'Refreshed token should differ from old token');
+    }
+
+    public function test_claimed_tablet_can_login_by_trusted_ip_without_setup_code(): void
+    {
+        config()->set('device.allow_client_supplied_ip', true);
+        config()->set('device.allowed_private_subnets', '192.168.100.0/24');
+
+        $device = Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.162',
+            'security_code' => null,
+            'security_code_lookup' => null,
+        ]);
+
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '127.0.0.1',
+        ])->getJson('/api/devices/login?ip_address=192.168.100.162');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('device.id', $device->id)
+            ->assertJsonPath('ip_used', '192.168.100.162');
+    }
+
+    public function test_unclaimed_tablet_cannot_login_by_trusted_ip_without_setup_code(): void
+    {
+        config()->set('device.allow_client_supplied_ip', true);
+        config()->set('device.allowed_private_subnets', '192.168.100.0/24');
+
+        $device = Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.164',
+            'security_code' => Hash::make('123456'),
+            'security_code_lookup' => DeviceSecurityCode::lookupHash('123456'),
+            'security_code_generated_at' => now(),
+        ]);
+
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '127.0.0.1',
+        ])->getJson('/api/devices/login?ip_address=192.168.100.164');
+
+        $response->assertStatus(403)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('error', 'Device not yet registered with security code')
+            ->assertJsonPath('device_id', $device->id);
+    }
+
+    public function test_login_rejects_invalid_global_passcode(): void
+    {
+        Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.163',
+        ]);
+
+        $response = $this->getJson('/api/devices/login?ip_address=192.168.100.163&passcode=999999');
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'Invalid passcode');
     }
 }

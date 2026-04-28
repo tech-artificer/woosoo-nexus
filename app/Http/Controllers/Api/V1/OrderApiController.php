@@ -2,20 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Order\CreateOrderedMenu;
+use App\Events\Order\OrderPrinted;
+use App\Events\PrintOrder;
+use App\Events\PrintRefill;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RefillOrderRequest;
+use App\Http\Resources\DeviceOrderResource;
 use App\Models\DeviceOrder;
-use Illuminate\Http\Request;
-use App\Models\Krypton\TerminalSession;
+use App\Models\DeviceOrderItems;
+use App\Models\Krypton\Menu;
 use App\Models\Krypton\Menu as KryptonMenu;
-use App\Actions\Order\CreateOrderedMenu;
-use App\Events\PrintRefill;
-use App\Events\PrintOrder;
-use App\Events\Order\OrderPrinted;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\PrintEventService;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class OrderApiController extends Controller
@@ -33,7 +35,7 @@ class OrderApiController extends Controller
         // Optional status filter: comma-separated list of status values
         if ($statuses = $request->query('status')) {
             $statusArr = array_filter(array_map('trim', explode(',', $statuses)));
-            if (!empty($statusArr)) {
+            if (! empty($statusArr)) {
                 $query->whereIn('status', $statusArr);
             }
         }
@@ -60,7 +62,7 @@ class OrderApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => \App\Http\Resources\DeviceOrderResource::collection($paginated)->response()->getData(true),
+            'data' => DeviceOrderResource::collection($paginated)->response()->getData(true),
         ]);
     }
 
@@ -103,7 +105,7 @@ class OrderApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'order' => new \App\Http\Resources\DeviceOrderResource($order)
+            'order' => new DeviceOrderResource($order),
         ]);
     }
 
@@ -114,7 +116,7 @@ class OrderApiController extends Controller
     {
         $order = DeviceOrder::with(['items.menu', 'table', 'device'])->where(['order_id' => $orderId])->first();
         if (! $order) {
-            return response()->json([ 'success' => false, 'message' => 'Order not found' ], 404);
+            return response()->json(['success' => false, 'message' => 'Order not found'], 404);
         }
 
         $device = $request->user();
@@ -129,7 +131,7 @@ class OrderApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'order' => new \App\Http\Resources\DeviceOrderResource($order),
+            'order' => new DeviceOrderResource($order),
         ]);
     }
 
@@ -159,7 +161,7 @@ class OrderApiController extends Controller
 
     /**
      * Persist refill items and dispatch print event.
-     * 
+     *
      * Validates that items are refillable (meats/sides only).
      */
     public function refill(RefillOrderRequest $request, int $orderId)
@@ -172,9 +174,9 @@ class OrderApiController extends Controller
         if ($idempotencyKey !== '') {
             $requestDevice = $request->user();
             $requestDeviceId = $requestDevice && isset($requestDevice->id) ? (string) $requestDevice->id : 'anonymous';
-            $idempotencyScope = 'refill:' . $requestDeviceId . ':' . $orderId . ':' . sha1($idempotencyKey);
-            $processingKey = $idempotencyScope . ':processing';
-            $responseCacheKey = $idempotencyScope . ':response';
+            $idempotencyScope = 'refill:'.$requestDeviceId.':'.$orderId.':'.sha1($idempotencyKey);
+            $processingKey = $idempotencyScope.':processing';
+            $responseCacheKey = $idempotencyScope.':response';
 
             $cachedResponse = Cache::get($responseCacheKey);
             if (is_array($cachedResponse)) {
@@ -186,7 +188,7 @@ class OrderApiController extends Controller
             }
 
             // Prevent duplicate in-flight refill requests with the same idempotency key.
-            if (!Cache::add($processingKey, 1, now()->addSeconds(30))) {
+            if (! Cache::add($processingKey, 1, now()->addSeconds(30))) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Duplicate refill request already processing',
@@ -194,7 +196,7 @@ class OrderApiController extends Controller
             }
         }
 
-        Log::info("[REFILL] Received refill request", [
+        Log::info('[REFILL] Received refill request', [
             'order_id' => $orderId,
             'ip' => $request->ip(),
             'items_count' => count($request->input('items', [])),
@@ -229,11 +231,11 @@ class OrderApiController extends Controller
 
             // Optimization: If both menu_id and price provided, skip DB lookup (testing + API contracts)
             $menu = null;
-            if (!empty($it['menu_id']) && isset($it['price'])) {
-                $menu = (object) [ 'id' => $it['menu_id'], 'price' => $it['price'] ];
+            if (! empty($it['menu_id']) && isset($it['price'])) {
+                $menu = (object) ['id' => $it['menu_id'], 'price' => $it['price']];
             }
             // Priority 1: Use menu_id to lookup from POS if price not provided
-            elseif (!empty($it['menu_id'])) {
+            elseif (! empty($it['menu_id'])) {
                 try {
                     $menu = KryptonMenu::find($it['menu_id']);
                 } catch (\Throwable $_e) {
@@ -242,7 +244,7 @@ class OrderApiController extends Controller
             }
 
             // Priority 2: Fallback to name-based lookup if menu_id lookup failed or not provided
-            if (!$menu && !empty($name)) {
+            if (! $menu && ! empty($name)) {
                 try {
                     $menu = KryptonMenu::whereRaw('LOWER(receipt_name) = ?', [strtolower($name)])->first()
                         ?? KryptonMenu::whereRaw('LOWER(name) = ?', [strtolower($name)])->first();
@@ -253,6 +255,7 @@ class OrderApiController extends Controller
 
             if (! $menu) {
                 $menuRef = $it['menu_id'] ?? $name ?? 'unknown';
+
                 return response()->json(['success' => false, 'message' => "Menu item not found: {$menuRef}"], 422);
             }
 
@@ -285,7 +288,10 @@ class OrderApiController extends Controller
         // Normalize created items: POS returns raw ordered_menu records.
         // Extract them into objects for consistent handling.
         $posItems = collect($created)->map(function ($it) {
-            if (is_array($it)) return (object) $it;
+            if (is_array($it)) {
+                return (object) $it;
+            }
+
             return $it;
         })->values()->all();
 
@@ -299,17 +305,17 @@ class OrderApiController extends Controller
             // Batch-load menu names to prevent N+1 queries.
             $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
             Log::info('Refill menu IDs extracted', ['menu_ids' => $menuIds]);
-            
-            $menuNames = !empty($menuIds)
-                ? \App\Models\Krypton\Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id')
+
+            $menuNames = ! empty($menuIds)
+                ? Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id')
                 : collect();
-            
+
             Log::info('Refill menu names loaded', ['menu_names' => $menuNames->all()]);
-            
-            $metaItems = collect($posItems)->map(function($item) use ($menuNames) {
+
+            $metaItems = collect($posItems)->map(function ($item) use ($menuNames) {
                 $menuId = $item->menu_id;
                 $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
-                
+
                 Log::info('Refill item mapping', [
                     'menu_id' => $menuId,
                     'item_name' => $item->name ?? null,
@@ -317,14 +323,14 @@ class OrderApiController extends Controller
                     'lookup_name' => $menuNames->get($menuId),
                     'final_name' => $menuName ?? "Menu #{$menuId}",
                 ]);
-                
+
                 return [
                     'menu_id' => $menuId,
                     'quantity' => $item->quantity ?? 1,
                     'name' => $menuName ?? "Menu #{$menuId}",
                 ];
             })->values()->all();
-            
+
             Log::info('Refill metaItems constructed', ['meta_items' => $metaItems]);
 
             $refillEventMeta = [
@@ -368,13 +374,18 @@ class OrderApiController extends Controller
 
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 try {
-                    DB::transaction(function () use ($deviceOrder, $posItems, $metaItems, $localPayloads, $refillEventMeta) {
+                    DB::transaction(function () use ($deviceOrder, $posItems, $localPayloads, $refillEventMeta) {
                         // Batch insert all payloads in one query.
-                        if (!empty($localPayloads)) {
-                            \App\Models\DeviceOrderItems::query()->insert($localPayloads);
+                        if (! empty($localPayloads)) {
+                            DeviceOrderItems::query()->insert($localPayloads);
                         }
 
-                        // After successful local transaction, schedule print/broadcast.
+                        // DB::afterCommit fires once the outer transaction commits.
+                        // It is intentionally nested inside the retry loop: if the outer
+                        // transaction is retried, this callback is re-registered each time,
+                        // so it only runs on the attempt that actually commits. Do NOT hoist
+                        // it outside the loop — that would fire on every iteration, not just
+                        // the successful one.
                         DB::afterCommit(function () use ($deviceOrder, $refillEventMeta, $posItems) {
                             try {
                                 // Create exactly one refill print event after the local mirror commits.
@@ -398,7 +409,7 @@ class OrderApiController extends Controller
                     break;
                 } catch (\Throwable $e) {
                     if ($attempt >= $maxAttempts) {
-                        \Illuminate\Support\Facades\Log::error('Refill local mirror failed after max retries', [
+                        Log::error('Refill local mirror failed after max retries', [
                             'order_id' => $orderId,
                             'device_order_id' => $deviceOrder->id,
                             'attempt' => $attempt,
@@ -407,7 +418,7 @@ class OrderApiController extends Controller
                         throw $e;
                     }
                     // Log retry attempt (no sleep; immediate retry)
-                    \Illuminate\Support\Facades\Log::warning('Refill local mirror retry', [
+                    Log::warning('Refill local mirror retry', [
                         'order_id' => $orderId,
                         'device_order_id' => $deviceOrder->id,
                         'attempt' => $attempt,
@@ -428,6 +439,7 @@ class OrderApiController extends Controller
             return response()->json($responseBody);
         } catch (\Throwable $th) {
             report($th);
+
             return response()->json(['success' => false, 'message' => 'Failed to persist refill', 'error' => $th->getMessage()], 500);
         } finally {
             if ($processingKey) {
@@ -511,7 +523,7 @@ class OrderApiController extends Controller
                 'guest_count',
             ]),
             'tablename' => $order->table->name ?? null,
-            'items' => $items->map(fn($it) => [
+            'items' => $items->map(fn ($it) => [
                 'name' => $it->menu?->receipt_name ?? $it->menu?->name ?? null,
                 'quantity' => $it->quantity ?? null,
             ])->values()->all(),

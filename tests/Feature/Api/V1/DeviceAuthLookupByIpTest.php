@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Branch;
 use App\Models\Device;
+use App\Support\DeviceSecurityCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,12 +29,18 @@ class DeviceAuthLookupByIpTest extends TestCase
 
         putenv('DEVICE_ALLOW_CLIENT_SUPPLIED_IP=0');
         putenv('DEVICE_ALLOWED_PRIVATE_SUBNETS=');
+
+        config()->set('device.allow_client_supplied_ip', false);
+        config()->set('device.allowed_private_subnets', '');
     }
 
     protected function tearDown(): void
     {
         $this->restoreEnv('DEVICE_ALLOW_CLIENT_SUPPLIED_IP', $this->previousAllowClientSuppliedIp);
         $this->restoreEnv('DEVICE_ALLOWED_PRIVATE_SUBNETS', $this->previousAllowedPrivateSubnets);
+
+        config()->set('device.allow_client_supplied_ip', false);
+        config()->set('device.allowed_private_subnets', '');
 
         parent::tearDown();
     }
@@ -58,6 +65,30 @@ class DeviceAuthLookupByIpTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('found', false);
         $response->assertJsonPath('ip_used', '127.0.0.1');
+    }
+
+    public function test_lookup_by_ip_does_not_issue_token_for_unclaimed_device(): void
+    {
+        Branch::create([
+            'name' => 'Lookup Branch',
+            'location' => 'HQ',
+        ]);
+
+        Device::create(array_merge([
+            'name' => 'Unclaimed Printer Relay',
+            'type' => 'printer_relay',
+            'ip_address' => '127.0.0.1',
+            'is_active' => true,
+        ], DeviceSecurityCode::attributesFor('123456')));
+
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '127.0.0.1',
+        ])->getJson('/api/device/lookup-by-ip');
+
+        $response->assertOk();
+        $response->assertJsonPath('found', false);
+        $response->assertJsonPath('error', 'Device not yet registered with security code');
+        $this->assertNull($response->json('device.auth_token'));
     }
 
     private function restoreEnv(string $key, ?string $value): void

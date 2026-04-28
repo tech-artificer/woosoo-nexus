@@ -1,14 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Device;
 use App\Http\Resources\DeviceResource;
 use App\Http\Responses\ApiResponse;
 use App\Http\Requests\StoreDeviceRequest;
 use App\Http\Requests\UpdateDeviceRequest;
+use App\Support\DeviceSecurityCode;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 class DeviceApiController extends Controller
 {
@@ -25,13 +32,82 @@ class DeviceApiController extends Controller
     /**
      * Store a newly created device in storage.
      */
-    public function store(StoreDeviceRequest $request)
+    public function store(StoreDeviceRequest $request): JsonResponse
     {
-        $device = Device::create($request->validated());
+        $data = $request->validated();
+        $branchId = $this->resolveBranchIdForDeviceCreate($request);
 
-        return (new DeviceResource($device->load('table')))
-            ->response()
-            ->setStatusCode(201);
+        if ($branchId === null) {
+            return response()->json([
+                'message' => 'No branch context is available for device creation.',
+                'errors' => [
+                    'branch' => 'Assign the current device to a branch or keep exactly one branch in this install.',
+                ],
+            ], 422);
+        }
+
+        $requestedSecurityCode = trim((string) ($data['security_code'] ?? ''));
+        $isGeneratedCode = $requestedSecurityCode === '';
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $plainSecurityCode = $isGeneratedCode
+                ? $this->generateUniqueSecurityCode()
+                : $requestedSecurityCode;
+
+            try {
+                $device = DB::transaction(function () use ($data, $branchId, $plainSecurityCode): Device {
+                    if (DeviceSecurityCode::isAssigned($plainSecurityCode)) {
+                        throw new \RuntimeException('security_code_assigned');
+                    }
+
+                    return Device::create(array_merge([
+                        'name' => $data['name'],
+                        'branch_id' => $branchId,
+                        'ip_address' => $data['ip_address'],
+                        'port' => $data['port'] ?? null,
+                        'table_id' => $data['table_id'] ?? null,
+                        'is_active' => true,
+                    ], DeviceSecurityCode::attributesFor($plainSecurityCode)));
+                }, 3);
+
+                return response()->json([
+                    'device' => (new DeviceResource($device->load('table')))->resolve(),
+                    'security_code' => $plainSecurityCode,
+                ], 201);
+            } catch (\RuntimeException $e) {
+                if ($e->getMessage() === 'security_code_assigned') {
+                    if ($isGeneratedCode) {
+                        continue;
+                    }
+
+                    return $this->securityCodeConflictResponse();
+                }
+
+                throw $e;
+            } catch (QueryException $e) {
+                if ($this->isUniqueConstraintViolation($e)) {
+                    if ($isGeneratedCode) {
+                        continue;
+                    }
+
+                    return response()->json([
+                        'message' => 'Device conflicts with an existing record',
+                        'errors' => [
+                            'device' => 'A device with this IP, name, or security code already exists',
+                        ],
+                    ], 409);
+                }
+
+                throw $e;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Unable to generate a unique security code. Please try again.',
+            'errors' => [
+                'security_code' => 'Could not generate a unique code',
+            ],
+        ], 409);
     }
 
     /**
@@ -132,6 +208,57 @@ class DeviceApiController extends Controller
             'table' => $table,
             'ip_used' => $ipUsed,
         ]);
+    }
+
+    private function securityCodeExists(string $plainSecurityCode): bool
+    {
+        return DeviceSecurityCode::isAssigned($plainSecurityCode);
+    }
+
+    private function generateUniqueSecurityCode(int $maxAttempts = 20): string
+    {
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $candidate = (string) random_int(100000, 999999);
+
+            if (! $this->securityCodeExists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw new \RuntimeException('Unable to generate a unique security code. Please try again.');
+    }
+
+    private function resolveBranchIdForDeviceCreate(Request $request): ?int
+    {
+        $device = $request->user();
+
+        if ($device instanceof Device && $device->branch_id !== null) {
+            return (int) $device->branch_id;
+        }
+
+        if (Branch::query()->count() === 1) {
+            return (int) Branch::query()->value('id');
+        }
+
+        return null;
+    }
+
+    private function securityCodeConflictResponse(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Security code already assigned to another device',
+            'errors' => [
+                'security_code' => 'This code is in use',
+            ],
+        ], 409);
+    }
+
+    private function isUniqueConstraintViolation(QueryException $e): bool
+    {
+        $sqlState = (string) ($e->errorInfo[0] ?? '');
+        $driverCode = (string) ($e->errorInfo[1] ?? '');
+
+        return $sqlState === '23000' || $driverCode === '1062' || $driverCode === '19';
     }
 
 }
