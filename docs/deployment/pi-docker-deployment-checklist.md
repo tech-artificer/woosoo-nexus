@@ -96,6 +96,7 @@ So both repos must be siblings under `/opt/woosoo`.
 [ ] docker/certs/privkey.pem         # generated locally, do not commit
 [ ] docker/php/local.ini
 [ ] docker/php/www.conf
+[ ] docker/php/zzz-app.conf
 [ ] docker/docker-entrypoint.sh
 [ ] scripts/deployment/apply-woosoo-config.sh
 [ ] scripts/deployment/woosoo-health.sh
@@ -501,6 +502,7 @@ ls -l Dockerfile
 ls -l docker/nginx/default.conf
 ls -l docker/php/local.ini
 ls -l docker/php/www.conf
+ls -l docker/php/zzz-app.conf
 ls -l docker/docker-entrypoint.sh
 ls -l docker/certs/fullchain.pem docker/certs/privkey.pem
 
@@ -738,6 +740,7 @@ Check required Docker build files:
 
 ```bash
 ls -l docker/php/www.conf
+ls -l docker/php/zzz-app.conf
 ls -l docker/docker-entrypoint.sh
 ls -l docker/php/local.ini
 ```

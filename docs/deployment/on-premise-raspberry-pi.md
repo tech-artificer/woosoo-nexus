@@ -138,8 +138,21 @@ sudo chown -R $USER:$USER /opt/woosoo
 cd /opt/woosoo
 
 git clone https://github.com/tech-artificer/woosoo-nexus.git
-cd woosoo-nexus
+git clone https://github.com/tech-artificer/tablet-ordering-pwa.git
+```
+
+Check out staging branches:
+
+```bash
+cd /opt/woosoo/woosoo-nexus
 git checkout staging
+git pull origin staging
+
+cd /opt/woosoo/tablet-ordering-pwa
+git checkout staging
+git pull origin staging
+
+cd /opt/woosoo/woosoo-nexus
 ```
 
 Make the deployment scripts executable:
@@ -156,9 +169,12 @@ The staging branch already includes:
 compose.yaml
 Dockerfile
 docker/nginx/default.conf
+docker/php/zzz-app.conf
 docker/certs/README.md
 docker/certs/generate-dev-certs.sh
 ```
+
+Important: `compose.yaml` builds the tablet PWA from `../tablet-ordering-pwa`. Both repos must be siblings under `/opt/woosoo`.
 
 ---
 
