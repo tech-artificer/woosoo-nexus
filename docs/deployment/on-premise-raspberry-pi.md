@@ -275,6 +275,8 @@ ip route
 
 The apply script can perform this automatically using values from `/etc/woosoo/woosoo.env`.
 
+When running over SSH, the apply script refuses to rebind the active interface to a different IP unless `FORCE_APPLY_STATIC_IP=true` is set. Prefer running static-IP changes from the Pi console.
+
 ---
 
 ## 12. dnsmasq Local DNS
@@ -329,12 +331,28 @@ Generate cert with hostname and IP:
 mkcert woosoo.local api.woosoo.local tablet.woosoo.local 192.168.100.10
 ```
 
-Place files where Nginx expects them:
+Place or rename the generated files to:
 
 ```txt
-docker/certs/woosoo.crt
-docker/certs/woosoo.key
+./docker/certs/woosoo.crt
+./docker/certs/woosoo.key
 ```
+
+The starter `docker-compose.yml` mounts that host directory into the Nginx container:
+
+```yaml
+volumes:
+  - ./docker/certs:/etc/nginx/certs:ro
+```
+
+The Nginx server block then reads the certificate inside the container from:
+
+```nginx
+ssl_certificate     /etc/nginx/certs/woosoo.crt;
+ssl_certificate_key /etc/nginx/certs/woosoo.key;
+```
+
+The apply script creates `./docker/certs` if it is missing and warns when `woosoo.crt` or `woosoo.key` does not exist before Docker startup.
 
 Install the mkcert root CA on all tablets. Without this, Android/browser may show certificate warnings.
 
@@ -378,6 +396,8 @@ SESSION_DOMAIN=woosoo.local
 SANCTUM_STATEFUL_DOMAINS=woosoo.local,woosoo.local:443,woosoo.local:80
 CORS_ALLOWED_ORIGINS=https://woosoo.local,http://woosoo.local
 ```
+
+The apply script writes values as quoted `.env` strings so values containing spaces, `#`, `=`, or `|` are preserved safely.
 
 ---
 
@@ -474,7 +494,7 @@ For each tablet:
 4. Set DNS 1 to the Pi IP.
 5. Set DNS 2 blank or same as DNS 1.
 6. Open browser.
-7. Visit `https://woosoo.local`.
+7. Visit `https://woosoo.local/tablet`.
 8. Install PWA if needed.
 
 Expected result:
@@ -563,9 +583,13 @@ Backups should be stored under:
 /opt/woosoo/backups/db
 ```
 
-Retain at least 14 days.
+Default retention is 14 days and can be changed with:
 
-The backup script passes database credentials to the dump command inside the database container. This is acceptable for a locked-down LAN appliance, but production operators should restrict SSH access to trusted admins only.
+```bash
+WOOSOO_BACKUP_RETENTION_DAYS="14"
+```
+
+The backup script passes the database password through `MYSQL_PWD` inside the database container, writes to temporary files first, and only moves the final compressed backup into place after a successful dump.
 
 ---
 
@@ -630,6 +654,20 @@ If `systemd-resolved` is active, disable it or rerun `apply-woosoo-config.sh`.
 
 Install the mkcert root CA on the tablet.
 
+### Nginx cannot read certificate files
+
+Confirm the host files exist:
+
+```bash
+ls -l docker/certs/woosoo.crt docker/certs/woosoo.key
+```
+
+Confirm the Nginx container mounts them through Docker Compose:
+
+```yaml
+./docker/certs:/etc/nginx/certs:ro
+```
+
 ### WebSocket fails
 
 Check Reverb container:
@@ -671,7 +709,7 @@ Then verify `DB_POS_*` values.
 [ ] Pi has stable static IP
 [ ] dnsmasq resolves woosoo.local
 [ ] Tablet DNS points to Pi
-[ ] Tablet loads https://woosoo.local
+[ ] Tablet loads https://woosoo.local/tablet
 [ ] HTTPS certificate trusted or accepted
 [ ] Docker stack starts after reboot
 [ ] Laravel app responds
