@@ -15,6 +15,7 @@ set +a
 WOOSOO_DOCKER_COMPOSE="${WOOSOO_DOCKER_COMPOSE:-docker compose}"
 WOOSOO_NEXUS_PATH="${WOOSOO_NEXUS_PATH:-/opt/woosoo/woosoo-nexus}"
 WOOSOO_BACKUP_DIR="${WOOSOO_BACKUP_DIR:-/opt/woosoo/backups}"
+WOOSOO_BACKUP_RETENTION_DAYS="${WOOSOO_BACKUP_RETENTION_DAYS:-14}"
 MYSQL_SERVICE="${WOOSOO_MYSQL_SERVICE:-mysql}"
 DB_NAME="${WOOSOO_DB_DATABASE:-woosoo}"
 DB_USER="${WOOSOO_DB_USERNAME:-woosoo}"
@@ -30,6 +31,13 @@ fi
 cd "$WOOSOO_NEXUS_PATH"
 
 BACKUP_FILE="$WOOSOO_BACKUP_DIR/db/${DB_NAME}_$(date +%F_%H%M%S).sql.gz"
+TEMP_SQL_FILE="${BACKUP_FILE%.gz}.tmp"
+TEMP_GZ_FILE="$BACKUP_FILE.tmp"
+
+cleanup() {
+  rm -f "$TEMP_SQL_FILE" "$TEMP_GZ_FILE"
+}
+trap cleanup EXIT
 
 echo "Creating DB backup: $BACKUP_FILE"
 
@@ -39,14 +47,27 @@ else
   DUMP_CMD="mysqldump"
 fi
 
-$WOOSOO_DOCKER_COMPOSE exec -T "$MYSQL_SERVICE" \
-  "$DUMP_CMD" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" \
-  | gzip > "$BACKUP_FILE"
+if ! $WOOSOO_DOCKER_COMPOSE exec -T \
+  -e MYSQL_PWD="$DB_PASS" \
+  "$MYSQL_SERVICE" \
+  "$DUMP_CMD" -u"$DB_USER" "$DB_NAME" > "$TEMP_SQL_FILE"; then
+  echo "ERROR: database dump failed; no backup written"
+  exit 1
+fi
+
+if [[ ! -s "$TEMP_SQL_FILE" ]]; then
+  echo "ERROR: database dump produced an empty file; no backup written"
+  exit 1
+fi
+
+gzip -c "$TEMP_SQL_FILE" > "$TEMP_GZ_FILE"
+mv "$TEMP_GZ_FILE" "$BACKUP_FILE"
+rm -f "$TEMP_SQL_FILE"
 
 echo "Backup complete: $BACKUP_FILE"
 
-echo "Deleting backups older than 14 days..."
-find "$WOOSOO_BACKUP_DIR/db" -name "*.sql.gz" -type f -mtime +14 -delete
+echo "Deleting backups older than ${WOOSOO_BACKUP_RETENTION_DAYS} days..."
+find "$WOOSOO_BACKUP_DIR/db" -name "*.sql.gz" -type f -mtime +"$WOOSOO_BACKUP_RETENTION_DAYS" -delete
 
 echo "Remaining backups:"
-ls -lh "$WOOSOO_BACKUP_DIR/db" | tail || true
+find "$WOOSOO_BACKUP_DIR/db" -maxdepth 1 -type f -name "*.sql.gz" -printf '%TY-%Tm-%Td %TH:%TM %s bytes %p\n' | sort || true
