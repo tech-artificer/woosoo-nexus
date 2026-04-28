@@ -25,6 +25,11 @@ WOOSOO_REVERB_APP_KEY="${WOOSOO_REVERB_APP_KEY:-}"
 echo "=== Woosoo Health Check ==="
 echo
 
+if [[ -z "${WOOSOO_SERVER_IP:-}" ]]; then
+  echo "Missing required config: WOOSOO_SERVER_IP"
+  exit 1
+fi
+
 echo "[1] Expected IP address"
 ip -4 addr | grep -F "${WOOSOO_SERVER_IP}" || echo "WARNING: Expected IP not found: ${WOOSOO_SERVER_IP}"
 

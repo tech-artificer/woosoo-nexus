@@ -15,6 +15,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
 fi
 
 set -a
+# shellcheck source=/dev/null
 source "$CONFIG_FILE"
 set +a
 
@@ -64,21 +65,23 @@ quote_env_value() {
   printf '"%s"' "$value"
 }
 
+escape_ere() {
+  printf '%s' "$1" | sed -e 's/[][(){}.^$*+?|\\/]/\\&/g'
+}
+
 set_env() {
   local key="$1"
   local value="$2"
   local file=".env"
-  local rendered sed_value
+  local rendered escaped_key
 
   rendered="$(quote_env_value "$value")"
-  sed_value="${rendered//\\/\\\\}"
-  sed_value="${sed_value//&/\\&}"
-  sed_value="${sed_value//|/\\|}"
+  escaped_key="$(escape_ere "$key")"
 
-  if grep -qE "^${key}=" "$file"; then
-    sed -i "s|^${key}=.*|${key}=${sed_value}|g" "$file"
+  if grep -qE "^${escaped_key}=" "$file"; then
+    SET_ENV_KEY="$key" SET_ENV_REPLACEMENT="${key}=${rendered}" perl -0pi -e 'BEGIN { $key = $ENV{"SET_ENV_KEY"}; $replacement = $ENV{"SET_ENV_REPLACEMENT"}; } s/^\Q$key\E=.*$/$replacement/m' "$file"
   else
-    echo "${key}=${rendered}" >> "$file"
+    printf '%s\n' "${key}=${rendered}" >> "$file"
   fi
 }
 
@@ -282,6 +285,8 @@ fi
 safe_backup_file ".env"
 
 echo "Updating Laravel .env..."
+db_password_value="${WOOSOO_DB_PASSWORD:-change_this_password}"
+db_root_password_value="${WOOSOO_DB_ROOT_PASSWORD:-change_this_root_password}"
 set_env "PUBLIC_SCHEME" "$WOOSOO_SCHEME"
 set_env "PUBLIC_HOST" "$WOOSOO_HOST"
 set_env "PUBLIC_HTTP_PORT" "80"
@@ -295,8 +300,14 @@ set_env "DB_HOST" "mysql"
 set_env "DB_PORT" "3306"
 set_env "DB_DATABASE" "${WOOSOO_DB_DATABASE:-woosoo}"
 set_env "DB_USERNAME" "${WOOSOO_DB_USERNAME:-woosoo}"
-set_env "DB_PASSWORD" "${WOOSOO_DB_PASSWORD:-change_this_password}"
-set_env "DB_ROOT_PASSWORD" "${WOOSOO_DB_ROOT_PASSWORD:-change_this_root_password}"
+set_env "DB_PASSWORD" "$db_password_value"
+set_env "DB_ROOT_PASSWORD" "$db_root_password_value"
+if [[ -z "${WOOSOO_DB_PASSWORD:-}" && "$db_password_value" == "change_this_password" ]]; then
+  echo "WARNING: DB_PASSWORD is using default credentials because WOOSOO_DB_PASSWORD is unset. Do not use default credentials in production; set WOOSOO_DB_PASSWORD in $CONFIG_FILE." >&2
+fi
+if [[ -z "${WOOSOO_DB_ROOT_PASSWORD:-}" && "$db_root_password_value" == "change_this_root_password" ]]; then
+  echo "WARNING: DB_ROOT_PASSWORD is using default credentials because WOOSOO_DB_ROOT_PASSWORD is unset. Do not use default credentials in production; set WOOSOO_DB_ROOT_PASSWORD in $CONFIG_FILE." >&2
+fi
 set_env "DB_POS_HOST" "${WOOSOO_POS_HOST:-192.168.100.20}"
 set_env "DB_POS_PORT" "${WOOSOO_POS_PORT:-3308}"
 set_env "DB_POS_DATABASE" "${WOOSOO_POS_DATABASE:-krypton_woosoo}"

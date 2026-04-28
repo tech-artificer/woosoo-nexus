@@ -27,6 +27,18 @@ DB_USER="${WOOSOO_DB_USERNAME:-woosoo}"
 DB_PASS="${WOOSOO_DB_PASSWORD:-change_this_password}"
 LOCK_FILE="/tmp/woosoo-backup.lock"
 
+read -r -a DOCKER_COMPOSE_CMD <<< "$WOOSOO_DOCKER_COMPOSE"
+
+docker_compose() {
+  "${DOCKER_COMPOSE_CMD[@]}" "$@"
+}
+
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "ERROR: another Woosoo backup is already running"
+  exit 1
+fi
+
 mkdir -p "$WOOSOO_BACKUP_DIR/db"
 
 if [[ ! -d "$WOOSOO_NEXUS_PATH" ]]; then
@@ -47,19 +59,13 @@ trap cleanup EXIT
 
 echo "Creating DB backup: $BACKUP_FILE"
 
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-  echo "ERROR: another Woosoo backup is already running"
-  exit 1
-fi
-
-if $WOOSOO_DOCKER_COMPOSE exec -T "$MYSQL_SERVICE" sh -c 'command -v mariadb-dump >/dev/null 2>&1'; then
+if docker_compose exec -T "$MYSQL_SERVICE" sh -c 'command -v mariadb-dump >/dev/null 2>&1'; then
   DUMP_CMD="mariadb-dump"
 else
   DUMP_CMD="mysqldump"
 fi
 
-if ! $WOOSOO_DOCKER_COMPOSE exec -T \
+if ! docker_compose exec -T \
   -e MYSQL_PWD="$DB_PASS" \
   "$MYSQL_SERVICE" \
   "$DUMP_CMD" -u"$DB_USER" "$DB_NAME" > "$TEMP_SQL_FILE"; then
