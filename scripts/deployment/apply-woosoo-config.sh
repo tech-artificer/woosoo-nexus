@@ -43,6 +43,7 @@ WOOSOO_QUEUE_SERVICE="${WOOSOO_QUEUE_SERVICE:-queue}"
 WOOSOO_SCHEDULER_SERVICE="${WOOSOO_SCHEDULER_SERVICE:-scheduler}"
 WOOSOO_BACKUP_DIR="${WOOSOO_BACKUP_DIR:-/opt/woosoo/backups}"
 WOOSOO_DNS_FORWARDERS="${WOOSOO_DNS_FORWARDERS:-1.1.1.1 8.8.8.8}"
+FORCE_APPLY_STATIC_IP="${FORCE_APPLY_STATIC_IP:-false}"
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -56,19 +57,29 @@ safe_backup_file() {
   fi
 }
 
+quote_env_value() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '"%s"' "$value"
+}
+
 set_env() {
   local key="$1"
   local value="$2"
   local file=".env"
+  local rendered
+  local sed_value
 
-  value="${value//\\/\\\\}"
-  value="${value//&/\\&}"
-  value="${value//@/\\@}"
+  rendered="$(quote_env_value "$value")"
+  sed_value="${rendered//\\/\\\\}"
+  sed_value="${sed_value//&/\\&}"
+  sed_value="${sed_value//|/\\|}"
 
   if grep -qE "^${key}=" "$file"; then
-    sed -i "s@^${key}=.*@${key}=${value}@g" "$file"
+    sed -i "s|^${key}=.*|${key}=${sed_value}|g" "$file"
   else
-    echo "${key}=${value}" >> "$file"
+    echo "${key}=${rendered}" >> "$file"
   fi
 }
 
@@ -88,6 +99,51 @@ install_packages_if_missing() {
   else
     echo "OK: required OS packages already installed"
   fi
+}
+
+get_connection_device() {
+  local connection="$1"
+  nmcli -t -f NAME,DEVICE connection show --active | awk -F: -v name="$connection" '$1==name {print $2; exit}'
+}
+
+get_device_ipv4() {
+  local device="$1"
+  ip -4 -o addr show dev "$device" | awk '{print $4}' | cut -d/ -f1 | head -n1
+}
+
+assert_static_ip_change_safe() {
+  local connection="$1"
+  local device current_ip
+
+  if [[ -z "${SSH_CONNECTION:-}${SSH_CLIENT:-}" ]]; then
+    return 0
+  fi
+
+  device="$(get_connection_device "$connection" || true)"
+  current_ip=""
+  if [[ -n "$device" ]]; then
+    current_ip="$(get_device_ipv4 "$device" || true)"
+  fi
+
+  if [[ "$current_ip" == "$WOOSOO_SERVER_IP" ]]; then
+    return 0
+  fi
+
+  if [[ "$FORCE_APPLY_STATIC_IP" == "true" ]]; then
+    echo "WARNING: SSH session detected, but FORCE_APPLY_STATIC_IP=true."
+    echo "Proceeding with nmcli connection modify and nmcli connection up for WOOSOO_NM_CONNECTION=$connection to WOOSOO_SERVER_IP=$WOOSOO_SERVER_IP."
+    return 0
+  fi
+
+  echo "ERROR: SSH session detected. Refusing to change active network settings remotely."
+  echo "WOOSOO_NM_CONNECTION=$connection"
+  echo "Current interface=${device:-unknown} current IP=${current_ip:-unknown}"
+  echo "Target WOOSOO_SERVER_IP=$WOOSOO_SERVER_IP"
+  echo "The script would run: nmcli connection modify \"$connection\" ... ipv4.method manual"
+  echo "Then: nmcli connection up \"$connection\""
+  echo "This can disconnect the SSH session if the target IP differs from the current IP."
+  echo "Run locally on the Pi console, or rerun with FORCE_APPLY_STATIC_IP=true if you accept the risk."
+  exit 1
 }
 
 wait_for_app_service() {
@@ -139,6 +195,7 @@ if [[ "$WOOSOO_APPLY_STATIC_IP" == "true" ]]; then
     fi
 
     if [[ -n "$WOOSOO_NM_CONNECTION" ]]; then
+      assert_static_ip_change_safe "$WOOSOO_NM_CONNECTION"
       echo "Applying static IP to NetworkManager connection: $WOOSOO_NM_CONNECTION"
       nmcli connection modify "$WOOSOO_NM_CONNECTION" \
         ipv4.addresses "${WOOSOO_SERVER_IP}/${WOOSOO_CIDR}" \
@@ -156,7 +213,7 @@ fi
 
 sleep 2
 
-if ip -4 addr | grep -q "$WOOSOO_SERVER_IP"; then
+if ip -4 addr | grep -Fq "$WOOSOO_SERVER_IP"; then
   echo "OK: Server IP is active: $WOOSOO_SERVER_IP"
 else
   echo "WARNING: Server IP $WOOSOO_SERVER_IP not detected on active interfaces."
@@ -290,7 +347,8 @@ set_env "LOG_LEVEL" "error"
 
 NGINX_DIR="$WOOSOO_NEXUS_PATH/docker/nginx"
 NGINX_CONF="$NGINX_DIR/default.conf"
-mkdir -p "$NGINX_DIR"
+CERT_DIR="$WOOSOO_NEXUS_PATH/docker/certs"
+mkdir -p "$NGINX_DIR" "$CERT_DIR"
 safe_backup_file "$NGINX_CONF"
 
 cat > "$NGINX_CONF" <<EOF
@@ -369,7 +427,14 @@ server {
 }
 EOF
 
-mkdir -p "$WOOSOO_NEXUS_PATH/docker/certs"
+if [[ ! -f "$CERT_DIR/woosoo.crt" || ! -f "$CERT_DIR/woosoo.key" ]]; then
+  echo "WARNING: TLS certificate files are missing."
+  echo "Expected host files:"
+  echo "  $CERT_DIR/woosoo.crt"
+  echo "  $CERT_DIR/woosoo.key"
+  echo "docker-compose.yml must mount ./docker/certs:/etc/nginx/certs:ro so Nginx can read /etc/nginx/certs/woosoo.crt and /etc/nginx/certs/woosoo.key."
+  echo "Generate them before starting Nginx, for example with: mkcert $WOOSOO_HOST ${WOOSOO_ALIASES:-} $WOOSOO_SERVER_IP"
+fi
 
 if [[ "$WOOSOO_RESTART_DOCKER" == "true" ]]; then
   if command_exists docker; then
