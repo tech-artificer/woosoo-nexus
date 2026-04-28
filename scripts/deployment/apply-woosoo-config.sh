@@ -61,7 +61,6 @@ set_env() {
   local value="$2"
   local file=".env"
 
-  # Escape characters that are special in sed replacement strings.
   value="${value//\\/\\\\}"
   value="${value//&/\\&}"
   value="${value//@/\\@}"
@@ -124,8 +123,6 @@ echo
 
 install_packages_if_missing
 
-# Raspberry Pi OS Bookworm may run systemd-resolved on port 53.
-# dnsmasq must own port 53 for tablet DNS to resolve woosoo.local reliably.
 if systemctl is-active --quiet systemd-resolved; then
   echo "Disabling systemd-resolved to avoid port 53 conflict with dnsmasq..."
   systemctl disable --now systemd-resolved || true
@@ -260,6 +257,7 @@ set_env "DB_PORT" "3306"
 set_env "DB_DATABASE" "${WOOSOO_DB_DATABASE:-woosoo}"
 set_env "DB_USERNAME" "${WOOSOO_DB_USERNAME:-woosoo}"
 set_env "DB_PASSWORD" "${WOOSOO_DB_PASSWORD:-change_this_password}"
+set_env "DB_ROOT_PASSWORD" "${WOOSOO_DB_ROOT_PASSWORD:-change_this_root_password}"
 set_env "DB_POS_HOST" "${WOOSOO_POS_HOST:-192.168.100.20}"
 set_env "DB_POS_PORT" "${WOOSOO_POS_PORT:-3308}"
 set_env "DB_POS_DATABASE" "${WOOSOO_POS_DATABASE:-krypton_woosoo}"
@@ -317,8 +315,13 @@ server {
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-Content-Type-Options "nosniff";
 
-    location / {
-        try_files \$uri \$uri/ /index.php?\$query_string;
+    location = /tablet {
+        return 301 /tablet/;
+    }
+
+    location ^~ /tablet/ {
+        alias /var/www/html/public/tablet/;
+        try_files \$uri \$uri/ /tablet/index.html;
     }
 
     location /app/ {
@@ -347,6 +350,10 @@ server {
         proxy_send_timeout 3600;
     }
 
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
     location ~ \.php\$ {
         fastcgi_pass ${WOOSOO_APP_SERVICE}:9000;
         fastcgi_index index.php;
@@ -361,6 +368,8 @@ server {
     }
 }
 EOF
+
+mkdir -p "$WOOSOO_NEXUS_PATH/docker/certs"
 
 if [[ "$WOOSOO_RESTART_DOCKER" == "true" ]]; then
   if command_exists docker; then
@@ -398,4 +407,4 @@ if command_exists vcgencmd; then vcgencmd measure_temp || true; fi
 
 echo
 echo "Done. Tablet DNS must point to: ${WOOSOO_SERVER_IP}"
-echo "Tablet URL: ${WOOSOO_SCHEME}://${WOOSOO_HOST}"
+echo "Tablet URL: ${WOOSOO_SCHEME}://${WOOSOO_HOST}/tablet"
