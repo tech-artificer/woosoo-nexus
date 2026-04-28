@@ -21,7 +21,7 @@ echo "=== Woosoo Health Check ==="
 echo
 
 echo "[1] Expected IP address"
-ip -4 addr | grep "${WOOSOO_SERVER_IP}" || echo "WARNING: Expected IP not found: ${WOOSOO_SERVER_IP}"
+ip -4 addr | grep -F "${WOOSOO_SERVER_IP}" || echo "WARNING: Expected IP not found: ${WOOSOO_SERVER_IP}"
 
 echo
 echo "[2] DNS local resolution"
@@ -33,7 +33,7 @@ systemctl is-active dnsmasq || true
 
 echo
 echo "[4] Host port listeners"
-ss -lntup | grep -E ':53|:80|:443' || true
+ss -lntup | awk '$5 ~ /:(53|80|443)$/ || $5 ~ /:(53|80|443)\s/ {print}' || true
 
 echo
 echo "[5] HTTPS check"
