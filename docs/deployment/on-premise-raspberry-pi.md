@@ -81,15 +81,17 @@ Never set public DNS such as `8.8.8.8` as tablet DNS 2. Some devices may bypass 
 3. Enable SSH if needed.
 4. Update the OS.
 5. Install Docker.
-6. Clone `woosoo-nexus`.
-7. Copy and edit `/etc/woosoo/woosoo.env`.
-8. Generate TLS certs in `docker/certs`.
-9. Run `scripts/deployment/apply-woosoo-config.sh`.
-10. Start the Docker stack using `compose.yaml`.
-11. Run first-install Laravel commands and migrations.
-12. Configure tablet DNS.
-13. Test admin, tablet PWA, Reverb, print bridge, and backups.
-14. Reboot and run the health check.
+6. Clone `woosoo-nexus` and check out `staging`.
+7. Make deployment scripts executable.
+8. Copy and edit `/etc/woosoo/woosoo.env`.
+9. Secure `/etc/woosoo/woosoo.env` permissions.
+10. Generate TLS certs in `docker/certs`.
+11. Run `scripts/deployment/apply-woosoo-config.sh`.
+12. Start the Docker stack using `compose.yaml`.
+13. Run first-install Laravel commands and migrations.
+14. Configure tablet DNS.
+15. Test admin, tablet PWA, Reverb, print bridge, and backups.
+16. Reboot and run the health check.
 
 ---
 
@@ -137,6 +139,15 @@ cd /opt/woosoo
 
 git clone https://github.com/tech-artificer/woosoo-nexus.git
 cd woosoo-nexus
+git checkout staging
+```
+
+Make the deployment scripts executable:
+
+```bash
+chmod +x scripts/deployment/apply-woosoo-config.sh
+chmod +x scripts/deployment/woosoo-backup.sh
+chmod +x scripts/deployment/woosoo-health.sh
 ```
 
 The staging branch already includes:
@@ -157,6 +168,8 @@ docker/certs/generate-dev-certs.sh
 sudo mkdir -p /etc/woosoo
 sudo cp docs/deployment/examples/woosoo.env.example /etc/woosoo/woosoo.env
 sudo nano /etc/woosoo/woosoo.env
+sudo chown root:root /etc/woosoo/woosoo.env
+sudo chmod 600 /etc/woosoo/woosoo.env
 ```
 
 Important values:
@@ -226,6 +239,10 @@ Docker stack startup/cache refresh
 ```
 
 When running over SSH, the script refuses to change the active network IP unless `FORCE_APPLY_STATIC_IP=true` is set.
+
+On first-time Pi builds, Docker image pulls/builds can take several minutes. If the script warns that the app service is not ready yet, let Docker finish and rerun the script.
+
+The script warns if `APP_KEY` is missing. Before first production use, run `php artisan key:generate` as shown below.
 
 ---
 
@@ -322,6 +339,14 @@ Default retention is controlled by:
 ```bash
 WOOSOO_BACKUP_RETENTION_DAYS="14"
 ```
+
+The backup script uses a lock file to prevent overlapping backups.
+
+---
+
+## Reverb Exposure
+
+`REVERB_HOST=0.0.0.0` binds Reverb inside the Docker network. The Reverb service is not published directly to the host in `compose.yaml`; Nginx proxies WebSocket traffic through `https://woosoo.local/app`.
 
 ---
 
