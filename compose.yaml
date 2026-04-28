@@ -107,12 +107,18 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      MAIN_API_URL: https://${PUBLIC_HOST:-192.168.100.7}
-      NUXT_PUBLIC_PUSHER_KEY: ${REVERB_APP_KEY:-your_reverb_key_here}
-      NUXT_PUBLIC_PUSHER_CLUSTER: mt1
+      NUXT_PUBLIC_API_BASE_URL: https://${PUBLIC_HOST:-192.168.100.7}/api
+      NUXT_PUBLIC_BROADCAST_CONNECTION: reverb
+      NUXT_PUBLIC_REVERB_APP_ID: ${REVERB_APP_ID:-woosoo}
+      NUXT_PUBLIC_REVERB_APP_KEY: ${REVERB_APP_KEY:-your_reverb_key_here}
       NUXT_PUBLIC_REVERB_HOST: ${PUBLIC_HOST:-192.168.100.7}
       NUXT_PUBLIC_REVERB_PORT: "443"
       NUXT_PUBLIC_REVERB_SCHEME: https
+      NUXT_PUBLIC_REVERB_PATH: /app
+      # Backward compatibility for older tablet code that still reads Pusher-style names.
+      MAIN_API_URL: https://${PUBLIC_HOST:-192.168.100.7}
+      NUXT_PUBLIC_PUSHER_KEY: ${REVERB_APP_KEY:-your_reverb_key_here}
+      NUXT_PUBLIC_PUSHER_CLUSTER: mt1
     networks:
       - woosoo
 
