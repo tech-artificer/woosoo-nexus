@@ -119,6 +119,7 @@ services:
       MAIN_API_URL: https://${PUBLIC_HOST:-192.168.100.7}
       NUXT_PUBLIC_PUSHER_KEY: ${REVERB_APP_KEY:-your_reverb_key_here}
       NUXT_PUBLIC_PUSHER_CLUSTER: mt1
+      NUXT_PUBLIC_DEVICE_AUTH_PASSCODE: ${DEVICE_AUTH_PASSCODE:-}
     networks:
       - woosoo
 
