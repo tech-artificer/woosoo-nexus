@@ -339,7 +339,12 @@ set_env "VITE_REVERB_HOST" "$WOOSOO_HOST"
 set_env "VITE_REVERB_PORT" "443"
 set_env "VITE_REVERB_SCHEME" "$WOOSOO_SCHEME"
 set_env "SESSION_DOMAIN" "$WOOSOO_HOST"
-set_env "SESSION_SECURE_COOKIE" "true"
+if [[ "$WOOSOO_SCHEME" == "https" ]]; then
+  session_secure_cookie_value="true"
+else
+  session_secure_cookie_value="false"
+fi
+set_env "SESSION_SECURE_COOKIE" "$session_secure_cookie_value"
 set_env "SESSION_SAME_SITE" "lax"
 set_env "SANCTUM_STATEFUL_DOMAINS" "${WOOSOO_HOST},${WOOSOO_HOST}:443,${WOOSOO_HOST}:80"
 set_env "CORS_ALLOWED_ORIGINS" "${WOOSOO_SCHEME}://${WOOSOO_HOST},http://${WOOSOO_HOST}"
