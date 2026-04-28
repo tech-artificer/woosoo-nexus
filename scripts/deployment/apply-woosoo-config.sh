@@ -36,13 +36,13 @@ require_var WOOSOO_SCHEME
 WOOSOO_APPLY_STATIC_IP="${WOOSOO_APPLY_STATIC_IP:-true}"
 WOOSOO_RESTART_DOCKER="${WOOSOO_RESTART_DOCKER:-true}"
 WOOSOO_DOCKER_COMPOSE="${WOOSOO_DOCKER_COMPOSE:-docker compose}"
-
 WOOSOO_APP_SERVICE="${WOOSOO_APP_SERVICE:-app}"
 WOOSOO_NGINX_SERVICE="${WOOSOO_NGINX_SERVICE:-nginx}"
 WOOSOO_REVERB_SERVICE="${WOOSOO_REVERB_SERVICE:-reverb}"
 WOOSOO_QUEUE_SERVICE="${WOOSOO_QUEUE_SERVICE:-queue}"
 WOOSOO_SCHEDULER_SERVICE="${WOOSOO_SCHEDULER_SERVICE:-scheduler}"
 WOOSOO_BACKUP_DIR="${WOOSOO_BACKUP_DIR:-/opt/woosoo/backups}"
+WOOSOO_DNS_FORWARDERS="${WOOSOO_DNS_FORWARDERS:-1.1.1.1 8.8.8.8}"
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -61,14 +61,56 @@ set_env() {
   local value="$2"
   local file=".env"
 
+  # Escape characters that are special in sed replacement strings.
   value="${value//\\/\\\\}"
   value="${value//&/\\&}"
+  value="${value//@/\\@}"
 
   if grep -qE "^${key}=" "$file"; then
-    sed -i "s|^${key}=.*|${key}=${value}|g" "$file"
+    sed -i "s@^${key}=.*@${key}=${value}@g" "$file"
   else
     echo "${key}=${value}" >> "$file"
   fi
+}
+
+install_packages_if_missing() {
+  local packages=(dnsmasq dnsutils curl iproute2 ca-certificates)
+  local missing=()
+
+  for package in "${packages[@]}"; do
+    if ! dpkg -s "$package" >/dev/null 2>&1; then
+      missing+=("$package")
+    fi
+  done
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    apt-get update
+    apt-get install -y --no-install-recommends "${missing[@]}"
+  else
+    echo "OK: required OS packages already installed"
+  fi
+}
+
+wait_for_app_service() {
+  local attempts=30
+  local delay=2
+
+  if ! $WOOSOO_DOCKER_COMPOSE ps --services | grep -qx "$WOOSOO_APP_SERVICE"; then
+    echo "WARNING: app service not found in compose: $WOOSOO_APP_SERVICE"
+    return 1
+  fi
+
+  echo "Waiting for Laravel app service to become ready..."
+  for _ in $(seq 1 "$attempts"); do
+    if $WOOSOO_DOCKER_COMPOSE exec -T "$WOOSOO_APP_SERVICE" php artisan --version >/dev/null 2>&1; then
+      echo "OK: Laravel app service is ready"
+      return 0
+    fi
+    sleep "$delay"
+  done
+
+  echo "WARNING: Laravel app service did not become ready in time"
+  return 1
 }
 
 echo "=== Woosoo Configuration Apply ==="
@@ -80,8 +122,18 @@ echo "Apply IP:      $WOOSOO_APPLY_STATIC_IP"
 echo "Restart stack: $WOOSOO_RESTART_DOCKER"
 echo
 
-apt-get update
-apt-get install -y dnsmasq dnsutils curl iproute2 ca-certificates
+install_packages_if_missing
+
+# Raspberry Pi OS Bookworm may run systemd-resolved on port 53.
+# dnsmasq must own port 53 for tablet DNS to resolve woosoo.local reliably.
+if systemctl is-active --quiet systemd-resolved; then
+  echo "Disabling systemd-resolved to avoid port 53 conflict with dnsmasq..."
+  systemctl disable --now systemd-resolved || true
+  safe_backup_file "/etc/resolv.conf"
+  rm -f /etc/resolv.conf
+  first_dns="$(echo "$WOOSOO_DNS_FORWARDERS" | awk '{print $1}')"
+  echo "nameserver ${first_dns:-1.1.1.1}" > /etc/resolv.conf
+fi
 
 if [[ "$WOOSOO_APPLY_STATIC_IP" == "true" ]]; then
   if command_exists nmcli; then
@@ -94,7 +146,7 @@ if [[ "$WOOSOO_APPLY_STATIC_IP" == "true" ]]; then
       nmcli connection modify "$WOOSOO_NM_CONNECTION" \
         ipv4.addresses "${WOOSOO_SERVER_IP}/${WOOSOO_CIDR}" \
         ipv4.gateway "$WOOSOO_GATEWAY" \
-        ipv4.dns "${WOOSOO_DNS_FORWARDERS:-1.1.1.1 8.8.8.8}" \
+        ipv4.dns "$WOOSOO_DNS_FORWARDERS" \
         ipv4.method manual
       nmcli connection up "$WOOSOO_NM_CONNECTION" || true
     else
@@ -134,7 +186,7 @@ cat >> "$DNSMASQ_CONF" <<EOF
 # Forward normal DNS.
 EOF
 
-for dns in ${WOOSOO_DNS_FORWARDERS:-1.1.1.1 8.8.8.8}; do
+for dns in $WOOSOO_DNS_FORWARDERS; do
   echo "server=${dns}" >> "$DNSMASQ_CONF"
 done
 
@@ -176,6 +228,12 @@ if [[ ! -f artisan ]]; then
   exit 1
 fi
 
+if [[ ! -f docker-compose.yml && ! -f compose.yml && ! -f docker-compose.yaml && ! -f compose.yaml ]]; then
+  echo "ERROR: No Docker Compose file found in $WOOSOO_NEXUS_PATH"
+  echo "Use the starter docker-compose.yml from this deployment docs branch or provide your production compose file."
+  exit 1
+fi
+
 if [[ ! -f .env ]]; then
   if [[ -f .env.example ]]; then
     cp .env.example .env
@@ -205,7 +263,7 @@ set_env "DB_PASSWORD" "${WOOSOO_DB_PASSWORD:-change_this_password}"
 set_env "DB_POS_HOST" "${WOOSOO_POS_HOST:-192.168.100.20}"
 set_env "DB_POS_PORT" "${WOOSOO_POS_PORT:-3308}"
 set_env "DB_POS_DATABASE" "${WOOSOO_POS_DATABASE:-krypton_woosoo}"
-set_env "DB_POS_USERNAME" "${WOOSOO_POS_USERNAME:-root}"
+set_env "DB_POS_USERNAME" "${WOOSOO_POS_USERNAME:-krypton_readonly}"
 set_env "DB_POS_PASSWORD" "${WOOSOO_POS_PASSWORD:-}"
 set_env "CACHE_DRIVER" "redis"
 set_env "QUEUE_CONNECTION" "redis"
@@ -225,6 +283,7 @@ set_env "VITE_REVERB_APP_KEY" "${WOOSOO_REVERB_APP_KEY:-change_this_reverb_key}"
 set_env "VITE_REVERB_HOST" "$WOOSOO_HOST"
 set_env "VITE_REVERB_PORT" "443"
 set_env "VITE_REVERB_SCHEME" "$WOOSOO_SCHEME"
+set_env "SESSION_DOMAIN" "$WOOSOO_HOST"
 set_env "SESSION_SECURE_COOKIE" "true"
 set_env "SESSION_SAME_SITE" "lax"
 set_env "SANCTUM_STATEFUL_DOMAINS" "${WOOSOO_HOST},${WOOSOO_HOST}:443,${WOOSOO_HOST}:80"
@@ -307,7 +366,7 @@ if [[ "$WOOSOO_RESTART_DOCKER" == "true" ]]; then
   if command_exists docker; then
     $WOOSOO_DOCKER_COMPOSE up -d
 
-    if $WOOSOO_DOCKER_COMPOSE ps --services | grep -qx "$WOOSOO_APP_SERVICE"; then
+    if wait_for_app_service; then
       $WOOSOO_DOCKER_COMPOSE exec -T "$WOOSOO_APP_SERVICE" php artisan config:clear || true
       $WOOSOO_DOCKER_COMPOSE exec -T "$WOOSOO_APP_SERVICE" php artisan cache:clear || true
       $WOOSOO_DOCKER_COMPOSE exec -T "$WOOSOO_APP_SERVICE" php artisan route:clear || true
