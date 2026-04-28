@@ -38,7 +38,7 @@ class AccessibilityController extends Controller
             $assignedPermissions[$role->name] = $role->permissions->pluck('name')->toArray();
         }
 
-        return Inertia::render('Accessibility', [
+        return Inertia::render('Accessibility/Index', [
             'title' => 'Accessibility',
             'description' => 'Manage what each role can access across the system.',
             'roles' => $roles,

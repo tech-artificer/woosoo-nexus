@@ -8,7 +8,6 @@ import { ref } from 'vue'
 // import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import type { Menu } from '@/types/models';
 import { columns } from '@/components/Menus/columns';
-// import MenuTable from '@/pages/menus/MenuTable.vue';
 import DataTable from '@/components/Menus/DataTable.vue';
 import StatsCards from '@/components/Stats/StatsCards.vue'
 // import { useToast } from '@/composables/useToast';
