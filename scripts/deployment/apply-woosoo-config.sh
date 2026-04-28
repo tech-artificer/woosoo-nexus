@@ -143,7 +143,7 @@ assert_static_ip_change_safe() {
 }
 
 wait_for_app_service() {
-  local attempts=30
+  local attempts=60
   local delay=2
 
   if ! $WOOSOO_DOCKER_COMPOSE ps --services | grep -qx "$WOOSOO_APP_SERVICE"; then
@@ -160,7 +160,7 @@ wait_for_app_service() {
     sleep "$delay"
   done
 
-  echo "WARNING: Laravel app service did not become ready in time"
+  echo "WARNING: Laravel app service did not become ready in time. On first Pi builds, Docker image pull/build can take several minutes. Rerun this script after the stack finishes building."
   return 1
 }
 
@@ -179,8 +179,9 @@ if systemctl is-active --quiet systemd-resolved; then
   systemctl disable --now systemd-resolved || true
   safe_backup_file "/etc/resolv.conf"
   rm -f /etc/resolv.conf
-  first_dns="$(echo "$WOOSOO_DNS_FORWARDERS" | awk '{print $1}')"
-  echo "nameserver ${first_dns:-1.1.1.1}" > /etc/resolv.conf
+  for dns in $WOOSOO_DNS_FORWARDERS; do
+    echo "nameserver $dns" >> /etc/resolv.conf
+  done
 fi
 
 if [[ "$WOOSOO_APPLY_STATIC_IP" == "true" ]]; then
@@ -325,6 +326,10 @@ set_env "SESSION_SAME_SITE" "lax"
 set_env "SANCTUM_STATEFUL_DOMAINS" "${WOOSOO_HOST},${WOOSOO_HOST}:443,${WOOSOO_HOST}:80"
 set_env "CORS_ALLOWED_ORIGINS" "${WOOSOO_SCHEME}://${WOOSOO_HOST},http://${WOOSOO_HOST}"
 set_env "LOG_LEVEL" "error"
+
+if ! grep -qE '^APP_KEY=base64:.+' .env; then
+  echo "INFO: APP_KEY is not set. Before first production use, run: $WOOSOO_DOCKER_COMPOSE exec -T $WOOSOO_APP_SERVICE php artisan key:generate"
+fi
 
 CERT_DIR="$WOOSOO_NEXUS_PATH/docker/certs"
 mkdir -p "$CERT_DIR"
