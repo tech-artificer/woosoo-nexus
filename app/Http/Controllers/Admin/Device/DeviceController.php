@@ -432,21 +432,25 @@ class DeviceController extends Controller
     }
 
     /**
-     * Download the mkcert CA certificate for Flutter app SSL/TLS validation.
-     * 
-     * Industry standard: Serve CA certificates with application/x-x509-ca-cert MIME type.
-     * This is the standard Android expects for certificate installation.
-     * This certificate allows Flutter apps to validate HTTPS connections against the self-signed mkcert CA.
-     * Android installation: Settings → Security → Install from SD card.
+     * Download the self-signed CA/server certificate so devices can trust the local HTTPS stack.
+     *
+     * Served with application/x-x509-ca-cert so Android/iOS prompt the user to install it.
+     * The endpoint is intentionally accessible over plain HTTP (nginx exception) so devices
+     * can bootstrap trust before they have a valid HTTPS connection to this server.
+     *
+     * Android installation: Settings → Security → Install from storage.
+     * iOS: tap .crt → Settings → General → VPN & Device Management → Install.
      */
     public function downloadCertificate()
     {
-        // Prefer DER (better Android install UX); then PEM fallbacks.
+        // Checked in priority order — first match wins.
+        // docker/certs/ is bind-mounted into the app container (.:/var/www/html).
         $candidatePaths = [
+            base_path('docker/certs/fullchain.pem'),       // compose.yaml deployment (primary)
+            base_path('docker/certs/fullchain.crt'),       // same, .crt extension variant
             storage_path('app/public/certificates/woosoo-ca.der'),
             storage_path('app/public/certificates/CAROOT.pem'),
-            // Root stack certs directory fallback (workspace/docker deployments)
-            base_path('certs/ca.crt'),
+            base_path('certs/ca.crt'),                     // legacy workspace path
             base_path('../certs/ca.crt'),
         ];
 
