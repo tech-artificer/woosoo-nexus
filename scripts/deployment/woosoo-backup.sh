@@ -3,6 +3,11 @@ set -euo pipefail
 
 CONFIG_FILE="/etc/woosoo/woosoo.env"
 
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root: sudo bash scripts/deployment/woosoo-backup.sh"
+  exit 1
+fi
+
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "Missing $CONFIG_FILE"
   exit 1
@@ -20,6 +25,7 @@ MYSQL_SERVICE="${WOOSOO_MYSQL_SERVICE:-mysql}"
 DB_NAME="${WOOSOO_DB_DATABASE:-woosoo}"
 DB_USER="${WOOSOO_DB_USERNAME:-woosoo}"
 DB_PASS="${WOOSOO_DB_PASSWORD:-change_this_password}"
+LOCK_FILE="/tmp/woosoo-backup.lock"
 
 mkdir -p "$WOOSOO_BACKUP_DIR/db"
 
@@ -41,7 +47,13 @@ trap cleanup EXIT
 
 echo "Creating DB backup: $BACKUP_FILE"
 
-if $WOOSOO_DOCKER_COMPOSE exec -T "$MYSQL_SERVICE" sh -lc 'command -v mariadb-dump >/dev/null 2>&1'; then
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "ERROR: another Woosoo backup is already running"
+  exit 1
+fi
+
+if $WOOSOO_DOCKER_COMPOSE exec -T "$MYSQL_SERVICE" sh -c 'command -v mariadb-dump >/dev/null 2>&1'; then
   DUMP_CMD="mariadb-dump"
 else
   DUMP_CMD="mysqldump"
