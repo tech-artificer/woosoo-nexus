@@ -514,7 +514,7 @@ Fallback flow:
 
 ```txt
 If WebSocket is missed:
-  print bridge calls /api/orders/unprinted
+  print bridge calls /api/printer/unprinted-events
   prints pending orders
   confirms printed status
 ```
