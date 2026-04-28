@@ -3,6 +3,11 @@ set -euo pipefail
 
 CONFIG_FILE="/etc/woosoo/woosoo.env"
 
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root: sudo bash scripts/deployment/woosoo-health.sh"
+  exit 1
+fi
+
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "Missing $CONFIG_FILE"
   exit 1
@@ -33,7 +38,7 @@ systemctl is-active dnsmasq || true
 
 echo
 echo "[4] Host port listeners"
-ss -lntup | awk '$5 ~ /:(53|80|443|4443)$/ || $5 ~ /:(53|80|443|4443)\s/ {print}' || true
+ss -lntup | grep -E ':(53|80|443|4443)\b' || true
 
 echo
 echo "[5] Admin HTTPS check"
