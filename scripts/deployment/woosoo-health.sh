@@ -15,6 +15,7 @@ set +a
 WOOSOO_DOCKER_COMPOSE="${WOOSOO_DOCKER_COMPOSE:-docker compose}"
 WOOSOO_NEXUS_PATH="${WOOSOO_NEXUS_PATH:-/opt/woosoo/woosoo-nexus}"
 WOOSOO_SCHEME="${WOOSOO_SCHEME:-https}"
+WOOSOO_REVERB_APP_KEY="${WOOSOO_REVERB_APP_KEY:-}"
 
 echo "=== Woosoo Health Check ==="
 echo
@@ -31,15 +32,23 @@ echo "[3] dnsmasq status"
 systemctl is-active dnsmasq || true
 
 echo
-echo "[4] Port listeners"
-ss -lntup | grep -E ':53|:80|:443|:8080' || true
+echo "[4] Host port listeners"
+ss -lntup | grep -E ':53|:80|:443' || true
 
 echo
 echo "[5] HTTPS check"
 curl -k -I --max-time 10 "${WOOSOO_SCHEME}://${WOOSOO_HOST}" || true
 
 echo
-echo "[6] Docker containers"
+echo "[6] Reverb proxy route check"
+if [[ -n "$WOOSOO_REVERB_APP_KEY" ]]; then
+  curl -k -I --max-time 10 "${WOOSOO_SCHEME}://${WOOSOO_HOST}/app/${WOOSOO_REVERB_APP_KEY}" || true
+else
+  echo "WOOSOO_REVERB_APP_KEY not set; skipping Reverb proxy route check"
+fi
+
+echo
+echo "[7] Docker containers"
 if [[ -d "$WOOSOO_NEXUS_PATH" ]]; then
   cd "$WOOSOO_NEXUS_PATH"
   $WOOSOO_DOCKER_COMPOSE ps || true
@@ -48,15 +57,15 @@ else
 fi
 
 echo
-echo "[7] Disk"
+echo "[8] Disk"
 df -h
 
 echo
-echo "[8] Memory"
+echo "[9] Memory"
 free -h
 
 echo
-echo "[9] Temperature"
+echo "[10] Temperature"
 if command -v vcgencmd >/dev/null 2>&1; then
   vcgencmd measure_temp || true
 else
@@ -64,5 +73,5 @@ else
 fi
 
 echo
-echo "[10] Recent dnsmasq logs"
+echo "[11] Recent dnsmasq logs"
 journalctl -u dnsmasq -n 30 --no-pager || true
