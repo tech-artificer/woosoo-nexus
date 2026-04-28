@@ -28,8 +28,10 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interactio
 
 COPY . .
 
-# PHP-FPM pool must listen on shared Unix socket for nginx fastcgi_pass
+# PHP-FPM pool — listen on TCP 9000 for inter-container FastCGI (nginx → app)
+# zzz-app.conf loads after the official zz-docker.conf (alphabetical order) to win
 COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/zzz-app.conf /usr/local/etc/php-fpm.d/zzz-app.conf
 
 RUN composer run-script post-autoload-dump 2>/dev/null || true \
     && chown -R www-data:www-data storage bootstrap/cache \

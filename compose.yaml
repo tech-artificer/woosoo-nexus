@@ -36,7 +36,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "php", "-r", "echo 'ok';"]
+      test: ["CMD", "php", "-r", "if (!($$s=fsockopen('127.0.0.1',9000,$$e,$$m,3))) exit(1);fclose($$s);"]
       interval: 15s
       timeout: 5s
       retries: 10
