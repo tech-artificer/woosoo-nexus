@@ -102,7 +102,7 @@ Tablet DNS 1:      192.168.100.10
 Tablet DNS 2:      blank or 192.168.100.10
 ```
 
-Do not set DNS 2 to `8.8.8.8`, because some devices may bypass the Pi and fail to resolve `woosoo.local`.
+Set DNS 2 to the same Pi IP or leave it blank. Never use public DNS such as `8.8.8.8` as tablet DNS 2, because some devices may bypass the Pi and fail to resolve `woosoo.local`.
 
 ---
 
@@ -117,16 +117,17 @@ Install in this order:
 5. Install Docker and Docker Compose.
 6. Clone `woosoo-nexus`.
 7. Create `/etc/woosoo/woosoo.env`.
-8. Run `apply-woosoo-config.sh`.
-9. Generate/install HTTPS certificate.
-10. Start Docker stack.
-11. Run migrations.
-12. Configure tablets to use Pi DNS.
-13. Test `https://woosoo.local`.
-14. Configure print bridge server URL to `https://woosoo.local`.
-15. Run print test.
-16. Enable backups and health checks.
-17. Reboot and verify recovery.
+8. Confirm `docker-compose.yml` and `docker/php/Dockerfile` exist.
+9. Run `apply-woosoo-config.sh`.
+10. Generate/install HTTPS certificate.
+11. Start Docker stack.
+12. Run first-install Laravel commands and migrations.
+13. Configure tablets to use Pi DNS.
+14. Test `https://woosoo.local`.
+15. Configure print bridge server URL to `https://woosoo.local`.
+16. Run print test.
+17. Enable backups and health checks.
+18. Reboot and verify recovery.
 
 ---
 
@@ -192,49 +193,25 @@ sudo mkdir -p /etc/woosoo
 sudo nano /etc/woosoo/woosoo.env
 ```
 
-Example:
+Use this repo's example as the starting point:
+
+```bash
+sudo cp docs/deployment/examples/woosoo.env.example /etc/woosoo/woosoo.env
+sudo nano /etc/woosoo/woosoo.env
+```
+
+Important values to confirm per installation:
 
 ```bash
 WOOSOO_HOST="woosoo.local"
 WOOSOO_SERVER_IP="192.168.100.10"
 WOOSOO_GATEWAY="192.168.100.1"
-WOOSOO_CIDR="24"
-WOOSOO_DNS_FORWARDERS="1.1.1.1 8.8.8.8"
-WOOSOO_NM_CONNECTION=""
-
-WOOSOO_NEXUS_PATH="/opt/woosoo/woosoo-nexus"
-WOOSOO_DOCKER_COMPOSE="docker compose"
-
-WOOSOO_SCHEME="https"
-WOOSOO_TIMEZONE="Asia/Manila"
-
 WOOSOO_POS_HOST="192.168.100.20"
 WOOSOO_POS_PORT="3308"
-WOOSOO_POS_DATABASE="krypton_woosoo"
-WOOSOO_POS_USERNAME="root"
-WOOSOO_POS_PASSWORD=""
-
-WOOSOO_DB_DATABASE="woosoo"
-WOOSOO_DB_USERNAME="woosoo"
-WOOSOO_DB_PASSWORD="change_this_password"
-
-WOOSOO_REVERB_APP_ID="woosoo"
-WOOSOO_REVERB_APP_KEY="change_this_reverb_key"
-WOOSOO_REVERB_APP_SECRET="change_this_reverb_secret"
-
-WOOSOO_ALIASES="api.woosoo.local tablet.woosoo.local"
-
-WOOSOO_APP_SERVICE="app"
-WOOSOO_NGINX_SERVICE="nginx"
-WOOSOO_REVERB_SERVICE="reverb"
-WOOSOO_QUEUE_SERVICE="queue"
-WOOSOO_SCHEDULER_SERVICE="scheduler"
-WOOSOO_MYSQL_SERVICE="mysql"
-
-WOOSOO_BACKUP_DIR="/opt/woosoo/backups"
-WOOSOO_APPLY_STATIC_IP="true"
-WOOSOO_RESTART_DOCKER="true"
+WOOSOO_POS_USERNAME="krypton_readonly"
 ```
+
+Use a least-privilege POS database user when possible. Avoid root for production POS reads unless the third-party POS gives no other option.
 
 ---
 
@@ -296,6 +273,8 @@ ip -4 addr
 ip route
 ```
 
+The apply script can perform this automatically using values from `/etc/woosoo/woosoo.env`.
+
 ---
 
 ## 12. dnsmasq Local DNS
@@ -319,6 +298,8 @@ address=/tablet.woosoo.local/192.168.100.10
 server=1.1.1.1
 server=8.8.8.8
 ```
+
+Raspberry Pi OS Bookworm may run `systemd-resolved` on port 53. If dnsmasq cannot start, disable `systemd-resolved` and let dnsmasq own port 53. The apply script handles this automatically.
 
 Validate:
 
@@ -393,6 +374,7 @@ VITE_REVERB_HOST=woosoo.local
 VITE_REVERB_PORT=443
 VITE_REVERB_SCHEME=https
 
+SESSION_DOMAIN=woosoo.local
 SANCTUM_STATEFUL_DOMAINS=woosoo.local,woosoo.local:443,woosoo.local:80
 CORS_ALLOWED_ORIGINS=https://woosoo.local,http://woosoo.local
 ```
@@ -423,6 +405,8 @@ http://woosoo.local:8080
 ---
 
 ## 16. Docker Services
+
+This PR includes a starter `docker-compose.yml` and `docker/php/Dockerfile` for Pi deployment.
 
 Recommended services:
 
@@ -458,7 +442,19 @@ cd /opt/woosoo/woosoo-nexus
 
 docker compose up -d --build
 docker compose exec app composer install --no-dev --optimize-autoloader
+```
+
+Only generate the Laravel app key on first install:
+
+```bash
 docker compose exec app php artisan key:generate
+```
+
+Never re-run `php artisan key:generate` against an existing production database unless you intentionally want to rotate `APP_KEY`. Rotating `APP_KEY` can break existing encrypted values, sessions, and stored encrypted payloads.
+
+Then run:
+
+```bash
 docker compose exec app php artisan migrate --force
 docker compose exec app php artisan storage:link || true
 docker compose exec app php artisan config:cache
@@ -514,10 +510,12 @@ Fallback flow:
 
 ```txt
 If WebSocket is missed:
-  print bridge calls /api/printer/unprinted-events
+  print bridge calls the backend unprinted-orders endpoint
   prints pending orders
   confirms printed status
 ```
+
+Use the current printer integration API documented in `docs/printer_readme.md`.
 
 ---
 
@@ -536,6 +534,7 @@ It should check:
 - `woosoo.local` resolves
 - ports 53/80/443 are listening
 - HTTPS responds
+- Reverb proxy route responds through Nginx
 - Docker containers are running
 - disk space
 - memory
@@ -565,6 +564,8 @@ Backups should be stored under:
 ```
 
 Retain at least 14 days.
+
+The backup script passes database credentials to the dump command inside the database container. This is acceptable for a locked-down LAN appliance, but production operators should restrict SSH access to trusted admins only.
 
 ---
 
@@ -614,6 +615,16 @@ Check Pi DNS:
 dig woosoo.local @127.0.0.1 +short
 sudo systemctl status dnsmasq
 ```
+
+### dnsmasq cannot start
+
+Check whether another service owns port 53:
+
+```bash
+sudo ss -lntup | grep ':53'
+```
+
+If `systemd-resolved` is active, disable it or rerun `apply-woosoo-config.sh`.
 
 ### HTTPS warning
 
