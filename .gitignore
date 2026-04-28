@@ -25,7 +25,9 @@ yarn-error.log
 Dockerfile
 docker-compose.env
 docker-compose.yml
-docker/
+docker/certs/*.pem
+docker/certs/*.crt
+docker/certs/*.key
 /bootstrap/cache/*
 !bootstrap/cache/.gitignore
 /certs

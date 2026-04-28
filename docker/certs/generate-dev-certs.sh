@@ -21,7 +21,7 @@ openssl req -x509 -nodes -newkey rsa:2048 \
     -out    "$CERT_DIR/fullchain.pem" \
     -days   "$DAYS" \
     -subj   "/C=PH/ST=Local/L=Local/O=Woosoo/CN=$IP" \
-    -addext "subjectAltName=IP:$IP,DNS:admin.woosoo.local,DNS:app.woosoo.local,DNS:localhost"
+    -addext "subjectAltName=IP:$IP,DNS:woosoo.local,DNS:admin.woosoo.local,DNS:app.woosoo.local,DNS:localhost"
 
 echo ""
 echo "Done."
