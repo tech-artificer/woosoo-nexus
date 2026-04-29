@@ -21,7 +21,7 @@ chmod +x generate-dev-certs.sh
 ./generate-dev-certs.sh 192.168.100.7   # replace with your server IP
 ```
 
-This generates a cert valid for the IP, `admin.woosoo.local`, `app.woosoo.local`, and `localhost`.
+This generates a cert valid for the IP, `woosoo.local`, `admin.woosoo.local`, `app.woosoo.local`, and `localhost`.
 
 ### Trusting the cert on each device
 

@@ -242,6 +242,7 @@ Important values:
 
 ```bash
 WOOSOO_HOST="woosoo.local"
+WOOSOO_SCHEME="https"
 WOOSOO_SERVER_IP="192.168.100.10"
 WOOSOO_GATEWAY="192.168.100.1"
 WOOSOO_CIDR="24"
@@ -345,7 +346,7 @@ Generate dev/self-signed certs:
 ```bash
 cd /opt/woosoo/woosoo-nexus/docker/certs
 chmod +x generate-dev-certs.sh
-./generate-dev-certs.sh 192.168.100.10
+./generate-dev-certs.sh 192.168.100.10   # replace with your WOOSOO_SERVER_IP value
 cd /opt/woosoo/woosoo-nexus
 ```
 
@@ -355,7 +356,24 @@ Verify files:
 ls -l docker/certs/fullchain.pem docker/certs/privkey.pem
 ```
 
-Install/trust the cert on tablets if Android/browser warns.
+Trust the cert on every device that will access the system. See `docker/certs/README.md`
+for platform-specific instructions (Android, iOS, Chrome, Firefox, macOS).
+
+Quick method — serve the cert over plain HTTP so devices can download it:
+
+```bash
+cd /opt/woosoo/woosoo-nexus/docker/certs
+python3 -m http.server 8888
+```
+
+Then on each tablet open `http://192.168.100.10:8888/fullchain.pem` (replace IP with
+your WOOSOO_SERVER_IP) and follow the OS trust prompt. Stop the server with Ctrl-C when done.
+
+Alternatively, once nginx is running the cert is always available at:
+
+```txt
+http://192.168.100.10/woosoo-ca.crt
+```
 
 ---
 
@@ -376,7 +394,7 @@ dnsmasq local DNS
 /etc/hosts fallback
 Laravel .env values
 certificate directory check
-Docker stack startup/cache refresh
+Docker stack startup with image rebuild and cache refresh
 ```
 
 SSH warning:
@@ -462,6 +480,20 @@ For each ordering tablet:
 Wi-Fi IP assignment: DHCP
 DNS 1: Raspberry Pi IP, e.g. 192.168.100.10
 DNS 2: blank or same as DNS 1
+```
+
+Trust the CA certificate (must be done before opening the PWA):
+
+```txt
+Open http://192.168.100.10/woosoo-ca.crt in the tablet browser
+Follow the OS prompt to install and trust the certificate
+Android: Settings → Security → Install from storage → trust as CA
+iOS:     Settings → General → VPN & Device Management → trust the profile
+```
+
+Then open the PWA:
+
+```txt
 Browser URL: https://woosoo.local:4443
 ```
 
@@ -812,6 +844,9 @@ sudo bash scripts/deployment/woosoo-health.sh
 [ ] dnsmasq resolves woosoo.local
 [ ] Tablet DNS points to Pi
 [ ] TLS certs exist and Nginx starts
+[ ] CA cert trusted on all admin/staff browsers
+[ ] CA cert trusted on all ordering tablets
+[ ] CA cert trusted on print bridge tablet
 [ ] Admin loads at https://woosoo.local
 [ ] Tablet PWA loads at https://woosoo.local:4443
 [ ] Tablet PWA API calls have no CORS errors
