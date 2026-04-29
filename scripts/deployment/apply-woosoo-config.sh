@@ -8,9 +8,20 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Missing config file: $CONFIG_FILE"
+if [[ ! -f "$CONFIG_FILE" || -L "$CONFIG_FILE" ]]; then
+  echo "Missing regular config file: $CONFIG_FILE"
   echo "Copy docs/deployment/examples/woosoo.env.example to $CONFIG_FILE first."
+  exit 1
+fi
+
+config_uid="$(stat -c '%u' "$CONFIG_FILE")"
+config_mode="$(stat -c '%a' "$CONFIG_FILE")"
+if [[ "$config_uid" != "0" ]]; then
+  echo "ERROR: $CONFIG_FILE must be owned by root (UID 0)." >&2
+  exit 1
+fi
+if (( (8#$config_mode & 0022) != 0 )); then
+  echo "ERROR: $CONFIG_FILE must not be writable by group or other users." >&2
   exit 1
 fi
 

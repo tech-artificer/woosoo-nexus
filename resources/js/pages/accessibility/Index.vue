@@ -8,7 +8,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Permission, Role } from '@/types/models';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, shallowRef, watch } from 'vue';
 import { toast } from 'vue-sonner';
 
 const page = usePage();
@@ -24,7 +24,7 @@ const props = reactive({
     assignedPermissions: page.props.assignedPermissions as { [key: string]: string[] },
 });
 
-const selectedRole = ref<Role>();
+const selectedRoleId = shallowRef<string | null>(null);
 const permissionsState = ref<string[]>([]);
 
 const form = useForm({
@@ -32,16 +32,18 @@ const form = useForm({
 });
 
 const isSubmitting = computed(() => form.processing);
+const selectedRole = computed<Role | null>(() => props.roles.find((role) => String(role.id) === selectedRoleId.value) ?? null);
 
 const savePermissions = () => {
-    if (!selectedRole.value) return;
+    const role = selectedRole.value;
+    if (!role) return;
 
     form.permissions = permissionsState.value;
-    form.post(route('roles.permissions.update', selectedRole.value.id), {
+    form.post(route('roles.permissions.update', role.id), {
         onSuccess: () => {
-            toast.success(`Successfully updated permissions for '${selectedRole.value}'.`);
+            toast.success(`Successfully updated permissions for '${role.name}'.`);
         },
-        onError: () => toast.error(`Failed to update permissions for '${selectedRole.value}'.`),
+        onError: () => toast.error(`Failed to update permissions for '${role.name}'.`),
     });
 };
 
@@ -55,9 +57,10 @@ const handleTogglePermission = (permissionName: string, isChecked: boolean) => {
     }
 };
 
-watch(selectedRole, (newRoleName) => {
-    if (newRoleName) {
-        const assigned = props.assignedPermissions[newRoleName.name] || [];
+watch(selectedRoleId, () => {
+    const role = selectedRole.value;
+    if (role) {
+        const assigned = props.assignedPermissions[role.name] || [];
         permissionsState.value = [...assigned];
     } else {
         permissionsState.value = [];
@@ -97,7 +100,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <Label for="role-select" class="text-sm font-semibold text-foreground/80"> Select a role </Label>
                         <p class="text-sm text-muted-foreground">Choose a role to review and update its permissions.</p>
                     </div>
-                    <Select v-model="selectedRole">
+                    <Select v-model="selectedRoleId">
                         <SelectTrigger
                             id="role-select"
                             class="w-full rounded-2xl border-black/10 bg-white/85 shadow-none md:w-[280px] dark:border-white/10 dark:bg-white/[0.06]"
@@ -107,7 +110,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <SelectContent class="rounded-2xl border-black/8 bg-white shadow-xl dark:border-white/10 dark:bg-[#1f1f1f]">
                             <SelectGroup>
                                 <SelectLabel>Roles</SelectLabel>
-                                <SelectItem v-for="role in props.roles" :key="role.id" :value="role" class="capitalize">
+                                <SelectItem v-for="role in props.roles" :key="role.id" :value="String(role.id)" class="capitalize">
                                     {{ role.name }}
                                 </SelectItem>
                             </SelectGroup>

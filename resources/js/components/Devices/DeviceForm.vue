@@ -54,16 +54,14 @@ const branchContextError = computed(() => {
     return errors.branch
 })
 
-const selectedTableName = computed(() => {
-  // if nothing selected yet, show the originally assigned table name
-  if (!form.table_id) {
-    return props.device.table?.name ?? ''
-  }
+const selectedTableName = ref(props.device.table?.name ?? '')
 
-  // if something is selected, look it up from computedTables
-  const found = computedTables.value.find(t => String(t.id) === String(form.table_id))
-  return found ? found.name : props.device.table?.name ?? ''
-})
+function handleTableChange(value: string | number | undefined) {
+    if (!value) return
+    form.table_id = value as number
+    const found = computedTables.value.find(t => String(t.id) === String(value))
+    if (found) selectedTableName.value = found.name
+}
 
 const submit = () => {
     if (props.formType === 'create') {
@@ -173,7 +171,7 @@ async function createToken() {
             <div class="flex flex-col">
                 <Label for="table_id" class="mb-1">Change Table Assignment</Label>
         
-                <Select v-model="form.table_id">
+                <Select :model-value="form.table_id" @update:model-value="handleTableChange">
                     <SelectTrigger id="table_id" class="w-45">
                         <SelectValue placeholder="Assign a Table" />
                     </SelectTrigger>

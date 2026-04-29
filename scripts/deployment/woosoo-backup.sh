@@ -14,6 +14,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
 fi
 
 set -a
+# shellcheck source=/dev/null
 source "$CONFIG_FILE"
 set +a
 
@@ -25,13 +26,27 @@ MYSQL_SERVICE="${WOOSOO_MYSQL_SERVICE:-mysql}"
 DB_NAME="${WOOSOO_DB_DATABASE:-woosoo}"
 DB_USER="${WOOSOO_DB_USERNAME:-woosoo}"
 DB_PASS="${WOOSOO_DB_PASSWORD:-change_this_password}"
-LOCK_FILE="/tmp/woosoo-backup.lock"
+LOCK_DIR="/run/lock/woosoo"
+LOCK_FILE="$LOCK_DIR/woosoo-backup.lock"
 
 read -r -a DOCKER_COMPOSE_CMD <<< "$WOOSOO_DOCKER_COMPOSE"
 
 docker_compose() {
   "${DOCKER_COMPOSE_CMD[@]}" "$@"
 }
+
+if [[ -L "$LOCK_DIR" ]]; then
+  echo "ERROR: unsafe lock directory: $LOCK_DIR"
+  exit 1
+fi
+if ! install -d -o root -g root -m 0755 "$LOCK_DIR"; then
+  echo "ERROR: unable to create secure lock directory: $LOCK_DIR"
+  exit 1
+fi
+if [[ -L "$LOCK_DIR" || ! -d "$LOCK_DIR" ]]; then
+  echo "ERROR: unsafe lock directory: $LOCK_DIR"
+  exit 1
+fi
 
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then

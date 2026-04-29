@@ -3,28 +3,34 @@
 namespace App\Http\Controllers\Admin\Device;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
-use App\Models\Device;
-use App\Models\Krypton\Table;
 use App\Http\Requests\StoreDeviceRequest;
 use App\Http\Requests\UpdateDeviceRequest;
+use App\Models\Branch;
+use App\Models\Device;
+use App\Models\Krypton\Table;
+use App\Services\CertificatePathResolver;
+use App\Support\DeviceSecurityCode;
+use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Models\Branch;
-use App\Support\DeviceSecurityCode;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 use RuntimeException;
 
 class DeviceController extends Controller
 {
+    public function __construct(
+        private readonly CertificatePathResolver $certificatePathResolver,
+    ) {}
+
     public function index()
     {
         $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
         // Fetch tables from 3rd-party DB that are NOT assigned
         try {
             $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             session()->flash('warning', 'Table data is unavailable — POS system is currently offline.');
             $unassignedTables = collect([]);
         }
@@ -39,11 +45,11 @@ class DeviceController extends Controller
         inertia()->share('unassignedTables', $unassignedTables);
 
         // Device stats: total, security-ready count, sparkline of devices created in last 7 days
-        $today = \Carbon\Carbon::today();
+        $today = Carbon::today();
         $start = $today->copy()->subDays(6)->startOfDay();
 
         $daily = Device::where('created_at', '>=', $start)
-            ->selectRaw("DATE(created_at) as date, COUNT(*) as cnt")
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as cnt')
             ->groupBy('date')
             ->orderBy('date')
             ->pluck('cnt', 'date')
@@ -56,8 +62,8 @@ class DeviceController extends Controller
         }
 
         $stats = [
-            [ 'title' => 'Total Devices', 'value' => $devices->count(), 'subtitle' => 'Registered devices', 'variant' => 'primary', 'sparkline' => $spark ],
-            [ 'title' => 'Security Ready', 'value' => $securityReadyCount, 'subtitle' => 'Devices with security code', 'variant' => 'accent' ],
+            ['title' => 'Total Devices', 'value' => $devices->count(), 'subtitle' => 'Registered devices', 'variant' => 'primary', 'sparkline' => $spark],
+            ['title' => 'Security Ready', 'value' => $securityReadyCount, 'subtitle' => 'Devices with security code', 'variant' => 'accent'],
         ];
 
         return Inertia::render('Devices/Index', [
@@ -76,7 +82,7 @@ class DeviceController extends Controller
         $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
         try {
             $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $unassignedTables = collect([]);
         }
 
@@ -102,6 +108,7 @@ class DeviceController extends Controller
 
         if ($branchId === null) {
             \Log::warning('Branch ID is null, rejecting device creation');
+
             return back()
                 ->withInput()
                 ->withErrors([
@@ -189,7 +196,7 @@ class DeviceController extends Controller
                     return back()
                         ->withInput()
                         ->withErrors([
-                            'security_code' => 'This security code is already assigned to another device.'
+                            'security_code' => 'This security code is already assigned to another device.',
                         ]);
                 }
 
@@ -279,7 +286,7 @@ class DeviceController extends Controller
             }
         }
 
-        throw new \RuntimeException('Unable to generate a unique security code. Please try again.');
+        throw new RuntimeException('Unable to generate a unique security code. Please try again.');
     }
 
     private function resolveBranchIdForDeviceCreate(Request $request): ?int
@@ -326,10 +333,10 @@ class DeviceController extends Controller
             ->whereNotNull('table_id')
             ->where('id', '!=', $device->id)
             ->pluck('table_id');
-        
+
         try {
             $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $unassignedTables = collect([]);
         }
 
@@ -341,7 +348,8 @@ class DeviceController extends Controller
         ]);
     }
 
-    public function update(UpdateDeviceRequest $request, Device $device) {
+    public function update(UpdateDeviceRequest $request, Device $device)
+    {
 
         $data = $request->validated();
 
@@ -365,8 +373,8 @@ class DeviceController extends Controller
             'port' => $data['port'] ?? null,
             'table_id' => $data['table_id'] ?? null,
         ]);
-        
-         return redirect()
+
+        return redirect()
             ->route('devices.index')
             ->with('success', 'Device updated.');
         // return Inertia::render('Devices/Edit', [
@@ -394,18 +402,22 @@ class DeviceController extends Controller
     //     return to_route('devices')->with(['success' => 'Device assigned successfully']);
     // }
 
-    public function destroy(Device $device) {
+    public function destroy(Device $device)
+    {
 
         $device->delete();
+
         return redirect()
             ->route('devices.index')
             ->with('success', 'Device trashed.');
     }
 
-    public function restore(Request $request, int $id){
+    public function restore(Request $request, int $id)
+    {
 
         $device = Device::withTrashed()->findOrFail($id);
         $device->restore();
+
         return redirect()
             ->route('devices.index')
             ->with('success', 'Device restored.');
@@ -443,23 +455,12 @@ class DeviceController extends Controller
      */
     public function downloadCertificate()
     {
-        // Checked in priority order — first match wins.
-        // docker/certs/ is bind-mounted into the app container (.:/var/www/html).
-        $candidatePaths = [
-            base_path('docker/certs/fullchain.pem'),       // compose.yaml deployment (primary)
-            base_path('docker/certs/fullchain.crt'),       // same, .crt extension variant
-            storage_path('app/public/certificates/woosoo-ca.der'),
-            storage_path('app/public/certificates/CAROOT.pem'),
-            base_path('certs/ca.crt'),                     // legacy workspace path
-            base_path('../certs/ca.crt'),
-        ];
+        $path = $this->certificatePathResolver->resolveCertificatePath();
 
-        foreach ($candidatePaths as $path) {
-            if (file_exists($path)) {
-                return response()->download($path, 'woosoo-ca.crt', [
-                    'Content-Type' => 'application/x-x509-ca-cert',
-                ]);
-            }
+        if ($path !== null) {
+            return response()->download($path, 'woosoo-ca.crt', [
+                'Content-Type' => 'application/x-x509-ca-cert',
+            ]);
         }
 
         return response('CA certificate not found. Contact system administrator.', 404)
@@ -498,5 +499,4 @@ class DeviceController extends Controller
 
         return redirect()->route('devices.index')->with('device_token', $plain)->with('success', 'Device token created.');
     }
-
 }

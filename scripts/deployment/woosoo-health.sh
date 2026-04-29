@@ -14,6 +14,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
 fi
 
 set -a
+# shellcheck source=/dev/null
 source "$CONFIG_FILE"
 set +a
 
@@ -27,6 +28,10 @@ echo
 
 if [[ -z "${WOOSOO_SERVER_IP:-}" ]]; then
   echo "Missing required config: WOOSOO_SERVER_IP"
+  exit 1
+fi
+if [[ -z "${WOOSOO_HOST:-}" ]]; then
+  echo "Missing required config: WOOSOO_HOST"
   exit 1
 fi
 
