@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
@@ -40,7 +41,10 @@ class MonitoringController extends Controller
         // Unprintable orders: device_orders where is_printed = false and created > 10 minutes ago
         $unprintedOrders = DeviceOrder::where('is_printed', false)
             ->where('created_at', '<', now()->subMinutes(10))
-            ->whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->whereIn('status', [
+                OrderStatus::PENDING->value,
+                OrderStatus::CONFIRMED->value,
+            ])
             ->with(['device', 'table'])
             ->orderBy('created_at', 'desc')
             ->limit(50)

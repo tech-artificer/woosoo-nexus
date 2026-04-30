@@ -366,7 +366,7 @@ fi
 
 if [[ "$WOOSOO_RESTART_DOCKER" == "true" ]]; then
   if command_exists docker; then
-    $WOOSOO_DOCKER_COMPOSE up -d
+    $WOOSOO_DOCKER_COMPOSE up -d --build
     if wait_for_app_service; then
       $WOOSOO_DOCKER_COMPOSE exec -T "$WOOSOO_APP_SERVICE" php artisan config:clear || true
       $WOOSOO_DOCKER_COMPOSE exec -T "$WOOSOO_APP_SERVICE" php artisan cache:clear || true

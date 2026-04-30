@@ -466,8 +466,10 @@ class PrinterApiController extends Controller
         $device = Auth::user();  // Authenticated device from token
         /** @var \Illuminate\Database\Eloquent\Model $device */
 
-        // Validate device_id mismatch (if provided in payload)
-        if ($request->filled('device_id') && $request->input('device_id') !== $device->id) {
+        // Validate device_id mismatch (if provided in payload).
+        // Cast both sides to string: Flutter sends device_id as a JSON string ("3"),
+        // while $device->id is a PHP integer (3). Strict !== would always mismatch.
+        if ($request->filled('device_id') && (string) $request->input('device_id') !== (string) $device->id) {
             abort(403, 'Device ID mismatch');
         }
 

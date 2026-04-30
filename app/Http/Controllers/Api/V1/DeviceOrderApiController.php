@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\OrderStatus;
+use App\Events\Order\OrderCreated;
+use App\Exceptions\SessionNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDeviceOrderRequest;
 use App\Http\Resources\DeviceOrderResource;
 use App\Models\DeviceOrder;
-use App\Events\Order\OrderCreated;
-use App\Services\Krypton\OrderService;
-use App\Exceptions\SessionNotFoundException;
-use App\Enums\OrderStatus;
 use App\Services\AuditLogService;
+use App\Services\Krypton\OrderService;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -23,16 +24,16 @@ use Throwable;
 class DeviceOrderApiController extends Controller
 {
     private const POS_SQLSTATE_GENERAL_ERROR = 'HY000';
+
     private const POS_CONNECTION_REFUSED_ERROR_CODE = 2002;
 
     /**
      * Handle the incoming order request from a specific device.
      *
-     * @param  StoreDeviceOrderRequest  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function __invoke(StoreDeviceOrderRequest $request)
-    {   
+    {
         // ── Idempotency ────────────────────────────────────────────────────
         // If the client sends X-Idempotency-Key, replay the cached response on
         // duplicate submissions (e.g. PWA retry after network error).
@@ -45,9 +46,9 @@ class DeviceOrderApiController extends Controller
         if ($idempotencyKey !== '') {
             $device = $request->user();
             $deviceId = $device && isset($device->id) ? (string) $device->id : 'anonymous';
-            $idempotencyScope = 'device-order:' . $deviceId . ':' . sha1($idempotencyKey);
-            $processingKey = $idempotencyScope . ':processing';
-            $responseCacheKey = $idempotencyScope . ':response';
+            $idempotencyScope = 'device-order:'.$deviceId.':'.sha1($idempotencyKey);
+            $processingKey = $idempotencyScope.':processing';
+            $responseCacheKey = $idempotencyScope.':response';
 
             // Return cached response for duplicate submission (HTTP 200 replay)
             $cachedResponse = Cache::get($responseCacheKey);
@@ -60,7 +61,7 @@ class DeviceOrderApiController extends Controller
             }
 
             // Block duplicate in-flight requests with the same key
-            if (!Cache::add($processingKey, 1, now()->addSeconds(30))) {
+            if (! Cache::add($processingKey, 1, now()->addSeconds(30))) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Duplicate order request is already being processed',
@@ -70,7 +71,7 @@ class DeviceOrderApiController extends Controller
 
         // Validate the incoming request
         $validatedData = $request->validated();
-        
+
         // Initialize errors array
         $errors = [];
         // Get the device from the incoming request
@@ -109,7 +110,7 @@ class DeviceOrderApiController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'An existing order (pending or confirmed) prevents creating a new order for this device.',
-                    'order' => new DeviceOrderResource($result['existing'])
+                    'order' => new DeviceOrderResource($result['existing']),
                 ], 409);
             }
 
@@ -124,7 +125,7 @@ class DeviceOrderApiController extends Controller
                 ], 500);
             }
 
-            OrderCreated::dispatch($order);
+            $this->dispatchOrderCreated($order, $device?->id);
             AuditLogService::orderStatusChanged($request, $order->id, 'NEW', OrderStatus::PENDING->value, $device->id);
 
             // H4 fix 2026-04-08: eager-load relationships so DeviceOrderResource
@@ -181,7 +182,7 @@ class DeviceOrderApiController extends Controller
                 'message' => 'Order creation failed.',
             ], 500);
         }
-    
+
     }
 
     private function isPosServiceUnavailable(QueryException $e): bool
@@ -204,6 +205,17 @@ class DeviceOrderApiController extends Controller
             || str_contains($message, 'no such file or directory');
     }
 
-
+    private function dispatchOrderCreated(DeviceOrder $order, ?int $deviceId): void
+    {
+        try {
+            OrderCreated::dispatch($order);
+        } catch (Throwable $e) {
+            Log::warning('Order created but realtime broadcast failed', [
+                'device_id' => $deviceId,
+                'device_order_id' => $order->id,
+                'order_id' => $order->order_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 }
-

@@ -25,6 +25,7 @@ class UpdateDeviceRequest extends FormRequest
             ],
             'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'table_id' => ['nullable', 'integer', Rule::exists('pos.tables', 'id')],
+            'type' => ['nullable', Rule::in(['tablet', 'printer_relay'])],
         ];
     }
 }

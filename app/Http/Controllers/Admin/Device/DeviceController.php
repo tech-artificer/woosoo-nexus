@@ -162,6 +162,7 @@ class DeviceController extends Controller
                         'ip_address' => $ipAddress,
                         'port' => $data['port'] ?? null,
                         'table_id' => $data['table_id'] ?? null,
+                        'type' => $data['type'] ?? null,
                         'is_active' => true,
                     ], DeviceSecurityCode::attributesFor($plainSecurityCode));
 
@@ -372,6 +373,7 @@ class DeviceController extends Controller
             'ip_address' => $ipAddress,
             'port' => $data['port'] ?? null,
             'table_id' => $data['table_id'] ?? null,
+            'type' => $data['type'] ?? null,
         ]);
 
         return redirect()
@@ -498,5 +500,50 @@ class DeviceController extends Controller
         }
 
         return redirect()->route('devices.index')->with('device_token', $plain)->with('success', 'Device token created.');
+    }
+
+    /**
+     * Regenerate a device's registration (security) code via admin UI.
+     * Returns the plain code once as JSON. Always AJAX-only.
+     */
+    public function regenerateSecurityCode(Request $request, Device $device)
+    {
+        $user = $request->user();
+        if (! $user || ! ($user->is_admin ?? false)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $device = Device::find($device->id);
+        if (! $device) {
+            return response()->json(['success' => false, 'message' => 'Device not found'], 404);
+        }
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $plain = (string) random_int(100000, 999999);
+
+            try {
+                DB::transaction(function () use ($device, $plain): void {
+                    if (DeviceSecurityCode::isAssigned($plain, (int) $device->id)) {
+                        throw new RuntimeException('security_code_assigned');
+                    }
+
+                    $lockedDevice = Device::whereKey($device->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $lockedDevice->tokens()->delete();
+                    $lockedDevice->update(DeviceSecurityCode::attributesFor($plain));
+                }, 3);
+
+                return response()->json(['security_code' => $plain]);
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'security_code_assigned') {
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
+        return response()->json(['message' => 'Unable to generate a unique security code.'], 409);
     }
 }

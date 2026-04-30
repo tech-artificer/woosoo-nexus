@@ -9,7 +9,6 @@ export interface User {
     avatar?: string;
     role: string;
     is_admin: boolean;
-    
     deleted_at?: string;
     email_verified_at?: string | null;
     roles: Role[];
@@ -189,5 +188,3 @@ export interface ServiceRequest {
     is_active?: boolean;
     created_at?: string;
 }
-
-    

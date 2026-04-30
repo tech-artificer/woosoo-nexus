@@ -198,6 +198,7 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('{id}/restore', [DeviceController::class, 'restore'])->name('restore');
             Route::post('/{device}/assign-table', [DeviceController::class, 'assignTable'])->name('device.assign.table');
             Route::post('/{device}/token', [DeviceController::class, 'createToken'])->name('create.token');
+            Route::post('/{device}/security-code', [DeviceController::class, 'regenerateSecurityCode'])->name('security-code.regenerate');
         });
 
         Route::get('/accessibility', [AccessibilityController::class, 'index'])->name('accessibility.index');

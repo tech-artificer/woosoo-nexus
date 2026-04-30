@@ -41,6 +41,16 @@ flowchart TD
 - Re-check response headers for `/service-worker.js` after the nginx change.
 - Confirm the worker no longer caches app responses.
 - Verify a normal browser tab after clearing site data or reloading the updated worker.
+
+### Addendum: Monitoring card false zero for unprinted orders (April 29, 2026)
+
+- Symptom: `System Monitoring` showed `Unprinted Orders = 0` while at least one pending unprinted order existed.
+- Root cause: `app/Http/Controllers/Admin/MonitoringController.php` filtered with uppercase literals `['PENDING', 'CONFIRMED']` while canonical `OrderStatus` values are lowercase (`pending`, `confirmed`).
+- Fix: switched filter to enum-backed canonical values:
+  - `OrderStatus::PENDING->value`
+  - `OrderStatus::CONFIRMED->value`
+- Regression coverage added: `tests/Feature/Admin/MonitoringMetricsTest.php` asserts that a lowercase pending unprinted order is returned by `/monitoring/metrics`.
+- Validation note: local test runner currently blocks on an interactive `migrate:fresh` confirmation path in this environment (`askQuestion` Mockery failure), so automated pass/fail evidence is pending environment normalization.
 # CASE_FILE: Orders Detail View Alignment
 **Last Updated:** March 25, 2026
 **Lead Detective:** Ranpo Edogawa
