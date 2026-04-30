@@ -19,6 +19,7 @@ class AckPrintEventRequest extends FormRequest
             'bluetooth_address' => ['nullable', 'string', 'max:50'],
             'app_version' => ['nullable', 'string', 'max:20'],
             'printed_at' => ['nullable', 'date'],
+            'verification_mode' => ['nullable', 'string', 'in:strict_status,connected_only'],
         ];
     }
 }

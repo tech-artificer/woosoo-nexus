@@ -315,6 +315,7 @@ class PrinterApiController extends Controller
         $bluetoothAddress = $request->input('bluetooth_address');
         $appVersion = $request->input('app_version');
         $printedAt = $request->input('printed_at');
+        $verificationMode = $request->input('verification_mode');
 
         try {
             $evt = $this->printEventService->getById($id);
@@ -355,9 +356,10 @@ class PrinterApiController extends Controller
             ]);
         }
 
-        $res = $this->printEventService->ack($id, $printerId, $printedAt, $device?->id, $printerName);
+        $res = $this->printEventService->ack($id, $printerId, $printedAt, $device?->id, $printerName, $verificationMode);
         Log::info("[ACK] Successfully acknowledged print_event_id=$id", [
             'was_updated' => $res['was_updated'],
+            'verification_mode' => $verificationMode,
         ]);
 
         // Update device heartbeat (only if authenticated)

@@ -186,3 +186,34 @@ flowchart LR
 5. ✅ Ensure database-backed sessions have a `sessions` table.
 6. ✅ Ensure dashboard metrics formatting does not hard-require `php_intl`.
 7. ✅ Ensure Echo client uses nginx TLS endpoint and leave calls are guarded.
+
+### Addendum: Stale Relay Heartbeat Queue-Safety Hardening (April 30, 2026)
+
+- Symptom risk: scheduled stale-heartbeat scans can pile up or retry-loop under worker pressure/timeouts, increasing queue churn and memory pressure.
+- Root-cause class: missing explicit job retry/time-limit contract and no failed-job fallback signal for this scheduled queue job.
+
+**Controls added**
+- `CheckStaleRelayHeartbeats` now has strict queue safety contract:
+  - `tries=1`, `maxExceptions=1`, `timeout=30`, `failOnTimeout=true`
+  - `WithoutOverlapping(...)->dontRelease()` middleware to prevent concurrent duplicates across workers
+  - `failed(Throwable $e)` handler to emit explicit error telemetry when timeout/failure occurs
+  - chunked DB scan (`chunkById(200)`) to reduce peak memory during stale-device scans
+- Scheduler dispatch now includes `withoutOverlapping(10)` for stale-heartbeat job trigger.
+- Added scheduler memory monitoring task (5-minute cadence) with warning threshold `SCHEDULER_MEMORY_WARN_MB`.
+- Added Docker container memory caps (compose):
+  - `app`: `768m` limit / `384m` reservation
+  - `queue`: `512m` limit / `256m` reservation
+  - `scheduler`: `256m` limit / `128m` reservation
+
+```mermaid
+flowchart TD
+    A[Scheduler tick every 3 min] --> B[Dispatch CheckStaleRelayHeartbeats]
+    B --> C{Overlap lock exists?}
+    C -- yes --> D[Skip duplicate dispatch]
+    C -- no --> E[Queue worker runs job]
+    E --> F{Exceeds 30s timeout?}
+    F -- yes --> G[Fail immediately: tries=1]
+    G --> H[failed() logs fallback telemetry]
+    F -- no --> I[Chunked scan + stale relay warnings]
+    I --> J[Complete without requeue loop]
+```
