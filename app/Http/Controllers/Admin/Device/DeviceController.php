@@ -446,6 +446,19 @@ class DeviceController extends Controller
     }
 
     /**
+     * Landing page for certificate distribution — no authentication required.
+     * Displays install instructions and a download link for the CA cert.
+     */
+    public function certificatePage(): \Illuminate\Contracts\View\View
+    {
+        return view('devices.certificate', [
+            'available'   => $this->certificatePathResolver->resolveCertificatePath() !== null,
+            'downloadUrl' => route('devices.download-certificate'),
+            'serverHost'  => config('app.url'),
+        ]);
+    }
+
+    /**
      * Download the self-signed CA/server certificate so devices can trust the local HTTPS stack.
      *
      * Served with application/x-x509-ca-cert so Android/iOS prompt the user to install it.
