@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-
-use Spatie\Permission\PermissionRegistrar;
-use Spatie\Permission\Models\Role;
+use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class AccessibilityController extends Controller
 {
@@ -20,14 +20,16 @@ class AccessibilityController extends Controller
         // Group permissions by their prefix (e.g., 'users.view' -> 'users')
         $groupedPermissions = $permissions->groupBy(function ($permission) {
             $parts = explode('.', $permission->name);
+
             return $parts[0] ?? 'other';
         })->map(function ($group) {
             return $group->map(function ($permission) {
                 // Add human-readable label if not already set
-                if (!isset($permission->label)) {
+                if (! isset($permission->label)) {
                     $parts = explode('.', $permission->name);
                     $permission->label = ucfirst(implode(' ', array_slice($parts, 1)));
                 }
+
                 return $permission;
             });
         });
@@ -38,7 +40,7 @@ class AccessibilityController extends Controller
             $assignedPermissions[$role->name] = $role->permissions->pluck('name')->toArray();
         }
 
-        return Inertia::render('Accessibility', [
+        return Inertia::render('accessibility/Index', [
             'title' => 'Accessibility',
             'description' => 'Manage what each role can access across the system.',
             'roles' => $roles,
@@ -48,12 +50,10 @@ class AccessibilityController extends Controller
         ]);
     }
 
-     /**
+    /**
      * Update the permissions for a specific role.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Spatie\Permission\Models\Role  $role
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function updatePermissions(Request $request, Role $role)
     {
@@ -66,6 +66,7 @@ class AccessibilityController extends Controller
         // Sync the role's permissions to the new list
         $role->syncPermissions($validated['permissions']);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         return back()->with(['success' => true]);
     }
 }

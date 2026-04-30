@@ -3,28 +3,34 @@
 namespace App\Http\Controllers\Admin\Device;
 
 use App\Http\Controllers\Controller;
-use Inertia\Inertia;
-use App\Models\Device;
-use App\Models\Krypton\Table;
 use App\Http\Requests\StoreDeviceRequest;
 use App\Http\Requests\UpdateDeviceRequest;
+use App\Models\Branch;
+use App\Models\Device;
+use App\Models\Krypton\Table;
+use App\Services\CertificatePathResolver;
+use App\Support\DeviceSecurityCode;
+use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Models\Branch;
-use App\Support\DeviceSecurityCode;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 use RuntimeException;
 
 class DeviceController extends Controller
 {
+    public function __construct(
+        private readonly CertificatePathResolver $certificatePathResolver,
+    ) {}
+
     public function index()
     {
         $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
         // Fetch tables from 3rd-party DB that are NOT assigned
         try {
             $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             session()->flash('warning', 'Table data is unavailable — POS system is currently offline.');
             $unassignedTables = collect([]);
         }
@@ -39,11 +45,11 @@ class DeviceController extends Controller
         inertia()->share('unassignedTables', $unassignedTables);
 
         // Device stats: total, security-ready count, sparkline of devices created in last 7 days
-        $today = \Carbon\Carbon::today();
+        $today = Carbon::today();
         $start = $today->copy()->subDays(6)->startOfDay();
 
         $daily = Device::where('created_at', '>=', $start)
-            ->selectRaw("DATE(created_at) as date, COUNT(*) as cnt")
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as cnt')
             ->groupBy('date')
             ->orderBy('date')
             ->pluck('cnt', 'date')
@@ -56,8 +62,8 @@ class DeviceController extends Controller
         }
 
         $stats = [
-            [ 'title' => 'Total Devices', 'value' => $devices->count(), 'subtitle' => 'Registered devices', 'variant' => 'primary', 'sparkline' => $spark ],
-            [ 'title' => 'Security Ready', 'value' => $securityReadyCount, 'subtitle' => 'Devices with security code', 'variant' => 'accent' ],
+            ['title' => 'Total Devices', 'value' => $devices->count(), 'subtitle' => 'Registered devices', 'variant' => 'primary', 'sparkline' => $spark],
+            ['title' => 'Security Ready', 'value' => $securityReadyCount, 'subtitle' => 'Devices with security code', 'variant' => 'accent'],
         ];
 
         return Inertia::render('Devices/Index', [
@@ -76,7 +82,7 @@ class DeviceController extends Controller
         $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
         try {
             $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $unassignedTables = collect([]);
         }
 
@@ -102,6 +108,7 @@ class DeviceController extends Controller
 
         if ($branchId === null) {
             \Log::warning('Branch ID is null, rejecting device creation');
+
             return back()
                 ->withInput()
                 ->withErrors([
@@ -155,6 +162,7 @@ class DeviceController extends Controller
                         'ip_address' => $ipAddress,
                         'port' => $data['port'] ?? null,
                         'table_id' => $data['table_id'] ?? null,
+                        'type' => $data['type'] ?? null,
                         'is_active' => true,
                     ], DeviceSecurityCode::attributesFor($plainSecurityCode));
 
@@ -189,7 +197,7 @@ class DeviceController extends Controller
                     return back()
                         ->withInput()
                         ->withErrors([
-                            'security_code' => 'This security code is already assigned to another device.'
+                            'security_code' => 'This security code is already assigned to another device.',
                         ]);
                 }
 
@@ -279,7 +287,7 @@ class DeviceController extends Controller
             }
         }
 
-        throw new \RuntimeException('Unable to generate a unique security code. Please try again.');
+        throw new RuntimeException('Unable to generate a unique security code. Please try again.');
     }
 
     private function resolveBranchIdForDeviceCreate(Request $request): ?int
@@ -326,10 +334,10 @@ class DeviceController extends Controller
             ->whereNotNull('table_id')
             ->where('id', '!=', $device->id)
             ->pluck('table_id');
-        
+
         try {
             $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $unassignedTables = collect([]);
         }
 
@@ -341,7 +349,8 @@ class DeviceController extends Controller
         ]);
     }
 
-    public function update(UpdateDeviceRequest $request, Device $device) {
+    public function update(UpdateDeviceRequest $request, Device $device)
+    {
 
         $data = $request->validated();
 
@@ -364,9 +373,10 @@ class DeviceController extends Controller
             'ip_address' => $ipAddress,
             'port' => $data['port'] ?? null,
             'table_id' => $data['table_id'] ?? null,
+            'type' => $data['type'] ?? null,
         ]);
-        
-         return redirect()
+
+        return redirect()
             ->route('devices.index')
             ->with('success', 'Device updated.');
         // return Inertia::render('Devices/Edit', [
@@ -394,18 +404,22 @@ class DeviceController extends Controller
     //     return to_route('devices')->with(['success' => 'Device assigned successfully']);
     // }
 
-    public function destroy(Device $device) {
+    public function destroy(Device $device)
+    {
 
         $device->delete();
+
         return redirect()
             ->route('devices.index')
             ->with('success', 'Device trashed.');
     }
 
-    public function restore(Request $request, int $id){
+    public function restore(Request $request, int $id)
+    {
 
         $device = Device::withTrashed()->findOrFail($id);
         $device->restore();
+
         return redirect()
             ->route('devices.index')
             ->with('success', 'Device restored.');
@@ -432,30 +446,36 @@ class DeviceController extends Controller
     }
 
     /**
-     * Download the mkcert CA certificate for Flutter app SSL/TLS validation.
-     * 
-     * Industry standard: Serve CA certificates with application/x-x509-ca-cert MIME type.
-     * This is the standard Android expects for certificate installation.
-     * This certificate allows Flutter apps to validate HTTPS connections against the self-signed mkcert CA.
-     * Android installation: Settings → Security → Install from SD card.
+     * Landing page for certificate distribution — no authentication required.
+     * Displays install instructions and a download link for the CA cert.
+     */
+    public function certificatePage(): \Illuminate\Contracts\View\View
+    {
+        return view('devices.certificate', [
+            'available'   => $this->certificatePathResolver->resolveCertificatePath() !== null,
+            'downloadUrl' => route('devices.download-certificate'),
+            'serverHost'  => config('app.url'),
+        ]);
+    }
+
+    /**
+     * Download the self-signed CA/server certificate so devices can trust the local HTTPS stack.
+     *
+     * Served with application/x-x509-ca-cert so Android/iOS prompt the user to install it.
+     * The endpoint is intentionally accessible over plain HTTP (nginx exception) so devices
+     * can bootstrap trust before they have a valid HTTPS connection to this server.
+     *
+     * Android installation: Settings → Security → Install from storage.
+     * iOS: tap .crt → Settings → General → VPN & Device Management → Install.
      */
     public function downloadCertificate()
     {
-        // Prefer DER (better Android install UX); then PEM fallbacks.
-        $candidatePaths = [
-            storage_path('app/public/certificates/woosoo-ca.der'),
-            storage_path('app/public/certificates/CAROOT.pem'),
-            // Root stack certs directory fallback (workspace/docker deployments)
-            base_path('certs/ca.crt'),
-            base_path('../certs/ca.crt'),
-        ];
+        $path = $this->certificatePathResolver->resolveCertificatePath();
 
-        foreach ($candidatePaths as $path) {
-            if (file_exists($path)) {
-                return response()->download($path, 'woosoo-ca.crt', [
-                    'Content-Type' => 'application/x-x509-ca-cert',
-                ]);
-            }
+        if ($path !== null) {
+            return response()->download($path, 'woosoo-ca.crt', [
+                'Content-Type' => 'application/x-x509-ca-cert',
+            ]);
         }
 
         return response('CA certificate not found. Contact system administrator.', 404)
@@ -495,4 +515,48 @@ class DeviceController extends Controller
         return redirect()->route('devices.index')->with('device_token', $plain)->with('success', 'Device token created.');
     }
 
+    /**
+     * Regenerate a device's registration (security) code via admin UI.
+     * Returns the plain code once as JSON. Always AJAX-only.
+     */
+    public function regenerateSecurityCode(Request $request, Device $device)
+    {
+        $user = $request->user();
+        if (! $user || ! ($user->is_admin ?? false)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $device = Device::find($device->id);
+        if (! $device) {
+            return response()->json(['success' => false, 'message' => 'Device not found'], 404);
+        }
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $plain = (string) random_int(100000, 999999);
+
+            try {
+                DB::transaction(function () use ($device, $plain): void {
+                    if (DeviceSecurityCode::isAssigned($plain, (int) $device->id)) {
+                        throw new RuntimeException('security_code_assigned');
+                    }
+
+                    $lockedDevice = Device::whereKey($device->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $lockedDevice->tokens()->delete();
+                    $lockedDevice->update(DeviceSecurityCode::attributesFor($plain));
+                }, 3);
+
+                return response()->json(['security_code' => $plain]);
+            } catch (RuntimeException $e) {
+                if ($e->getMessage() === 'security_code_assigned') {
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
+        return response()->json(['message' => 'Unable to generate a unique security code.'], 409);
+    }
 }

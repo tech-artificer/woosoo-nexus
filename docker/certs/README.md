@@ -18,10 +18,10 @@ Requires `openssl`.
 
 ```sh
 chmod +x generate-dev-certs.sh
-./generate-dev-certs.sh 192.168.100.7   # replace with your server IP
+./generate-dev-certs.sh 192.168.100.10   # replace with your actual Pi IP
 ```
 
-This generates a cert valid for the IP, `admin.woosoo.local`, `app.woosoo.local`, and `localhost`.
+This generates a cert valid for the IP, `woosoo.local`, `admin.woosoo.local`, `app.woosoo.local`, and `localhost`.
 
 ### Trusting the cert on each device
 

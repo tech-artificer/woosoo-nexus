@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\RotateDeviceSecurityCodeRequest;
+use App\Http\Requests\Api\StoreDeviceApiRequest;
 use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceHeartbeat;
 use App\Services\LocalBranchResolver;
-use App\Http\Requests\Api\StoreDeviceApiRequest;
-use App\Http\Requests\Api\RotateDeviceSecurityCodeRequest;
 use App\Support\DeviceSecurityCode;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -17,12 +17,14 @@ use Illuminate\Support\Facades\DB;
 
 class DeviceApiController extends Controller
 {
-    public function __construct(private LocalBranchResolver $branchResolver)
-    {
-    }
+    public function __construct(private LocalBranchResolver $branchResolver) {}
 
     /** Minutes of inactivity before a device is considered offline. */
     private const ONLINE_WINDOW_MINUTES = 5;
+
+    private const DEVICE_TYPE_ALIASES = [
+        'relay_printer' => 'printer_relay',
+    ];
 
     // -------------------------------------------------------------------------
     // Collection endpoints
@@ -44,13 +46,13 @@ class DeviceApiController extends Controller
             } else {
                 $query->where(function ($q) {
                     $q->whereNull('last_seen_at')
-                      ->orWhere('last_seen_at', '<', now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
+                        ->orWhere('last_seen_at', '<', now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
                 });
             }
         }
 
         if ($request->filled('type')) {
-            $query->where('type', $request->input('type'));
+            $query->where('type', $this->normalizeDeviceType((string) $request->input('type')));
         }
 
         if ($request->filled('branch_id')) {
@@ -63,10 +65,10 @@ class DeviceApiController extends Controller
         return response()->json([
             'data' => $devices->items(),
             'meta' => [
-                'total'        => $devices->total(),
-                'per_page'     => $devices->perPage(),
+                'total' => $devices->total(),
+                'per_page' => $devices->perPage(),
                 'current_page' => $devices->currentPage(),
-                'last_page'    => $devices->lastPage(),
+                'last_page' => $devices->lastPage(),
             ],
         ]);
     }
@@ -99,23 +101,23 @@ class DeviceApiController extends Controller
         $this->authorize('viewAny', Device::class);
 
         $onlineThreshold = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
-        $total   = Device::count();
-        $active  = Device::where('is_active', true)->count();
-        $online  = Device::where('last_seen_at', '>=', $onlineThreshold)->count();
+        $total = Device::count();
+        $active = Device::where('is_active', true)->count();
+        $online = Device::where('last_seen_at', '>=', $onlineThreshold)->count();
 
         $byType = [];
-        foreach (['tablet', 'relay_printer', 'print_bridge', 'direct_printer'] as $type) {
+        foreach (['tablet', 'printer_relay', 'print_bridge', 'direct_printer'] as $type) {
             $base = Device::where('type', $type);
             $byType[$type] = [
-                'total'  => (clone $base)->count(),
+                'total' => (clone $base)->count(),
                 'online' => (clone $base)->where('last_seen_at', '>=', $onlineThreshold)->count(),
             ];
         }
 
         return response()->json([
-            'total'   => $total,
-            'active'  => $active,
-            'online'  => $online,
+            'total' => $total,
+            'active' => $active,
+            'online' => $online,
             'offline' => $total - $online,
             'by_type' => $byType,
         ]);
@@ -131,14 +133,14 @@ class DeviceApiController extends Controller
 
         $threshold = now()->subMinutes(self::ONLINE_WINDOW_MINUTES);
 
-        $online  = Device::where('last_seen_at', '>=', $threshold)->with('branch')->get();
+        $online = Device::where('last_seen_at', '>=', $threshold)->with('branch')->get();
         $offline = Device::where(function ($q) use ($threshold) {
             $q->whereNull('last_seen_at')
-              ->orWhere('last_seen_at', '<', $threshold);
+                ->orWhere('last_seen_at', '<', $threshold);
         })->with('branch')->get();
 
         return response()->json([
-            'online'  => $online->map(fn ($d) => $this->formatDevice($d)),
+            'online' => $online->map(fn ($d) => $this->formatDevice($d)),
             'offline' => $offline->map(fn ($d) => $this->formatDevice($d)),
         ]);
     }
@@ -153,7 +155,8 @@ class DeviceApiController extends Controller
      */
     public function store(StoreDeviceApiRequest $request): JsonResponse
     {
-        $data   = $request->validated();
+        $data = $request->validated();
+        $data['type'] = $this->normalizeDeviceType($data['type']);
         $branch = Branch::find($data['branch_id'] ?? null)
             ?? $this->branchResolver->resolve()
             ?? Branch::query()->orderBy('id')->first();
@@ -171,11 +174,11 @@ class DeviceApiController extends Controller
                 }
 
                 return Device::create(array_merge([
-                    'name'                       => $data['name'],
-                    'type'                       => $data['type'],
-                    'branch_id'                  => $branch->id,
-                    'ip_address'                 => $data['ip_address'] ?? null,
-                    'is_active'                  => true,
+                    'name' => $data['name'],
+                    'type' => $data['type'],
+                    'branch_id' => $branch->id,
+                    'ip_address' => $data['ip_address'] ?? null,
+                    'is_active' => true,
                 ], DeviceSecurityCode::attributesFor($plainCode)));
             }, 3);
         } catch (\RuntimeException $e) {
@@ -185,7 +188,7 @@ class DeviceApiController extends Controller
 
             return response()->json([
                 'message' => 'Security code already assigned to another device',
-                'errors' => ['security_code' => 'This code is in use']
+                'errors' => ['security_code' => 'This code is in use'],
             ], 409);
         } catch (QueryException $e) {
             if (! $this->isUniqueConstraintViolation($e)) {
@@ -194,14 +197,14 @@ class DeviceApiController extends Controller
 
             return response()->json([
                 'message' => 'Device conflicts with an existing record',
-                'errors' => ['device' => 'A device with this IP, name, or security code already exists']
+                'errors' => ['device' => 'A device with this IP, name, or security code already exists'],
             ], 409);
         }
 
         $plain = $plainCode;
 
         return response()->json([
-            'device'        => $this->formatDevice($device),
+            'device' => $this->formatDevice($device),
             'security_code' => $plain,   // one-time flash — not stored in plain text after this
         ], 201);
     }
@@ -215,6 +218,7 @@ class DeviceApiController extends Controller
         $this->authorize('view', $device);
 
         $device->load(['branch', 'latestHeartbeat']);
+
         return response()->json($this->formatDevice($device, withHeartbeat: true));
     }
 
@@ -226,7 +230,7 @@ class DeviceApiController extends Controller
     {
         $this->authorize('view', $device);
 
-        $days  = min((int) $request->input('days', 1), 30);
+        $days = min((int) $request->input('days', 1), 30);
         $limit = min((int) $request->input('limit', 100), 500);
 
         $records = DeviceHeartbeat::where('device_id', $device->id)
@@ -246,19 +250,19 @@ class DeviceApiController extends Controller
     {
         $this->authorize('view', $device);
 
-        $hb     = $device->latestHeartbeat;
+        $hb = $device->latestHeartbeat;
         $online = $device->last_seen_at
             && $device->last_seen_at->gte(now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
 
         return response()->json([
-            'online'           => $online,
-            'last_seen_at'     => $device->last_seen_at?->toIso8601String(),
+            'online' => $online,
+            'last_seen_at' => $device->last_seen_at?->toIso8601String(),
             'latest_heartbeat' => $hb ? [
-                'recorded_at'     => $hb->recorded_at->toIso8601String(),
-                'battery_level'   => $hb->battery_level,
+                'recorded_at' => $hb->recorded_at->toIso8601String(),
+                'battery_level' => $hb->battery_level,
                 'storage_percent' => $hb->storage_percent,
                 'wifi_signal_dbm' => $hb->wifi_signal_dbm,
-                'ping_ms'         => $hb->ping_ms,
+                'ping_ms' => $hb->ping_ms,
             ] : null,
         ]);
     }
@@ -280,10 +284,12 @@ class DeviceApiController extends Controller
                         throw new \RuntimeException('security_code_assigned');
                     }
 
-                    Device::whereKey($device->id)
+                    $lockedDevice = Device::whereKey($device->id)
                         ->lockForUpdate()
-                        ->firstOrFail()
-                        ->update(DeviceSecurityCode::attributesFor($plain));
+                        ->firstOrFail();
+
+                    $lockedDevice->tokens()->delete();
+                    $lockedDevice->update(DeviceSecurityCode::attributesFor($plain));
                 }, 3);
 
                 return response()->json(['security_code' => $plain]);
@@ -338,10 +344,12 @@ class DeviceApiController extends Controller
                     throw new \RuntimeException('security_code_assigned');
                 }
 
-                Device::whereKey($device->id)
+                $lockedDevice = Device::whereKey($device->id)
                     ->lockForUpdate()
-                    ->firstOrFail()
-                    ->update(DeviceSecurityCode::attributesFor($newCode));
+                    ->firstOrFail();
+
+                $lockedDevice->tokens()->delete();
+                $lockedDevice->update(DeviceSecurityCode::attributesFor($newCode));
             }, 3);
         } catch (\RuntimeException $e) {
             if ($e->getMessage() !== 'security_code_assigned') {
@@ -350,7 +358,7 @@ class DeviceApiController extends Controller
 
             return response()->json([
                 'message' => 'Security code already assigned to another device',
-                'errors' => ['security_code' => 'This code is in use']
+                'errors' => ['security_code' => 'This code is in use'],
             ], 409);
         } catch (QueryException $e) {
             if (! $this->isUniqueConstraintViolation($e)) {
@@ -359,13 +367,13 @@ class DeviceApiController extends Controller
 
             return response()->json([
                 'message' => 'Security code already assigned to another device',
-                'errors' => ['security_code' => 'This code is in use']
+                'errors' => ['security_code' => 'This code is in use'],
             ], 409);
         }
 
         return response()->json([
             'data' => $this->formatDevice($device->fresh()),
-            'message' => 'Security code rotated successfully'
+            'message' => 'Security code rotated successfully',
         ], 200);
     }
 
@@ -379,30 +387,30 @@ class DeviceApiController extends Controller
             && $device->last_seen_at->gte(now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
 
         $out = [
-            'id'                        => $device->id,
-            'device_uuid'               => $device->device_uuid,
-            'name'                      => $device->name,
-            'type'                      => $device->type,
-            'is_active'                 => $device->is_active,
-            'online'                    => $online,
-            'last_seen_at'              => $device->last_seen_at?->toIso8601String(),
-            'ip_address'                => $device->ip_address,
-            'last_ip_address'           => $device->last_ip_address,
+            'id' => $device->id,
+            'device_uuid' => $device->device_uuid,
+            'name' => $device->name,
+            'type' => $device->type,
+            'is_active' => $device->is_active,
+            'online' => $online,
+            'last_seen_at' => $device->last_seen_at?->toIso8601String(),
+            'ip_address' => $device->ip_address,
+            'last_ip_address' => $device->last_ip_address,
             'security_code_generated_at' => $device->security_code_generated_at?->toIso8601String(),
-            'branch'                    => $device->relationLoaded('branch') ? [
-                'id'   => $device->branch?->id,
+            'branch' => $device->relationLoaded('branch') ? [
+                'id' => $device->branch?->id,
                 'name' => $device->branch?->name,
             ] : null,
         ];
 
         if ($withHeartbeat && $device->relationLoaded('latestHeartbeat')) {
-            $hb  = $device->latestHeartbeat;
+            $hb = $device->latestHeartbeat;
             $out['latest_heartbeat'] = $hb ? [
-                'recorded_at'     => $hb->recorded_at->toIso8601String(),
-                'battery_level'   => $hb->battery_level,
+                'recorded_at' => $hb->recorded_at->toIso8601String(),
+                'battery_level' => $hb->battery_level,
                 'storage_percent' => $hb->storage_percent,
                 'wifi_signal_dbm' => $hb->wifi_signal_dbm,
-                'ping_ms'         => $hb->ping_ms,
+                'ping_ms' => $hb->ping_ms,
             ] : null;
         }
 
@@ -415,5 +423,10 @@ class DeviceApiController extends Controller
         $driverCode = (string) ($e->errorInfo[1] ?? '');
 
         return $sqlState === '23000' || $driverCode === '1062' || $driverCode === '19';
+    }
+
+    private function normalizeDeviceType(?string $type): ?string
+    {
+        return self::DEVICE_TYPE_ALIASES[$type] ?? $type;
     }
 }

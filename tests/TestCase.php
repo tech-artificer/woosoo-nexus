@@ -13,6 +13,25 @@ abstract class TestCase extends BaseTestCase
     private const TEST_KRYPTON_SESSION_CACHE_KEY = 'testing.krypton.session_id';
 
     /**
+     * Ensure framework-driven test migrations never hit interactive
+     * confirmation paths in RefreshDatabase.
+     */
+    public function artisan($command, $parameters = [])
+    {
+        if ($command === 'migrate:fresh') {
+            if (! array_key_exists('--force', $parameters)) {
+                $parameters['--force'] = true;
+            }
+
+            if (! array_key_exists('--database', $parameters)) {
+                $parameters['--database'] = 'testing';
+            }
+        }
+
+        return parent::artisan($command, $parameters);
+    }
+
+    /**
      * Setup the test environment and ensure the `pos` connection is
      * mapped to an in-memory sqlite database to avoid remote MySQL
      * connections during CI/test runs. Also create minimal POS tables

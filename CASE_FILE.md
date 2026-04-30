@@ -41,6 +41,16 @@ flowchart TD
 - Re-check response headers for `/service-worker.js` after the nginx change.
 - Confirm the worker no longer caches app responses.
 - Verify a normal browser tab after clearing site data or reloading the updated worker.
+
+### Addendum: Monitoring card false zero for unprinted orders (April 29, 2026)
+
+- Symptom: `System Monitoring` showed `Unprinted Orders = 0` while at least one pending unprinted order existed.
+- Root cause: `app/Http/Controllers/Admin/MonitoringController.php` filtered with uppercase literals `['PENDING', 'CONFIRMED']` while canonical `OrderStatus` values are lowercase (`pending`, `confirmed`).
+- Fix: switched filter to enum-backed canonical values:
+  - `OrderStatus::PENDING->value`
+  - `OrderStatus::CONFIRMED->value`
+- Regression coverage added: `tests/Feature/Admin/MonitoringMetricsTest.php` asserts that a lowercase pending unprinted order is returned by `/monitoring/metrics`.
+- Validation note: local test runner currently blocks on an interactive `migrate:fresh` confirmation path in this environment (`askQuestion` Mockery failure), so automated pass/fail evidence is pending environment normalization.
 # CASE_FILE: Orders Detail View Alignment
 **Last Updated:** March 25, 2026
 **Lead Detective:** Ranpo Edogawa
@@ -176,3 +186,34 @@ flowchart LR
 5. ✅ Ensure database-backed sessions have a `sessions` table.
 6. ✅ Ensure dashboard metrics formatting does not hard-require `php_intl`.
 7. ✅ Ensure Echo client uses nginx TLS endpoint and leave calls are guarded.
+
+### Addendum: Stale Relay Heartbeat Queue-Safety Hardening (April 30, 2026)
+
+- Symptom risk: scheduled stale-heartbeat scans can pile up or retry-loop under worker pressure/timeouts, increasing queue churn and memory pressure.
+- Root-cause class: missing explicit job retry/time-limit contract and no failed-job fallback signal for this scheduled queue job.
+
+**Controls added**
+- `CheckStaleRelayHeartbeats` now has strict queue safety contract:
+  - `tries=1`, `maxExceptions=1`, `timeout=30`, `failOnTimeout=true`
+  - `WithoutOverlapping(...)->dontRelease()` middleware to prevent concurrent duplicates across workers
+  - `failed(Throwable $e)` handler to emit explicit error telemetry when timeout/failure occurs
+  - chunked DB scan (`chunkById(200)`) to reduce peak memory during stale-device scans
+- Scheduler dispatch now includes `withoutOverlapping(10)` for stale-heartbeat job trigger.
+- Added scheduler memory monitoring task (5-minute cadence) with warning threshold `SCHEDULER_MEMORY_WARN_MB`.
+- Added Docker container memory caps (compose):
+  - `app`: `768m` limit / `384m` reservation
+  - `queue`: `512m` limit / `256m` reservation
+  - `scheduler`: `256m` limit / `128m` reservation
+
+```mermaid
+flowchart TD
+    A[Scheduler tick every 3 min] --> B[Dispatch CheckStaleRelayHeartbeats]
+    B --> C{Overlap lock exists?}
+    C -- yes --> D[Skip duplicate dispatch]
+    C -- no --> E[Queue worker runs job]
+    E --> F{Exceeds 30s timeout?}
+    F -- yes --> G[Fail immediately: tries=1]
+    G --> H[failed() logs fallback telemetry]
+    F -- no --> I[Chunked scan + stale relay warnings]
+    I --> J[Complete without requeue loop]
+```

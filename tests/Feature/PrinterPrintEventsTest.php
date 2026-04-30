@@ -383,7 +383,11 @@ class PrinterPrintEventsTest extends TestCase
 
         // First ack should perform the update
         $resp = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->postJson('/api/printer/print-events/' . $evt->id . '/ack', ['printer_id' => 'PR1', 'printed_at' => '2025-12-15T12:00:00+08:00']);
+            ->postJson('/api/printer/print-events/' . $evt->id . '/ack', [
+                'printer_id' => 'PR1',
+                'printed_at' => '2025-12-15T12:00:00+08:00',
+                'verification_mode' => 'connected_only',
+            ]);
 
         $resp->assertStatus(200)
             ->assertJson(['success' => true])
@@ -398,12 +402,83 @@ class PrinterPrintEventsTest extends TestCase
         $raw = \Illuminate\Support\Facades\DB::table('print_events')->where('id', $evt->id)->value('acknowledged_at');
         $expectedUtc = Carbon::parse('2025-12-15T12:00:00+08:00')->utc()->format('Y-m-d H:i:s');
         $this->assertEquals($expectedUtc, $raw);
+        $this->assertEquals('connected_only', data_get($evt->meta, 'verification_mode'));
 
         // Second ack is idempotent (was_updated => false)
         $resp2 = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/printer/print-events/' . $evt->id . '/ack', ['printer_id' => 'PR1']);
 
         $resp2->assertStatus(200)->assertJsonPath('data.was_updated', false);
+    }
+
+    public function test_ack_accepts_all_supported_verification_modes()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'VM Branch', 'location' => 'VM']);
+        $device = Device::create(['name' => 'device-vm', 'ip_address' => '127.0.0.21', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 23232,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+        $order->branch_id = $device->branch_id;
+        $order->save();
+
+        foreach (['strict_status', 'connected_only'] as $index => $mode) {
+            $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+            $resp = $this->withHeader('Authorization', 'Bearer ' . $token)
+                ->postJson('/api/printer/print-events/' . $evt->id . '/ack', [
+                    'printer_id' => 'PR-VM-' . $index,
+                    'verification_mode' => $mode,
+                ]);
+
+            $resp->assertStatus(200)->assertJsonPath('data.was_updated', true);
+            $evt->refresh();
+            $this->assertEquals($mode, data_get($evt->meta, 'verification_mode'));
+        }
+    }
+
+    public function test_ack_rejects_invalid_verification_mode()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'VM Bad', 'location' => 'VMB']);
+        $device = Device::create(['name' => 'device-vmb', 'ip_address' => '127.0.0.22', 'branch_id' => $branch->id]);
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 24242,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+        $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/ack', [
+                'verification_mode' => 'strict',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'VALIDATION_ERROR');
     }
 
     public function test_fail_increments_attempts_and_forbidden_for_wrong_device()

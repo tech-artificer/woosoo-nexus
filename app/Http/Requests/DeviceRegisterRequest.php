@@ -23,11 +23,10 @@ class DeviceRegisterRequest extends FormRequest
     {
         return [
             'name' => ['nullable', 'string', 'max:255'],
-            // Primary contract: security_code. passcode/code are accepted as
-            // short-lived aliases for older tablet bundles.
-            'passcode'      => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without_all:security_code,code'],
-            'security_code' => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without_all:passcode,code'],
-            'code'          => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without_all:passcode,security_code'],
+            // Primary contract: security_code. passcode is accepted as a
+            // short-lived alias for older tablet bundles. `code` alias removed.
+            'passcode'      => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without:security_code'],
+            'security_code' => ['nullable', 'string', 'regex:/^\d{6}$/', 'required_without:passcode'],
             'app_version' => ['nullable', 'string', 'max:255'],
             'ip_address' => ['nullable', 'ip'],
             'ip' => ['nullable', 'ip'],
@@ -45,7 +44,6 @@ class DeviceRegisterRequest extends FormRequest
             'passcode.regex'         => 'The security code must be a 6-digit numeric code.',
             'security_code.required' => 'The security code is required.',
             'security_code.regex'    => 'The security code must be a 6-digit numeric code.',
-            'code.regex'             => 'The security code must be a 6-digit numeric code.',
         ];
     }
 }

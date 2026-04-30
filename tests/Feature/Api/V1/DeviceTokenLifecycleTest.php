@@ -6,9 +6,9 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Branch;
 use App\Models\Device;
+use App\Support\DeviceSecurityCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use App\Support\DeviceSecurityCode;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
@@ -29,14 +29,14 @@ class DeviceTokenLifecycleTest extends TestCase
     public function test_register_issues_token_with_30_day_expiry(): void
     {
         $device = Device::factory()->create([
-            'is_active'     => true,
-            'ip_address'    => '192.168.100.160',
+            'is_active' => true,
+            'ip_address' => '192.168.100.160',
         ]);
         $device->update(DeviceSecurityCode::attributesFor('123456'));
 
         $response = $this->postJson('/api/devices/register', [
             'security_code' => '123456',
-            'ip_address'    => '192.168.100.160',
+            'ip_address' => '192.168.100.160',
         ]);
 
         $response->assertStatus(200)
@@ -58,31 +58,32 @@ class DeviceTokenLifecycleTest extends TestCase
     }
 
     /**
-     * Test: Re-register cleans up expired tokens before issuing a new one
-     * Purpose: Verify expired tokens are purged on each register call
+     * Test: Re-register revokes all prior tokens before issuing a new one
+     * Purpose: Verify active and expired tokens are purged on each register call
      */
-    public function test_register_purges_expired_tokens_on_reregister(): void
+    public function test_register_purges_existing_tokens_on_reregister(): void
     {
         $device = Device::factory()->create([
-            'is_active'     => true,
-            'ip_address'    => '192.168.100.161',
+            'is_active' => true,
+            'ip_address' => '192.168.100.161',
         ]);
         $device->update(DeviceSecurityCode::attributesFor('123456'));
 
-        // Seed an already-expired token
+        // Seed both active and expired tokens.
+        $device->createToken('old-active', expiresAt: now()->addDays(30));
         $device->createToken('old-expired', expiresAt: now()->subDay());
 
-        $this->assertCount(1, $device->tokens);
+        $this->assertCount(2, $device->tokens()->get());
 
         // Re-register
         $response = $this->postJson('/api/devices/register', [
             'security_code' => '123456',
-            'ip_address'    => '192.168.100.161',
+            'ip_address' => '192.168.100.161',
         ]);
 
         $response->assertStatus(200);
 
-        // Expired token should be gone; only the new one remains
+        // Prior tokens should be gone; only the new one remains.
         $remaining = PersonalAccessToken::where('tokenable_type', Device::class)
             ->where('tokenable_id', $device->id)
             ->get();
@@ -182,6 +183,57 @@ class DeviceTokenLifecycleTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('device.id', $device->id)
             ->assertJsonPath('ip_used', '192.168.100.162');
+    }
+
+    public function test_host_header_spoofing_cannot_authenticate_a_claimed_device(): void
+    {
+        Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.7',
+            'security_code' => null,
+            'security_code_lookup' => null,
+        ]);
+
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '172.18.0.1',
+            'SERVER_NAME' => '192.168.100.7',
+            'SERVER_PORT' => '4443',
+            'HTTP_HOST' => '192.168.100.7:4443',
+            'HTTP_X_FORWARDED_HOST' => '192.168.100.7',
+        ])->withHeaders([
+            'Host' => '192.168.100.7:4443',
+            'X-Forwarded-Host' => '192.168.100.7',
+        ])->getJson('/api/devices/login');
+
+        $response->assertStatus(404)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('error', 'Device not found')
+            ->assertJsonPath('ip_address', '172.18.0.1');
+    }
+
+    public function test_device_ip_endpoint_reports_private_host_device_ip_instead_of_proxy_bridge_ip(): void
+    {
+        Device::factory()->create([
+            'is_active' => true,
+            'ip_address' => '192.168.100.7',
+            'security_code' => null,
+            'security_code_lookup' => null,
+        ]);
+
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '172.18.0.1',
+            'SERVER_NAME' => '192.168.100.7',
+            'SERVER_PORT' => '4443',
+            'HTTP_HOST' => '192.168.100.7:4443',
+            'HTTP_X_FORWARDED_HOST' => '192.168.100.7',
+        ])->withHeaders([
+            'Host' => '192.168.100.7:4443',
+            'X-Forwarded-Host' => '192.168.100.7',
+        ])->getJson('/api/device/ip');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ip', '192.168.100.7')
+            ->assertJsonPath('request_ip', '172.18.0.1');
     }
 
     public function test_unclaimed_tablet_cannot_login_by_trusted_ip_without_setup_code(): void

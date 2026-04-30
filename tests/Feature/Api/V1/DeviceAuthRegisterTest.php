@@ -119,6 +119,17 @@ class DeviceAuthRegisterTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_register_rejects_code_only_payload_with_422(): void
+    {
+        // CT-01/CT-06 alias sunset: `code` field no longer accepted — must return 422.
+        $response = $this->postJson('/api/devices/register', [
+            'code' => '123456',
+            'app_version' => '1.0.0',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
     public function test_register_supports_legacy_hashed_security_code_without_lookup_hash(): void
     {
         $device = Device::create([

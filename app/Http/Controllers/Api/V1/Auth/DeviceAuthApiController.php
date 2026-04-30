@@ -8,8 +8,8 @@ use App\Http\Requests\DeviceRegisterRequest;
 use App\Models\Device;
 use App\Services\AuditLogService;
 use App\Support\DeviceSecurityCode;
-use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -60,7 +60,7 @@ class DeviceAuthApiController extends Controller
         $maskBits = max(0, min(32, (int) $mask));
         $maskLong = $maskBits === 0 ? 0 : (~0 << (32 - $maskBits));
 
-        return (($ipLong & $maskLong) === ($subnetLong & $maskLong));
+        return ($ipLong & $maskLong) === ($subnetLong & $maskLong);
     }
 
     protected function same24(?string $a, ?string $b): bool
@@ -125,8 +125,8 @@ class DeviceAuthApiController extends Controller
     {
         $validated = $request->validated();
 
-        // Accept security_code, or legacy aliases passcode / code.
-        $securityCode = $validated['security_code'] ?? ($validated['passcode'] ?? ($validated['code'] ?? null));
+        // Accept security_code, or legacy alias passcode. `code` alias removed.
+        $securityCode = $validated['security_code'] ?? ($validated['passcode'] ?? null);
         $ipToUse = $this->resolveClientSuppliedIp($request) ?: $request->ip();
 
         if (! $securityCode) {
@@ -175,7 +175,7 @@ class DeviceAuthApiController extends Controller
                     'security_code_generated_at' => null,
                 ]);
 
-                $device->tokens()->where('expires_at', '<', now())->delete();
+                $device->tokens()->delete();
 
                 $token = $device->createToken(
                     name: 'device-auth',
