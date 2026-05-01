@@ -66,7 +66,11 @@ class SyncPosOrderPaymentStatus extends Command
                             ->orWhere('is_open', 0);
                     })
                     ->get()
-                    ->keyBy('id');
+                    ->mapWithKeys(static function ($order): array {
+                        // POS stores IDs as zero-padded strings (e.g., "0000019635").
+                        // Normalize keys to int so local `order_id` numeric values map correctly.
+                        return [(int) $order->id => $order];
+                    });
 
                 foreach ($rows as $row) {
                     $posOrder = $posOrders->get((int) $row->order_id);
