@@ -40,10 +40,10 @@ class DeviceRegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'passcode.required'      => 'A security code is required.',
-            'passcode.regex'         => 'The security code must be a 6-digit numeric code.',
-            'security_code.required' => 'The security code is required.',
-            'security_code.regex'    => 'The security code must be a 6-digit numeric code.',
+            'passcode.required_without'      => 'A security code is required.',
+            'passcode.regex'                 => 'The security code must be a 6-digit numeric code.',
+            'security_code.required_without' => 'The security code is required.',
+            'security_code.regex'            => 'The security code must be a 6-digit numeric code.',
         ];
     }
 }
