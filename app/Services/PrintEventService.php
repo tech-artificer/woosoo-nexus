@@ -60,10 +60,10 @@ class PrintEventService
      *
      * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
      */
-    public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null, ?int $acknowledgedByDeviceId = null, ?string $printerName = null): array
+    public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null, ?int $acknowledgedByDeviceId = null, ?string $printerName = null, ?string $verificationMode = null): array
     {
         $ackAt = $printedAt ? Carbon::parse($printedAt)->utc() : Carbon::now()->utc();
-        $result = DB::transaction(function () use ($printEventId, $printerId, $ackAt, $acknowledgedByDeviceId, $printerName) {
+        $result = DB::transaction(function () use ($printEventId, $printerId, $ackAt, $acknowledgedByDeviceId, $printerName, $verificationMode) {
             // Lock the row to avoid race conditions when multiple workers
             // acknowledge/fail the same print event concurrently.
             $evt = PrintEvent::where('id', $printEventId)->lockForUpdate()->first();
@@ -88,6 +88,12 @@ class PrintEventService
             }
             if ($acknowledgedByDeviceId !== null) {
                 $evt->acknowledged_by_device_id = $acknowledgedByDeviceId;
+            }
+
+            if ($verificationMode !== null) {
+                $meta = is_array($evt->meta) ? $evt->meta : [];
+                $meta['verification_mode'] = $verificationMode;
+                $evt->meta = $meta;
             }
 
             $evt->attempts = (int) ($evt->attempts ?? 0) + 1;

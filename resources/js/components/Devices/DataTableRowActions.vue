@@ -73,7 +73,7 @@ const openDialog = () => {
 
 const rotateSecurityCode = async (device: Device) => {
   try {
-    const response = await axios.post(`/api/v2/devices/${device.id}/security-code`, {}, {
+    const response = await axios.post(route('devices.security-code.regenerate', device.id), {}, {
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
       },
@@ -181,12 +181,12 @@ const restore = (computedDevice: Device) => {
   <Sheet v-model:open="isSheetOpen">
     <SheetContent>
       <SheetHeader>
-        <SheetTitle>Edit User</SheetTitle>
+        <SheetTitle>Edit Device</SheetTitle>
         <SheetDescription>
-          Edit the user's information.
+          Edit the device information.
         </SheetDescription>
       </SheetHeader>
-      <DeviceForm :device="computedDevice" :unassignedTables="unassignedTables" :in-sheet="true" />
+      <DeviceForm :device="computedDevice" :unassignedTables="unassignedTables" form-type="edit" :in-sheet="true" />
     </SheetContent>
   </Sheet>
 

@@ -8,6 +8,7 @@ use App\Models\Branch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Cache;
+use PHPUnit\Framework\Attributes\Test;
 
 class ThrottleByDeviceTest extends TestCase
 {
@@ -38,7 +39,7 @@ class ThrottleByDeviceTest extends TestCase
         RateLimiter::clear('device:2');
     }
 
-    /** @test */
+    #[Test]
     public function it_rate_limits_by_device_id_for_authenticated_requests()
     {
         $device = $this->makeDevice('A');
@@ -95,7 +96,7 @@ class ThrottleByDeviceTest extends TestCase
         $response->assertJsonStructure(['message']);
     }
 
-    /** @test */
+    #[Test]
     public function it_prevents_ip_spoofing_bypass_via_x_forwarded_for()
     {
         $device = $this->makeDevice('B');
@@ -148,7 +149,7 @@ class ThrottleByDeviceTest extends TestCase
         $response->assertStatus(429);
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_fingerprint_for_unauthenticated_requests()
     {
         // Make 10 registration requests (the limit for /devices/register)
@@ -173,7 +174,7 @@ class ThrottleByDeviceTest extends TestCase
         $response->assertStatus(429);
     }
 
-    /** @test */
+    #[Test]
     public function it_isolates_rate_limits_between_different_devices()
     {
         $device1 = $this->makeDevice('C1');
@@ -247,7 +248,7 @@ class ThrottleByDeviceTest extends TestCase
         $this->assertNotEquals(429, $response2->status(), 'Device 2 should have independent rate limit');
     }
 
-    /** @test */
+    #[Test]
     public function it_includes_rate_limit_headers_in_response()
     {
         $device = $this->makeDevice('D');

@@ -2,23 +2,28 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Tests\Traits\MocksKryptonSession;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\Device;
+use App\Enums\OrderStatus;
+use App\Events\Order\OrderCreated;
 use App\Models\Branch;
+use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
-use App\Enums\OrderStatus;
+use App\Services\Krypton\OrderService;
+use Illuminate\Broadcasting\BroadcastException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 
 class DeviceCreateOrderConflictTest extends TestCase
 {
-    use RefreshDatabase, MocksKryptonSession;
+    use MocksKryptonSession, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Mock active Krypton session for all tests
         $this->mockActiveKryptonSession();
     }
@@ -81,18 +86,96 @@ class DeviceCreateOrderConflictTest extends TestCase
                     'quantity' => 1,
                     'price' => 1.00,
                     'subtotal' => 1.00,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         $response->assertStatus(409);
         $this->assertFalse($response->json('success'));
         $this->assertStringContainsString('existing order', strtolower($response->json('message')));
+    }
+
+    public function test_order_creation_succeeds_when_realtime_broadcast_is_unavailable(): void
+    {
+        Branch::create(['name' => 'Main', 'location' => 'HQ']);
+
+        $device = Device::create([
+            'name' => 'Device Broadcast Failure',
+            'ip_address' => '192.168.100.6',
+            'is_active' => true,
+            'table_id' => 10,
+        ]);
+
+        $sessionId = $this->createTestSession();
+
+        Event::listen(OrderCreated::class, function (): void {
+            throw new BroadcastException('Pusher error: connection refused');
+        });
+
+        $this->mock(OrderService::class, function ($mock) use ($device, $sessionId) {
+            $mock->shouldReceive('processOrder')
+                ->once()
+                ->andReturnUsing(function () use ($device, $sessionId) {
+                    $deviceOrder = DeviceOrder::create([
+                        'device_id' => $device->id,
+                        'table_id' => $device->table_id,
+                        'terminal_session_id' => 1,
+                        'session_id' => $sessionId,
+                        'order_id' => 23456,
+                        'order_number' => 'ORD-000001-23456',
+                        'status' => OrderStatus::CONFIRMED->value,
+                        'subtotal' => 1.00,
+                        'tax' => 0.00,
+                        'discount' => 0.00,
+                        'total' => 1.00,
+                        'guest_count' => 1,
+                    ]);
+
+                    DeviceOrderItems::create([
+                        'order_id' => $deviceOrder->id,
+                        'menu_id' => 1,
+                        'quantity' => 1,
+                        'price' => 1.00,
+                        'subtotal' => 1.00,
+                        'tax' => 0.00,
+                        'total' => 1.00,
+                    ]);
+
+                    return $deviceOrder;
+                });
+        });
+
+        $token = $device->createToken('test-token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+            'X-Idempotency-Key' => Str::uuid()->toString(),
+        ])->postJson('/api/devices/create-order', [
+            'guest_count' => 1,
+            'subtotal' => 1.00,
+            'tax' => 0.00,
+            'discount' => 0.00,
+            'total_amount' => 1.00,
+            'items' => [
+                [
+                    'menu_id' => 1,
+                    'name' => 'Test Item',
+                    'quantity' => 1,
+                    'price' => 1.00,
+                    'subtotal' => 1.00,
+                ],
+            ],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('order.order_id', 23456);
     }
 }

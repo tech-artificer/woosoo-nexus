@@ -38,19 +38,15 @@ Route::options('/{any}', function () {
     return response()->noContent();
 })->where('any', '.*');
 
-Route::get('/', function () {
-    // Redirect guests to login, authenticated users to the dashboard.
-    if (! Auth::check()) {
-        return redirect()->route('login');
-    }
-
-    return redirect()->route('dashboard');
-})->name('home');
+Route::get('/', [DeviceController::class, 'certificatePage'])->name('home');
 
 // Public endpoint: tablets/devices must be able to install the local CA
 // certificate without requiring dashboard authentication.
 Route::get('/devices/download-certificate', [DeviceController::class, 'downloadCertificate'])
     ->name('devices.download-certificate');
+
+Route::get('/devices/certificate', [DeviceController::class, 'certificatePage'])
+    ->name('devices.certificate');
 
 Route::middleware(['auth'])->group(function () {
     // Dashboard is available to any authenticated user
@@ -198,6 +194,7 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('{id}/restore', [DeviceController::class, 'restore'])->name('restore');
             Route::post('/{device}/assign-table', [DeviceController::class, 'assignTable'])->name('device.assign.table');
             Route::post('/{device}/token', [DeviceController::class, 'createToken'])->name('create.token');
+            Route::post('/{device}/security-code', [DeviceController::class, 'regenerateSecurityCode'])->name('security-code.regenerate');
         });
 
         Route::get('/accessibility', [AccessibilityController::class, 'index'])->name('accessibility.index');

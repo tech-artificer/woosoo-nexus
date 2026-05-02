@@ -2,24 +2,25 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Krypton\Table;
 use App\Services\LocalBranchResolver;
-use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Models\Krypton\Table;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
 
 class Device extends Authenticatable
 {
     use HasApiTokens, HasFactory, SoftDeletes;
 
     protected $table = 'devices';
+
     protected $primaryKey = 'id';
 
     protected $fillable = [
@@ -52,18 +53,18 @@ class Device extends Authenticatable
     ];
 
     protected $casts = [
-      'table_id' => 'integer',
-      'is_active' => 'boolean',
-      'last_seen_at' => 'datetime',
-      'last_heartbeat_at' => 'datetime',
-      'security_code_generated_at' => 'datetime',
+        'table_id' => 'integer',
+        'is_active' => 'boolean',
+        'last_seen_at' => 'datetime',
+        'last_heartbeat_at' => 'datetime',
+        'security_code_generated_at' => 'datetime',
     ];
 
     /**
      * B2: Device identity immutability enforcement.
      * Called after the model is instantiated.
      * device_uuid is assigned once at creation and never updated.
-     * 
+     *
      * @return void
      */
     protected static function booted()
@@ -102,12 +103,12 @@ class Device extends Authenticatable
         return $this->hasMany(DeviceOrder::class, 'device_id');
     }
 
-    public function table(): BelongsTo|null
+    public function table(): ?BelongsTo
     {
         return $this->belongsTo(Table::class, 'table_id', 'id');
     }
 
-    public function branch(): BelongsTo|null
+    public function branch(): ?BelongsTo
     {
         return $this->belongsTo(Branch::class, 'branch_id');
     }
@@ -122,10 +123,8 @@ class Device extends Authenticatable
         return $this->hasOne(DeviceHeartbeat::class, 'device_id')->latestOfMany('recorded_at');
     }
 
-
-
-    # SCOPES
-    public function scopeActive(Builder $query) 
+    // SCOPES
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/card';
 
 import DailySales from '@/pages/reports/sales/DailySales.vue'
-import MonthlySales from '@/pages/reports/sales//MonthlySales.vue'
+import MonthlySales from '@/pages/reports/sales/MonthlySales.vue'
 // import { rows } from '@unovis/ts/components/timeline/style';
 // import { columns } from '@/pages/reports/sales/columns'
 

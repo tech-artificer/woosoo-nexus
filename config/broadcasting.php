@@ -42,7 +42,18 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => value(static fn (): string => trim((string) env('REVERB_PUBLIC_HOST')) ?: PublicOrigin::host()),
+                'host' => value(static function (): string {
+                    $broadcastHost = trim((string) env('REVERB_BROADCAST_HOST'));
+                    if ($broadcastHost !== '') {
+                        return $broadcastHost;
+                    }
+
+                    if (trim((string) env('REVERB_HOST')) === '0.0.0.0') {
+                        return 'reverb';
+                    }
+
+                    return trim((string) env('REVERB_PUBLIC_HOST')) ?: PublicOrigin::host();
+                }),
                 'port' => env('REVERB_PORT', 8080),
                 'public_port' => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 8080)),
                 'scheme' => env('REVERB_SCHEME', PublicOrigin::scheme()),

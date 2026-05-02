@@ -19,7 +19,7 @@ class StoreDeviceApiRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', Rule::in(['tablet', 'relay_printer', 'print_bridge', 'direct_printer'])],
+            'type' => ['required', 'string', Rule::in(['tablet', 'printer_relay', 'relay_printer', 'print_bridge', 'direct_printer'])],
             // Codes are stored hashed, so SQL unique checks cannot validate duplicates.
             // Controller-level hash checks enforce uniqueness.
             'security_code' => ['required', 'string', 'regex:/^\d{6}$/'],

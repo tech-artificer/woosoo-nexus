@@ -24,10 +24,28 @@ class SetupPosOrderPaymentTrigger extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         // POS DB connection (trigger will be created here)
         $connection = DB::connection('pos');
+
+        // MySQL trigger body can only access tables on the same MySQL server instance.
+        // When app DB and POS DB are on different hosts/ports (e.g., Docker + external POS),
+        // cross-server table updates are impossible from a trigger.
+        if (! $this->isSameMysqlEndpoint()) {
+            $connection->unprepared('DROP TRIGGER IF EXISTS after_payment_update');
+
+            $this->error('Cannot create after_payment_update trigger: POS and app databases are on different MySQL endpoints.');
+            $this->line('MySQL triggers cannot update tables on another server/port.');
+            $this->newLine();
+            $this->line('POS endpoint: ' . $this->describeConnectionEndpoint('pos'));
+            $this->line('APP endpoint: ' . $this->describeConnectionEndpoint('mysql'));
+            $this->newLine();
+            $this->line('Action required: use an application-level sync flow for payment status reconciliation.');
+            $this->line('This project now provides: php artisan pos:sync-payment-statuses');
+
+            return self::FAILURE;
+        }
 
         // App DB (where device_orders lives)
         $appDb = DB::connection('mysql')->getDatabaseName();
@@ -69,5 +87,39 @@ class SetupPosOrderPaymentTrigger extends Command
         $this->info('Trigger "after_payment_update" created successfully.');
         $this->info('The trigger will now directly update device_orders status when orders are paid/voided.');
 
+        return self::SUCCESS;
+    }
+
+    private function isSameMysqlEndpoint(): bool
+    {
+        $pos = config('database.connections.pos', []);
+        $app = config('database.connections.mysql', []);
+
+        $keys = ['host', 'port', 'unix_socket'];
+
+        foreach ($keys as $key) {
+            $left = (string) ($pos[$key] ?? '');
+            $right = (string) ($app[$key] ?? '');
+
+            if ($left !== $right) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function describeConnectionEndpoint(string $connection): string
+    {
+        $config = config("database.connections.{$connection}", []);
+        $host = (string) ($config['host'] ?? '');
+        $port = (string) ($config['port'] ?? '');
+        $socket = (string) ($config['unix_socket'] ?? '');
+
+        if ($socket !== '') {
+            return sprintf('%s (socket: %s)', $connection, $socket);
+        }
+
+        return sprintf('%s (%s:%s)', $connection, $host !== '' ? $host : 'unknown-host', $port !== '' ? $port : 'unknown-port');
     }
 }

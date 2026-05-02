@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\Test;
 
 class TransactionRollbackTest extends TestCase
 {
@@ -36,7 +37,7 @@ class TransactionRollbackTest extends TestCase
         $this->createTestSession();
     }
 
-    /** @test */
+    #[Test]
     public function it_rolls_back_entire_transaction_on_order_service_failure()
     {
         $device = Device::factory()->create([
@@ -76,7 +77,7 @@ class TransactionRollbackTest extends TestCase
         $this->assertEquals($initialDeviceOrderCount, DeviceOrder::count(), 'No device orders should be created on failure');
     }
 
-    /** @test */
+    #[Test]
     public function it_prevents_partial_writes_on_concurrent_order_creation()
     {
         $device = Device::factory()->create([
@@ -119,7 +120,7 @@ class TransactionRollbackTest extends TestCase
         $this->assertEquals(1, DeviceOrder::where('device_id', $device->id)->count());
     }
 
-    /** @test */
+    #[Test]
     public function it_ensures_no_orphaned_pos_records_on_local_db_failure()
     {
         $device = Device::factory()->create([
@@ -170,7 +171,7 @@ class TransactionRollbackTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function it_completes_transaction_atomically_on_success()
     {
         $device = Device::factory()->create([
@@ -217,7 +218,7 @@ class TransactionRollbackTest extends TestCase
         $this->assertEquals($posOrder->guest_count, $deviceOrder->guest_count, 'Guest counts should match');
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_errors_when_transaction_fails()
     {
         Log::shouldReceive('withContext')->zeroOrMoreTimes();

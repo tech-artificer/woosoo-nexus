@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
@@ -40,7 +41,10 @@ class MonitoringController extends Controller
         // Unprintable orders: device_orders where is_printed = false and created > 10 minutes ago
         $unprintedOrders = DeviceOrder::where('is_printed', false)
             ->where('created_at', '<', now()->subMinutes(10))
-            ->whereIn('status', ['PENDING', 'CONFIRMED'])
+            ->whereIn('status', [
+                OrderStatus::PENDING->value,
+                OrderStatus::CONFIRMED->value,
+            ])
             ->with(['device', 'table'])
             ->orderBy('created_at', 'desc')
             ->limit(50)
@@ -92,19 +96,10 @@ class MonitoringController extends Controller
 
         // Orphaned device_orders: local device_orders with no matching POS order
         // This is expensive; cache for 5 minutes or skip in real-time view
-        $orphanedOrders = cache()->remember('monitoring.orphaned_orders', 300, function () {
-            try {
-                // Check for device_orders where order_id doesn't exist in krypton_woosoo.orders
-                // Note: This requires a LEFT JOIN across connections, which Laravel doesn't support natively
-                // Alternative: Count device_orders with null order relationship (if eager-loaded)
-                return DeviceOrder::whereNotNull('order_id')
-                    ->whereDoesntHave('order') // This only works if Order relationship is defined
-                    ->count();
-            } catch (\Throwable $e) {
-                Log::warning('Failed to count orphaned orders', ['error' => $e->getMessage()]);
-                return 0;
-            }
-        });
+        // Orphaned order detection is not implemented: DeviceOrder.order_id references
+        // Krypton\Order which lives on the 'pos' connection; cross-connection subqueries
+        // are not supported by Laravel's query builder on a single connection.
+        $orphanedOrders = 0;
 
         // Database connection health
         $mysqlHealthy = $this->checkDatabaseHealth('mysql');

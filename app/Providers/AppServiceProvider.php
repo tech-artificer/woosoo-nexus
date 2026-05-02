@@ -2,36 +2,36 @@
 
 namespace App\Providers;
 
-use App\Models\User;
-use App\Models\OrderUpdateLog;
 use App\Models\DeviceOrder;
-use App\Observers\OrderUpdateLogObserver;
+use App\Models\OrderUpdateLog;
+use App\Models\User;
 use App\Observers\DeviceOrderObserver;
+use App\Observers\OrderUpdateLogObserver;
+use App\Services\CertificatePathResolver;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\LocalBranchResolver;
 use App\Services\PosConnectionService;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Inertia\Inertia;
-use Illuminate\Routing\Route;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
-use Illuminate\Support\Str;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 // use Illuminate\Routing\Route;
 // use App\Services\Krypton\OrderService;
 // Spatie Roles/Permissions
-use Illuminate\Support\Facades\Schema;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-// use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
-
+// use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,13 +40,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(KryptonContextService::class, fn () => new KryptonContextService());
-        $this->app->singleton(LocalBranchResolver::class, fn () => new LocalBranchResolver());
-        $this->app->singleton(PosConnectionService::class, fn () => new PosConnectionService());
+        $this->app->singleton(KryptonContextService::class, fn () => new KryptonContextService);
+        $this->app->singleton(CertificatePathResolver::class, fn () => new CertificatePathResolver);
+        $this->app->singleton(LocalBranchResolver::class, fn () => new LocalBranchResolver);
+        $this->app->singleton(PosConnectionService::class, fn () => new PosConnectionService);
         // Register test-only service provider when running tests so we can
         // bind POS/Krypton repositories to fakes for isolation.
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-            $this->app->register(\App\Providers\TestServiceProvider::class);
+            $this->app->register(TestServiceProvider::class);
         }
     }
 
@@ -72,8 +73,8 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(10)->by(
                 $deviceId
-                    ? 'device:' . $deviceId
-                    : ($tokenKey ? 'token:' . sha1($tokenKey) : $request->fingerprint())
+                    ? 'device:'.$deviceId
+                    : ($tokenKey ? 'token:'.sha1($tokenKey) : $request->fingerprint())
             );
         });
 
@@ -86,9 +87,9 @@ class AppServiceProvider extends ServiceProvider
             // Roles & Permissions (moved to dedicated private method for clarity)
             $this->shareRolesAndPermissions();
         } catch (\Throwable $e) {
-            Log::warning("Skipping context share: " . $e->getMessage());
+            Log::warning('Skipping context share: '.$e->getMessage());
         }
-        
+
         // API docs: disable runtime docs routes in production to avoid
         // request-time generation failures on constrained or unstable datasources.
         if (app()->environment('production')) {
@@ -131,40 +132,41 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
         try {
-            if (!Schema::hasTable('roles') || !Schema::hasTable('permissions')) {
+            if (! Schema::hasTable('roles') || ! Schema::hasTable('permissions')) {
                 return;
             }
 
-                $roles = Role::with(['permissions'])->withCount('users')->get(['id', 'name']);
-                $allPermissions = Permission::all()->map(fn ($p) => [
-                    'id' => $p->id,
-                    'name' => $p->name,
-                    'label' => $this->humanizePermission($p->name),
-                ]);
-                $groupedPermissions = $allPermissions->groupBy(fn ($p) => explode('.', $p['name'])[0])->map(fn ($g) => $g);
-                $assignedPermissions = $roles->mapWithKeys(fn ($role) => [$role->name => $role->permissions->pluck('name')]);
+            $roles = Role::with(['permissions'])->withCount('users')->get(['id', 'name']);
+            $allPermissions = Permission::all()->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'label' => $this->humanizePermission($p->name),
+            ]);
+            $groupedPermissions = $allPermissions->groupBy(fn ($p) => explode('.', $p['name'])[0])->map(fn ($g) => $g);
+            $assignedPermissions = $roles->mapWithKeys(fn ($role) => [$role->name => $role->permissions->pluck('name')]);
 
-               $data = compact('roles', 'allPermissions', 'groupedPermissions', 'assignedPermissions');
-          
+            $data = compact('roles', 'allPermissions', 'groupedPermissions', 'assignedPermissions');
 
             Inertia::share($data);
         } catch (\Throwable $e) {
-            Log::warning("Skipping role/permission sharing: " . $e->getMessage());
+            Log::warning('Skipping role/permission sharing: '.$e->getMessage());
         }
     }
 
-    protected function humanizePermission(string $name) : string
+    protected function humanizePermission(string $name): string
     {
-        $parts = explode('.', $name);   
+        $parts = explode('.', $name);
 
         if (count($parts) === 3) {
             [$entity, $anotherEntity, $action] = $parts;
-            return ucfirst($action) . ' ' . ucfirst($anotherEntity) . ' ' . ucfirst($entity);
+
+            return ucfirst($action).' '.ucfirst($anotherEntity).' '.ucfirst($entity);
         }
 
         if (count($parts) === 2) {
             [$entity, $action] = $parts;
-            return ucfirst($action) . ' ' . ucfirst($entity);
+
+            return ucfirst($action).' '.ucfirst($entity);
         }
 
         // fallback: just prettify words

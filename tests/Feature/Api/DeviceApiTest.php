@@ -2,12 +2,13 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Branch;
 use App\Models\Device;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
 class DeviceApiTest extends TestCase
 {
@@ -26,7 +27,7 @@ class DeviceApiTest extends TestCase
     private function actingAsAdmin(): void
     {
         $user = User::factory()->create(['is_admin' => true]);
-        $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $user->assignRole($adminRole);
         Sanctum::actingAs($user, [], 'sanctum');
     }
@@ -42,8 +43,8 @@ class DeviceApiTest extends TestCase
     private function makeDevice(Branch $branch, array $attrs = []): Device
     {
         return Device::create(array_merge([
-            'name'      => 'Test Device '.uniqid(),
-            'type'      => 'tablet',
+            'name' => 'Test Device '.uniqid(),
+            'type' => 'tablet',
             'branch_id' => $branch->id,
             'is_active' => true,
         ], $attrs));
@@ -89,13 +90,27 @@ class DeviceApiTest extends TestCase
     {
         $branch = $this->makeBranch();
         $this->makeDevice($branch, ['type' => 'tablet']);
-        $this->makeDevice($branch, ['type' => 'relay_printer']);
+        $this->makeDevice($branch, ['type' => 'printer_relay']);
 
         $this->actingAsAdmin();
 
         $resp = $this->get('/api/v2/devices?type=tablet');
         $resp->assertStatus(200);
         $this->assertCount(1, $resp->json('data'));
+    }
+
+    public function test_devices_index_accepts_legacy_relay_printer_filter(): void
+    {
+        $branch = $this->makeBranch();
+        $this->makeDevice($branch, ['type' => 'tablet']);
+        $this->makeDevice($branch, ['type' => 'printer_relay']);
+
+        $this->actingAsAdmin();
+
+        $resp = $this->get('/api/v2/devices?type=relay_printer');
+        $resp->assertStatus(200);
+        $this->assertCount(1, $resp->json('data'));
+        $this->assertSame('printer_relay', $resp->json('data.0.type'));
     }
 
     // -------------------------------------------------------------------------
@@ -108,6 +123,7 @@ class DeviceApiTest extends TestCase
         $this->makeDevice($branch, ['last_seen_at' => now()]);           // online
         $this->makeDevice($branch, ['last_seen_at' => now()->subHour()]); // offline
         $this->makeDevice($branch, ['is_active' => false]);
+        $this->makeDevice($branch, ['type' => 'printer_relay', 'last_seen_at' => now()]);
 
         $this->actingAsAdmin();
 
@@ -118,15 +134,17 @@ class DeviceApiTest extends TestCase
         foreach (['total', 'active', 'online', 'offline', 'by_type'] as $key) {
             $this->assertArrayHasKey($key, $json);
         }
-        $this->assertEquals(3, $json['total']);
-        $this->assertEquals(1, $json['online']);
+        $this->assertEquals(4, $json['total']);
+        $this->assertEquals(2, $json['online']);
         $this->assertEquals(2, $json['offline']);
         $this->assertIsArray($json['by_type']);
-        foreach (['tablet', 'relay_printer', 'print_bridge', 'direct_printer'] as $type) {
+        foreach (['tablet', 'printer_relay', 'print_bridge', 'direct_printer'] as $type) {
             $this->assertArrayHasKey($type, $json['by_type']);
             $this->assertArrayHasKey('total', $json['by_type'][$type]);
             $this->assertArrayHasKey('online', $json['by_type'][$type]);
         }
+        $this->assertSame(1, $json['by_type']['printer_relay']['total']);
+        $this->assertSame(1, $json['by_type']['printer_relay']['online']);
     }
 
     // -------------------------------------------------------------------------
@@ -161,10 +179,10 @@ class DeviceApiTest extends TestCase
         $this->actingAsAdmin();
 
         $resp = $this->postJson('/api/v2/devices', [
-            'name'          => 'New Tablet',
-            'type'          => 'tablet',
+            'name' => 'New Tablet',
+            'type' => 'tablet',
             'security_code' => '123456',
-            'branch_id'     => $branch->id,
+            'branch_id' => $branch->id,
         ]);
 
         $resp->assertStatus(201);
@@ -175,16 +193,34 @@ class DeviceApiTest extends TestCase
         $this->assertDatabaseHas('devices', ['name' => 'New Tablet', 'type' => 'tablet']);
     }
 
+    public function test_store_normalizes_legacy_relay_printer_type(): void
+    {
+        $branch = $this->makeBranch();
+
+        $this->actingAsAdmin();
+
+        $resp = $this->postJson('/api/v2/devices', [
+            'name' => 'Legacy Print Bridge',
+            'type' => 'relay_printer',
+            'security_code' => '654321',
+            'branch_id' => $branch->id,
+        ]);
+
+        $resp->assertStatus(201);
+        $this->assertSame('printer_relay', $resp->json('device.type'));
+        $this->assertDatabaseHas('devices', ['name' => 'Legacy Print Bridge', 'type' => 'printer_relay']);
+    }
+
     public function test_store_rejects_invalid_security_code_format(): void
     {
         $branch = $this->makeBranch();
         $this->actingAsAdmin();
 
         $resp = $this->postJson('/api/v2/devices', [
-            'name'          => 'Bad Device',
-            'type'          => 'tablet',
+            'name' => 'Bad Device',
+            'type' => 'tablet',
             'security_code' => 'abc',
-            'branch_id'     => $branch->id,
+            'branch_id' => $branch->id,
         ]);
 
         $resp->assertStatus(422);
@@ -301,6 +337,36 @@ class DeviceApiTest extends TestCase
         $resp->assertStatus(200);
         $this->assertArrayHasKey('security_code', $resp->json());
         $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $resp->json('security_code'));
+    }
+
+    public function test_regenerate_security_code_revokes_existing_tokens(): void
+    {
+        $branch = $this->makeBranch();
+        $device = $this->makeDevice($branch);
+        $device->createToken('device-auth', expiresAt: now()->addDays(30));
+
+        $this->actingAsAdmin();
+
+        $resp = $this->postJson("/api/v2/devices/{$device->id}/security-code");
+        $resp->assertStatus(200);
+
+        $this->assertSame(0, $device->tokens()->count());
+    }
+
+    public function test_rotate_security_code_revokes_existing_tokens(): void
+    {
+        $branch = $this->makeBranch();
+        $device = $this->makeDevice($branch);
+        $device->createToken('device-auth', expiresAt: now()->addDays(30));
+
+        $this->actingAsAdmin();
+
+        $resp = $this->patchJson("/api/v2/devices/{$device->id}/rotate-security-code", [
+            'security_code' => '987654',
+        ]);
+        $resp->assertStatus(200);
+
+        $this->assertSame(0, $device->tokens()->count());
     }
 
     // -------------------------------------------------------------------------

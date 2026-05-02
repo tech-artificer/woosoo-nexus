@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\V1\Krypton\{
 };
 
 use App\Helpers\BroadcastConfig;
+use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Events\PrintOrder;
 
@@ -41,8 +42,48 @@ Route::options('{any}', function () {
 })->where('any', '.*');
 
 Route::get('/device/ip', function (Request $request) {
+    $requestIp = $request->ip();
+    $hostCandidates = [
+        $request->headers->get('x-forwarded-host'),
+        $request->headers->get('host'),
+        $request->server('HTTP_X_FORWARDED_HOST'),
+        $request->server('HTTP_HOST'),
+        $request->server('SERVER_NAME'),
+        $request->getHost(),
+    ];
+
+    $resolvedIp = $requestIp;
+
+    foreach ($hostCandidates as $candidate) {
+        $candidateHost = preg_replace('/:\d+$/', '', (string) $candidate);
+        $isPrivateIpv4 = filter_var($candidateHost, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+            && (
+                str_starts_with($candidateHost, '10.')
+                || str_starts_with($candidateHost, '192.168.')
+                || preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $candidateHost)
+                || str_starts_with($candidateHost, '169.254.')
+            );
+
+        if (! $isPrivateIpv4) {
+            continue;
+        }
+
+        $claimedDeviceExists = Device::query()
+            ->where('ip_address', $candidateHost)
+            ->where('is_active', true)
+            ->whereNull('security_code')
+            ->whereNull('security_code_lookup')
+            ->exists();
+
+        if ($claimedDeviceExists) {
+            $resolvedIp = $candidateHost;
+            break;
+        }
+    }
+
     return response()->json([
-        'ip' => $request->ip(),
+        'ip' => $resolvedIp,
+        'request_ip' => $requestIp,
         'user_agent' => $request->userAgent()
     ]);
 });
