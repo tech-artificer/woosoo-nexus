@@ -427,7 +427,14 @@ class OrderApiController extends Controller
                 }
             }
 
-            $responseBody = ['success' => true, 'created' => $created];
+            // Fetch fresh order with relationships to return via DeviceOrderResource
+            $freshOrder = DeviceOrder::with(['items.menu', 'table', 'device'])->find($deviceOrder->id);
+
+            $responseBody = [
+                'success' => true,
+                'order' => $freshOrder ? DeviceOrderResource::make($freshOrder) : null,
+                'created' => $created,
+            ];
 
             if ($responseCacheKey) {
                 Cache::put($responseCacheKey, [
