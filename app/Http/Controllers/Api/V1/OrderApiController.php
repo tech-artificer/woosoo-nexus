@@ -398,14 +398,19 @@ class OrderApiController extends Controller
                                     );
                                     // Reload to pick up printEvent relation
                                     $deviceOrder->refresh();
-                                    PrintRefill::dispatch($deviceOrder, $posItems);
 
-                                    // Broadcast the complete updated order to admin.orders
-                                    // so the Refill Monitor receives all items immediately.
+                                    // Queue broadcasts until the print-event transaction commits,
+                                    // so listeners never observe uncommitted state.
                                     $freshOrder = $deviceOrder->fresh(['items.menu', 'device.table', 'table', 'serviceRequests']);
-                                    if ($freshOrder) {
-                                        OrderStatusUpdated::dispatch($freshOrder);
-                                    }
+                                    DB::afterCommit(function () use ($deviceOrder, $posItems, $freshOrder) {
+                                        PrintRefill::dispatch($deviceOrder, $posItems);
+
+                                        // Broadcast the complete updated order to admin.orders
+                                        // so the Refill Monitor receives all items immediately.
+                                        if ($freshOrder) {
+                                            OrderStatusUpdated::dispatch($freshOrder);
+                                        }
+                                    });
                                 });
                             } catch (\Throwable $e) {
                                 report($e);
