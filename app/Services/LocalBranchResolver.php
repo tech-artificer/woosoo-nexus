@@ -24,8 +24,6 @@ class LocalBranchResolver
             return (int) $branch->getKey();
         }
 
-        throw new RuntimeException(
-            'Local install must have exactly one branch record in the branches table.'
-        );
+        throw new RuntimeException('Local install must have exactly one branch record in the branches table.');
     }
 }

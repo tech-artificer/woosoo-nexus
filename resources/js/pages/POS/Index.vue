@@ -8,52 +8,30 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { MonitorSmartphone, Circle, LoaderCircle, TableProperties, ReceiptText } from 'lucide-vue-next'
+import { MonitorSmartphone, Circle, ReceiptText } from 'lucide-vue-next'
+import EditOrderDialog from '@/components/pos/EditOrderDialog.vue'
+import PaymentDialog from '@/components/pos/PaymentDialog.vue'
+import PosTableCard from '@/components/pos/PosTableCard.vue'
+import type { PosTerminal, PosTable, PosOrder } from '@/types/pos'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+    Skeleton,
+} from '@/components/ui/skeleton'
 
-interface PosTerminal {
-    id: string
-    name: string
-    type: string
-    ip_address: string | null
-    port: number | null
-    is_active: number | boolean
-    terminal_session_id: string | null
-    session_id: string | null
-    terminal_session_opened_at: string | null
-    terminal_session_closed_at: string | null
-    session_closed_at: string | null
-    open_orders_count: number | string
-}
-
-interface PosTable {
-    id: string
-    name: string
-    status: string
-    is_available: number | boolean
-    is_locked: number | boolean
-    table_group_id: string
-    order_created_in: string | null
-    open_orders_count: number | string
-    is_occupied: number | boolean
-}
-
-interface PosOrder {
-    id: string
-    reference: string
-    date_time_opened: string
-    guest_count: number | string
-    terminal_id: string
-    total_amount: number | string
-    paid_amount: number | string
-    is_settled: number | boolean
-    resetable_transaction_number: string | null
-    table_names: string | null
-}
+// Interfaces imported from @/types/pos
 
 const props = defineProps<{
     title: string
@@ -92,6 +70,14 @@ const actionLoading = ref(false)
 
 const addGuestCount = ref<number>(2)
 const addReference = ref<string>('')
+
+// Dialog state
+const editDialogOpen = ref(false)
+const paymentDialogOpen = ref(false)
+const voidDialogOpen = ref(false)
+const selectedOrderForEdit = ref<PosOrder | null>(null)
+const selectedOrderForPay = ref<PosOrder | null>(null)
+const selectedOrderForVoid = ref<PosOrder | null>(null)
 
 const totalTerminals = computed(() => terminals.value.length)
 const activeTerminals = computed(() => terminals.value.filter((terminal) => Boolean(Number(terminal.is_active))).length)
@@ -263,22 +249,16 @@ const addOrderForTable = async () => {
 }
 
 const editOrder = async (order: PosOrder) => {
-    const nextGuestCountRaw = window.prompt('Edit guest count:', String(order.guest_count ?? 1))
-    if (!nextGuestCountRaw) {
-        return
-    }
+    selectedOrderForEdit.value = order
+    editDialogOpen.value = true
+}
 
-    const nextGuestCount = parseInt(nextGuestCountRaw, 10)
-    if (!Number.isInteger(nextGuestCount) || nextGuestCount < 1) {
-        ordersError.value = 'Guest count must be a whole number ≥ 1.'
-        return
-    }
-
-    const nextReference = window.prompt('Edit reference (optional):', order.reference || '')
+const handleEditSave = async (guestCount: number, reference: string | null) => {
+    if (!selectedOrderForEdit.value) return
 
     actionLoading.value = true
     try {
-        const response = await fetch(route('pos.orders.edit', { orderId: order.id }), {
+        const response = await fetch(route('pos.orders.edit', { orderId: selectedOrderForEdit.value.id }), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -287,8 +267,8 @@ const editOrder = async (order: PosOrder) => {
                 Accept: 'application/json',
             },
             body: JSON.stringify({
-                guest_count: nextGuestCount,
-                reference: nextReference || null,
+                guest_count: guestCount,
+                reference: reference,
             }),
         })
 
@@ -297,6 +277,7 @@ const editOrder = async (order: PosOrder) => {
             throw new Error(payload?.message || 'Failed to edit order.')
         }
 
+        editDialogOpen.value = false
         await refreshCurrentTableOrders()
     } catch (error: any) {
         ordersError.value = error?.message || 'Unable to edit order in Krypton.'
@@ -305,15 +286,17 @@ const editOrder = async (order: PosOrder) => {
     }
 }
 
-const voidOrder = async (order: PosOrder) => {
-    const confirmed = window.confirm(`Void order #${order.id}?`)
-    if (!confirmed) {
-        return
-    }
+const voidOrder = (order: PosOrder) => {
+    selectedOrderForVoid.value = order
+    voidDialogOpen.value = true
+}
+
+const handleVoidConfirm = async () => {
+    if (!selectedOrderForVoid.value) return
 
     actionLoading.value = true
     try {
-        const response = await fetch(route('pos.orders.void', { orderId: order.id }), {
+        const response = await fetch(route('pos.orders.void', { orderId: selectedOrderForVoid.value.id }), {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': getCsrfToken(),
@@ -327,6 +310,7 @@ const voidOrder = async (order: PosOrder) => {
             throw new Error(payload?.message || 'Failed to void order.')
         }
 
+        voidDialogOpen.value = false
         await refreshCurrentTableOrders()
         if (selectedTerminalId.value) {
             await loadTablesForTerminal(selectedTerminalId.value)
@@ -339,35 +323,16 @@ const voidOrder = async (order: PosOrder) => {
 }
 
 const payOrder = async (order: PosOrder) => {
-    const total = Number(order.total_amount || 0)
-    const paid = Number(order.paid_amount || 0)
-    const remaining = Math.max(total - paid, 0)
+    selectedOrderForPay.value = order
+    paymentDialogOpen.value = true
+}
 
-    const amountPrompt = window.prompt('Payment amount:', String(remaining || total || 0))
-    if (!amountPrompt) {
-        return
-    }
-
-    const amount = parseFloat(amountPrompt)
-    if (!Number.isFinite(amount) || amount <= 0) {
-        ordersError.value = 'Payment amount must be a positive number.'
-        return
-    }
-
-    const paymentTypePrompt = window.prompt('Payment type id (Cash=1, Credit=2, Debit=3, GCASH=4, PAYMAYA=5):', '1')
-    if (!paymentTypePrompt) {
-        return
-    }
-
-    const paymentTypeId = parseInt(paymentTypePrompt, 10)
-    if (!Number.isInteger(paymentTypeId) || paymentTypeId < 1) {
-        ordersError.value = 'Invalid payment type ID.'
-        return
-    }
+const handlePay = async (amount: number, paymentTypeId: number, tip?: number) => {
+    if (!selectedOrderForPay.value) return
 
     actionLoading.value = true
     try {
-        const response = await fetch(route('pos.orders.pay', { orderId: order.id }), {
+        const response = await fetch(route('pos.orders.pay', { orderId: selectedOrderForPay.value.id }), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -378,6 +343,7 @@ const payOrder = async (order: PosOrder) => {
             body: JSON.stringify({
                 amount,
                 payment_type_id: paymentTypeId,
+                tip,
             }),
         })
 
@@ -386,6 +352,7 @@ const payOrder = async (order: PosOrder) => {
             throw new Error(payload?.message || 'Failed to pay order.')
         }
 
+        paymentDialogOpen.value = false
         await refreshCurrentTableOrders()
         if (selectedTerminalId.value) {
             await loadTablesForTerminal(selectedTerminalId.value)
@@ -441,12 +408,12 @@ const payOrder = async (order: PosOrder) => {
                 </div>
             </section>
 
-            <section class="rounded-[28px] border border-border/60 bg-card/95 p-4 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80 sm:p-6 lg:p-8">
+            <section class="rounded-[28px] border border-border/60 bg-card/95 p-4 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80 sm:p-5 lg:p-6">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">POS &gt; Terminal</h3>
                     <p class="text-xs text-muted-foreground">Pick a terminal, then click a table to manage orders.</p>
                 </div>
-                <div class="p-4 sm:p-6 lg:p-8">
+                <div class="p-4 sm:p-5 lg:p-6">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                         <button
                             v-for="terminal in terminals"
@@ -483,8 +450,9 @@ const payOrder = async (order: PosOrder) => {
                 </div>
             </section>
 
+            <!-- Tables Section -->
             <section class="rounded-[28px] border border-border/60 bg-card/95 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80">
-                <div class="border-b px-4 py-4 sm:px-6">
+                <div class="border-b px-4 py-4 sm:px-5">
                     <div class="flex items-center justify-between gap-4">
                         <div>
                             <h3 class="text-base font-semibold">POS &gt; Terminal &gt; Tables</h3>
@@ -499,10 +467,13 @@ const payOrder = async (order: PosOrder) => {
                     </div>
                 </div>
 
-                <div class="p-4 sm:p-6">
-                    <div v-if="tablesLoading" class="flex items-center justify-center gap-2 py-14 text-sm text-muted-foreground">
-                        <LoaderCircle class="h-4 w-4 animate-spin" />
-                        Loading tables from Krypton...
+                <div class="p-4 sm:p-5">
+                    <div v-if="tablesLoading" class="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
+                        <div v-for="n in 6" :key="n" class="rounded-2xl border p-4 space-y-3">
+                            <Skeleton class="h-4 w-1/3 rounded" />
+                            <Skeleton class="h-6 w-1/2 rounded" />
+                            <Skeleton class="h-4 w-full rounded" />
+                        </div>
                     </div>
 
                     <div v-else-if="tablesError" class="rounded-xl border border-rose-300/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
@@ -510,32 +481,19 @@ const payOrder = async (order: PosOrder) => {
                     </div>
 
                     <div v-else class="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
-                        <button
+                        <PosTableCard
                             v-for="table in tables"
                             :key="table.id"
-                            type="button"
-                            class="rounded-2xl border p-4 text-left transition hover:border-primary"
-                            :class="Number(table.is_occupied) ? 'border-rose-400/70 bg-rose-500/10' : 'border-emerald-400/40 bg-emerald-500/10'"
-                            @click="openTableOrders(table)"
-                        >
-                            <div class="mb-2 flex items-center justify-between">
-                                <TableProperties class="h-4 w-4 text-foreground/70" />
-                                <span class="text-[10px] font-semibold uppercase tracking-wide" :class="Number(table.is_occupied) ? 'text-rose-500' : 'text-emerald-600'">
-                                    {{ Number(table.is_occupied) ? 'Occupied' : 'Available' }}
-                                </span>
-                            </div>
-                            <p class="text-base font-semibold">{{ table.name }}</p>
-                            <p class="text-[11px] text-muted-foreground">ID {{ table.id }}</p>
-                            <p class="mt-2 text-xs text-muted-foreground">
-                                Orders: <span class="font-semibold text-foreground">{{ Number(table.open_orders_count) }}</span>
-                            </p>
-                        </button>
+                            :table="table"
+                            :selected="selectedTable?.id === table.id"
+                            @select="openTableOrders(table)"
+                        />
                     </div>
                 </div>
             </section>
-        </div>
 
-        <Dialog v-model:open="showOrdersModal">
+            <!-- Orders Dialog -->
+            <Dialog v-model:open="showOrdersModal">
             <DialogContent class="max-h-[90vh] max-w-6xl overflow-hidden p-0">
                 <DialogHeader class="border-b px-6 py-4">
                     <DialogTitle>
@@ -574,9 +532,20 @@ const payOrder = async (order: PosOrder) => {
                         </div>
                     </div>
 
-                    <div v-if="ordersLoading" class="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-                        <LoaderCircle class="h-4 w-4 animate-spin" />
-                        Loading current orders from Krypton...
+                    <div v-if="ordersLoading" class="space-y-3 py-4">
+                        <div v-for="n in 3" :key="n" class="grid grid-cols-7 gap-4 px-2">
+                            <Skeleton class="h-6 w-16 rounded" />
+                            <Skeleton class="h-6 w-24 rounded" />
+                            <Skeleton class="h-6 w-20 rounded" />
+                            <Skeleton class="h-6 w-12 rounded" />
+                            <Skeleton class="h-6 w-20 rounded" />
+                            <Skeleton class="h-6 w-20 rounded" />
+                            <div class="flex gap-2 justify-end">
+                                <Skeleton class="h-8 w-12 rounded-md" />
+                                <Skeleton class="h-8 w-12 rounded-md" />
+                                <Skeleton class="h-8 w-12 rounded-md" />
+                            </div>
+                        </div>
                     </div>
 
                     <div v-else-if="ordersError" class="rounded-xl border border-rose-300/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
@@ -623,12 +592,36 @@ const payOrder = async (order: PosOrder) => {
                     </table>
                 </div>
 
-                <DialogFooter class="border-t px-6 py-4">
-                    <Button type="button" variant="outline" @click="showOrdersModal = false">
-                        Close
-                    </Button>
-                </DialogFooter>
+                <EditOrderDialog
+                    :open="editDialogOpen"
+                    :order="selectedOrderForEdit"
+                    @update:open="editDialogOpen = $event"
+                    @save="handleEditSave"
+                />
+
+                <PaymentDialog
+                    :open="paymentDialogOpen"
+                    :order="selectedOrderForPay"
+                    @update:open="paymentDialogOpen = $event"
+                    @pay="handlePay"
+                />
+
+                <AlertDialog :open="voidDialogOpen" @update:open="voidDialogOpen = $event">
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Void Order #{{ selectedOrderForVoid?.id }}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to void this order? This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel @click="voidDialogOpen = false">Cancel</AlertDialogCancel>
+                            <AlertDialogAction @click="handleVoidConfirm">Void Order</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </DialogContent>
         </Dialog>
+        </div>
     </AppLayout>
 </template>

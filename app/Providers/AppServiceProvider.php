@@ -46,7 +46,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PosConnectionService::class, fn () => new PosConnectionService);
         // Register test-only service provider when running tests so we can
         // bind POS/Krypton repositories to fakes for isolation.
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        if ($this->isRunningTests()) {
             $this->app->register(TestServiceProvider::class);
         }
     }
@@ -54,7 +54,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(KryptonContextService $contextService, PosConnectionService $posConnection): void
+    public function boot(PosConnectionService $posConnection): void
     {
         // Force HTTPS URL generation when APP_URL is configured for HTTPS.
         // This ensures Ziggy, route(), asset(), and all URL helpers produce
@@ -82,8 +82,14 @@ class AppServiceProvider extends ServiceProvider
         JsonResource::withoutWrapping();
 
         try {
-            // Share context-based sessions (from your Krypton service)
-            Inertia::share(app(KryptonContextService::class)->getCurrentSessions());
+            // Share Krypton context lazily so tests and non-Inertia requests
+            // do not eagerly touch POS dependencies during provider boot.
+            foreach (['terminal', 'session', 'terminalSession', 'employeeLog', 'cashTraySession', 'terminalService', 'sessionFlag'] as $key) {
+                Inertia::share($key, function () use ($key) {
+                    return app(KryptonContextService::class)->getCurrentSessions()[$key] ?? null;
+                });
+            }
+
             // Roles & Permissions (moved to dedicated private method for clarity)
             $this->shareRolesAndPermissions();
         } catch (\Throwable $e) {
@@ -171,5 +177,12 @@ class AppServiceProvider extends ServiceProvider
 
         // fallback: just prettify words
         return ucfirst(str_replace('.', ' ', $name));
+    }
+
+    private function isRunningTests(): bool
+    {
+        return $this->app->runningUnitTests()
+            || $this->app->environment('testing')
+            || env('APP_ENV') === 'testing';
     }
 }

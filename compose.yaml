@@ -26,7 +26,9 @@ services:
       dockerfile: Dockerfile
     pull_policy: build
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
+      - .env.docker
     environment:
       REVERB_BROADCAST_HOST: "192.168.100.7"
     volumes:
@@ -57,7 +59,9 @@ services:
     pull_policy: build
     restart: unless-stopped
     command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=1", "--timeout=30", "--max-jobs=250", "--max-time=900", "--memory=256"]
-    env_file: .env
+    env_file:
+      - .env
+      - .env.docker
     volumes:
       - .:/var/www/html
       - storage_data:/var/www/html/storage
@@ -79,7 +83,9 @@ services:
     pull_policy: build
     restart: unless-stopped
     command: ["php", "artisan", "schedule:work"]
-    env_file: .env
+    env_file:
+      - .env
+      - .env.docker
     volumes:
       - .:/var/www/html
       - storage_data:/var/www/html/storage
@@ -100,7 +106,9 @@ services:
     pull_policy: build
     restart: unless-stopped
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080", "--no-interaction"]
-    env_file: .env
+    env_file:
+      - .env
+      - .env.docker
     environment:
       REVERB_BROADCAST_HOST: "192.168.100.7"
     volumes:

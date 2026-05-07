@@ -2,7 +2,7 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Image, Pencil } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
@@ -50,7 +50,7 @@ function onFileChange(e: Event) {
   }
   const file = input.files[0];
   try {
-    // form.image = file; // Set file in the form
+    form.image = file;
     previewImage.value = URL.createObjectURL(file); // Update preview
     // Optimistic update for img_url
     localMenu.value[0].img_url = previewImage.value;
@@ -60,11 +60,16 @@ function onFileChange(e: Event) {
 }
 // Submit the image upload
 function submit() {
-  form.post(route('menu.upload.image', { id: props.menu.id }), {
+  form.post(route('menu.upload.image', { menu: props.menu.id }), {
     forceFormData: true, // <-- THIS is the secret ingredient
     preserveScroll: true,
     preserveState: true,
     onSuccess: () => {
+      router.reload({
+        only: ['menus'],
+        preserveScroll: true,
+      });
+
       // console.log('✅ Image uploaded successfully');
       toast('Image Uploaded:', {
         description: 'The previous image has been replaced with your new upload.',

@@ -1,70 +1,53 @@
-# ============================================
-# Laravel Backend - Docker Build Exclusions
-# ============================================
-# Excludes files from Docker build context to:
-# - Reduce build context size
-# - Prevent host artifacts contaminating container
-# - Speed up builds
+# PHP / Laravel
+vendor/
+node_modules/
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+public/hot
+public/build/
+public/storage
 
-# Git
-.git
-.gitignore
-.gitattributes
-
-# Dependencies (installed in container)
-/vendor
-/node_modules
-
-# Environment files (mounted at runtime)
+# Environment & secrets
 .env
 .env.*
 !.env.example
 
-# IDE / Editor
-.vscode
-.idea
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Laravel storage (mounted as volume)
-/storage/*.key
-/storage/logs/*
-/storage/framework/cache/*
-/storage/framework/sessions/*
-/storage/framework/views/*
-/storage/app/public/*
-
-# Build artifacts
-/public/hot
-/public/storage
-/public/build
-/public/mix-manifest.json
-
-# Testing
-/tests
-/.phpunit.cache
-phpunit.xml
-.phpunit.result.cache
-
-# Documentation
-README.md
-CHANGELOG.md
-*.md
-!database/**/*.md
-
-# Docker files (not needed in image)
-Dockerfile
-docker-compose*.yml
+# Docker
+.docker
 .dockerignore
+docker-compose*.yml
+compose.*.yaml
 
-# CI/CD
-.github
-.gitlab-ci.yml
-.travis.yml
+# Python / BI (not needed in PHP image)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+*.egg-info/
+.pytest_cache/
+logs/
+reports/
 
-# Cache
-/bootstrap/cache/*.php
-/.php-cs-fixer.cache
-/.php_cs.cache
+# Misc build artifacts
+dist/
+build/
+*.log
