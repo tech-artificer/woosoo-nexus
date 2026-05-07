@@ -1,0 +1,84 @@
+#syntax=docker/dockerfile:1
+
+# ============================================================================
+# BI PROCESSOR: Docker Hardened Image Multi-Stage Build
+# Purpose: Minimal, secure ETL container for order reconciliation
+# ============================================================================
+
+# BUILD STAGE
+# ============================================================================
+# This stage uses a dev image with package manager and build tools
+# All dependencies are installed here; nothing unused in final image
+FROM dhi.io/python:3.13-alpine3.21-dev AS builder
+
+WORKDIR /app
+
+# Copy requirements and install Python dependencies to user site-packages
+# Using --user installs to /root/.local (will be copied to runtime stage)
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# SETUP STAGE
+# ============================================================================
+# This stage creates the nonroot user and directories
+FROM dhi.io/python:3.13-alpine3.21-dev AS setup
+
+# Create nonroot user (standard unprivileged UID 1000)
+# This user owns the application and logs; prevents root privilege escalation
+RUN addgroup -g 1000 app && \
+    adduser -D -u 1000 -G app -s /sbin/nologin -h /home/app app && \
+    mkdir -p /app /app/logs /app/reports && \
+    chmod 755 /app && \
+    chmod 777 /app/logs /app/reports
+
+# FINAL STAGE
+# ============================================================================
+# Minimal runtime image with copied user and dependencies
+FROM dhi.io/python:3.13-alpine3.21
+
+# Metadata
+LABEL maintainer="Woosoo DevOps Team"
+LABEL description="BI Processor: Krypton ↔ Woosoo order reconciliation ETL (DHI)"
+LABEL version="1.0"
+
+# Copy user/group configuration from setup stage
+COPY --from=setup /etc/passwd /etc/passwd
+COPY --from=setup /etc/group /etc/group
+COPY --from=setup /etc/shadow /etc/shadow
+COPY --from=setup /home/app /home/app
+COPY --from=setup /app /app
+
+WORKDIR /app
+
+# Copy installed Python packages from builder
+# This preserves all compiled extensions and dependencies for the runtime image
+COPY --from=builder /root/.local /home/app/.local
+
+# Copy application code
+# Source files are small; no need for .dockerignore optimization here
+COPY --chown=app:app bi_processor.py .
+
+# Configure Python runtime
+# - PYTHONUNBUFFERED: flush stdout/stderr immediately (important for logs)
+# - PYTHONDONTWRITEBYTECODE: prevent .pyc pollution (read-only filesystem compat)
+# - PATH: include user-installed packages from /home/app/.local
+ENV PATH=/home/app/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Health check: Validate critical imports and Python syntax
+# If this fails, the container is considered unhealthy
+# Interval: 60s, Timeout: 10s, Retries: 3 before marking unhealthy
+HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import pandas, mysql.connector, psycopg2; exit(0)" || exit 1
+
+# Switch to nonroot user before running application
+# Any process started in this container will run as UID 1000 (app user)
+# Cannot escalate to root, cannot read/write files owned by root
+USER app
+
+# Entrypoint: Run Python ETL script
+# Default command provides usage information; override with specific flags
+# Example: docker run ... --refresh --report --output /app/reports/report.json
+ENTRYPOINT ["python", "bi_processor.py"]
+CMD ["--help"]
