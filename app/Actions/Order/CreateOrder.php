@@ -2,10 +2,10 @@
 
 namespace App\Actions\Order;
 
-use Lorisleiva\Actions\Concerns\AsAction;
-use Illuminate\Http\Request;
-use App\Models\Krypton\Order;
 use App\Exceptions\SessionNotFoundException;
+use App\Models\Krypton\Order;
+use Illuminate\Http\Request;
+use Lorisleiva\Actions\Concerns\AsAction;
 
 class CreateOrder
 {
@@ -14,13 +14,13 @@ class CreateOrder
     // public function handle(Device $device, array $params)
     public function handle(array $attr)
     {
-       $order = $this->createNewOrder($attr);
+        $order = $this->createNewOrder($attr);
 
         // Update the order with terminal and cashier details
         // Some POS fields are not present in the lightweight in-memory
         // `pos` schema used during tests. Only attempt to persist these
         // updates in non-testing environments to avoid schema mismatches.
-        if (! (app()->environment('testing') || env('APP_ENV') === 'testing')) {
+        if (! (app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing')) {
             $order->update([
                 'is_available' => true,
                 'end_terminal_id' => $order->terminal_id ?? $attr['terminal_id'] ?? null,
@@ -37,13 +37,14 @@ class CreateOrder
         return $order;
     }
 
-    public function createNewOrder(array $attr = []) {
-        
+    public function createNewOrder(array $attr = [])
+    {
+
         try {
             $sessionId = $attr['session_id'] ?? null;
-            
+
             // session_id is MANDATORY from Krypton - cannot be null
-            if (!$sessionId) {
+            if (! $sessionId) {
                 throw new SessionNotFoundException(
                     'session_id is required and must be fetched from Krypton POS.'
                 );
@@ -62,9 +63,9 @@ class CreateOrder
             $guestCount = $attr['guest_count'] ?? 1;
             $serviceTypeId = $attr['service_type_id'] ?? 1; // e.g., 1 for Dine-In
             $startEmployeeLogId = $attr['start_employee_log_id']; // $attr['start_employee_log_id']; // From logged-in user or default
-            $currentEmployeeLogId = $attr['current_employee_log_id']; //$attr['current_employee_log_id'];
+            $currentEmployeeLogId = $attr['current_employee_log_id']; // $attr['current_employee_log_id'];
             $closeEmployeeLogId = $attr['close_employee_log_id']; // //$attr['close_employee_log_id'] ?? null;
-            $serverEmployeeLogId = $attr['server_employee_log_id']; //$attr['server_employee_log_id'] ?? $startEmployeeLogId;
+            $serverEmployeeLogId = $attr['server_employee_log_id']; // $attr['server_employee_log_id'] ?? $startEmployeeLogId;
             // SP column is NOT NULL — null is never acceptable. Use '' when absent or explicitly null.
             $reference = $attr['reference'] ?? '';
             $cashierEmployeeId = $attr['cashier_employee_id'] ?? 2;
@@ -72,39 +73,44 @@ class CreateOrder
             $isOnlineOrder = $attr['is_online_order']; // Default to false, can be set based on request
 
             $params = [
-                $sessionId, 
-                $terminalSessionId, 
-                $dateTimeOpened, 
-                $dateTimeClosed, 
-                $revenueId, 
+                $sessionId,
+                $terminalSessionId,
+                $dateTimeOpened,
+                $dateTimeClosed,
+                $revenueId,
                 $terminalId,
-                $customerId, 
-                $isOpen, 
+                $customerId,
+                $isOpen,
                 $isTransferred,
-                $isVoided, 
-                $guestCount, 
+                $isVoided,
+                $guestCount,
                 $serviceTypeId,
                 $startEmployeeLogId,
-                $currentEmployeeLogId, 
-                $closeEmployeeLogId, 
+                $currentEmployeeLogId,
+                $closeEmployeeLogId,
                 $serverEmployeeLogId,
-                $reference, 
-                $cashierEmployeeId, 
-                $terminalServiceId, 
-                $isOnlineOrder
+                $reference,
+                $cashierEmployeeId,
+                $terminalServiceId,
+                $isOnlineOrder,
             ];
 
-    
             // During tests we do not have stored procedures available on the
             // sqlite in-memory connection. Provide a lightweight fallback that
             // inserts a minimal order row into the `pos` (testing) connection
             // so higher-level services can operate without hitting the real
             // POS stored procedure.
-            if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            if (app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
                 return Order::create([
                     'session_id' => $sessionId,
                     'terminal_session_id' => $terminalSessionId,
+                    'cash_tray_session_id' => $attr['cash_tray_session_id'] ?? null,
+                    'server_employee_log_id' => $serverEmployeeLogId,
+                    'close_employee_log_id' => $closeEmployeeLogId,
+                    'cashier_employee_id' => $cashierEmployeeId,
+                    'end_terminal_id' => $terminalId,
                     'guest_count' => $guestCount,
+                    'reference' => $reference,
                     'status' => 'OPEN',
                 ]);
             }
@@ -112,10 +118,10 @@ class CreateOrder
             $placeholdersArray = array_fill(0, count($params), '?');
             $placeholders = implode(', ', $placeholdersArray);
             // Call the procedure
-            $order = Order::fromQuery('CALL create_order(' . $placeholders . ')', $params)->first();
+            $order = Order::fromQuery('CALL create_order('.$placeholders.')', $params)->first();
 
             if (empty($order)) {
-                throw new \Exception("Failed to create new order.");
+                throw new \Exception('Failed to create new order.');
             }
 
             return $order;

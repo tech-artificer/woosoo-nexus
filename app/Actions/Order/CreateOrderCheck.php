@@ -64,7 +64,7 @@ class CreateOrderCheck
         // During tests, avoid calling POS stored procedures. Insert a
         // lightweight order_check row into the in-memory `pos` connection
         // so higher-level code can proceed.
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        if (app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
             // During tests avoid inserting into the `pos.order_checks` table.
             // Return a lightweight object with the shape consumers expect.
             $fake = new \stdClass();

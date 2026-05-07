@@ -17,7 +17,7 @@ class DeviceOrderResource extends BaseResource
         // Avoid querying the external POS `tables` or other POS models
         // during tests (they would hit the `pos` connection). In testing
         // environments, return null/fallbacks so resources remain stable.
-        $isTesting = app()->environment('testing') || env('APP_ENV') === 'testing';
+        $isTesting = app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing';
         $items = $this->relationLoaded('items') ? $this->items : collect();
         $device = $this->relationLoaded('device') ? $this->device : null;
         $tableRelation = $this->relationLoaded('table') ? $this->table : null;

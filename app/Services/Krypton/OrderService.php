@@ -2,37 +2,23 @@
 
 namespace App\Services\Krypton;
 
-use Illuminate\Support\Facades\DB;
-use App\Models\Krypton\{
-    Order,
-    Menu,
-    Session,
-    Tax,
-    EmployeeLog,
-    Revenue,
-    Terminal,
-    TerminalSession,
-    TerminalService,
-    CashTraySession,
-    Table,
-};
-use App\Models\Device;
-use App\Models\DeviceOrder;
-use App\Actions\Order\{
-    CreateOrder,
-    CreateOrderCheck,
-    CreateTableOrder,
-    CreateOrderedMenu
-};
-
+use App\Actions\Order\CreateOrder;
+use App\Actions\Order\CreateOrderCheck;
+use App\Actions\Order\CreateOrderedMenu;
+use App\Actions\Order\CreateTableOrder;
 use App\Enums\OrderStatus;
-use App\Services\Krypton\KryptonContextService;
-use App\Services\BroadcastService;
 use App\Events\Order\OrderVoided;
 use App\Events\PrintOrder;
 use App\Exceptions\SessionNotFoundException;
-
+use App\Models\Device;
+use App\Models\DeviceOrder;
+use App\Models\Krypton\Order;
+use App\Models\Krypton\Table;
+use App\Models\Krypton\Tax;
+use App\Services\BroadcastService;
+use App\Services\PrintEventService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -41,11 +27,10 @@ class OrderService
     private const TEST_KRYPTON_SESSION_CACHE_KEY = 'testing.krypton.session_id';
 
     public $attributes = [];
+
     /**
      * Process an order for a given device with specified attributes.
      *
-     * @param Device $device
-     * @param array $attributes
      * @return Order|bool
      */
     public function processOrder(Device $device, array $attributes)
@@ -56,6 +41,7 @@ class OrderService
         // Fetch default values and merge them with provided attributes
         $defaults = $this->getDefaultAttributes();
         $attributes = array_merge($defaults, $attributes, ['device_id' => $device->id, 'table_id' => $device->table_id]);
+        $attributes['reference'] = $this->buildOrderReference($device, $attributes['reference'] ?? null);
 
         // Enforce ID namespace contract before touching POS:
         // - Local main DB IDs (e.g., device_orders.id) must never be sent to POS SPs.
@@ -163,9 +149,9 @@ class OrderService
 
                 DB::afterCommit(function () use ($deviceOrder) {
                     try {
-                        app(\App\Services\PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                        app(PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
                         $deviceOrder->refresh();
-                        \App\Events\PrintOrder::dispatch($deviceOrder);
+                        PrintOrder::dispatch($deviceOrder);
                     } catch (\Throwable $e) {
                         report($e);
                     }
@@ -190,7 +176,8 @@ class OrderService
         }
     }
 
-    protected function updateAttributes($array = []) {
+    protected function updateAttributes($array = [])
+    {
         foreach ($array as $key => $value) {
             $this->attributes[$key] = $value;
         }
@@ -198,11 +185,9 @@ class OrderService
 
     /**
      * Fetch default values needed for order processing.
-     *
-     * @return array
      */
     protected function getDefaultAttributes(): array
-    {   
+    {
         $contextService = app(KryptonContextService::class);
         $defaults = $contextService->getData();
 
@@ -221,7 +206,7 @@ class OrderService
             'terminal_service_id' => $defaults['terminal_service_id'] ?? null,
             'employee_id' => $defaults['employee_id'] ?? null,
             'cashier_employee_id' => $defaults['cashier_employee_id'] ?? null,
-            'server_employee_log_id' => $defaults['server_employee_log_id'] ?? ($defaults['employee_log_id'] ?? null),
+            'server_employee_log_id' => null,
         ];
 
         if (($normalized['session_id'] ?? null) === null && app()->runningUnitTests()) {
@@ -236,7 +221,7 @@ class OrderService
             'start_employee_log_id' => $normalized['employee_log_id'] ?? null,
             'current_employee_log_id' => $normalized['employee_log_id'] ?? null,
             'close_employee_log_id' => $normalized['employee_log_id'] ?? null,
-            'server_employee_log_id' => $normalized['server_employee_log_id'] ?? null,
+            'server_employee_log_id' => null,
             'is_online_order' => false,
             'reference' => '',
         ];
@@ -244,24 +229,18 @@ class OrderService
         return array_merge($normalized, $params);
     }
 
-    protected function cancelOrder(Device $device) {
-        
-    }
+    protected function cancelOrder(Device $device) {}
 
-    public function voidOrder(DeviceOrder $deviceOrder) {
+    public function voidOrder(DeviceOrder $deviceOrder)
+    {
         app(BroadcastService::class)->dispatchBroadcastJob(new OrderVoided($deviceOrder));
     }
 
-    protected function rollBackOrder(Device $device) {
-        
-    }
+    protected function rollBackOrder(Device $device) {}
 
     /**
      * Calculate totals from items array
      * This matches the calculation logic in CreateOrderedMenu
-     *
-     * @param array $items
-     * @return array
      */
     protected function calculateTotalsFromItems(array $items): array
     {
@@ -272,13 +251,13 @@ class OrderService
         foreach ($items as $item) {
             $quantity = (int) ($item['quantity'] ?? 0);
             $price = $this->money($item['price'] ?? 0);
-            
+
             // Calculate item total (price * quantity)
             $itemTotal = $this->money($price * $quantity);
-            
+
             // Calculate tax for this item (same as CreateOrderedMenu: totalItemPrice * taxRate)
             $itemTax = $this->money($itemTotal * $taxRate);
-            
+
             $subtotal = $this->money($subtotal + $itemTotal);
             $tax = $this->money($tax + $itemTax);
         }
@@ -297,6 +276,21 @@ class OrderService
         return round((float) $value, 2);
     }
 
+    private function buildOrderReference(Device $device, mixed $reference): string
+    {
+        $reference = trim((string) ($reference ?? ''));
+        if ($reference !== '') {
+            return $reference;
+        }
+
+        $parts = ["woosoo device:{$device->id}"];
+        if (! empty($device->ip_address)) {
+            $parts[] = "ip:{$device->ip_address}";
+        }
+
+        return substr(implode(' ', $parts), 0, 120);
+    }
+
     /**
      * Validate that IDs used for POS transactions belong to the POS namespace.
      *
@@ -310,7 +304,7 @@ class OrderService
             throw new RuntimeException('Invalid POS table_id: expected Krypton table identifier.');
         }
 
-        if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+        if (app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
             return;
         }
 
