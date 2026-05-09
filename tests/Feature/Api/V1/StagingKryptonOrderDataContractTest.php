@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\OrderStatus;
 use App\Models\Device;
 use App\Models\DeviceOrder;
+use App\Models\Package;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\Krypton\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -166,6 +167,18 @@ class StagingKryptonOrderDataContractTest extends TestCase
             ],
         ]);
 
+        $package = Package::create([
+            'name' => 'Classic Feast',
+            'krypton_menu_id' => 46,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $package->modifiers()->createMany([
+            ['krypton_menu_id' => 10, 'sort_order' => 1],
+            ['krypton_menu_id' => 13, 'sort_order' => 2],
+        ]);
+
         $device = Device::create([
             'id' => 199,
             'name' => 'Staging Audit Tablet T1',
@@ -201,10 +214,70 @@ class StagingKryptonOrderDataContractTest extends TestCase
             ->get();
 
         $this->assertSame([46, 10, 13], $rows->pluck('menu_id')->all());
+        $this->assertSame([46, 46, 46], $rows->pluck('ordered_menu_id')->all());
         // Client sent a bogus package price above; POS menu price must win.
         $this->assertSame(399.00, (float) $rows->firstWhere('menu_id', 46)->price);
         // P1 exists as an available modifier, but was not selected by customer.
         $this->assertNull($rows->firstWhere('menu_id', 11));
+    }
+
+    public function test_initial_order_rejects_modifiers_not_allowed_by_active_package_config(): void
+    {
+        $this->seedKryptonContextRows();
+        $this->seedOrderSupportRows();
+
+        DB::connection('pos')->table('menu_groups')->insert([
+            'id' => 2,
+            'name' => 'Packages',
+        ]);
+
+        DB::connection('pos')->table('menus')->insert([
+            ['id' => 46, 'name' => 'Classic Feast', 'receipt_name' => 'Classic Feast', 'price' => 399.00, 'menu_group_id' => 2],
+            ['id' => 13, 'name' => 'Chicken Galbi', 'receipt_name' => 'Chicken Galbi', 'price' => 92.00, 'menu_group_id' => 1],
+        ]);
+
+        $package = Package::create([
+            'name' => 'Classic Feast',
+            'krypton_menu_id' => 46,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $package->modifiers()->create([
+            'krypton_menu_id' => 10,
+            'sort_order' => 1,
+        ]);
+
+        $device = Device::create([
+            'id' => 199,
+            'name' => 'Staging Audit Tablet T1',
+            'ip_address' => '192.168.100.51',
+            'is_active' => true,
+            'table_id' => 19,
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Modifier 13 is not allowed for package 46');
+
+        app(OrderService::class)->processOrder($device, [
+            'guest_count' => 2,
+            'items' => [
+                [
+                    'menu_id' => 46,
+                    'name' => 'Classic Feast',
+                    'quantity' => 1,
+                    'price' => 1.00,
+                    'subtotal' => 1.00,
+                    'tax' => 0,
+                    'discount' => 0,
+                    'is_package' => true,
+                    'modifiers' => [
+                        ['menu_id' => 10, 'quantity' => 1],
+                        ['menu_id' => 13, 'quantity' => 1],
+                    ],
+                ],
+            ],
+        ]);
     }
 
     private function seedKryptonContextRows(): void
