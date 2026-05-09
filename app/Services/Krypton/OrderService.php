@@ -293,7 +293,7 @@ class OrderService
             $parts[] = "ip:{$device->ip_address}";
         }
 
-        return substr(implode(' ', $parts), 0, 120);
+        return mb_substr(implode(' ', $parts), 0, 120);
     }
 
     /**
@@ -309,7 +309,7 @@ class OrderService
             throw new RuntimeException('Invalid POS table_id: expected Krypton table identifier.');
         }
 
-        if (app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
+        if (app()->runningUnitTests() || app()->environment('testing')) {
             return;
         }
 

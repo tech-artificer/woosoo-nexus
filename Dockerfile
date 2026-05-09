@@ -28,12 +28,19 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interactio
 
 # Declare VITE build args so they are available at build time
 ARG VITE_APP_NAME
+ENV VITE_APP_NAME=${VITE_APP_NAME}
 ARG VITE_APP_ENV
+ENV VITE_APP_ENV=${VITE_APP_ENV}
 ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
 ARG VITE_REVERB_APP_KEY
+ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY}
 ARG VITE_REVERB_HOST
+ENV VITE_REVERB_HOST=${VITE_REVERB_HOST}
 ARG VITE_REVERB_PORT
+ENV VITE_REVERB_PORT=${VITE_REVERB_PORT}
 ARG VITE_REVERB_SCHEME
+ENV VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
 
 # Copy full source before building — VITE_* env vars and all config files must be
 # present at build time so the compiled JS bundle receives the correct values.

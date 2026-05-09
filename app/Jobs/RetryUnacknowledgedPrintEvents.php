@@ -19,7 +19,7 @@ class RetryUnacknowledgedPrintEvents implements ShouldQueue
         // Find events broadcast more than 2 minutes ago with no ack and still retryable.
         // NOTE: retry_count = backend re-broadcast counter.
         //       attempts     = device-ack counter (distinct — do NOT conflate).
-        // chunk(50) prevents full result-set loading into memory during high-volume peaks.
+        // chunkById(50) prevents full result-set loading into memory during high-volume peaks.
         PrintEvent::where('backend_status', 'broadcast')
             ->where('broadcast_at', '<', now()->subMinutes(2))
             ->where('retry_count', '<', 5)

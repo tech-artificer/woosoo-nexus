@@ -119,7 +119,7 @@ Click **Create Role**. The custom role now appears in the Roles list and can be 
 Permissions follow a pattern:
 - **`<feature>:<action>`**
   - `order:view` — can view orders
-  - `menu:edit` — can edit menus
+  - `menu:update` — can edit menus
   - `user:create` — can add users
 
 ---
@@ -151,8 +151,8 @@ Permissions follow a pattern:
 4. Assign permissions:
    - ✅ `order:view`
    - ❌ `order:create` (orders come from tablet)
-   - ❌ `menu:edit`
-   - ❌ `user:edit`
+   - ❌ `menu:update`
+   - ❌ `user:update`
 5. Save
 
 **Then:**
@@ -164,11 +164,11 @@ Permissions follow a pattern:
 
 ### Scenario: Restrict a Manager from Deleting Users
 
-**Current problem:** Manager role has `user:edit` permission, which also allows them to delete users.
+**Current problem:** Manager role has `user:update` permission, which also allows them to delete users.
 
 **Solution (if fine-grained permissions needed):**
 1. Create a custom permission `user:delete`
-2. Separate from `user:edit`
+2. Separate from `user:update`
 3. Remove `user:delete` from Manager role
 4. Now managers can edit user names/emails, but cannot delete them
 

@@ -263,21 +263,30 @@ tail -f /var/log/woosoo/reverb.log
 
 **Diagnosis:**
 1. Reverb server may not be running
-2. Network/firewall may be blocking port 6001
+2. Network/firewall may be blocking the Reverb port
+   - Docker/compose deployments use port **8080** (internal)
+   - Non-Docker/local deployments use port **6001**
 
 **Solution:**
 
-On Pi:
+On Pi (non-Docker, port 6001):
 ```bash
 sudo supervisorctl status laravel-reverb  # Check if running
 sudo supervisorctl start laravel-reverb   # Start it
-sudo netstat -tulpn | grep 6001  # Verify port is open
+sudo netstat -tulpn | grep 6001  # Verify port is open (non-Docker)
 ```
 
 If port not open, check firewall:
 ```bash
 sudo ufw status
-sudo ufw allow 6001
+sudo ufw allow 6001  # For non-Docker deployments
+# OR
+sudo ufw allow 8080  # For Docker/compose deployments
+```
+
+For Docker/compose deployments, verify port 8080:
+```bash
+sudo netstat -tulpn | grep 8080  # Verify port is open (Docker)
 ```
 
 ---

@@ -147,7 +147,7 @@ Click the **Resource** dropdown to filter by:
 2026-05-02 13:05:22 | system | device:online | Device | Tablet-1 | Reconnected | 192.168.100.42
 ```
 
-**Analysis:** Device goes offline at ~3:30 PM every day. Could be:
+**Analysis:** Device goes offline at ~3:30 PM every day. Possible causes include:
 - WiFi interference during afternoon peak
 - Battery saving mode kicking in
 - Tablet overheating

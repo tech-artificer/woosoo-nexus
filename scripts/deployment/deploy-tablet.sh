@@ -56,7 +56,15 @@ sync_repo() {
   if [[ -n "$ref" ]]; then
     echo "Pinning ${label} repo to ref ${ref}..."
     git -C "$dir" fetch --prune origin
-    git -C "$dir" checkout "$ref"
+    # Check if ref is an existing local branch; if not, create/update a deployment branch
+    if git -C "$dir" show-ref --verify --quiet "refs/heads/${ref}"; then
+      git -C "$dir" checkout "$ref"
+    else
+      # ref is a commit hash or tag - create/update a deployment branch to avoid detached HEAD
+      local deploy_branch="deploy/${ref}"
+      echo "Creating deployment branch ${deploy_branch} for ref ${ref}..."
+      git -C "$dir" checkout -B "$deploy_branch" "$ref"
+    fi
   fi
 }
 
