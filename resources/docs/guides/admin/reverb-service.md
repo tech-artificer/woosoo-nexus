@@ -49,7 +49,7 @@ Reverb is a **WebSocket server** that enables live, two-way communication:
 | **Active Connections** | Number of tablets/printers connected right now |
 | **Messages/sec** | Data flow rate (should spike during orders) |
 | **Uptime** | How long since last restart |
-| **Server Port** | Usually 6001 (for WebSocket) |
+| **Server Port** | Docker/compose: 8080; local/non-Docker: 6001 |
 
 ---
 
@@ -121,7 +121,7 @@ sudo supervisorctl restart laravel-reverb
 ```
 
 Expected output:
-```
+```text
 laravel-reverb: stopped
 laravel-reverb: started
 ```
@@ -230,7 +230,7 @@ tail -f /var/log/woosoo/reverb.log
 
 **Expected log lines (healthy):**
 
-```
+```text
 [2026-05-03 14:00:00] INFO: Connection established from 192.168.100.45 (Tablet 1)
 [2026-05-03 14:00:01] INFO: Subscription to channel: orders.downtown
 [2026-05-03 14:00:15] INFO: Broadcast to orders.downtown: 1 subscribers
@@ -238,7 +238,7 @@ tail -f /var/log/woosoo/reverb.log
 
 **Error log lines (problematic):**
 
-```
+```text
 [2026-05-03 14:00:30] ERROR: Connection timeout from 192.168.100.50
 [2026-05-03 14:00:31] ERROR: Failed to route message to print channel
 ```

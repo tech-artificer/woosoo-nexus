@@ -187,40 +187,35 @@ class MenuRepository
 
     public function getMenusByCourse($course): EloquentCollection
     {
-        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
-        try {
-              $rows = DB::connection('pos')->select('CALL get_menus_by_course(?)', [$course]);
-            $hydrated = Menu::hydrate($rows);
-
-            // If stored-proc returned no rows, fallback to local Menu model lookup by course
-            if ($hydrated->isEmpty()) {
-                try {
-                    return Menu::where('course', 'LIKE', $course)->get();
-                } catch (Exception $inner) {
-                    Log::warning('Local fallback query failed in getMenusByCourse: ' . $inner->getMessage());
-                    return $hydrated; // empty collection
-                }
-            }
-
-            return $hydrated;
-        } catch (Exception $e) {
-            Log::error('Procedure call failed (getMenusByCourse): ' . $e->getMessage());
-
-            // Attempt local fallback when stored-proc fails
+        // Attempt CALL procedure only when supported; otherwise proceed directly to fallback
+        if (self::posSupportsCall()) {
             try {
-                $local = Menu::where('course', 'LIKE', $course)->get();
-                if ($local->isNotEmpty()) {
-                    return $local;
-                }
-            } catch (Exception $inner) {
-                Log::warning('Local fallback query failed in getMenusByCourse (after proc failure): ' . $inner->getMessage());
-            }
+                $rows = DB::connection('pos')->select('CALL get_menus_by_course(?)', [$course]);
+                $hydrated = Menu::hydrate($rows);
 
-            if (app()->environment('testing')) {
-                return Menu::hydrate([]);
+                // If stored-proc returned rows, return them
+                if ($hydrated->isNotEmpty()) {
+                    return $hydrated;
+                }
+            } catch (Exception $e) {
+                Log::error('Procedure call failed (getMenusByCourse): ' . $e->getMessage());
             }
-            throw new \Exception('Something Went Wrong.');
         }
+
+        // Fallback: local Menu model lookup by course
+        try {
+            $local = Menu::where('course', 'LIKE', $course)->get();
+            if ($local->isNotEmpty()) {
+                return $local;
+            }
+        } catch (Exception $inner) {
+            Log::warning('Local fallback query failed in getMenusByCourse: ' . $inner->getMessage());
+        }
+
+        if (app()->environment('testing')) {
+            return Menu::hydrate([]);
+        }
+        throw new \Exception('Something Went Wrong.');
     }
 
 

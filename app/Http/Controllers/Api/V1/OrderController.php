@@ -8,6 +8,7 @@ use App\Models\DeviceOrder;
 use Illuminate\Validation\Rules\Enum as EnumRule;
 use App\Enums\OrderStatus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -204,6 +205,8 @@ class OrderController extends Controller
 
         $device = $request->user();
         $orderIds = $request->input('order_ids', []);
+        // Sort IDs to prevent deadlocks by ensuring consistent lock acquisition order
+        sort($orderIds, SORT_NUMERIC);
         $targetStatus = OrderStatus::from($request->input('status'));
 
         $results = ['updated' => [], 'failed' => []];

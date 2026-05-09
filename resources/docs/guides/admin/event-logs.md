@@ -42,7 +42,7 @@ Each entry shows:
 
 ### Example Log Entries
 
-```
+```text
 2026-05-03 13:45:22 | manager@rest.local | order:updated | Order | #ORD-8901 | Status changed: Pending → Completed | 192.168.1.50
 2026-05-03 13:44:55 | system | device:offline | Device | tablet-1 | Connection lost | 192.168.100.42
 2026-05-03 13:44:01 | admin@rest.local | user:created | User | #user-234 | New user: bartender@rest.local | 192.168.1.20
@@ -121,7 +121,7 @@ Click the **Resource** dropdown to filter by:
 5. Check Timestamp to know when
 
 **Result:**
-```
+```text
 2026-05-03 14:22:10 | manager@rest.local | order:deleted | Order | #ORD-8890 | Deleted | 192.168.1.50
 ```
 
@@ -140,7 +140,7 @@ Click the **Resource** dropdown to filter by:
 6. Look at the pattern
 
 **Example result:**
-```
+```text
 2026-05-03 15:30:45 | system | device:offline | Device | Tablet-1 | Connection lost | 192.168.100.42
 2026-05-03 13:22:10 | system | device:online | Device | Tablet-1 | Reconnected | 192.168.100.42
 2026-05-02 15:15:33 | system | device:offline | Device | Tablet-1 | Connection lost | 192.168.100.42
@@ -165,7 +165,7 @@ Click the **Resource** dropdown to filter by:
 4. Look for repeated attempts from same IP or user
 
 **Example result (suspicious):**
-```
+```text
 2026-05-03 23:14:02 | unknown@attacker.net | login_failed | User | N/A | Invalid credentials | 203.0.113.50
 2026-05-03 23:14:01 | unknown@attacker.net | login_failed | User | N/A | Invalid credentials | 203.0.113.50
 2026-05-03 23:13:59 | unknown@attacker.net | login_failed | User | N/A | Invalid credentials | 203.0.113.50
@@ -185,7 +185,7 @@ Click the **Resource** dropdown to filter by:
 5. See who updated it and when
 
 **Example result:**
-```
+```text
 2026-05-03 10:22:15 | manager@rest.local | menu:updated | Menu | Salmon Fillet | Price: $16.99 → $13.99 | 192.168.1.50
 ```
 
@@ -202,7 +202,7 @@ Click the **Resource** dropdown to filter by:
 4. Count how many failures and when they occur
 
 **Example result:**
-```
+```text
 2026-05-03 14:05:33 | system | sync:failed | Krypton | sync-job-#2847 | Connection timeout | 192.168.100.42
 2026-05-01 02:05:12 | system | sync:failed | Krypton | sync-job-#2801 | Invalid auth token | 192.168.100.42
 2026-04-28 14:05:44 | system | sync:failed | Krypton | sync-job-#2715 | Database locked | 192.168.100.42

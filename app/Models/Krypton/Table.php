@@ -54,7 +54,7 @@ class Table extends Model
     public function checkTableStatus()
     {
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-            return collect([]);
+            return Table::hydrate([]);
         }
 
         $contextService = new KryptonContextService();

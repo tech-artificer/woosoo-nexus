@@ -26,6 +26,15 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
+# Declare VITE build args so they are available at build time
+ARG VITE_APP_NAME
+ARG VITE_APP_ENV
+ARG VITE_API_URL
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_PORT
+ARG VITE_REVERB_SCHEME
+
 # Copy full source before building — VITE_* env vars and all config files must be
 # present at build time so the compiled JS bundle receives the correct values.
 COPY . .

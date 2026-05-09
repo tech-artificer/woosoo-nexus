@@ -18,7 +18,7 @@ Artisan::command('inspire', function () {
 // runInBackground() spawns a fresh OS process per invocation — prevents memory
 // accumulation inside the long-lived schedule:work loop (Pulse aggregation can
 // spike 60-100MB; this keeps that cost isolated and disposable).
-Schedule::command('pulse:check')->everyMinute()->runInBackground();
+Schedule::command('pulse:check')->everyMinute()->withoutOverlapping()->runInBackground();
 // Schedule::command('horizon:snapshot')->everyFiveMinutes(); // Horizon not installed
 
 // Split-DB safe payment status reconciliation (POS -> local device_orders).

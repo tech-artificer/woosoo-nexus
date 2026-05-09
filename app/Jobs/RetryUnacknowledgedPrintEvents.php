@@ -23,7 +23,7 @@ class RetryUnacknowledgedPrintEvents implements ShouldQueue
         PrintEvent::where('backend_status', 'broadcast')
             ->where('broadcast_at', '<', now()->subMinutes(2))
             ->where('retry_count', '<', 5)
-            ->chunk(50, function ($stale) {
+            ->chunkById(50, function ($stale) {
                 foreach ($stale as $event) {
                     $event->increment('retry_count');
 
@@ -36,6 +36,13 @@ class RetryUnacknowledgedPrintEvents implements ShouldQueue
                             'print_event_id' => $event->id,
                             'retry_count'    => $event->retry_count,
                             'device_order_id'=> $event->device_order_id,
+                        ]);
+                    } else {
+                        // Reset cooldown for orphaned events to enforce 2-minute window
+                        $event->update(['broadcast_at' => now()]);
+                        Log::info('[RetryPrint] Skipped orphaned print event (no deviceOrder)', [
+                            'print_event_id' => $event->id,
+                            'retry_count'    => $event->retry_count,
                         ]);
                     }
                 }
