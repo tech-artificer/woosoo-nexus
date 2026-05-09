@@ -35,7 +35,7 @@ const showDialog = ref(false); // Dialog state
 const previewImage = ref<string | null>(props.menu.img_url); // Image preview
 const localMenu = ref([props.menu]); // Reactive menu data (single item for this component)
 
-const form = useForm({
+const form = useForm<{ image: File | null }>({
   image: null,
 });
 // Open dialog and start editingS
@@ -67,7 +67,6 @@ function submit() {
     onSuccess: () => {
       router.reload({
         only: ['menus'],
-        preserveScroll: true,
       });
 
       // console.log('✅ Image uploaded successfully');
@@ -156,8 +155,7 @@ onUnmounted(() => {
         <!-- File Input -->
         <div class="grid gap-2">
           <Label for="image" class="text-woosoo-dark-gray">Featured Image</Label>
-          <Input id="image" type="file" accept="image/*" @change="onFileChange"
-            @input="form.image = $event.target.files[0]" />
+          <Input id="image" type="file" accept="image/*" @change="onFileChange" />
           <progress v-if="form.progress" :value="form.progress.percentage" max="100">
             {{ form.progress.percentage }}%
           </progress>
