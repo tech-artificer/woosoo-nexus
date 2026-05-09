@@ -5,6 +5,7 @@ namespace App\Actions\Order;
 use App\Models\DeviceOrderItems;
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\OrderedMenu;
+use App\Models\Package;
 use Carbon\Carbon;
 use Lorisleiva\Actions\Concerns\AsAction;
 
@@ -22,7 +23,16 @@ class CreateOrderedMenu
         $expandedItems = [];
 
         foreach ($menuItems as $item) {
-            $expandedItems[] = $item;
+            $packageMenuId = (int) ($item['menu_id'] ?? 0);
+            $isPackage = ! empty($item['is_package']);
+
+            if ($isPackage) {
+                $this->assertAllowedPackageModifiers($packageMenuId, $item['modifiers'] ?? []);
+            }
+
+            $expandedItems[] = array_merge($item, [
+                'ordered_menu_id' => $item['ordered_menu_id'] ?? $packageMenuId,
+            ]);
 
             // Tablet workflow contract:
             // - Initial order sends the selected package as one top-level item.
@@ -38,6 +48,7 @@ class CreateOrderedMenu
 
                     $expandedItems[] = [
                         'menu_id' => $modifier['menu_id'],
+                        'ordered_menu_id' => $packageMenuId,
                         'quantity' => intval($modifier['quantity'] ?? 1),
                         'seat_number' => $item['seat_number'] ?? 1,
                         'note' => $item['note'] ?? 'Package modifier',
@@ -95,8 +106,9 @@ class CreateOrderedMenu
                 $localPayload = [
                     'order_id' => $attr['device_order_id'],
                     // Store the package/menu id as ordered_menu_id (package_id),
-                    // not the POS ordered_menus.id
-                    'ordered_menu_id' => $menuId,
+                    // not the POS ordered_menus.id. Package modifiers inherit
+                    // the top-level package id so local rows preserve hierarchy.
+                    'ordered_menu_id' => $item['ordered_menu_id'] ?? $menuId,
                     'menu_id' => $menuId,
                     'quantity' => $quantity,
                     'price' => $orderedMenu->price ?? $unitPrice,
@@ -262,6 +274,35 @@ class CreateOrderedMenu
             report($e);
 
             return 1;
+        }
+    }
+
+    private function assertAllowedPackageModifiers(int $packageMenuId, mixed $modifiers): void
+    {
+        if ($packageMenuId <= 0 || ! is_array($modifiers) || $modifiers === []) {
+            return;
+        }
+
+        $package = Package::query()
+            ->where('krypton_menu_id', $packageMenuId)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $package) {
+            return;
+        }
+
+        $allowedModifierIds = $package->modifiers()
+            ->pluck('krypton_menu_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        foreach ($modifiers as $modifier) {
+            $modifierMenuId = (int) ($modifier['menu_id'] ?? 0);
+
+            if ($modifierMenuId > 0 && ! in_array($modifierMenuId, $allowedModifierIds, true)) {
+                throw new \RuntimeException("Modifier {$modifierMenuId} is not allowed for package {$packageMenuId}");
+            }
         }
     }
 }
