@@ -206,7 +206,12 @@ class OrderService
             'terminal_service_id' => $defaults['terminal_service_id'] ?? null,
             'employee_id' => $defaults['employee_id'] ?? null,
             'cashier_employee_id' => $defaults['cashier_employee_id'] ?? null,
-            'server_employee_log_id' => null,
+            // Preserve an explicit POS context value, even when it is null.
+            // If older/fake contexts omit the key, map it from employee_log_id
+            // so the default tuple remains internally consistent.
+            'server_employee_log_id' => array_key_exists('server_employee_log_id', $defaults)
+                ? $defaults['server_employee_log_id']
+                : ($defaults['employee_log_id'] ?? null),
         ];
 
         if (($normalized['session_id'] ?? null) === null && app()->runningUnitTests()) {
@@ -221,7 +226,7 @@ class OrderService
             'start_employee_log_id' => $normalized['employee_log_id'] ?? null,
             'current_employee_log_id' => $normalized['employee_log_id'] ?? null,
             'close_employee_log_id' => $normalized['employee_log_id'] ?? null,
-            'server_employee_log_id' => null,
+            'server_employee_log_id' => $normalized['server_employee_log_id'],
             'is_online_order' => false,
             'reference' => '',
         ];
