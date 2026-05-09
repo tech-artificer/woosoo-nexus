@@ -80,6 +80,10 @@ class DeviceOrderApiController extends Controller
         if (! $device || ! $device->table_id) {
             $errors[] = 'The device is not assigned to a table. Please assign the device to a table and try again.';
 
+            if ($processingKey !== null) {
+                Cache::forget($processingKey);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Order processing failed.',
@@ -107,6 +111,10 @@ class DeviceOrderApiController extends Controller
             });
 
             if (isset($result['existing'])) {
+                if ($processingKey !== null) {
+                    Cache::forget($processingKey);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => 'An existing order (pending or confirmed) prevents creating a new order for this device.',
@@ -118,6 +126,10 @@ class DeviceOrderApiController extends Controller
             if (! $order) {
                 $errors[] = 'Order creation failed unexpectedly.';
 
+                if ($processingKey !== null) {
+                    Cache::forget($processingKey);
+                }
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Order processing failed.',
@@ -126,7 +138,7 @@ class DeviceOrderApiController extends Controller
             }
 
             $this->dispatchOrderCreated($order, $device?->id);
-            AuditLogService::orderStatusChanged($request, $order->id, 'NEW', OrderStatus::PENDING->value, $device->id);
+            AuditLogService::orderStatusChanged($request, $order->id, 'NEW', OrderStatus::CONFIRMED->value, $device->id);
 
             // H4 fix 2026-04-08: eager-load relationships so DeviceOrderResource
             // returns items and device in the 201 response (prevents silent empty-items body).
@@ -149,6 +161,10 @@ class DeviceOrderApiController extends Controller
             return response()->json($responseBody, 201);
         } catch (SessionNotFoundException $e) {
             // Transaction aborted: No active POS session
+            if ($processingKey !== null) {
+                Cache::forget($processingKey);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -159,6 +175,10 @@ class DeviceOrderApiController extends Controller
                 'device_id' => $device?->id,
                 'error' => $e->getMessage(),
             ]);
+
+            if ($processingKey !== null) {
+                Cache::forget($processingKey);
+            }
 
             if ($this->isPosServiceUnavailable($e)) {
                 return response()->json([
@@ -176,6 +196,10 @@ class DeviceOrderApiController extends Controller
                 'device_id' => $device?->id,
                 'error' => $e->getMessage(),
             ]);
+
+            if ($processingKey !== null) {
+                Cache::forget($processingKey);
+            }
 
             return response()->json([
                 'success' => false,

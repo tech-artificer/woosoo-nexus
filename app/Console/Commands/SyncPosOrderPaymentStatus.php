@@ -7,6 +7,7 @@ use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderVoided;
 use App\Models\DeviceOrder;
+use App\Services\AuditLogService;
 use Illuminate\Console\Command;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\DB;
@@ -100,6 +101,15 @@ class SyncPosOrderPaymentStatus extends Command
                     }
 
                     $totalUpdated++;
+
+                    AuditLogService::orderStatusChanged(
+                        null,
+                        (int) $row->id,
+                        (string) $row->status,
+                        $nextStatus->value,
+                        null,
+                        'system'
+                    );
 
                     $deviceOrder = DeviceOrder::query()->find((int) $row->id);
                     if (! $deviceOrder) {

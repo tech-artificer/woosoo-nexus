@@ -71,10 +71,16 @@ return [
         ],
 
         'pos' => [
-            'driver' => 'mysql',
+            'driver' => env('DB_POS_DRIVER', 'mysql'),
             'host' => env('DB_POS_HOST', '127.0.0.1'),
             'port' => env('DB_POS_PORT', '3306'),
-            'database' => env('DB_POS_DATABASE', 'krypton_woosoo'),
+            // When DB_POS_DRIVER=sqlite (e.g. in tests), default to :memory: so a bare
+            // 'krypton_woosoo' string is never silently opened as a relative file path.
+            // Partial-protection caveat: if DB_POS_DATABASE is explicitly set (e.g. to
+            // 'krypton_woosoo') alongside DB_POS_DRIVER=sqlite, the outer env() wins and
+            // the bare string is still used. Intentional — a real sqlite file is a valid
+            // use case; this default only protects the unconfigured/test path.
+            'database' => env('DB_POS_DATABASE', env('DB_POS_DRIVER') === 'sqlite' ? ':memory:' : 'krypton_woosoo'),
             'username' => env('DB_POS_USERNAME', 'root'),
             'password' => env('DB_POS_PASSWORD', ''),
             'charset' => 'utf8mb4',

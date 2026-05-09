@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
@@ -55,6 +55,29 @@ const ongoingFetchOrderId = ref<number | string | null>(null)
 
 // WebSocket connection state: 'connecting' | 'connected' | 'disconnected'
 const echoStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting')
+
+// When Echo reconnects after a disconnection, reload orders to catch any missed
+// during the gap. When disconnected for too long, poll as a fallback.
+let disconnectPollTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(echoStatus, (newStatus, oldStatus) => {
+  if (newStatus === 'connected' && oldStatus === 'disconnected') {
+    // Only reload when recovering from a real disconnection, not on initial connect.
+    // Using oldStatus === 'disconnected' prevents a spurious reload on first mount.
+    router.reload({ only: ['orders', 'orderHistory'] })
+    if (disconnectPollTimer !== null) {
+      clearTimeout(disconnectPollTimer)
+      disconnectPollTimer = null
+    }
+  } else if (newStatus === 'disconnected') {
+    // Fallback: if still disconnected after 30 s, do a data reload so the admin
+    // at least sees the current state even without a live WebSocket.
+    if (disconnectPollTimer !== null) clearTimeout(disconnectPollTimer)
+    disconnectPollTimer = setTimeout(() => {
+      router.reload({ only: ['orders', 'orderHistory'] })
+    }, 30_000)
+  }
+})
 
 // Track which order IDs have active print animations to prevent duplicate animations
 const animatedOrderIds = new Set<number>()
@@ -381,6 +404,11 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (disconnectPollTimer !== null) {
+    clearTimeout(disconnectPollTimer)
+    disconnectPollTimer = null
+  }
+
   if (window.Echo) {
     try {
       // gracefully leave channels we joined

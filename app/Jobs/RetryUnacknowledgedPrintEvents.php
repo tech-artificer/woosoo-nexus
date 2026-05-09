@@ -19,26 +19,27 @@ class RetryUnacknowledgedPrintEvents implements ShouldQueue
         // Find events broadcast more than 2 minutes ago with no ack and still retryable.
         // NOTE: retry_count = backend re-broadcast counter.
         //       attempts     = device-ack counter (distinct — do NOT conflate).
-        $stale = PrintEvent::where('backend_status', 'broadcast')
+        // chunk(50) prevents full result-set loading into memory during high-volume peaks.
+        PrintEvent::where('backend_status', 'broadcast')
             ->where('broadcast_at', '<', now()->subMinutes(2))
             ->where('retry_count', '<', 5)
-            ->get();
+            ->chunk(50, function ($stale) {
+                foreach ($stale as $event) {
+                    $event->increment('retry_count');
 
-        foreach ($stale as $event) {
-            $event->increment('retry_count');
-
-            if ($event->deviceOrder) {
-                event(new \App\Events\PrintOrder($event->deviceOrder));
-                // Reset broadcast_at to now() so the 2-minute cooldown window is
-                // enforced between each successive retry attempt, not just the first.
-                $event->update(['broadcast_at' => now()]);
-                Log::info('[RetryPrint] Re-broadcast print event', [
-                    'print_event_id' => $event->id,
-                    'retry_count'    => $event->retry_count,
-                    'device_order_id'=> $event->device_order_id,
-                ]);
-            }
-        }
+                    if ($event->deviceOrder) {
+                        event(new \App\Events\PrintOrder($event->deviceOrder));
+                        // Reset broadcast_at to now() so the 2-minute cooldown window is
+                        // enforced between each successive retry attempt, not just the first.
+                        $event->update(['broadcast_at' => now()]);
+                        Log::info('[RetryPrint] Re-broadcast print event', [
+                            'print_event_id' => $event->id,
+                            'retry_count'    => $event->retry_count,
+                            'device_order_id'=> $event->device_order_id,
+                        ]);
+                    }
+                }
+            });
 
         // Dead-letter events that exceeded the retry ceiling AND have had at least
         // 2 minutes since last broadcast — prevents immediate dead-lettering of an

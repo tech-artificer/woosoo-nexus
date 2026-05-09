@@ -1,23 +1,27 @@
 <?php
+
 namespace App\Services\Krypton;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use App\Models\Krypton\TerminalSession;
+use App\Exceptions\SessionNotFoundException;
+use App\Models\Krypton\CashTraySession;
 use App\Models\Krypton\EmployeeLog;
+use App\Models\Krypton\Revenue;
 use App\Models\Krypton\Session;
 use App\Models\Krypton\Terminal;
-use App\Models\Krypton\CashTraySession;
 use App\Models\Krypton\TerminalService;
-use App\Models\Krypton\Revenue;
-use App\Exceptions\SessionNotFoundException;
+use App\Models\Krypton\TerminalSession;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class KryptonContextService
 {
     private array $currentSessions = [];
+
     private array $data = [];
+
     private bool $loaded = false;
 
     public function __construct()
@@ -27,7 +31,9 @@ class KryptonContextService
 
     private function load(): void
     {
-        if ($this->loaded) return;
+        if ($this->loaded) {
+            return;
+        }
 
         try {
             // Cache for 30 seconds (tweak as needed)
@@ -37,33 +43,54 @@ class KryptonContextService
 
                 $terminal = Terminal::where('id', config('api.krypton.terminal_id', 1))->first();
 
-                $session = Session::query()
+                $terminalSession = TerminalSession::query()
+                    ->when($terminal, fn ($query) => $query->where('terminal_id', $terminal->id))
                     ->whereNull('date_time_closed')
-                    ->whereDate('date_time_opened', $today)
                     ->orderByDesc('id')
                     ->first();
 
-                if (!$session) {
-                    $flag = false;
+                $session = null;
+                if ($terminalSession?->session_id) {
+                    $session = Session::query()
+                        ->where('id', $terminalSession->session_id)
+                        ->whereNull('date_time_closed')
+                        ->first();
+                }
+
+                // If no session from terminal, look for ANY open session (not just today's)
+                // Use fallback immediately instead of restricting to today first
+                if (! $session) {
                     $session = Session::query()
                         ->whereNull('date_time_closed')
                         ->orderByDesc('id')
                         ->first();
                 }
 
-                $terminalSession = TerminalSession::query()
-                    ->whereNull('date_time_closed')
-                    ->orderByDesc('id')
-                    ->first();
-
                 $employeeLog = EmployeeLog::query()
+                    ->when($session && $this->posColumnExists('employee_logs', 'session_id'), fn ($query) => $query->where('session_id', $session->id))
+                        ->when($terminal && $this->posColumnExists('employee_logs', 'terminal_id'), fn ($query) => $query->where('terminal_id', $terminal->id))
                     ->whereNull('date_time_out')
                     ->orderByDesc('id')
                     ->first();
 
-                $cashTraySession = $session
-                    ? CashTraySession::where('session_id', $session->id)->first()
-                    : null;
+                    // Fallback: if no employee log found for current session, use any active log
+                    if (! $employeeLog) {
+                        $employeeLog = EmployeeLog::query()
+                            ->when($terminal && $this->posColumnExists('employee_logs', 'terminal_id'), fn ($query) => $query->where('terminal_id', $terminal->id))
+                            ->whereNull('date_time_out')
+                            ->orderByDesc('id')
+                            ->first();
+                    }
+
+                $cashTraySession = null;
+                if ($session) {
+                    $cashTraySession = CashTraySession::query()
+                        ->where('session_id', $session->id)
+                        ->when($terminalSession && $this->posColumnExists('cash_tray_sessions', 'terminal_session_id'), fn ($query) => $query->where('terminal_session_id', $terminalSession->id))
+                        ->when($terminal && $this->posColumnExists('cash_tray_sessions', 'terminal_id'), fn ($query) => $query->where('terminal_id', $terminal->id))
+                        ->orderByDesc('id')
+                        ->first();
+                }
 
                 $terminalService = $terminal
                     ? TerminalService::where('terminal_id', $terminal->id)->first()
@@ -87,7 +114,7 @@ class KryptonContextService
                 ];
 
                 // Enforce non-negotiable business rule: session_id MUST exist from Krypton
-                if (!$session) {
+                if (! $session) {
                     throw new SessionNotFoundException(
                         'No active POS session found. Transaction cannot proceed. Ensure POS system is running and a session is opened.'
                     );
@@ -106,13 +133,15 @@ class KryptonContextService
                     'terminal_service_id' => $terminalService?->id,
                     'employee_id' => $employeeLog?->employee_id,
                     'cashier_employee_id' => $employeeLog?->employee_id,
-                    'server_employee_log_id' => $employeeLog?->id,
+                    // Native Krypton tablet-era rows leave this blank. Keep it null
+                    // unless the POS app starts requiring a server log explicitly.
+                    'server_employee_log_id' => null,
                 ];
 
                 return [$currentSessions, $data];
             });
         } catch (\Throwable $e) {
-            Log::warning("KryptonContextService failed to load: " . $e->getMessage());
+            Log::warning('KryptonContextService failed to load: '.$e->getMessage());
             $this->currentSessions = [];
             $this->data = [];
         }
@@ -123,12 +152,14 @@ class KryptonContextService
     public function getCurrentSessions(): array
     {
         $this->load();
+
         return $this->currentSessions;
     }
 
     public function getData(): array
     {
         $this->load();
+
         return $this->data;
     }
 
@@ -136,5 +167,14 @@ class KryptonContextService
     {
         Cache::forget('krypton.context');
         $this->loaded = false;
+    }
+
+    private function posColumnExists(string $table, string $column): bool
+    {
+        try {
+            return Schema::connection('pos')->hasColumn($table, $column);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

@@ -32,6 +32,8 @@ docker/certs/*.key
 !bootstrap/cache/.gitignore
 /certs
 /logs
+/storage/**
+!/storage/.gitignore
 vite.log
 
 # Workspace files
@@ -45,6 +47,12 @@ coverage/
 # Local env files
 .env.*
 !.env.example
+!.env.local.example
+!.env.docker.example
+
+# Malformed generated absolute-path directories from local Windows runs
+/E*Projects*/
+/public/E*Projects*/
 
 # Random seed file and logs
 .rnd

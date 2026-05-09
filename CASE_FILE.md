@@ -217,3 +217,55 @@ flowchart TD
     F -- no --> I[Chunked scan + stale relay warnings]
     I --> J[Complete without requeue loop]
 ```
+
+### Addendum: Refill 500 on SQLite `FIELD()` incompatibility (May 3, 2026)
+
+- Symptom: refill feature tests returned 500 instead of 200 with `SQLSTATE[HY000]: no such function: FIELD` on `pos` sqlite `:memory:`.
+- Trigger path: `OrderApiController::refill()` response serialization (`$freshOrder->toArray()`) touched `Menu::$appends` → `computed_modifiers` accessor.
+- Root cause: `App\Models\Krypton\Menu` used MySQL-only `FIELD(receipt_name, ...)` ordering in both:
+  - `getModifiers(int $id)`
+  - `getComputedModifiersAttribute()`
+
+```mermaid
+flowchart TD
+    A[POST /api/order/{id}/refill] --> B[OrderApiController::refill]
+    B --> C[Build response payload with fresh order]
+    C --> D[DeviceOrder->toArray]
+    D --> E[Menu serialization]
+    E --> F[computed_modifiers accessor]
+    F --> G[orderByRaw FIELD(receipt_name,...)]
+    G --> H[SQLite pos::memory: FIELD missing]
+    H --> I[QueryException]
+    I --> J[HTTP 500]
+```
+
+- Fix: replaced MySQL-specific `FIELD(...)` ordering with portable deterministic `CASE WHEN receipt_name = ? THEN idx ... END` ordering helper in `Menu`.
+- Result intent: preserve modifier order contract in production MySQL while making test/runtime behavior deterministic across SQLite-based test environments.
+
+### Addendum: 500 Runtime Profile Mismatch (May 6, 2026)
+
+- Symptom: local Windows requests against `php artisan serve` produced HTTP 500/timeouts and logs showed Docker-only hostnames from the local host.
+- Primary evidence:
+  - `php_network_getaddresses: getaddrinfo for redis failed: No such host is known. [tcp://redis:6379]`
+  - repeated `getaddrinfo for mysql failed: No such host is known. (Connection: mysql, Host: mysql, Port: 3306)`
+  - current `.env` had duplicate `QUEUE_CONNECTION`, where the later `redis` value overrode the intended local `sync` value.
+- Root cause: one `.env` was mixing two runtime profiles:
+  - local Windows PHP expects host-reachable services such as `127.0.0.1:3306`
+  - Docker PHP expects compose DNS names such as `mysql` and `redis`
+- Decision: canonical local development path is PHP on the Windows host plus MySQL via `compose.local.yaml` bound to `127.0.0.1:3306`.
+
+```mermaid
+flowchart LR
+    A[Local php artisan serve] --> B[Windows host DNS]
+    B --> C[127.0.0.1:3306 for MySQL]
+    B --> D[file cache / file session / sync queue]
+    E[Docker app container] --> F[Compose network DNS]
+    F --> G[mysql service]
+    F --> H[redis service]
+```
+
+- Controls added:
+  - `.env.local.example` and `.env.docker.example` make runtime profiles explicit.
+  - `scripts/env/apply-env-profile.ps1` rejects duplicate keys and writes a labeled `.env`.
+  - `compose.local.yaml` keeps local MySQL host exposure out of canonical production compose.
+  - `scripts/env/cleanup-generated-artifacts.ps1` dry-runs cleanup of malformed generated path directories before deletion.

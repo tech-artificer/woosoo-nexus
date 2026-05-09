@@ -1,0 +1,17 @@
+{
+  "description": "Generated malformed absolute-path artifact roots created by local Windows path handling. Delete only after dry-run review.",
+  "allowedRootGlobs": [
+    "E*Projects*woosoo-nexus*storage*logs",
+    "public/E*Projects*woosoo-nexus*storage*framework*views",
+    "public/E*Projects*woosoo-nexus*storage*logs"
+  ],
+  "excludeGlobs": [
+    ".git*",
+    ".env*",
+    "storage/app*",
+    "storage/framework/sessions*",
+    "database*",
+    "resources*",
+    "app*"
+  ]
+}

@@ -1,303 +1,418 @@
-# Woosoo Nexus — Integrated Restaurant POS System
+# Krypton ↔ Woosoo BI Platform
 
-**Version:** 1.0  
-**Last Updated:** January 4, 2026
+A production-ready, unified **read-only BI layer** that reconciles Krypton POS and Woosoo Nexus order data via a crosswalk. Enables real-time drift detection, historical snapshots, and seamless integration with BI tools.
 
-Woosoo Nexus is a comprehensive restaurant management system consisting of three integrated products:
+## 📦 What You Get
 
-1. **Admin Panel** (Laravel + Inertia.js + Vue 3) — Web-based management interface
-2. **Tablet Ordering PWA** (Nuxt 3) — Customer-facing kiosk ordering system
-3. **Relay Printer App** (Flutter) — Mobile thermal printer relay device
+| File | Purpose |
+|------|---------|
+| **krypton_woosoo_bi_views.sql** | Core SQL views + materialized tables (MySQL & PostgreSQL) |
+| **bi_processor.py** | Python ETL for automated refresh, drift detection, reporting |
+| **docker-compose.yml** | Full stack: MySQL/PostgreSQL + Python processor + Grafana |
+| **Dockerfile.processor** | Container image for ETL service |
+| **BI_SETUP_GUIDE.md** | Comprehensive 50+ page setup & integration guide |
+| **quickstart.sh** | Automated setup script (Docker or native) |
+| **.env.example** | Configuration template |
+| **requirements.txt** | Python dependencies |
 
----
+## 🚀 Quick Start (2 minutes)
 
-## 🚀 Quick Start
+### Option A: Docker (Recommended)
 
-### Prerequisites
-- PHP 8.2+
-- Node.js 18+
-- MySQL 8.0+
-- Composer 2.x
-- Flutter 3.9.2+ (for relay device only)
+```bash
+# Clone/download files to a directory
+cd krypton-woosoo-bi
 
-### Installation (PowerShell)
+# Run setup with Docker
+bash quickstart.sh docker
 
-```powershell
-# Clone repository
-git clone <repository-url> woosoo-nexus
-cd woosoo-nexus
+# Wait ~30 seconds for services to start
+docker-compose logs -f bi-processor
 
-# Copy env before installing (needed for artisan post-install hooks)
-cp .env.example .env
-
-# Install dependencies
-composer install
-npm install
-
-# Generate app key and set up database
-# (SQLite is auto-created; for MySQL: create the DB first)
-php artisan key:generate
-php artisan migrate --seed
-
-# Start all services (HTTP, Queue, Vite, Reverb)
-composer dev
+# Access:
+# - MySQL: localhost:3306 (bi_user / bi_password)
+# - PostgreSQL: localhost:5432 (bi_user / bi_password)
+# - Grafana: http://localhost:3000 (admin / admin_password)
 ```
 
-**Verify setup:**
-- HTTP: http://127.0.0.1:8000
-- Vite HMR: http://127.0.0.1:5173
-- Reverb WebSocket: Port 6001
+### Option B: Native Installation
 
-### Individual Product Setup
+```bash
+# Install prerequisites: python3, pip, mysql-client (or psql)
 
-#### Tablet Ordering PWA
-```powershell
-cd tablet-ordering-pwa
-npm install
-npm run dev
+# Run setup
+bash quickstart.sh
+
+# Follow prompts for database connection details
+# Views will be deployed automatically
 ```
 
-#### Relay Printer App
-```powershell
-cd relay-device
-flutter pub get
-flutter run -d <device>
-```
-
----
-
-## 📁 Repository Structure
+## 🏗️ Architecture
 
 ```
-woosoo-nexus/
-├── app/                       # Laravel application (Admin Panel backend)
-├── resources/js/              # Vue 3 + Inertia.js frontend
-├── tablet-ordering-pwa/       # Nuxt 3 PWA (customer kiosk)
-├── relay-device/              # Flutter printer relay app
-├── print-service/             # Node.js print service (Express, port 9100)
-├── docs/                      # Technical documentation
-├── .github/                   # GitHub workflows & copilot instructions
-└── tests/                     # Feature & unit tests
+Krypton POS              Crosswalk              Woosoo Nexus
+    ↓                        ↓                      ↓
+ orders              woosoo_crosswalk_orders    orders
+ ordered_menus            (links)           device_orders
+ order_checks                                device_order_items
+    ↓                        ↓                      ↓
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            BI VIEWS (READ-ONLY)
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    ↓
+ bi_krypton_woosoo_order_fusion ← Order-level fusion
+ bi_order_drift_detection       ← Drift identification
+ bi_line_item_reconciliation    ← Item-level alignment
+ bi_order_reconciliation_snapshot ← Daily snapshots
+    ↓
+ BI Tools (Tableau, Looker, Grafana, custom dashboards)
 ```
 
----
+## 📊 Core Views
 
-## 🏗️ Architecture Overview
+### 1. **bi_krypton_woosoo_order_fusion** (Real-Time)
+Unified order view across both systems.
 
-### Tech Stack
-- **Backend:** Laravel 12, MySQL 8.0, Reverb (WebSocket)
-- **Admin Frontend:** Vue 3, TypeScript, Inertia.js, Tailwind v4, shadcn-vue
-- **Tablet PWA:** Nuxt 3, Pinia, Axios, PWA with offline support
-- **Relay Device:** Flutter, Riverpod, Blue Thermal Printer, WebSocket
-
-### Real-time Communication
-- **Reverb** (port 6001) — WebSocket server for broadcasting events
-- **Channels:** `device.{deviceId}`, `admin.orders`, `admin.print`, `admin.service-requests`
-- **Frontend Listeners:** Laravel Echo (Vue) + Echo client (Nuxt)
-
-### Database Architecture
-- **`mysql` connection** (default) — App data (users, devices, menus, orders, branches, roles)
-- **`pos` connection** — Read-only Krypton legacy POS (`krypton_woosoo` DB)
-- **Test:** SQLite in-memory (configured in `phpunit.xml`)
-
----
-
-## 📚 Documentation
-
-### For Developers
-- **[AI Agent Instructions](.github/copilot-instructions.md)** — Comprehensive guide for AI coding assistants (572 lines)
-- **[Documentation Index](DOCUMENTATION_INDEX.md)** — Master navigation for all docs
-- **[API Reference](docs/API_MAP.md)** — Complete API endpoint documentation
-- **[Testing Guide](TESTING_VALIDATION_GUIDE.md)** — 15 test procedures
-- **[Implementation Checklist](IMPLEMENTATION_CHECKLIST.md)** — Remaining tasks (6 items)
-
-### Product-Specific Documentation
-- **Admin Panel:** [.github/copilot-instructions.md](.github/copilot-instructions.md)
-- **Tablet PWA:** [tablet-ordering-pwa/README.md](tablet-ordering-pwa/README.md) + [tablet-ordering-pwa/.github/copilot-instructions.md](tablet-ordering-pwa/.github/copilot-instructions.md)
-- **Relay Device:** [relay-device/README.md](relay-device/README.md) + [relay-device/QUICK_START.md](relay-device/QUICK_START.md)
-
-### Integration Guides
-- **[Printer Integration](docs/printer_readme.md)** — Device registration, API endpoints, WebSocket events
-- **[Admin Manual](docs/admin_manual.md)** — Staff operations guide
-- **[Order Restrictions](README_ORDER_RESTRICTIONS.md)** — Business rules implementation
-
-### User Guides
-Located in `resources/docs/guides/`:
-- **Admin:** login, add-user, manage-orders, register-device, menu-availability, overview
-- **Tablet:** navigation, place-order, requirements, troubleshooting
-- **Relay:** install, connect-printer, check-status, requirements
-
----
-
-## 🔧 Development Workflow
-
-### Running Services Individually
-```powershell
-# HTTP Server (port 8000)
-php artisan serve
-
-# Queue Worker
-php artisan queue:listen --tries=1
-
-# Vite Dev Server (port 5173)
-npm run dev
-
-# Reverb WebSocket (port 6001)
-php artisan reverb:start
-
-# Print Service (port 9100)
-node print-service/index.js
+```sql
+SELECT * FROM bi_krypton_woosoo_order_fusion 
+WHERE krypton_order_id = 19643;
 ```
 
-### Testing
-```powershell
-# Main app (PHP/Pest)
-composer test
-./vendor/bin/pest --filter=OrderServiceTest
+**Key columns:**
+- `krypton_order_id`, `woosoo_order_id` (linked via crosswalk)
+- `krypton_total`, `woosoo_total` (amount reconciliation)
+- `crosswalk_status` (LINKED or UNLINKED)
+- `amount_reconciliation` (AMOUNT_OK or AMOUNT_MISMATCH)
+- `opened_delta_seconds`, `closed_delta_seconds` (timing alignment)
 
-# Tablet PWA (Vitest)
-cd tablet-ordering-pwa
-npm run test
+### 2. **bi_order_drift_detection** (Real-Time)
+Identifies orders with reconciliation issues.
 
-# Relay Device (Flutter)
-cd relay-device
-flutter test
+```sql
+SELECT * FROM bi_order_drift_detection 
+WHERE severity = 'HIGH' AND detected_at >= DATE_SUB(NOW(), INTERVAL 7 DAY);
 ```
 
-### Code Quality
-```powershell
-# PHP formatting
-./vendor/bin/pint
+**Detects:**
+- Unlinked crosswalk entries (HIGH severity)
+- Amount mismatches (HIGH severity)
+- Timestamp drift > 5 minutes (MEDIUM severity)
 
-# JavaScript/TypeScript formatting
-npm run format
+### 3. **bi_line_item_reconciliation** (Real-Time)
+Item-level alignment between Krypton ordered_menus and Woosoo device_order_items.
 
-# Linting
-npm run lint
+```sql
+SELECT * FROM bi_line_item_reconciliation 
+WHERE krypton_order_id = 19643 AND item_reconciliation_status != 'MATCHED';
 ```
 
----
+**Detects:**
+- Quantity mismatches
+- Price mismatches
+- Missing items
 
-## 🚀 Deployment
+### 4. **bi_order_reconciliation_snapshot** (Daily Snapshot)
+Point-in-time materialized table for historical analysis.
 
-### Production Services (Windows)
-Windows services managed via NSSM:
-- `woosoo-scheduler` → `php artisan schedule:work`
-- `woosoo-reverb` → `php artisan reverb:start`
-- `woosoo-queue` → `php artisan queue:work`
-- `woosoo-printer` → `node print-service/index.js`
-
-### Build Commands
-```powershell
-# Admin Panel
-npm run build
-php artisan optimize
-
-# Tablet PWA
-cd tablet-ordering-pwa
-npm run build
-
-# Relay Device
-cd relay-device
-flutter build apk --release
-flutter build windows --release
+```sql
+SELECT * FROM bi_order_reconciliation_snapshot 
+WHERE snapshot_date = CURDATE();
 ```
 
----
+### 5. Dashboard Summary Views
+- `bi_order_summary_by_status` → Order counts by status
+- `bi_drift_issues_summary` → Issue counts by severity
+- `bi_krypton_order_metadata` → Krypton dimensions
+- `bi_woosoo_order_metadata` → Woosoo dimensions
 
-## 🔐 Environment Configuration
+## 🔧 Usage Examples
 
-Key environment variables (`.env`):
+### Get Order Fusion for Order 19643
 
-```env
-# Application
-APP_NAME=Woosoo
-APP_URL=http://127.0.0.1:8000
-
-# Database (App)
-DB_CONNECTION=mysql
-DB_DATABASE=woosoo_api
-
-# Database (POS - Read-only)
-DB_POS_CONNECTION=pos
-DB_POS_DATABASE=krypton_woosoo
-
-# Reverb WebSocket
-VITE_REVERB_HOST=127.0.0.1
-VITE_REVERB_PORT=6001
-
-# Tablet PWA
-MAIN_API_URL=http://127.0.0.1:8000
+```sql
+SELECT 
+  krypton_order_id, woosoo_order_id,
+  krypton_total, woosoo_total,
+  crosswalk_status, amount_reconciliation,
+  opened_delta_seconds, severity
+FROM bi_krypton_woosoo_order_fusion 
+WHERE krypton_order_id = 19643;
 ```
 
----
+### Find All High-Severity Drift (Last 24 Hours)
 
-## 📊 Current Status
+```sql
+SELECT 
+  krypton_order_id, woosoo_order_id,
+  issue_type_crosswalk, issue_type_amount, issue_type_timing,
+  severity, detected_at
+FROM bi_order_drift_detection 
+WHERE severity = 'HIGH' AND detected_at >= NOW() - INTERVAL '24 HOUR'
+ORDER BY detected_at DESC;
+```
 
-**Implementation Completeness:** 80% feature-complete, 6 small tasks remaining (3-4 hours)
+### Python: Generate Daily Drift Report
 
-### ✅ Completed Features
-- Order restrictions & validation
-- Stability infrastructure (7/7 deliverables)
-- Roles & permissions CRUD
-- Branch management
-- Real-time broadcasting (Reverb)
-- Event replay API
-- Health monitoring
-- Durable print queue
-- PIN authentication
+```bash
+python bi_processor.py \
+  --dialect mysql \
+  --host localhost \
+  --user bi_readonly \
+  --password 'password' \
+  --database krypton_woosoo \
+  --refresh \
+  --report \
+  --output drift_report_$(date +%Y%m%d).json
+```
 
-### ⏳ Pending Tasks
-See [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) for:
-1. Token refresh timer (Tablet PWA)
-2. API retry logic (Tablet PWA)
-3. API retry logic (Flutter)
-4. Monitoring thresholds
-5. Event recording verification
-6. Test suite validation
+### Python: Fetch Specific Order's Data
 
----
+```bash
+python bi_processor.py \
+  --dialect postgresql \
+  --host pg.example.com \
+  --user bi_readonly \
+  --password 'password' \
+  --order-id 19643
+```
 
-## 🐛 Troubleshooting
+## 📈 Drift Analysis
 
 ### Common Issues
 
-**CSRF Token Errors**
-- Ensure `<meta name="csrf-token">` in layout
-- Check Axios configuration in `resources/js/app.ts`
+| Issue | Severity | Root Cause | Fix |
+|-------|----------|-----------|-----|
+| Unlinked crosswalk | HIGH | No entry in woosoo_crosswalk_orders | Manually insert crosswalk link |
+| Amount mismatch | HIGH | Tax/discount/item delta | Audit line items, check order_checks |
+| Timestamp drift | MEDIUM | System clock skew, network latency | Sync clocks (ntpdate), check network |
+| Item qty mismatch | MEDIUM | Partial removal, device split | Check device_orders, order_checks |
 
-**WebSocket Connection Fails**
-- Verify Reverb is running: `php artisan reverb:start`
-- Check `VITE_REVERB_*` env vars
-- Ensure port 6001 is accessible
+### Audit Query for Order 19643
 
-**POS Queries Fail**
-- Verify `DB_POS_*` connection in `.env`
-- Check stored procedure signatures in Krypton DB
+```sql
+-- Check item reconciliation
+SELECT * FROM bi_line_item_reconciliation 
+WHERE krypton_order_id = 19643;
 
-**Tests Fail**
-- Run `php artisan config:clear` before tests
-- Check `phpunit.xml` environment variables
+-- Check device orders (tablet data)
+SELECT do.device_id, do.order_number, COUNT(*) as item_count
+FROM woosoo.device_orders do
+LEFT JOIN woosoo.device_order_items doi ON do.id = doi.order_id
+WHERE do.order_id IN (
+  SELECT woosoo_order_id FROM woosoo_crosswalk_orders 
+  WHERE krypton_order_id = 19643
+)
+GROUP BY do.device_id, do.order_number;
+```
 
-**Vite Build Errors**
-- Clear cache: `rm -rf node_modules/.vite`
-- Reinstall: `npm ci`
+## 🔄 Refresh Strategy
+
+### Real-Time Views
+Query directly for up-to-the-second data (minimal overhead, views are lightweight).
+
+### Materialized Snapshot
+Automatically refreshes daily at 2 AM (configurable).
+
+#### MySQL: Scheduled Event
+```sql
+CREATE EVENT refresh_bi_snapshot_daily
+ON SCHEDULE EVERY 1 DAY
+STARTS CURRENT_TIMESTAMP + INTERVAL 1 DAY
+DO CALL refresh_bi_order_reconciliation_snapshot();
+```
+
+#### PostgreSQL: pg_cron
+```sql
+CREATE EXTENSION pg_cron;
+SELECT cron.schedule('refresh_bi_snapshot_daily', '0 2 * * *', 
+  'SELECT refresh_bi_order_reconciliation_snapshot();');
+```
+
+#### Docker: Built-In
+Cron job runs automatically in the `bi-processor` container.
+
+## 📊 BI Tool Integration
+
+### Tableau
+1. Data Source → MySQL/PostgreSQL
+2. Table/View → `bi_krypton_woosoo_order_fusion`
+3. Dimensions: `crosswalk_status`, `amount_reconciliation`, `severity`
+4. Measures: COUNT, SUM(krypton_total), AVG(opened_delta_seconds)
+
+### Looker (LookML)
+```yaml
+view: bi_order_fusion {
+  sql_table_name: bi_krypton_woosoo_order_fusion ;;
+  
+  dimension: krypton_order_id { primary_key: yes; type: number; }
+  dimension: crosswalk_status { type: string; suggestions: ["LINKED", "UNLINKED"]; }
+  
+  measure: order_count { type: count; }
+  measure: total_drift { type: sum; sql: ${TABLE}.opened_delta_seconds;; }
+}
+explore: bi_order_fusion {}
+```
+
+### Grafana
+1. Data Source → MySQL/PostgreSQL
+2. Query: `SELECT COUNT(*) FROM bi_order_drift_detection WHERE severity='HIGH' AND detected_at >= NOW() - INTERVAL '24 HOUR'`
+3. Alert: Notify when count > threshold
+4. Panel Types: Gauge (drift count), Time series (drift over time), Table (recent issues)
+
+## 🛡️ Security
+
+### Read-Only User
+
+**MySQL:**
+```sql
+CREATE USER 'bi_readonly'@'%' IDENTIFIED BY 'secure_password';
+GRANT SELECT ON krypton_woosoo.* TO 'bi_readonly'@'%';
+GRANT SELECT ON woosoo.* TO 'bi_readonly'@'%';
+FLUSH PRIVILEGES;
+```
+
+**PostgreSQL:**
+```sql
+CREATE ROLE bi_readonly WITH LOGIN PASSWORD 'secure_password';
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO bi_readonly;
+```
+
+### Network Security
+- Use environment variables (`.env`) for passwords, never hardcode
+- Restrict database access to internal networks (VPC/private subnets)
+- Use SSL/TLS for remote database connections
+- Enable query logging for audit trails
+
+## 📋 Configuration
+
+Edit `.env` for customization:
+
+```bash
+# Copy template
+cp .env.example .env
+
+# Edit
+nano .env
+```
+
+**Key settings:**
+- `DB_DIALECT` - mysql or postgresql
+- `DB_HOST`, `DB_USER`, `DB_PASSWORD` - Connection details
+- `AMOUNT_TOLERANCE` - Precision for amount matching (default: 0.01)
+- `TIME_DELTA_TOLERANCE` - Max acceptable time delta in seconds (default: 300)
+- `ALERT_EMAIL`, `ALERT_SLACK_WEBHOOK` - Notifications
+- `REFRESH_SCHEDULE` - Cron format (default: `0 2 * * *` → 2 AM daily)
+
+## 🐛 Troubleshooting
+
+### Views Not Appearing
+
+```bash
+# MySQL
+mysql -u root -p krypton_woosoo -e "SHOW VIEWS LIKE 'bi_%';"
+
+# PostgreSQL
+psql -U postgres -d krypton_woosoo -c "SELECT table_name FROM information_schema.views WHERE table_schema='public' AND table_name LIKE 'bi_%';"
+```
+
+### No Crosswalk Links Found
+
+```sql
+SELECT COUNT(*) FROM woosoo_crosswalk_orders;
+-- If 0: manually link orders or check sync logs
+```
+
+### High Time Delta
+
+```sql
+SELECT 
+  ROUND(AVG(ABS(opened_delta_seconds)), 0) AS avg_open_delta,
+  MAX(ABS(opened_delta_seconds)) AS max_open_delta
+FROM bi_krypton_woosoo_order_fusion
+WHERE krypton_opened_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR);
+-- If > 300s: check system clocks, network latency
+```
+
+### Python ETL Errors
+
+```bash
+# Check logs
+tail -f logs/bi_refresh.log
+
+# Test connection manually
+python bi_processor.py --dialect mysql --host localhost --user bi_user --password 'pass' --order-id 19643
+```
+
+### Docker Issues
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# Restart services
+docker-compose restart bi-processor
+
+# Rebuild images
+docker-compose build --no-cache
+```
+
+## 📚 Full Documentation
+
+See **BI_SETUP_GUIDE.md** for:
+- Detailed view definitions & SQL explanations
+- Materialized snapshot strategy
+- Performance tuning & indexes
+- Drift analysis deep-dives
+- Monitoring & alerting setup
+- Backup & recovery procedures
+- FAQ & troubleshooting
+
+## 📦 Files Summary
+
+| File | Size | Purpose |
+|------|------|---------|
+| `krypton_woosoo_bi_views.sql` | ~21 KB | SQL views, materialized tables, indexes |
+| `bi_processor.py` | ~13 KB | Python ETL processor |
+| `docker-compose.yml` | ~2.6 KB | Full stack orchestration |
+| `Dockerfile.processor` | ~1 KB | Container image for ETL |
+| `BI_SETUP_GUIDE.md` | ~21 KB | Comprehensive setup & reference |
+| `quickstart.sh` | ~5 KB | Automated setup |
+| `requirements.txt` | ~90 B | Python dependencies |
+| `.env.example` | ~1.1 KB | Configuration template |
+| `README.md` | This file | Overview & quick reference |
+
+## 🚀 Deployment Checklist
+
+- [ ] SQL views deployed to database
+- [ ] Crosswalk table populated with Krypton ↔ Woosoo links
+- [ ] BI read-only user created with SELECT permissions
+- [ ] Daily snapshot refresh job configured (cron or scheduled event)
+- [ ] Python ETL processor tested with `--report` flag
+- [ ] BI tool connected to database and views verified
+- [ ] Sample dashboards created (status, drift, items)
+- [ ] Alerting configured (email/Slack for HIGH severity)
+- [ ] Logs configured and monitored
+- [ ] Backup procedure documented (views + snapshot table)
+
+## 📞 Support
+
+For issues:
+1. Check `logs/bi_refresh.log` and `logs/*.log`
+2. Verify database connection: `mysql -h host -u user -p -e "SELECT 1;"`
+3. Test view queries directly
+4. Review BI_SETUP_GUIDE.md FAQ section
+5. Confirm indexes are present and data is fresh
+
+## 📄 License
+
+Provided as-is for internal analytics. Customize for your environment.
 
 ---
 
-## 📞 Support & Resources
+**Ready to deploy?** Run:
+```bash
+bash quickstart.sh docker
+```
 
-- **Issue Tracker:** [GitHub Issues](../../issues)
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
-- **Visual Summary:** [VISUAL_SUMMARY.md](VISUAL_SUMMARY.md)
-- **Stability Overview:** [README_STABILITY.md](README_STABILITY.md)
+**Need help?** See BI_SETUP_GUIDE.md or check logs.
 
----
-
-## 📝 License
-
-Proprietary — Woosoo Restaurant Management System
-
----
-
-**Note for AI Coding Agents:** This repository includes comprehensive AI agent instructions. Please read [.github/copilot-instructions.md](.github/copilot-instructions.md) for detailed patterns, conventions, and examples before making changes.

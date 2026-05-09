@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\Auth\{
 
 use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Api\V2\DeviceApiController as DeviceV2ApiController;
+use App\Http\Controllers\Api\DeploymentInfoController;
 
 use App\Http\Controllers\Api\V1\Krypton\{
     TerminalSessionApiController,
@@ -96,6 +97,8 @@ Route::get('/config', function () {
         'app_version'  => config('app.version', env('APP_VERSION', '1.0.0')),
     ])->header('Cache-Control', 'public, max-age=300');
 })->name('api.config');
+
+Route::get('/deployment-info', DeploymentInfoController::class)->name('api.deployment-info');
 
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 

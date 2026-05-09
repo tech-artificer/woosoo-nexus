@@ -12,6 +12,7 @@ class MenuRepository
 {
     public function getMenus(): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menus()');
             return Menu::hydrate($rows);
@@ -26,6 +27,7 @@ class MenuRepository
 
     public static function getMenuById(int $id): ?Menu
     {
+        if (!self::posSupportsCall()) { return null; }
         try {
              $rows = DB::connection('pos')->select('CALL get_menu_by_id(?)', [$id]);
            return Menu::hydrate($rows)->first();
@@ -47,6 +49,7 @@ class MenuRepository
      */
     public static function getMenusWithModifiers(): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menus_with_modifiers()');
             return Menu::hydrate($rows);
@@ -69,6 +72,7 @@ class MenuRepository
 
     public static function getMenusByCategory($category): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menus_by_category(?)', [$category]);
             return Menu::hydrate($rows);
@@ -95,6 +99,7 @@ class MenuRepository
 
     public function getAllModifierGroups(): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_all_modifier_groups()');
             return Menu::hydrate($rows);
@@ -117,6 +122,7 @@ class MenuRepository
      */
     public function getMenuModifiers(): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menu_modifiers()');
             return Menu::hydrate($rows);
@@ -140,6 +146,7 @@ class MenuRepository
      */
     public function getMenuModifier(int $id): ?Menu
     {
+        if (!self::posSupportsCall()) { return null; }
         try {
               $rows = DB::connection('pos')->select('CALL get_menu_modifier(?)', [$id]);
             return Menu::hydrate($rows)->first();
@@ -165,6 +172,7 @@ class MenuRepository
 
     public function getMenuModifiersByGroup(int $modifierGroupId): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menu_modifiers_by_group(?)', [$modifierGroupId]);
             return Menu::hydrate($rows);
@@ -179,6 +187,7 @@ class MenuRepository
 
     public function getMenusByCourse($course): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menus_by_course(?)', [$course]);
             $hydrated = Menu::hydrate($rows);
@@ -217,6 +226,7 @@ class MenuRepository
 
     public function getMenusByGroup($group): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menus_by_group(?)', [$group]);
             return Menu::hydrate($rows);
@@ -232,6 +242,7 @@ class MenuRepository
 
     public function getMenuDiscountsById($menuId): EloquentCollection
     {
+        if (!self::posSupportsCall()) { return Menu::hydrate([]); }
         try {
               $rows = DB::connection('pos')->select('CALL get_menu_discounts_by_id(?)', [$menuId]);
             return Menu::hydrate($rows);
@@ -244,7 +255,19 @@ class MenuRepository
         }
     }
 
-
-
-
+    /**
+     * Returns true when the pos connection supports MySQL stored-procedure CALL syntax.
+     * Resolved once per process via a static cache — getDriverName() reads from the
+     * connection config (no I/O), but caching avoids repeated config lookups in hot loops.
+     *
+     * Note: $driver is cached for the lifetime of the PHP process. If a test swaps the
+     * pos driver mid-suite via Config::set + DB::purge('pos'), this cache will be stale.
+     * DB::purge('pos') alone is insufficient — the static must also be reset to null.
+     */
+    private static function posSupportsCall(): bool
+    {
+        static $driver = null;
+        $driver ??= DB::connection('pos')->getDriverName();
+        return in_array($driver, ['mysql', 'mariadb'], true);
+    }
 }

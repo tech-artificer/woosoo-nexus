@@ -1,8 +1,8 @@
 FROM php:8.2-fpm-alpine
 
-# System dependencies
+# System dependencies — includes Node.js and npm for running build commands
 RUN apk add --no-cache \
-    git curl zip unzip gettext \
+    git curl zip unzip gettext nodejs npm \
     libpng-dev libxml2-dev libzip-dev \
     oniguruma-dev icu-dev \
     mysql-client
@@ -26,10 +26,12 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
+# Copy full source before building — VITE_* env vars and all config files must be
+# present at build time so the compiled JS bundle receives the correct values.
 COPY . .
+RUN npm ci && npm run build
 
 # PHP-FPM pool — listen on TCP 9000 for inter-container FastCGI (nginx → app)
-# zzz-app.conf loads after the official zz-docker.conf (alphabetical order) to win
 COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
 COPY docker/php/zzz-app.conf /usr/local/etc/php-fpm.d/zzz-app.conf
 

@@ -59,7 +59,7 @@ class AuditLogService
     // ----------------------------------------------------------------
 
     public static function orderStatusChanged(
-        Request $request,
+        ?Request $request,
         int $orderId,
         string $oldStatus,
         string $newStatus,

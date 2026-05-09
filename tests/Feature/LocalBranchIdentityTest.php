@@ -13,6 +13,15 @@ class LocalBranchIdentityTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected bool $skipAutoBranchSeed = true;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Branch::query()->withTrashed()->forceDelete();
+    }
+
     public function test_device_uses_the_only_branch_when_branch_is_missing(): void
     {
         $branch = Branch::create([

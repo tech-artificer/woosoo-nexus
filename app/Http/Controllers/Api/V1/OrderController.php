@@ -173,10 +173,17 @@ class OrderController extends Controller
         }
 
         try {
-            $order->status = OrderStatus::from($request->input('status'));
-            $order->save();
-            
-            // Broadcast status update immediately (observer will handle this)
+            $targetStatus = OrderStatus::from($request->input('status'));
+            DB::transaction(function () use ($order, $targetStatus) {
+                $fresh = DeviceOrder::lockForUpdate()->findOrFail($order->id);
+                if ($fresh->status === $targetStatus) {
+                    return; // idempotent — already in target state
+                }
+                $fresh->status = $targetStatus;
+                $fresh->save();
+            });
+            // Reload to get the persisted state for the response
+            $order->refresh();
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => 'Invalid status transition', 'error' => $e->getMessage()], 422);
         }
@@ -204,8 +211,8 @@ class OrderController extends Controller
         DB::beginTransaction();
         try {
             foreach ($orderIds as $oid) {
-                // Lookup by DeviceOrder ID (internal ID)
-                $order = DeviceOrder::find($oid);
+                // Lookup by DeviceOrder ID (internal ID) with a pessimistic lock
+                $order = DeviceOrder::lockForUpdate()->find($oid);
                 if (! $order) {
                     $results['failed'][] = ['order_id' => $oid, 'reason' => 'not_found'];
                     continue;

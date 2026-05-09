@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Pre-commit hook: block localhost ASSET_URL bake-in
+# =============================================================================
+# ASSET_URL set to a localhost value is the #1 cause of the admin panel
+# loading assets from 127.0.0.1:8000 and showing ERR_CONNECTION_REFUSED
+# on every client that isn't the dev machine.
+#
+# .env is gitignored, so this only triggers on .env.example, .env.docker,
+# or any other env file accidentally staged with a localhost ASSET_URL.
+# =============================================================================
+
+set -euo pipefail
+
+FAIL=0
+
+# Check any staged file that looks like an env file
+while IFS= read -r file; do
+  if [[ ! -f "$file" ]]; then continue; fi
+
+  # Detect localhost ASSET_URL in staged content
+  if git show ":$file" 2>/dev/null | grep -Eq '^ASSET_URL=https?://(127\.0\.0\.1|localhost)(:[0-9]+)?'; then
+    echo "ERROR [pre-commit]: $file contains a localhost ASSET_URL."
+    echo "  This bakes 127.0.0.1 into compiled Vite assets, breaking the admin panel on all clients."
+    echo "  Remove ASSET_URL from local .env files. Production values are set by apply-woosoo-config.sh."
+    FAIL=1
+  fi
+done < <(git diff --cached --name-only)
+
+if [[ "$FAIL" -eq 1 ]]; then
+  exit 1
+fi

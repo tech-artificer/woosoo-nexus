@@ -35,7 +35,7 @@ class CreateTableOrder
             // on the in-memory `pos` connection. Insert a minimal
             // `table_orders` row into the `pos` testing DB so the
             // subsequent lookup returns a model instance.
-            if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            if (app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
                 DB::connection('pos')->table('table_orders')->insert([
                     'order_id' => $attr['order_id'],
                     'table_id' => $attr['table_id'],

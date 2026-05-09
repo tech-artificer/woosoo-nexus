@@ -53,13 +53,20 @@ class Table extends Model
 
     public function checkTableStatus()
     {
-        $contextService = new KryptonContextService();
-        $currentSessions = $contextService->getCurrentSessions();
-        $session = $currentSessions['session'];
-
         if (app()->environment('testing') || env('APP_ENV') === 'testing') {
             return collect([]);
         }
+
+        $contextService = new KryptonContextService();
+        $currentSessions = $contextService->getCurrentSessions();
+
+        if (empty($currentSessions) || !isset($currentSessions['session'])) {
+            throw new \App\Exceptions\SessionNotFoundException(
+                'No active POS session found. Cannot check table status.'
+            );
+        }
+
+        $session = $currentSessions['session'];
 
         return Table::fromQuery('CALL check_table_status(?,?)', [$this->id, $session->id]);
     }

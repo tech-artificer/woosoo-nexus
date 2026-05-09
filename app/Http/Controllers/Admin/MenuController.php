@@ -78,7 +78,7 @@ class MenuController extends Controller
     public function uploadImage(Request $request, Menu $menu) 
     {
         $validated = $request->validate([
-            'image' => ['required'],
+            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
         ]);
 
         if ($request->hasFile('image')) {

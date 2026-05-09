@@ -128,5 +128,8 @@ return [
 
 
     'instance_type' => env('APP_INSTANCE_TYPE', 'local'),
+    'version' => env('APP_VERSION', '1.0.0'),
+    'build_sha' => env('BUILD_SHA'),
+    'build_time' => env('BUILD_TIME'),
 
 ];

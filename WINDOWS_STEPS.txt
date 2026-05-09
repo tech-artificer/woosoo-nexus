@@ -1,0 +1,121 @@
+# WINDOWS POWERSHELL - STEP BY STEP
+
+# You are in: E:\Projects\woosoo-integrated-stack\woosoo-nexus
+
+# ============================================================================
+# STEP 1: BUILD DOCKER IMAGE
+# ============================================================================
+# Copy this entire line and paste in PowerShell, press Enter:
+
+docker build -f Dockerfile.processor.dhi -t bi-processor:dhi .
+
+# Wait for it to complete (should say "Successfully tagged bi-processor:dhi")
+# Time: ~3 minutes
+
+
+# ============================================================================
+# STEP 2: START THE SERVICE
+# ============================================================================
+# Copy this and paste:
+
+docker-compose up -d bi-processor
+
+# Check it's running:
+
+docker-compose ps
+
+# You should see: bi-processor | Running
+
+
+# ============================================================================
+# STEP 3: DEPLOY SQL VIEWS TO KRYPTON DATABASE
+# ============================================================================
+# Copy this and paste:
+
+mysql -h 192.168.100.7 -P 3308 -u woosoo_pos -ppassword krypton_woosoo < krypton_woosoo_bi_views.sql
+
+# Wait for completion (no output = success)
+
+
+# ============================================================================
+# STEP 4: VERIFY VIEWS WERE DEPLOYED
+# ============================================================================
+# Copy this and paste:
+
+mysql -h 192.168.100.7 -P 3308 -u woosoo_pos -ppassword krypton_woosoo -e "SHOW VIEWS LIKE 'bi_%';"
+
+# You should see 5+ rows:
+# bi_krypton_woosoo_order_fusion
+# bi_order_drift_detection
+# bi_line_item_reconciliation
+# bi_order_summary_by_status
+# bi_drift_issues_summary
+
+
+# ============================================================================
+# STEP 5: GENERATE FIRST DRIFT REPORT
+# ============================================================================
+# Copy this entire line as ONE BLOCK and paste in PowerShell:
+
+docker exec bi-processor python /app/bi_processor.py --dialect mysql --host 192.168.100.7 --user woosoo_pos --password "password" --database krypton_woosoo --refresh --report --output /app/reports/drift_report.json
+
+# Wait for completion
+# Time: ~10-30 seconds
+
+
+# ============================================================================
+# STEP 6: VIEW THE REPORT
+# ============================================================================
+# View the JSON file:
+
+cat reports/drift_report.json
+
+# Or open in notepad:
+
+notepad reports\drift_report.json
+
+# Or pretty-print JSON (PowerShell):
+
+(Get-Content reports/drift_report.json) | ConvertFrom-Json | ConvertTo-Json
+
+
+# ============================================================================
+# STEP 7: QUERY A VIEW DIRECTLY
+# ============================================================================
+# Check order 19643:
+
+mysql -h 192.168.100.7 -P 3308 -u woosoo_pos -ppassword krypton_woosoo -e "SELECT krypton_order_id, woosoo_order_id, crosswalk_status, amount_reconciliation FROM bi_krypton_woosoo_order_fusion WHERE krypton_order_id = 19643;"
+
+# Find HIGH severity drift:
+
+mysql -h 192.168.100.7 -P 3308 -u woosoo_pos -ppassword krypton_woosoo -e "SELECT COUNT(*) as high_severity_count FROM bi_order_drift_detection WHERE severity = 'HIGH';"
+
+
+# ============================================================================
+# STEP 8: VIEW LIVE LOGS
+# ============================================================================
+
+docker-compose logs -f bi-processor
+
+# Press Ctrl+C to exit logs
+
+
+# ============================================================================
+# IF SOMETHING BREAKS
+# ============================================================================
+
+# Check logs:
+docker-compose logs bi-processor
+
+# Test database connection:
+mysql -h 192.168.100.7 -P 3308 -u woosoo_pos -ppassword -e "SELECT 1;"
+
+# Restart container:
+docker-compose restart bi-processor
+
+# Stop everything:
+docker-compose down
+
+# Start again:
+docker-compose up -d bi-processor
+

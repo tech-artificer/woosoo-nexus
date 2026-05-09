@@ -77,6 +77,13 @@ const mainNavItems: NavItem[] = [
         hasSubItems: false,
     },
     {
+        title: 'POS',
+        href: route('pos.index'),
+        icon: Monitor,
+        isActive: isActiveRoute(route('pos.index')),
+        hasSubItems: false,
+    },
+    {
         title: 'Menus',
         href: route('menus'),
         icon: UtensilsCrossed,

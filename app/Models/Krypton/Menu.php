@@ -187,15 +187,6 @@ class Menu extends Model
      * @param array $codeList The ordered list of codes (e.g., ['P1', 'P2', 'P3'])
      * @return string The CASE WHEN clause for orderByRaw()
      */
-    private static function buildCodeOrderClause(array $codeList): string
-    {
-        $cases = [];
-        foreach ($codeList as $index => $code) {
-            $cases[] = "WHEN receipt_name = '$code' THEN " . ($index + 1);
-        }
-        return "CASE " . implode(" ", $cases) . " ELSE " . (count($codeList) + 1) . " END";
-    }
-
     public static function getModifiers(int $id) {
         $codes = [
             46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
@@ -212,13 +203,11 @@ class Menu extends Model
         }
 
         $codeList = $codes[$id];
-        $orderExpression = self::buildCodeOrderClause($codeList);
-
-        return Menu::with(['image'])
+        $query = Menu::with(['image'])
             ->whereIn('receipt_name', $codeList)
-            ->where('is_modifier_only', true)
-            ->orderByRaw($orderExpression)
-            ->get();
+            ->where('is_modifier_only', true);
+
+        return self::orderByReceiptCodeList($query, $codeList)->get();
     }
 
     public function getComputedModifiersAttribute()
@@ -241,17 +230,45 @@ class Menu extends Model
         }
 
         $codeList = $codes[$this->id];
-        $orderExpression = self::buildCodeOrderClause($codeList);
 
         // Return modifier menus matching the receipt codes for this package.
         // Do not restrict by group name so the set meal modifiers include the
         // same menu rows/fields as the regular modifiers endpoint. Preserve
-        // the defined code order using a database-agnostic CASE statement.
-        return Menu::with(['image'])
+        // the defined code order across both MySQL and SQLite.
+        $query = Menu::with(['image'])
             ->whereIn('receipt_name', $codeList)
-            ->where('is_modifier_only', true)
-            ->orderByRaw($orderExpression)
-            ->get();
+            ->where('is_modifier_only', true);
+
+        return self::orderByReceiptCodeList($query, $codeList)->get();
+    }
+
+    /**
+     * Apply deterministic ordering for a fixed receipt-code list.
+     *
+     * Uses a CASE expression for portability (SQLite test DB + MySQL runtime)
+     * while preserving the exact incoming codeList order.
+     *
+     * @param \\Illuminate\\Database\\Eloquent\\Builder $query
+     * @param array<int, string> $codeList
+     * @return \\Illuminate\\Database\\Eloquent\\Builder
+     */
+    protected static function orderByReceiptCodeList(Builder $query, array $codeList): Builder
+    {
+        if (empty($codeList)) {
+            return $query;
+        }
+
+        $caseSegments = [];
+        $bindings = [];
+
+        foreach (array_values($codeList) as $index => $code) {
+            $caseSegments[] = 'WHEN receipt_name = ? THEN '.$index;
+            $bindings[] = $code;
+        }
+
+        $caseSql = 'CASE '.implode(' ', $caseSegments).' ELSE '.count($codeList).' END';
+
+        return $query->orderByRaw($caseSql, $bindings);
     }
 
     /**

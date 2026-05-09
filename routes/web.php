@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Admin\{
     DashboardController,
     OrderController,
+    PosController,
     MenuController,
     UserController,
     Device\DeviceController,
@@ -61,6 +62,15 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::post('/orders/print', [OrderController::class, 'print'])->name('orders.print');
         Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
+
+        // POS (Krypton-only data surface)
+        Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
+        Route::get('/pos/terminals/{terminalId}/tables', [PosController::class, 'terminalTables'])->name('pos.terminal.tables');
+        Route::get('/pos/terminals/{terminalId}/tables/{tableId}/orders', [PosController::class, 'tableOrders'])->name('pos.table.orders');
+        Route::post('/pos/terminals/{terminalId}/tables/{tableId}/orders', [PosController::class, 'addOrder'])->name('pos.table.orders.add');
+        Route::put('/pos/orders/{orderId}', [PosController::class, 'editOrder'])->name('pos.orders.edit');
+        Route::post('/pos/orders/{orderId}/void', [PosController::class, 'voidOrder'])->name('pos.orders.void');
+        Route::post('/pos/orders/{orderId}/pay', [PosController::class, 'payOrder'])->name('pos.orders.pay');
         
         // Bulk operations with rate limiting (60 requests/min to prevent abuse)
         Route::middleware(['throttle:60,1'])->group(function () {
