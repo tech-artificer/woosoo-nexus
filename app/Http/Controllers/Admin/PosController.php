@@ -6,6 +6,9 @@ use App\Actions\Order\CreateOrder;
 use App\Actions\Order\CreateOrderCheck;
 use App\Actions\Order\CreateTableOrder;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\PayPosOrderRequest;
+use App\Http\Requests\Admin\StorePosOrderRequest;
+use App\Http\Requests\Admin\UpdatePosOrderRequest;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -184,12 +187,9 @@ class PosController extends Controller
         ]);
     }
 
-    public function addOrder(string $terminalId, string $tableId, Request $request): JsonResponse
+    public function addOrder(string $terminalId, string $tableId, StorePosOrderRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'guest_count' => ['required', 'integer', 'min:1', 'max:50'],
-            'reference' => ['nullable', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
 
         $table = DB::connection('pos')->table('tables')->where('id', $tableId)->first();
         if (! $table) {
@@ -252,12 +252,9 @@ class PosController extends Controller
         ]);
     }
 
-    public function editOrder(string $orderId, Request $request): JsonResponse
+    public function editOrder(string $orderId, UpdatePosOrderRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'guest_count' => ['required', 'integer', 'min:1', 'max:50'],
-            'reference' => ['nullable', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
 
         $updated = DB::connection('pos')
             ->table('orders')
@@ -324,18 +321,9 @@ class PosController extends Controller
         ]);
     }
 
-    public function payOrder(string $orderId, Request $request): JsonResponse
+    public function payOrder(string $orderId, PayPosOrderRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'payment_type_id' => ['required', 'integer'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'tip' => ['nullable', 'numeric', 'min:0'],
-            'card_company' => ['nullable', 'string', 'max:50'],
-            'card_number' => ['nullable', 'string', 'max:30'],
-            'unique_code' => ['nullable', 'string', 'max:50'],
-            'auth_code' => ['nullable', 'string', 'max:50'],
-            'expiration_date' => ['nullable', 'string', 'max:16'],
-        ]);
+        $validated = $request->validated();
 
         $order = DB::connection('pos')
             ->table('orders')
