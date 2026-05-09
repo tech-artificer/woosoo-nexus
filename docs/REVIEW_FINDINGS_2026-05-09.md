@@ -54,3 +54,14 @@ The docs are strong and actionable overall, but there are contract-level inconsi
 | 1 | [ ] | Endpoint/payload/idempotency model inconsistencies must be resolved first. |
 | 2 | [ ] | Depends on canonical API contract decision and Phase 1 stabilization. |
 
+## Deferred Polish Items (Address Later)
+
+These are non-blocking consistency cleanups that should be queued after the current review/implementation cycle.
+
+| # | Deferred polish item | Evidence | Suggested follow-up |
+|---|----------------------|----------|---------------------|
+| 1 | Clarify session endpoint semantics (`/api/session/latest` alias vs actual latest-session endpoint). | `docs/LONG_TERM_REQUIREMENTS_2026-05-09.md:172`, `routes/api.php:208`, `routes/api.php:255-257` | In the API table, label `/api/session/latest` as a compatibility alias to current session and explicitly document `/api/devices/latest-session` as latest known session. |
+| 2 | Replace generic "Persisted idempotency table" wording with canonical `order_transactions` phrasing. | `docs/LONG_TERM_REQUIREMENTS_2026-05-09.md:431`, `docs/LONG_TERM_REQUIREMENTS_2026-05-09.md:599` | Change the checklist text to "Persisted idempotency in `order_transactions`". |
+| 3 | Add explicit legacy endpoint deprecation cutoff (phase/date + removal condition). | `docs/LONG_TERM_REQUIREMENTS_2026-05-09.md:191` | Add a concrete deprecation window and merge gate for removing aliases. |
+| 4 | Reconcile referenced contract/standards docs with actual repo files. | `docs/LONG_TERM_REQUIREMENTS_2026-05-09.md:154`, `docs/LONG_TERM_REQUIREMENTS_2026-05-09.md:831`, `docs/LONG_TERM_REQUIREMENTS_2026-05-09.md:837` | Create missing files (`docs/contracts/tablet-api.v1.yaml`, `docs/standards/idempotency.md`) or mark them as future-phase deliverables with owner/phase. |
+
