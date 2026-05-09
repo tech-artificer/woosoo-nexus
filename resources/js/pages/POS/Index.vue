@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, useForm } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
@@ -68,8 +68,10 @@ const ordersLoading = ref(false)
 const ordersError = ref<string | null>(null)
 const actionLoading = ref(false)
 
-const addGuestCount = ref<number>(2)
-const addReference = ref<string>('')
+const form = useForm({
+    guest_count: 2,
+    reference: '',
+})
 
 // Dialog state
 const editDialogOpen = ref(false)
@@ -212,40 +214,23 @@ const refreshCurrentTableOrders = async () => {
     }
 }
 
-const addOrderForTable = async () => {
+const addOrderForTable = () => {
     if (!selectedTerminalId.value || !selectedTable.value) {
         return
     }
 
-    actionLoading.value = true
-    try {
-        const response = await fetch(route('pos.table.orders.add', { terminalId: selectedTerminalId.value, tableId: selectedTable.value.id }), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken(),
-                'X-Requested-With': 'XMLHttpRequest',
-                Accept: 'application/json',
-            },
-            body: JSON.stringify({
-                guest_count: Number(addGuestCount.value || 1),
-                reference: addReference.value || null,
-            }),
-        })
-
-        const payload = await readJsonPayload(response)
-        if (!response.ok || !payload?.success) {
-            throw new Error(payload?.message || 'Failed to add order.')
-        }
-
-        await refreshCurrentTableOrders()
-        await loadTablesForTerminal(selectedTerminalId.value)
-        addReference.value = ''
-    } catch (error: any) {
-        ordersError.value = error?.message || 'Unable to add order from POS.'
-    } finally {
-        actionLoading.value = false
-    }
+    form.post(route('pos.table.orders.add', { terminalId: selectedTerminalId.value, tableId: selectedTable.value.id }), {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            form.reset('reference')
+            refreshCurrentTableOrders()
+            loadTablesForTerminal(selectedTerminalId.value!)
+        },
+        onError: (errors) => {
+            ordersError.value = errors.message || 'Unable to add order from POS.'
+        },
+    })
 }
 
 const editOrder = async (order: PosOrder) => {
@@ -511,7 +496,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             <div>
                                 <label class="mb-1 block text-xs text-muted-foreground">Guest Count</label>
                                 <input
-                                    v-model.number="addGuestCount"
+                                    v-model.number="form.guest_count"
                                     type="number"
                                     min="1"
                                     class="w-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -520,13 +505,13 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             <div>
                                 <label class="mb-1 block text-xs text-muted-foreground">Reference</label>
                                 <input
-                                    v-model="addReference"
+                                    v-model="form.reference"
                                     type="text"
                                     class="w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
                                     placeholder="Optional"
                                 >
                             </div>
-                            <Button :disabled="actionLoading" @click="addOrderForTable">
+                            <Button :disabled="form.processing" @click="addOrderForTable">
                                 Add Order
                             </Button>
                         </div>
