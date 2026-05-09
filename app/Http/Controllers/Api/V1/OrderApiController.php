@@ -216,13 +216,15 @@ class OrderApiController extends Controller
         // RefillOrderRequest automatically validates items
         $validatedData = $request->validated();
 
-        $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
+        $device = $request->user();
+        $deviceOrder = DeviceOrder::where('order_id', $orderId)
+            ->where('device_id', $device?->id)
+            ->first();
         if (! $deviceOrder) {
             return response()->json(['success' => false, 'message' => 'Order not found'], 404);
         }
 
-        // Authorization: ensure device (if any) is allowed to operate on this order
-        $device = $request->user();
+        // Authorization: ensure device is in the same branch as the order
         if ($device && isset($device->branch_id) && isset($deviceOrder->branch_id) && $device->branch_id !== $deviceOrder->branch_id) {
             return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
         }

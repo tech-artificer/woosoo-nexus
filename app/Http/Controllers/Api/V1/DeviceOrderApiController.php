@@ -105,7 +105,7 @@ class DeviceOrderApiController extends Controller
                     return ['existing' => $existing];
                 }
 
-                $order = app(OrderService::class)->processOrder($device, $validatedData);
+                $order = app(OrderService::class)->processOrder($device, $this->expandIntentPayload($validatedData));
 
                 return ['order' => $order];
             });
@@ -207,6 +207,35 @@ class DeviceOrderApiController extends Controller
             ], 500);
         }
 
+    }
+
+    /**
+     * Transform the tablet's intent-only payload into the internal package-with-modifiers
+     * structure that OrderService::processOrder() and CreateOrderedMenu understand.
+     *
+     * Tablet sends:  { guest_count, package_id, items: [{menu_id, quantity}] }
+     * Internal form: { guest_count, items: [{ menu_id: package_id, quantity: guest_count,
+     *                   is_package: true, modifiers: [{menu_id, quantity}] }] }
+     */
+    private function expandIntentPayload(array $data): array
+    {
+        $packageId  = (int) ($data['package_id'] ?? 0);
+        $guestCount = (int) ($data['guest_count'] ?? 1);
+        $modifiers  = array_map(fn ($item) => [
+            'menu_id'  => (int) $item['menu_id'],
+            'quantity' => (int) $item['quantity'],
+        ], $data['items'] ?? []);
+
+        $data['items'] = [
+            [
+                'menu_id'    => $packageId,
+                'quantity'   => $guestCount,
+                'is_package' => true,
+                'modifiers'  => $modifiers,
+            ],
+        ];
+
+        return $data;
     }
 
     private function isPosServiceUnavailable(QueryException $e): bool

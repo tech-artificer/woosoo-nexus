@@ -1,0 +1,222 @@
+<?php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\StoreDeviceOrderRequest;
+use App\Http\Requests\RefillOrderRequest;
+
+/**
+ * Verifies that both request validators accept the exact intent-only
+ * payload shapes the tablet staging branch sends, and reject invalid inputs.
+ *
+ * These are pure validator unit tests (no DB / POS calls).
+ */
+class DeviceOrderIntentContractTest extends TestCase
+{
+    // ─── Initial order ────────────────────────────────────────────────────────
+
+    public function test_accepts_intent_only_initial_order_payload(): void
+    {
+        $rules = (new StoreDeviceOrderRequest())->rules();
+
+        $payload = [
+            'guest_count' => 3,
+            'package_id'  => 46,
+            'items'       => [
+                ['menu_id' => 10, 'quantity' => 2],
+                ['menu_id' => 13, 'quantity' => 2],
+            ],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertTrue(
+            $validator->passes(),
+            'Intent-only payload should pass validation. Errors: '.json_encode($validator->errors()->toArray())
+        );
+    }
+
+    public function test_initial_order_rejects_missing_package_id(): void
+    {
+        $rules = (new StoreDeviceOrderRequest())->rules();
+
+        $payload = [
+            'guest_count' => 3,
+            'items'       => [['menu_id' => 10, 'quantity' => 2]],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertFalse($validator->passes());
+        $this->assertArrayHasKey('package_id', $validator->errors()->toArray());
+    }
+
+    public function test_initial_order_rejects_missing_items(): void
+    {
+        $rules = (new StoreDeviceOrderRequest())->rules();
+
+        $payload = [
+            'guest_count' => 3,
+            'package_id'  => 46,
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertFalse($validator->passes());
+        $this->assertArrayHasKey('items', $validator->errors()->toArray());
+    }
+
+    public function test_initial_order_rejects_item_without_menu_id(): void
+    {
+        $rules = (new StoreDeviceOrderRequest())->rules();
+
+        $payload = [
+            'guest_count' => 3,
+            'package_id'  => 46,
+            'items'       => [['quantity' => 2]],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertFalse($validator->passes());
+        $this->assertArrayHasKey('items.0.menu_id', $validator->errors()->toArray());
+    }
+
+    public function test_initial_order_does_not_require_client_totals(): void
+    {
+        $rules = (new StoreDeviceOrderRequest())->rules();
+
+        $payload = [
+            'guest_count' => 2,
+            'package_id'  => 47,
+            'items'       => [['menu_id' => 15, 'quantity' => 1]],
+            // subtotal / tax / discount / total_amount intentionally omitted
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertTrue(
+            $validator->passes(),
+            'Client totals must be optional. Errors: '.json_encode($validator->errors()->toArray())
+        );
+    }
+
+    public function test_initial_order_does_not_require_item_name_or_price(): void
+    {
+        $rules = (new StoreDeviceOrderRequest())->rules();
+
+        $payload = [
+            'guest_count' => 2,
+            'package_id'  => 47,
+            'items'       => [
+                ['menu_id' => 15, 'quantity' => 1],
+                // no 'name', no 'price', no 'subtotal'
+            ],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertTrue(
+            $validator->passes(),
+            'items.*.name and items.*.price must be optional. Errors: '.json_encode($validator->errors()->toArray())
+        );
+    }
+
+    // ─── Refill order ─────────────────────────────────────────────────────────
+
+    public function test_accepts_intent_only_refill_payload(): void
+    {
+        $rules = (new RefillOrderRequest())->rules();
+
+        $payload = [
+            'items' => [
+                ['menu_id' => 10, 'quantity' => 1],
+                ['menu_id' => 13, 'quantity' => 1],
+            ],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertTrue(
+            $validator->passes(),
+            'Intent-only refill payload should pass validation. Errors: '.json_encode($validator->errors()->toArray())
+        );
+    }
+
+    public function test_refill_rejects_missing_menu_id(): void
+    {
+        $rules = (new RefillOrderRequest())->rules();
+
+        $payload = [
+            'items' => [
+                ['quantity' => 1],
+            ],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertFalse($validator->passes());
+        $this->assertArrayHasKey('items.0.menu_id', $validator->errors()->toArray());
+    }
+
+    public function test_refill_does_not_require_item_name(): void
+    {
+        $rules = (new RefillOrderRequest())->rules();
+
+        $payload = [
+            'items' => [
+                ['menu_id' => 10, 'quantity' => 2],
+                // no 'name'
+            ],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertTrue(
+            $validator->passes(),
+            'items.*.name must be optional for refill. Errors: '.json_encode($validator->errors()->toArray())
+        );
+    }
+
+    public function test_refill_rejects_zero_quantity(): void
+    {
+        $rules = (new RefillOrderRequest())->rules();
+
+        $payload = [
+            'items' => [['menu_id' => 10, 'quantity' => 0]],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+
+        $this->assertFalse($validator->passes());
+        $this->assertArrayHasKey('items.0.quantity', $validator->errors()->toArray());
+    }
+
+    public function test_expandIntentPayload_shape(): void
+    {
+        $controller = new \App\Http\Controllers\Api\V1\DeviceOrderApiController();
+        $expand = new \ReflectionMethod($controller, 'expandIntentPayload');
+        $expand->setAccessible(true);
+
+        $input = [
+            'guest_count' => 3,
+            'package_id'  => 46,
+            'items'       => [
+                ['menu_id' => 10, 'quantity' => 2],
+                ['menu_id' => 13, 'quantity' => 1],
+            ],
+        ];
+
+        $result = $expand->invoke($controller, $input);
+
+        $this->assertCount(1, $result['items']);
+        $this->assertEquals(46, $result['items'][0]['menu_id']);
+        $this->assertEquals(3,  $result['items'][0]['quantity']);
+        $this->assertTrue($result['items'][0]['is_package']);
+        $this->assertCount(2, $result['items'][0]['modifiers']);
+        $this->assertEquals(10, $result['items'][0]['modifiers'][0]['menu_id']);
+        $this->assertEquals(13, $result['items'][0]['modifiers'][1]['menu_id']);
+    }
+}

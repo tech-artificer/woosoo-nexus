@@ -20,69 +20,35 @@ class StoreDeviceOrderRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-    {   
+    {
         return [
-            /**
-             * 
-             * @var integer
-             * @example 2            
-             */
-            'guest_count' => ['required', 'integer', 'min:1'],
-            // /**
-            //  * 
-            //  * @var integer
-            //  * @example 36
-            //  */
-            // 'table_id' => ['required', 'integer'],
-            /**
-             * 
-             * @var float
-             * @example 988
-             */
-            'subtotal' => ['required', 'numeric', 'min:0'],
-            /**
-             * 
-             * @var float
-             * @example 118.56
-             */
-            'tax' => ['required', 'numeric', 'min:0'],
-            /**
-             * 
-             * @var float
-             * @example 967.80
-             */
-            /**
-             * 
-             * @var float
-             * @example 0.00
-             */
-            'discount' => ['required', 'numeric', 'min:0'],
-            /**
-             * 
-             * @var float
-             * @example 1106.56
-             */
-            'total_amount' => ['required', 'numeric', 'min:0'],
-            /**
-             * 
-             * @var array {menu_id, name, quantity, price, note, subtotal, ordered_menu_id, tax, discount}
-             * @example  [{"menu_id":46,"name":"Classic Feast","quantity":2,"price":399,"note":"this is a note","subtotal":898.00,"tax":107.76,"discount":0.00},
-             * {"menu_id":96,"name":"Coke Zero","quantity":2,"price":45,"note":"this is a note","subtotal":90.00,"tax":10.80,"discount":0.00}]
-             */
-            'items' => ['required', 'array'],
+            // Intent-only fields (tablet staging contract)
+            'guest_count'  => ['required', 'integer', 'min:1', 'max:20'],
+            'package_id'   => ['required', 'integer', 'min:1'],
+
+            // Client-supplied totals are optional; server always recalculates them.
+            'subtotal'      => ['nullable', 'numeric', 'min:0'],
+            'tax'           => ['nullable', 'numeric', 'min:0'],
+            'discount'      => ['nullable', 'numeric', 'min:0'],
+            'total_amount'  => ['nullable', 'numeric', 'min:0'],
+
             'session_id' => ['nullable', 'integer'],
-            'items.*.menu_id' => ['required', 'integer'],
-            'items.*.name' => ['required', 'string'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.price' => ['required', 'numeric', 'min:0'],
-            'items.*.note' => ['nullable', 'string'],
-            'items.*.subtotal' => ['required', 'numeric', 'min:0'],
-            'items.*.ordered_menu_id' => ['nullable', 'integer', 'min:1'],
-            'items.*.tax' => ['nullable', 'numeric', 'min:0'],
-            'items.*.discount' => ['nullable', 'numeric', 'min:0'],
-            'items.*.is_package' => ['nullable', 'boolean'],
-            'items.*.modifiers' => ['nullable', 'array'],
-            'items.*.modifiers.*.menu_id' => ['required_with:items.*.modifiers', 'integer'],
+
+            // Items: only menu_id + quantity are required; name/price/subtotal are optional
+            // (server resolves them from POS menu catalog)
+            'items'                    => ['required', 'array', 'min:1'],
+            'items.*.menu_id'          => ['required', 'integer', 'min:1'],
+            'items.*.quantity'         => ['required', 'integer', 'min:1', 'max:50'],
+            'items.*.name'             => ['nullable', 'string'],
+            'items.*.price'            => ['nullable', 'numeric', 'min:0'],
+            'items.*.note'             => ['nullable', 'string'],
+            'items.*.subtotal'         => ['nullable', 'numeric', 'min:0'],
+            'items.*.ordered_menu_id'  => ['nullable', 'integer', 'min:1'],
+            'items.*.tax'              => ['nullable', 'numeric', 'min:0'],
+            'items.*.discount'         => ['nullable', 'numeric', 'min:0'],
+            'items.*.is_package'       => ['nullable', 'boolean'],
+            'items.*.modifiers'        => ['nullable', 'array'],
+            'items.*.modifiers.*.menu_id'  => ['required_with:items.*.modifiers', 'integer'],
             'items.*.modifiers.*.quantity' => ['required_with:items.*.modifiers', 'integer', 'min:1'],
         ];
     }

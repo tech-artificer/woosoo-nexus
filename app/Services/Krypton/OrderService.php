@@ -12,6 +12,7 @@ use App\Events\PrintOrder;
 use App\Exceptions\SessionNotFoundException;
 use App\Models\Device;
 use App\Models\DeviceOrder;
+use App\Models\Krypton\Menu as KryptonMenu;
 use App\Models\Krypton\Order;
 use App\Models\Krypton\Table;
 use App\Models\Krypton\Tax;
@@ -255,7 +256,18 @@ class OrderService
 
         foreach ($items as $item) {
             $quantity = (int) ($item['quantity'] ?? 0);
-            $price = $this->money($item['price'] ?? 0);
+            $clientPrice = $item['price'] ?? null;
+            if ($clientPrice !== null) {
+                $price = $this->money($clientPrice);
+            } else {
+                try {
+                    $posMenu = KryptonMenu::find((int) ($item['menu_id'] ?? 0));
+                    $price = $this->money($posMenu?->price ?? 0);
+                } catch (\Throwable $e) {
+                    Log::warning('OrderService: POS price lookup failed, defaulting to 0', ['menu_id' => $item['menu_id'] ?? null, 'error' => $e->getMessage()]);
+                    $price = 0.0;
+                }
+            }
 
             // Calculate item total (price * quantity)
             $itemTotal = $this->money($price * $quantity);
