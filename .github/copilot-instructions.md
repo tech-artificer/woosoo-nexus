@@ -32,6 +32,154 @@ composer dev              # Start all: HTTP server (8000), queue, Vite HMR (5173
 
 ---
 
+## Current Deployment Truth: Nexus + Tablet Sibling Repos
+
+The integrated Docker deployment expects `tablet-ordering-pwa` to be a **sibling repository**, not a child folder:
+
+```txt
+parent/
+├── woosoo-nexus/
+└── tablet-ordering-pwa/
+```
+
+The `tablet-pwa` service in `compose.yaml` builds from:
+
+```yaml
+context: ../tablet-ordering-pwa
+dockerfile: ${TABLET_DOCKERFILE:-Dockerfile.prod}
+```
+
+Do not assume updating `woosoo-nexus` updates tablet UI. Both repos must be on the intended branch/ref before deployment.
+
+---
+
+## Deterministic Tablet Deployment Rules
+
+Use the deployment scripts before rebuilding tablet UI:
+
+```powershell
+$env:TABLET_DOCKERFILE = "Dockerfile.prod"
+./scripts/deployment/verify-tablet-deploy-context.sh
+```
+
+For intentional deployment:
+
+```powershell
+$env:NEXUS_DEPLOY_BRANCH = "staging"
+$env:TABLET_DEPLOY_BRANCH = "staging"
+$env:TABLET_DOCKERFILE = "Dockerfile.prod"
+./scripts/deployment/deploy-tablet.sh
+```
+
+The preflight must show:
+
+- Nexus branch + commit
+- Tablet branch + commit
+- Selected Dockerfile
+- Build args
+- Runtime env
+- Resolved `tablet-pwa` Compose block
+
+Do not deploy if the selected branch, commit, Dockerfile, or runtime host is ambiguous.
+
+**For integrated production tablet deployment, use `Dockerfile.prod` unless intentionally testing legacy `Dockerfile`.**
+
+---
+
+## Reverb and Tablet Runtime Config
+
+Docker deployment uses:
+
+- Internal Reverb: `reverb:8080`
+- Public WebSocket endpoint: `https://${PUBLIC_HOST}/app` via nginx port `443`
+- Tablet app: `https://${PUBLIC_HOST}:4443`
+- Backend API: `https://${PUBLIC_HOST}/api`
+
+Tablet runtime config is exposed through:
+
+```txt
+/runtime-config.js
+window.__APP_CONFIG__
+```
+
+Do not hardcode LAN IPs in source code. Use `PUBLIC_HOST` and Compose/runtime env values.
+
+---
+
+## Current Deployment Truth: Nexus + Tablet Sibling Repos
+
+The integrated Docker deployment expects `tablet-ordering-pwa` to be a **sibling repository**, not a child folder:
+
+```txt
+parent/
+├── woosoo-nexus/
+└── tablet-ordering-pwa/
+```
+
+The `tablet-pwa` service in `compose.yaml` builds from:
+
+```yaml
+context: ../tablet-ordering-pwa
+dockerfile: ${TABLET_DOCKERFILE:-Dockerfile.prod}
+```
+
+Do not assume updating `woosoo-nexus` updates tablet UI. Both repos must be on the intended branch/ref before deployment.
+
+---
+
+## Deterministic Tablet Deployment Rules
+
+Use the deployment scripts before rebuilding tablet UI:
+
+```powershell
+$env:TABLET_DOCKERFILE = "Dockerfile.prod"
+./scripts/deployment/verify-tablet-deploy-context.sh
+```
+
+For intentional deployment:
+
+```powershell
+$env:NEXUS_DEPLOY_BRANCH = "staging"
+$env:TABLET_DEPLOY_BRANCH = "staging"
+$env:TABLET_DOCKERFILE = "Dockerfile.prod"
+./scripts/deployment/deploy-tablet.sh
+```
+
+The preflight must show:
+
+- Nexus branch + commit
+- Tablet branch + commit
+- Selected Dockerfile
+- Build args
+- Runtime env
+- Resolved `tablet-pwa` Compose block
+
+Do not deploy if the selected branch, commit, Dockerfile, or runtime host is ambiguous.
+
+**For integrated production tablet deployment, use `Dockerfile.prod` unless intentionally testing legacy `Dockerfile`.**
+
+---
+
+## Reverb and Tablet Runtime Config
+
+Docker deployment uses:
+
+- Internal Reverb: `reverb:8080`
+- Public WebSocket endpoint: `https://${PUBLIC_HOST}/app` via nginx port `443`
+- Tablet app: `https://${PUBLIC_HOST}:4443`
+- Backend API: `https://${PUBLIC_HOST}/api`
+
+Tablet runtime config is exposed through:
+
+```txt
+/runtime-config.js
+window.__APP_CONFIG__
+```
+
+Do not hardcode LAN IPs in source code. Use `PUBLIC_HOST` and Compose/runtime env values.
+
+---
+
 ## Architecture Overview: Three Integrated Products
 
 ### 1. **Admin Panel** (Laravel + Inertia.js + Vue 3 + TypeScript)
