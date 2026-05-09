@@ -154,6 +154,36 @@ docker compose down -v && docker compose up -d --build
 
 ---
 
+## Deterministic Tablet Deployment
+
+Use the deployment scripts to guarantee the exact Nexus + Tablet context being deployed:
+
+```sh
+# Preflight only (fails on dirty git trees unless ALLOW_DIRTY=1)
+scripts/deployment/verify-tablet-deploy-context.sh
+
+# Deploy Tablet from explicit branches
+NEXUS_DEPLOY_BRANCH=staging TABLET_DEPLOY_BRANCH=staging scripts/deployment/deploy-tablet.sh
+
+# Example: deploy main intentionally
+NEXUS_DEPLOY_BRANCH=main TABLET_DEPLOY_BRANCH=main scripts/deployment/deploy-tablet.sh
+```
+
+Optional commit pinning:
+
+```sh
+NEXUS_DEPLOY_REF=<nexus-commit> TABLET_DEPLOY_REF=<tablet-commit> scripts/deployment/deploy-tablet.sh
+```
+
+The preflight prints:
+- Nexus branch/commit/status
+- Tablet branch/commit/status
+- Resolved `tablet-pwa` Dockerfile
+- Resolved tablet build args and runtime env
+- Fully resolved compose `tablet-pwa` service
+
+---
+
 ## Tablet Setup
 
 Each physical tablet needs:
