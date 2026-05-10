@@ -279,7 +279,7 @@ SELECT
   detected_at
 FROM bi_order_drift_detection
 WHERE severity = 'HIGH' 
-AND detected_at >= NOW() - INTERVAL '24 HOUR'
+AND detected_at >= NOW() - INTERVAL 24 HOUR
 ORDER BY detected_at DESC;
 ```
 
@@ -340,7 +340,7 @@ GROUP BY crosswalk_status, amount_reconciliation;
 7. Query:
    ```sql
    SELECT COUNT(*) FROM bi_order_drift_detection 
-   WHERE severity='HIGH' AND detected_at >= NOW() - INTERVAL '24 HOUR'
+   WHERE severity='HIGH' AND detected_at >= NOW() - INTERVAL 24 HOUR
    ```
 
 ### **Power BI / Looker:**

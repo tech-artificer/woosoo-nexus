@@ -148,7 +148,7 @@ SELECT
   detected_at
 FROM bi_order_drift_detection
 WHERE severity = 'HIGH' 
-AND detected_at >= NOW() - INTERVAL '24 HOUR'
+AND detected_at >= NOW() - INTERVAL 24 HOUR
 ORDER BY detected_at DESC
 LIMIT 20;
 "

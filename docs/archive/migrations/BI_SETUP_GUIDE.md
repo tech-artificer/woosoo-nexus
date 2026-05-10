@@ -321,7 +321,7 @@ explore: bi_order_fusion {}
 {
   "targets": [
     {
-      "rawSql": "SELECT COUNT(*) FROM bi_order_drift_detection WHERE severity = 'HIGH' AND detected_at >= NOW() - INTERVAL '24 HOUR'",
+      "rawSql": "SELECT COUNT(*) FROM bi_order_drift_detection WHERE severity = 'HIGH' AND detected_at >= NOW() - INTERVAL 24 HOUR",
       "format": "table"
     }
   ],
