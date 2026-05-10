@@ -36,7 +36,7 @@ setup-native:
 
 deploy:
 	@if [ -f .env ]; then \
-		source .env; \
+		. .env; \
 		if [ "$$DB_DIALECT" = "mysql" ]; then \
 			echo "Deploying to MySQL $$DB_HOST..."; \
 			mysql -h $$DB_HOST -u $$DB_USER -p$$DB_PASSWORD $$DB_NAME < krypton_woosoo_bi_views.sql; \
@@ -52,7 +52,7 @@ deploy:
 
 test:
 	@if [ -f .env ]; then \
-		source .env; \
+		. .env; \
 		echo "Testing $$DB_DIALECT connection to $$DB_HOST..."; \
 		python3 bi_processor.py \
 			--dialect $$DB_DIALECT \
@@ -68,7 +68,7 @@ test:
 
 refresh:
 	@if [ -f .env ]; then \
-		source .env; \
+		. .env; \
 		echo "Running ETL refresh..."; \
 		mkdir -p reports logs; \
 		python3 bi_processor.py \
@@ -88,7 +88,7 @@ refresh:
 
 report:
 	@if [ -f .env ]; then \
-		source .env; \
+		. .env; \
 		echo "Generating drift report..."; \
 		mkdir -p reports; \
 		python3 bi_processor.py \
