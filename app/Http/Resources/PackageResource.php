@@ -10,25 +10,29 @@ class PackageResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        // Force load modifiers if not already loaded
+        $modifiers = [];
+        if ($this->relationLoaded('modifiers')) {
+            $modifiers = $this->modifiers
+                ->sortBy('sort_order')
+                ->values()
+                ->map(function ($modifier) {
+                    return [
+                        'id' => $modifier->id,
+                        'krypton_menu_id' => (int) $modifier->krypton_menu_id,
+                        'sort_order' => (int) $modifier->sort_order,
+                    ];
+                })
+                ->all();
+        }
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'krypton_menu_id' => (int) $this->krypton_menu_id,
             'is_active' => (bool) $this->is_active,
             'sort_order' => (int) $this->sort_order,
-            'modifiers' => $this->whenLoaded('modifiers', function () {
-                return $this->modifiers
-                    ->sortBy('sort_order')
-                    ->values()
-                    ->map(function ($modifier) {
-                        return [
-                            'id' => $modifier->id,
-                            'krypton_menu_id' => (int) $modifier->krypton_menu_id,
-                            'sort_order' => (int) $modifier->sort_order,
-                        ];
-                    })
-                    ->all();
-            }, []),
+            'modifiers' => $modifiers,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

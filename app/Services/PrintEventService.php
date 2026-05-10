@@ -79,6 +79,7 @@ class PrintEventService
             }
 
             $evt->is_acknowledged = true;
+            $evt->backend_status = 'acked';
             $evt->acknowledged_at = $ackAt;
             if ($printerId !== null) {
                 $evt->printer_id = $printerId;
@@ -142,6 +143,7 @@ class PrintEventService
 
             $evt->attempts = (int) ($evt->attempts ?? 0) + 1;
             $evt->last_error = $error;
+            $evt->backend_status = 'failed';
             if ($acknowledgedByDeviceId !== null) {
                 $evt->acknowledged_by_device_id = $acknowledgedByDeviceId;
             }

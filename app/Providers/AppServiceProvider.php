@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Log;
 // use Illuminate\Routing\Route;
 // use App\Services\Krypton\OrderService;
 // Spatie Roles/Permissions
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
@@ -32,6 +33,8 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use App\Events\PrintOrder;
+use App\Listeners\UpdatePrintEventStatusOnDispatch;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -122,6 +125,9 @@ class AppServiceProvider extends ServiceProvider
         // 🔹 Observers
         OrderUpdateLog::observe(OrderUpdateLogObserver::class);
         DeviceOrder::observe(DeviceOrderObserver::class);
+
+        // 🔹 Event Listeners
+        Event::listen(PrintOrder::class, UpdatePrintEventStatusOnDispatch::class);
     }
 
     /**
