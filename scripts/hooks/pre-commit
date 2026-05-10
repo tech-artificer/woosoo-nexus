@@ -19,7 +19,7 @@ while IFS= read -r file; do
   if [[ ! -f "$file" ]]; then continue; fi
 
   # Detect localhost ASSET_URL in staged content
-  if git show ":$file" 2>/dev/null | grep -Eq '^ASSET_URL=https?://(127\.0\.0\.1|localhost)(:[0-9]+)?'; then
+  if git show ":$file" 2>/dev/null | grep -Eq '^ASSET_URL=["\x27]?https?://(127\.0\.0\.1|localhost)(:[0-9]+)?["\x27]?'; then
     echo "ERROR [pre-commit]: $file contains a localhost ASSET_URL."
     echo "  This bakes 127.0.0.1 into compiled Vite assets, breaking the admin panel on all clients."
     echo "  Remove ASSET_URL from local .env files. Production values are set by apply-woosoo-config.sh."
