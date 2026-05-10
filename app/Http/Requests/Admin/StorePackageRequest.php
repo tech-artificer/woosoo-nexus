@@ -16,7 +16,7 @@ class StorePackageRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'krypton_menu_id' => ['required', 'integer', 'min:1', 'unique:packages,krypton_menu_id'],
+            'krypton_menu_id' => ['required', 'integer', 'min:1'],
             'is_active' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'modifiers' => ['nullable', 'array'],

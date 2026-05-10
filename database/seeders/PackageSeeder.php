@@ -67,7 +67,6 @@ class PackageSeeder extends Seeder
             // Resolve modifier IDs from Krypton by receipt_name.
             try {
                 $modifierMenus = Menu::whereIn('receipt_name', $def['codes'])
-                    ->where('is_modifier_only', true)
                     ->get()
                     ->keyBy('receipt_name');
 
