@@ -297,6 +297,8 @@ class PrinterPrintEventsTest extends TestCase
             'is_printed' => false,
         ]);
 
+        // Seed a legacy event explicitly so this test proves the disabled endpoint
+        // refuses to mutate state even if one is hit directly.
         $evt = PrintEvent::factory()->create([
             'device_order_id' => $order->id,
             'is_acknowledged' => false,
@@ -342,6 +344,8 @@ class PrinterPrintEventsTest extends TestCase
             'is_printed' => false,
         ]);
 
+        // Seed a legacy event explicitly so this test proves the disabled endpoint
+        // refuses to mutate state even if one is hit directly.
         $evt = PrintEvent::factory()->create([
             'device_order_id' => $order->id,
             'is_acknowledged' => false,

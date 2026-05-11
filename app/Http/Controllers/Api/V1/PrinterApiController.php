@@ -18,6 +18,7 @@ use App\Models\PrintEvent;
 use App\Services\PrintEventService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -485,7 +486,7 @@ class PrinterApiController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse|null
      */
-    protected function getPrintEventsDisabledResponseIfNeeded($request, string $action)
+    protected function getPrintEventsDisabledResponseIfNeeded(Request $request, string $action)
     {
         if ($this->printEventService->isEnabled()) {
             return null;
