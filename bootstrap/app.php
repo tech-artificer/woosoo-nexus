@@ -55,10 +55,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle.device' => \App\Http\Middleware\ThrottleByDevice::class,
         ]);
 
-        // Replace default CSRF middleware with our exemption-aware version
-        // This prevents 419 errors on API routes when session cookies are present
+        // Replace CSRF middleware with an exemption-aware variant.
+        // Exempt only stateless device-bootstrap API endpoints; keep CSRF
+        // enabled for session-authenticated web and API routes.
         $middleware->replace(
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
             \App\Http\Middleware\ApiCsrfExemption::class
         );
 
