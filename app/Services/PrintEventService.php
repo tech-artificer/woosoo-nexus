@@ -80,7 +80,7 @@ class PrintEventService
      * Acknowledge a PrintEvent in a concurrency-safe manner.
      * Performs a conditional update so multiple acks don't overwrite each other.
      *
-     * @return array{print_event: PrintEvent, was_updated: bool}
+     * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
      */
     public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null, ?int $acknowledgedByDeviceId = null, ?string $printerName = null, ?string $verificationMode = null): array
     {
@@ -147,7 +147,7 @@ class PrintEventService
     /**
      * Mark a PrintEvent as failed (increment attempts and store the error).
      *
-     * @return array{print_event: PrintEvent, was_updated: bool}
+     * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
      */
     public function fail(int $printEventId, ?string $error = null, ?int $acknowledgedByDeviceId = null): array
     {

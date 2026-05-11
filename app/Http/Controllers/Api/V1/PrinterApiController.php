@@ -18,6 +18,7 @@ use App\Models\PrintEvent;
 use App\Services\PrintEventService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -483,8 +484,7 @@ class PrinterApiController extends Controller
     /**
      * Return a disabled response when the PrintEvent runtime path is turned off.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse|null
+     * @return JsonResponse|null
      */
     protected function getPrintEventsDisabledResponseIfNeeded(Request $request, string $action)
     {

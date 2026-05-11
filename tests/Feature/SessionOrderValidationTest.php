@@ -81,7 +81,7 @@ class SessionOrderValidationTest extends TestCase
         $this->assertDatabaseCount('print_events', 0);
     }
 
-    public function test_print_event_is_created_when_feature_flag_is_enabled()
+    public function test_print_event_created_when_feature_flag_enabled()
     {
         config(['nexus.print_events_enabled' => true]);
 
