@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Branch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Tests\Traits\MocksKryptonSession;
@@ -28,7 +29,7 @@ class PrinterPrintEventsTest extends TestCase
     public function test_heartbeat_sets_cache()
     {
         // Create branch and device
-        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $branch = Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
         $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.1', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -46,7 +47,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_heartbeat_updates_device_last_seen_at()
     {
-        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $branch = Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
         $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.2', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -67,7 +68,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_heartbeat_updates_device_app_version()
     {
-        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $branch = Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
         $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.3', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -84,7 +85,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_heartbeat_updates_device_status()
     {
-        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $branch = Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
         $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.4', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -101,7 +102,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_heartbeat_rejects_device_id_mismatch()
     {
-        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $branch = Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
         $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.5', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -115,7 +116,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_heartbeat_rejects_invalid_status()
     {
-        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $branch = Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
         $device = Device::create(['name' => 'heartbeat-device', 'ip_address' => '127.0.0.6', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -143,7 +144,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_admin_can_query_online_devices_by_last_seen_at()
     {
-        $branch = \App\Models\Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
+        $branch = Branch::create(['name' => 'HB Branch', 'location' => 'Loc']);
         
         // Online device (seen recently)
         $onlineDevice = Device::create([
@@ -170,7 +171,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_polling_returns_only_unacked_events()
     {
-        $branch = \App\Models\Branch::create(['name' => 'PollBranch', 'location' => 'P']);
+        $branch = Branch::create(['name' => 'PollBranch', 'location' => 'P']);
         $device = Device::create(['name' => 'device-poll', 'ip_address' => '127.0.0.11', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -215,7 +216,7 @@ class PrinterPrintEventsTest extends TestCase
     {
         config(['nexus.print_events_enabled' => false]);
 
-        $branch = \App\Models\Branch::create(['name' => 'Disabled Poll Branch', 'location' => 'P']);
+        $branch = Branch::create(['name' => 'Disabled Poll Branch', 'location' => 'P']);
         $device = Device::create(['name' => 'device-disabled-poll', 'ip_address' => '127.0.0.91', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -230,7 +231,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_polling_respects_since_parameter()
     {
-        $branch = \App\Models\Branch::create(['name' => 'SinceBranch', 'location' => 'S']);
+        $branch = Branch::create(['name' => 'SinceBranch', 'location' => 'S']);
         $device = Device::create(['name' => 'device-since', 'ip_address' => '127.0.0.12', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -278,7 +279,7 @@ class PrinterPrintEventsTest extends TestCase
     {
         config(['nexus.print_events_enabled' => false]);
 
-        $branch = \App\Models\Branch::create(['name' => 'Disabled Ack Branch', 'location' => 'A']);
+        $branch = Branch::create(['name' => 'Disabled Ack Branch', 'location' => 'A']);
         $device = Device::create(['name' => 'device-disabled-ack', 'ip_address' => '127.0.0.92', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
         $sessionId = $this->createTestSession();
@@ -325,7 +326,7 @@ class PrinterPrintEventsTest extends TestCase
     {
         config(['nexus.print_events_enabled' => false]);
 
-        $branch = \App\Models\Branch::create(['name' => 'Disabled Fail Branch', 'location' => 'F']);
+        $branch = Branch::create(['name' => 'Disabled Fail Branch', 'location' => 'F']);
         $device = Device::create(['name' => 'device-disabled-fail', 'ip_address' => '127.0.0.93', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
         $sessionId = $this->createTestSession();
@@ -369,7 +370,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_polling_alias_route_works()
     {
-        $branch = \App\Models\Branch::create(['name' => 'AliasBranch', 'location' => 'A']);
+        $branch = Branch::create(['name' => 'AliasBranch', 'location' => 'A']);
         $device = Device::create(['name' => 'device-alias', 'ip_address' => '127.0.0.13', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
@@ -419,7 +420,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_device_uuid_immutable()
     {
-        $branch = \App\Models\Branch::create(['name' => 'UuidBranch', 'location' => 'U']);
+        $branch = Branch::create(['name' => 'UuidBranch', 'location' => 'U']);
         $device = Device::create(['name' => 'device-uuid', 'ip_address' => '127.0.0.14', 'branch_id' => $branch->id]);
 
         $this->expectException(\Exception::class);
@@ -432,7 +433,7 @@ class PrinterPrintEventsTest extends TestCase
     public function test_ack_forbidden_for_wrong_device_branch()
     {
         // Branch A with order/event
-        $branchA = \App\Models\Branch::create(['name' => 'A', 'location' => 'A']);
+        $branchA = Branch::create(['name' => 'A', 'location' => 'A']);
         $deviceA = Device::create(['name' => 'device-a', 'ip_address' => '1.2.3.4', 'branch_id' => $branchA->id]);
 
         $sessionId = $this->createTestSession();
@@ -454,7 +455,7 @@ class PrinterPrintEventsTest extends TestCase
         $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
 
         // Branch B device (unauthorized)
-        $branchB = \App\Models\Branch::create(['name' => 'B', 'location' => 'B']);
+        $branchB = Branch::create(['name' => 'B', 'location' => 'B']);
         $deviceB = Device::create(['name' => 'device-b', 'ip_address' => '5.6.7.8', 'branch_id' => $branchB->id]);
         $tokenB = $deviceB->createToken('device-auth')->plainTextToken;
 
@@ -466,7 +467,7 @@ class PrinterPrintEventsTest extends TestCase
 
     public function test_ack_success_and_idempotent()
     {
-        $branch = \App\Models\Branch::create(['name' => 'BranchX', 'location' => 'X']);
+        $branch = Branch::create(['name' => 'BranchX', 'location' => 'X']);
         $device = Device::create(['name' => 'device-x', 'ip_address' => '1.2.3.5', 'branch_id' => $branch->id]);
         $token = $device->createToken('device-auth')->plainTextToken;
 
