@@ -212,7 +212,7 @@ class PrinterPrintEventsTest extends TestCase
         $this->assertNotContains($acked->id, $eventIds);
     }
 
-    public function test_polling_returns_disabled_response_when_feature_flag_is_off()
+    public function test_polling_returns_disabled_response_when_print_events_disabled()
     {
         config(['nexus.print_events_enabled' => false]);
 
@@ -275,7 +275,7 @@ class PrinterPrintEventsTest extends TestCase
         $this->assertContains($newEvent->id, $eventIds);
     }
 
-    public function test_ack_returns_disabled_response_without_mutating_event_when_feature_flag_is_off()
+    public function test_ack_returns_disabled_response_without_mutating_event_when_print_events_disabled()
     {
         config(['nexus.print_events_enabled' => false]);
 
@@ -322,7 +322,7 @@ class PrinterPrintEventsTest extends TestCase
         $this->assertFalse((bool) $order->is_printed);
     }
 
-    public function test_fail_returns_disabled_response_without_mutating_event_when_feature_flag_is_off()
+    public function test_fail_returns_disabled_response_without_mutating_event_when_print_events_disabled()
     {
         config(['nexus.print_events_enabled' => false]);
 
