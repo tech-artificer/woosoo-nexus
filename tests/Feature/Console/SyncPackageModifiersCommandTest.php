@@ -77,6 +77,9 @@ class SyncPackageModifiersCommandTest extends TestCase
 
     private function seedPosMenus(): void
     {
+        // The command reuses the same modifier codes across multiple packages
+        // (e.g. P1-P5 appear in all three package definitions), so 21 unique
+        // POS modifier menus expand into 33 package_modifiers rows after sync.
         $receiptCodes = [
             'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
             'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',

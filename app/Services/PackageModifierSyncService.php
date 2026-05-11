@@ -6,7 +6,6 @@ use App\Models\Krypton\Menu;
 use App\Models\Package;
 use App\Models\PackageModifier;
 use App\Support\PackageModifierCatalog;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class PackageModifierSyncService
@@ -93,10 +92,11 @@ class PackageModifierSyncService
     private function resolveModifiers(int $packageId, array $codes): array
     {
         $menus = Menu::query()
-            ->whereIn(DB::raw('UPPER(receipt_name)'), array_map('strtoupper', $codes))
+            ->whereIn('receipt_name', array_map('strtoupper', $codes))
             ->where('is_modifier_only', true)
             ->get()
-            ->keyBy(static fn (Menu $menu): string => strtoupper((string) $menu->receipt_name));
+            ->filter(static fn (Menu $menu): bool => is_string($menu->receipt_name) && $menu->receipt_name !== '')
+            ->keyBy(static fn (Menu $menu): string => strtoupper($menu->receipt_name));
 
         $modifiers = [];
         $missingCodes = [];
