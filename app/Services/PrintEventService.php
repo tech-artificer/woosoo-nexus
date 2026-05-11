@@ -5,16 +5,38 @@ namespace App\Services;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PrintEventService
 {
+    public function isEnabled(): bool
+    {
+        return (bool) config('nexus.print_events_enabled', false);
+    }
+
+    public function disabledReason(): string
+    {
+        return 'PrintEvent flow is disabled because woosoo-print-bridge is primary.';
+    }
+
     /**
      * Create a print event for a DeviceOrder.
      */
     public function createForOrder(DeviceOrder $deviceOrder, string $eventType, array $meta = []): ?PrintEvent
     {
+        if (! $this->isEnabled()) {
+            Log::info($this->disabledReason(), [
+                'action' => 'create',
+                'device_order_id' => $deviceOrder->id,
+                'order_id' => $deviceOrder->order_id,
+                'event_type' => $eventType,
+            ]);
+
+            return null;
+        }
+
         // Treat `session_id` as device-local. Do not consult POS sessions here.
         // Always create print events for device orders; session scoping is handled client-side.
 
@@ -58,7 +80,7 @@ class PrintEventService
      * Acknowledge a PrintEvent in a concurrency-safe manner.
      * Performs a conditional update so multiple acks don't overwrite each other.
      *
-     * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
+     * @return array{print_event: PrintEvent, was_updated: bool}
      */
     public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null, ?int $acknowledgedByDeviceId = null, ?string $printerName = null, ?string $verificationMode = null): array
     {
@@ -70,7 +92,7 @@ class PrintEventService
 
             if (! $evt) {
                 // Caller expects an exception-like behavior similar to findOrFail.
-                throw new \Illuminate\Database\Eloquent\ModelNotFoundException("PrintEvent not found: {$printEventId}");
+                throw new ModelNotFoundException("PrintEvent not found: {$printEventId}");
             }
 
             // If already acknowledged, do not modify attempts or timestamps.
@@ -103,7 +125,7 @@ class PrintEventService
 
             // Propagate printed status to the associated device order
             // so clients have a consistent source of truth on the order.
-            /** @var \App\Models\DeviceOrder|null $order */
+            /** @var DeviceOrder|null $order */
             $order = $evt->deviceOrder;
             if ($order) {
                 // Do not overwrite existing printed_at if present; use latest ack time if empty
@@ -125,7 +147,7 @@ class PrintEventService
     /**
      * Mark a PrintEvent as failed (increment attempts and store the error).
      *
-     * @return array{print_event: \App\Models\PrintEvent, was_updated: bool}
+     * @return array{print_event: PrintEvent, was_updated: bool}
      */
     public function fail(int $printEventId, ?string $error = null, ?int $acknowledgedByDeviceId = null): array
     {
@@ -133,7 +155,7 @@ class PrintEventService
             $evt = PrintEvent::where('id', $printEventId)->lockForUpdate()->first();
 
             if (! $evt) {
-                throw new \Illuminate\Database\Eloquent\ModelNotFoundException("PrintEvent not found: {$printEventId}");
+                throw new ModelNotFoundException("PrintEvent not found: {$printEventId}");
             }
 
             // Do not mark as failed if already acknowledged/printed.

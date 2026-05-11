@@ -22,6 +22,13 @@ class PrintEventBroadcastContractTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['nexus.print_events_enabled' => true]);
+    }
+
     /**
      * Test that PrintOrder event includes all required flat fields
      * for relay device consumption.

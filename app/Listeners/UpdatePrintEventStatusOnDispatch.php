@@ -16,7 +16,15 @@ class UpdatePrintEventStatusOnDispatch implements ShouldQueue
     public function handle(PrintOrder $event): void
     {
         $deviceOrder = $event->deviceOrder;
-        if (!$deviceOrder) {
+        if (! $deviceOrder) {
+            return;
+        }
+
+        if (! config('nexus.print_events_enabled', false)) {
+            Log::info('Skipping PrintEvent status update because woosoo-print-bridge is primary.', [
+                'device_order_id' => $deviceOrder->id,
+            ]);
+
             return;
         }
 
@@ -25,10 +33,11 @@ class UpdatePrintEventStatusOnDispatch implements ShouldQueue
             ->latest('id')
             ->first();
 
-        if (!$printEvent) {
+        if (! $printEvent) {
             Log::warning('No print event found for device order', [
                 'device_order_id' => $deviceOrder->id,
             ]);
+
             return;
         }
 

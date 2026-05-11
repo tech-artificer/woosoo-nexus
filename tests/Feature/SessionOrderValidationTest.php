@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Device;
 use App\Models\Branch;
 use App\Models\Krypton\Menu;
+use App\Models\PrintEvent;
 use App\Services\Krypton\OrderService;
 use PDOException;
 
@@ -77,10 +78,13 @@ class SessionOrderValidationTest extends TestCase
         $this->assertTrue($response->json('success'));
         $this->assertArrayHasKey('order', $response->json());
         $this->assertSame(1, $response->json('order.guest_count'));
+        $this->assertDatabaseCount('print_events', 0);
     }
 
-    public function test_print_event_skipped_for_closed_session()
+    public function test_print_event_can_still_be_created_when_feature_flag_is_enabled()
     {
+        config(['nexus.print_events_enabled' => true]);
+
         // Mock active Krypton session for this test
         $this->mockActiveKryptonSession();
 
@@ -118,6 +122,7 @@ class SessionOrderValidationTest extends TestCase
         // Since sessions are device-local, print events should be created.
         $this->assertNotNull($res);
         $this->assertDatabaseHas('print_events', ['device_order_id' => $deviceOrder->id]);
+        $this->assertSame(1, PrintEvent::query()->count());
     }
 
     public function test_order_creation_fails_without_active_krypton_session()

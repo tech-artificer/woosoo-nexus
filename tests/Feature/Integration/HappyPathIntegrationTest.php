@@ -42,6 +42,8 @@ class HappyPathIntegrationTest extends TestCase
     {
         parent::setUp();
 
+        config(['nexus.print_events_enabled' => true]);
+
         $this->mockActiveKryptonSession();
 
         $this->branch = Branch::create(['name' => 'Main Branch', 'location' => 'HQ']);

@@ -18,6 +18,8 @@ class PrinterPrintEventsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        config(['nexus.print_events_enabled' => true]);
         
         // Mock active Krypton session for all tests
         $this->mockActiveKryptonSession();
@@ -209,6 +211,23 @@ class PrinterPrintEventsTest extends TestCase
         $this->assertNotContains($acked->id, $eventIds);
     }
 
+    public function test_polling_returns_disabled_response_when_feature_flag_is_off()
+    {
+        config(['nexus.print_events_enabled' => false]);
+
+        $branch = \App\Models\Branch::create(['name' => 'Disabled Poll Branch', 'location' => 'P']);
+        $device = Device::create(['name' => 'device-disabled-poll', 'ip_address' => '127.0.0.91', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/printer/unprinted-events')
+            ->assertStatus(503)
+            ->assertJson([
+                'success' => false,
+                'message' => 'PrintEvent flow is disabled because woosoo-print-bridge is primary.',
+            ]);
+    }
+
     public function test_polling_respects_since_parameter()
     {
         $branch = \App\Models\Branch::create(['name' => 'SinceBranch', 'location' => 'S']);
@@ -253,6 +272,95 @@ class PrinterPrintEventsTest extends TestCase
         $eventIds = collect($resp->json('events'))->pluck('id')->all();
         $this->assertNotContains($oldEvent->id, $eventIds);
         $this->assertContains($newEvent->id, $eventIds);
+    }
+
+    public function test_ack_returns_disabled_response_without_mutating_event_when_feature_flag_is_off()
+    {
+        config(['nexus.print_events_enabled' => false]);
+
+        $branch = \App\Models\Branch::create(['name' => 'Disabled Ack Branch', 'location' => 'A']);
+        $device = Device::create(['name' => 'device-disabled-ack', 'ip_address' => '127.0.0.92', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 92929,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 2,
+            'total' => 20,
+            'subtotal' => 20,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create([
+            'device_order_id' => $order->id,
+            'is_acknowledged' => false,
+            'attempts' => 0,
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/printer/print-events/' . $evt->id . '/ack', ['printer_id' => 'PR-DISABLED'])
+            ->assertStatus(503)
+            ->assertJson([
+                'success' => false,
+                'message' => 'PrintEvent flow is disabled because woosoo-print-bridge is primary.',
+            ]);
+
+        $evt->refresh();
+        $order->refresh();
+
+        $this->assertFalse($evt->is_acknowledged);
+        $this->assertSame(0, $evt->attempts);
+        $this->assertFalse((bool) $order->is_printed);
+    }
+
+    public function test_fail_returns_disabled_response_without_mutating_event_when_feature_flag_is_off()
+    {
+        config(['nexus.print_events_enabled' => false]);
+
+        $branch = \App\Models\Branch::create(['name' => 'Disabled Fail Branch', 'location' => 'F']);
+        $device = Device::create(['name' => 'device-disabled-fail', 'ip_address' => '127.0.0.93', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 93939,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 2,
+            'total' => 20,
+            'subtotal' => 20,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create([
+            'device_order_id' => $order->id,
+            'is_acknowledged' => false,
+            'attempts' => 0,
+            'last_error' => null,
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/printer/print-events/' . $evt->id . '/failed', ['error' => 'Printer offline'])
+            ->assertStatus(503)
+            ->assertJson([
+                'success' => false,
+                'message' => 'PrintEvent flow is disabled because woosoo-print-bridge is primary.',
+            ]);
+
+        $evt->refresh();
+        $this->assertSame(0, $evt->attempts);
+        $this->assertNull($evt->last_error);
+        $this->assertFalse($evt->is_acknowledged);
     }
 
     public function test_polling_alias_route_works()

@@ -11,15 +11,17 @@ use App\Http\Requests\GetUnprintedOrdersRequest;
 use App\Http\Requests\MarkOrderPrintedBulkRequest;
 use App\Http\Requests\MarkOrderPrintedRequest;
 use App\Http\Requests\PrinterHeartbeatRequest;
-use App\Models\DeviceOrder;
+use App\Models\Device;
 // TerminalSession checks removed; sessions are device-local
+use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
 use App\Services\PrintEventService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PrinterApiController extends Controller
 {
@@ -37,7 +39,7 @@ class PrinterApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Order not found', 'data' => null], 404);
         }
 
-        /** @var \App\Models\DeviceOrder $deviceOrder */
+        /** @var DeviceOrder $deviceOrder */
 
         // Ensure the authenticated device is allowed to operate on this order (branch-level check)
         $device = Auth::user();
@@ -209,6 +211,10 @@ class PrinterApiController extends Controller
      */
     public function getUnprintedEvents(GetUnprintedOrdersRequest $request)
     {
+        if ($response = $this->printEventsDisabledResponse($request, 'poll')) {
+            return $response;
+        }
+
         $limitInput = (int) $request->input('limit', 100);
         $limit = max(1, min($limitInput, 200));
         $since = $request->input('since');
@@ -296,6 +302,10 @@ class PrinterApiController extends Controller
      */
     public function ackPrintEvent(AckPrintEventRequest $request, int $id)
     {
+        if ($response = $this->printEventsDisabledResponse($request, 'ack')) {
+            return $response;
+        }
+
         Log::info("[ACK] Received request for print_event_id=$id", [
             'ip' => $request->ip(),
             'payload' => $request->all(),
@@ -303,8 +313,8 @@ class PrinterApiController extends Controller
 
         // Optional auth for relay device emergency mode
         $device = Auth::guard('device')->user();
-        
-        Log::info("[ACK] Device auth status", [
+
+        Log::info('[ACK] Device auth status', [
             'authenticated' => $device !== null,
             'device_id' => $device?->id,
             'device_name' => $device?->name,
@@ -319,22 +329,23 @@ class PrinterApiController extends Controller
 
         try {
             $evt = $this->printEventService->getById($id);
-            Log::info("[ACK] PrintEvent found", [
+            Log::info('[ACK] PrintEvent found', [
                 'print_event_id' => $evt->id,
                 'order_id' => $evt->device_order_id,
                 'already_acked' => $evt->is_acknowledged,
             ]);
         } catch (\Throwable $e) {
             Log::error("[ACK] PrintEvent not found: $id", ['error' => $e->getMessage()]);
+
             return response()->json(['success' => false, 'message' => 'Event not found'], 404);
         }
 
         // Authorize device for this event (passes device for branch check)
         try {
             $this->authorizeDeviceForEvent($evt, $device);
-            Log::info("[ACK] Authorization passed");
+            Log::info('[ACK] Authorization passed');
         } catch (\Throwable $e) {
-            Log::error("[ACK] Authorization failed", [
+            Log::error('[ACK] Authorization failed', [
                 'print_event_id' => $id,
                 'device_id' => $device?->id,
                 'error' => $e->getMessage(),
@@ -344,7 +355,8 @@ class PrinterApiController extends Controller
 
         // Check idempotency: if already acknowledged, return success with was_updated=false
         if ($evt->is_acknowledged) {
-            Log::info("[ACK] Already acknowledged, returning success");
+            Log::info('[ACK] Already acknowledged, returning success');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Already acknowledged',
@@ -368,7 +380,7 @@ class PrinterApiController extends Controller
             if ($appVersion) {
                 $device->app_version = $appVersion;
             }
-            /** @var \App\Models\Device $device */
+            /** @var Device $device */
             $device->save();
         }
 
@@ -388,6 +400,10 @@ class PrinterApiController extends Controller
      */
     public function failPrintEvent(FailPrintEventRequest $request, int $id)
     {
+        if ($response = $this->printEventsDisabledResponse($request, 'fail')) {
+            return $response;
+        }
+
         // Optional auth for relay device emergency mode
         $device = Auth::guard('device')->user();
 
@@ -424,7 +440,7 @@ class PrinterApiController extends Controller
         if ($appVersion) {
             $device->app_version = $appVersion;
         }
-        /** @var \App\Models\Device $device */
+        /** @var Device $device */
         $device->save();
 
         return response()->json([
@@ -463,10 +479,30 @@ class PrinterApiController extends Controller
         return true;
     }
 
+    protected function printEventsDisabledResponse($request, string $action)
+    {
+        if ($this->printEventService->isEnabled()) {
+            return null;
+        }
+
+        $device = Auth::guard('device')->user();
+
+        Log::info($this->printEventService->disabledReason(), [
+            'action' => $action,
+            'path' => $request->path(),
+            'device_id' => $device?->id,
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => $this->printEventService->disabledReason(),
+        ], 503);
+    }
+
     public function heartbeat(PrinterHeartbeatRequest $request)
     {
         $device = Auth::user();  // Authenticated device from token
-        /** @var \Illuminate\Database\Eloquent\Model $device */
+        /** @var Model $device */
 
         // Validate device_id mismatch (if provided in payload).
         // Cast both sides to string: Flutter sends device_id as a JSON string ("3"),

@@ -151,6 +151,7 @@ class OrderRefillTest extends TestCase
         ])->postJson('/api/order/1001/refill', $payload);
 
         $response->assertStatus(200)->assertJson(['success' => true]);
+        $this->assertDatabaseCount('print_events', 0);
 
         // Verify local device_order_items persisted (ordered_menu_id should equal menu_id)
         // Note: order_id column stores DeviceOrder->id, not DeviceOrder->order_id
@@ -281,6 +282,8 @@ class OrderRefillTest extends TestCase
 
     public function test_refill_endpoint_creates_only_one_print_event(): void
     {
+        config(['nexus.print_events_enabled' => true]);
+
         Branch::create(['name' => 'Main', 'location' => 'HQ']);
 
         $device = Device::create([

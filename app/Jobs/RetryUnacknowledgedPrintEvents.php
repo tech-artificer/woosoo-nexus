@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\PrintOrder;
 use App\Models\PrintEvent;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -16,6 +17,12 @@ class RetryUnacknowledgedPrintEvents implements ShouldQueue
 
     public function handle(): void
     {
+        if (! config('nexus.print_events_enabled', false)) {
+            Log::info('Skipping PrintEvent retry because woosoo-print-bridge is primary.');
+
+            return;
+        }
+
         // Find events broadcast more than 2 minutes ago with no ack and still retryable.
         // NOTE: retry_count = backend re-broadcast counter.
         //       attempts     = device-ack counter (distinct — do NOT conflate).
@@ -28,21 +35,21 @@ class RetryUnacknowledgedPrintEvents implements ShouldQueue
                     $event->increment('retry_count');
 
                     if ($event->deviceOrder) {
-                        event(new \App\Events\PrintOrder($event->deviceOrder));
+                        event(new PrintOrder($event->deviceOrder));
                         // Reset broadcast_at to now() so the 2-minute cooldown window is
                         // enforced between each successive retry attempt, not just the first.
                         $event->update(['broadcast_at' => now()]);
                         Log::info('[RetryPrint] Re-broadcast print event', [
                             'print_event_id' => $event->id,
-                            'retry_count'    => $event->retry_count,
-                            'device_order_id'=> $event->device_order_id,
+                            'retry_count' => $event->retry_count,
+                            'device_order_id' => $event->device_order_id,
                         ]);
                     } else {
                         // Reset cooldown for orphaned events to enforce 2-minute window
                         $event->update(['broadcast_at' => now()]);
                         Log::info('[RetryPrint] Skipped orphaned print event (no deviceOrder)', [
                             'print_event_id' => $event->id,
-                            'retry_count'    => $event->retry_count,
+                            'retry_count' => $event->retry_count,
                         ]);
                     }
                 }
