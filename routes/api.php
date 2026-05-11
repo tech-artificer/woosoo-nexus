@@ -124,12 +124,13 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(funct
         // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
         Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
     });
+
+    // Device registration — must be guest-accessible for new devices
+    // Rate limit: 10 requests per minute (prevents brute force)
+    Route::middleware('throttle:10,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
 });
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'api'])->group(function () {
-    // Rate limit: 10 requests per minute for device registration (prevents brute force)
-    Route::middleware('throttle:10,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
-    
     // Menu endpoints: 300 requests per minute (generous for busy tablets)
     Route::middleware('throttle:300,1')->group(function () {
         Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
