@@ -55,6 +55,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle.device' => \App\Http\Middleware\ThrottleByDevice::class,
         ]);
 
+        // Replace default CSRF middleware with our exemption-aware version
+        // This prevents 419 errors on API routes when session cookies are present
+        $middleware->replace(
+            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+            \App\Http\Middleware\ApiCsrfExemption::class
+        );
+
         // Enable stateful API for web admin (Inertia + Sanctum session auth)
         // Device API still uses Bearer tokens via auth:device guard.
         $middleware->statefulApi();
