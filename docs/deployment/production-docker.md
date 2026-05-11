@@ -144,6 +144,8 @@ docker compose logs -f reverb
 # Artisan commands
 docker compose exec app php artisan migrate:status
 docker compose exec app php artisan tinker
+docker compose exec app php artisan woosoo:sync-package-modifiers --dry-run
+docker compose exec app php artisan woosoo:sync-package-modifiers
 
 # Restart a single service
 docker compose restart reverb

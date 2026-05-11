@@ -5,6 +5,7 @@ namespace App\Models\Krypton;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use App\Support\PackageModifierCatalog;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -188,15 +189,7 @@ class Menu extends Model
      * @return string The CASE WHEN clause for orderByRaw()
      */
     public static function getModifiers(int $id) {
-        $codes = [
-            46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
-            47 => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
-            48 => [
-                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
-                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
-                'C1',
-            ],
-        ];
+        $codes = PackageModifierCatalog::modifierCodesByPackageId();
 
         if (! isset($codes[$id]) || empty($codes[$id])) {
             return collect();
@@ -212,18 +205,10 @@ class Menu extends Model
 
     public function getComputedModifiersAttribute()
     {
-        if (!in_array($this->id, [46, 47, 48])) {
+        if (! in_array($this->id, PackageModifierCatalog::packageIds(), true)) {
             return collect(); // Return empty collection if not a "package" menu
         }
-        $codes = [
-            46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
-            47 => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
-            48 => [
-                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
-                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
-                'C1',
-            ],
-        ];
+        $codes = PackageModifierCatalog::modifierCodesByPackageId();
 
         if (! isset($codes[$this->id]) || empty($codes[$this->id])) {
             return collect();
@@ -285,15 +270,7 @@ class Menu extends Model
         // Ensure $menuRows is a collection to avoid undefined variable errors
         $menuRows = collect($menuRows ?? []);
 
-        $codes = [
-            46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
-            47 => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
-            48 => [
-                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
-                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
-                'C1',
-            ],
-        ];
+        $codes = PackageModifierCatalog::modifierCodesByPackageId();
 
         // Fetch package menu models (if present locally)
         $packageIds = array_keys($codes);
