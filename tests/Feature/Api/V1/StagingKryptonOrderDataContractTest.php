@@ -236,7 +236,7 @@ class StagingKryptonOrderDataContractTest extends TestCase
 
         $device = $this->makeStagingDevice();
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Modifier 13 is not allowed for package 46');
 
         app(OrderService::class)->processOrder($device, [

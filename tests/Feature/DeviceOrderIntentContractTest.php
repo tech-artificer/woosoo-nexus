@@ -218,5 +218,23 @@ class DeviceOrderIntentContractTest extends TestCase
         $this->assertCount(2, $result['items'][0]['modifiers']);
         $this->assertEquals(10, $result['items'][0]['modifiers'][0]['menu_id']);
         $this->assertEquals(13, $result['items'][0]['modifiers'][1]['menu_id']);
+        $this->assertGreaterThan(0, $result['items'][0]['menu_id']);
+    }
+
+    public function test_expandIntentPayload_rejects_invalid_initial_payload(): void
+    {
+        $controller = new \App\Http\Controllers\Api\V1\DeviceOrderApiController();
+        $expand = new \ReflectionMethod($controller, 'expandIntentPayload');
+        $expand->setAccessible(true);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('package_id is required and must be greater than 0');
+
+        $expand->invoke($controller, [
+            'guest_count' => 3,
+            'items' => [
+                ['menu_id' => 10, 'quantity' => 2],
+            ],
+        ]);
     }
 }

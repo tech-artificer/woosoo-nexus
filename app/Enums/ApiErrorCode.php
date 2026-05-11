@@ -24,6 +24,7 @@ enum ApiErrorCode: string
     case SESSION_NOT_FOUND     = 'SESSION_NOT_FOUND';      // 404 — session record missing
     case PRINT_EVENT_NOT_FOUND = 'PRINT_EVENT_NOT_FOUND';  // 404 — print event record missing
     case DEVICE_INACTIVE       = 'DEVICE_INACTIVE';        // 403 — device account is suspended
+    case MENU_ITEM_UNAVAILABLE = 'MENU_ITEM_UNAVAILABLE';  // 422 — submitted menu_id not found in Krypton
 
     /**
      * Human-readable description for logging / support.
@@ -48,6 +49,7 @@ enum ApiErrorCode: string
             self::SESSION_NOT_FOUND    => 'No active session found for this device',
             self::PRINT_EVENT_NOT_FOUND => 'Print event record not found',
             self::DEVICE_INACTIVE      => 'Device account is inactive',
+            self::MENU_ITEM_UNAVAILABLE => 'One or more menu items are no longer available',
         };
     }
 }

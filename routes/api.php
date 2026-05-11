@@ -124,12 +124,13 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(funct
         // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
         Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
     });
+
+    // Device registration — must be guest-accessible for new devices
+    // Rate limit: 10 requests per minute (prevents brute force)
+    Route::middleware('throttle:10,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
 });
 
 Route::middleware([\App\Http\Middleware\RequestId::class, 'api'])->group(function () {
-    // Rate limit: 10 requests per minute for device registration (prevents brute force)
-    Route::middleware('throttle:10,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
-    
     // Menu endpoints: 300 requests per minute (generous for busy tablets)
     Route::middleware('throttle:300,1')->group(function () {
         Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
@@ -207,12 +208,15 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group
     Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
     Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
     
-    // Printer API routes (device-authenticated for branch isolation)
-    require __DIR__ . '/api_printer_routes.php';
-    
     // Order print endpoints for devices
     Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->name('api.order.printed');
     Route::get('/order/{orderId}/print', [OrderApiController::class, 'print'])->name('api.order.print');
+});
+
+// Printer API routes - allow guest access for emergency mode (optional auth)
+// The PrinterApiController handles optional auth for relay device emergency mode
+Route::middleware([\App\Http\Middleware\RequestId::class])->group(function () {
+    require __DIR__ . '/api_printer_routes.php';
 });
 
 // Device API v1 (device-only endpoints)

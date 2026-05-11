@@ -2,6 +2,7 @@
 
 namespace App\Actions\Order;
 
+use App\Exceptions\MenuItemUnavailableException;
 use App\Models\DeviceOrderItems;
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\OrderedMenu;
@@ -13,12 +14,8 @@ class CreateOrderedMenu
 {
     use AsAction;
 
-    public $orderedMenuId = null;
-
     public function handle(array $attr)
     {
-        $this->orderedMenuId = null;
-
         $menuItems = $attr['items'] ?? [];
         $expandedItems = [];
 
@@ -57,14 +54,37 @@ class CreateOrderedMenu
             }
         }
 
+        $allMenuIds = collect($expandedItems)
+            ->pluck('menu_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        try {
+            $menuModels = Menu::whereIn('id', $allMenuIds)->get()->keyBy('id');
+        } catch (\Throwable $e) {
+            report($e);
+            throw new \RuntimeException('Unable to validate Krypton menu items — POS connection failure.', 0, $e);
+        }
+
+        $missingIds = array_diff($allMenuIds, $menuModels->keys()->map(fn ($id) => (int) $id)->all());
+        if (! empty($missingIds)) {
+            throw MenuItemUnavailableException::forMissingIds($missingIds);
+        }
+
+        $activePackageMenuIds = Package::query()
+            ->whereIn('krypton_menu_id', $allMenuIds)
+            ->where('is_active', true)
+            ->pluck('krypton_menu_id')
+            ->map(fn ($id) => (int) $id)
+            ->flip();
+
         $created = [];
 
         foreach ($expandedItems as $key => $item) {
-            if ($key == 0) {
-                $this->orderedMenuId = $item['menu_id'];
-            }
-
-            $menuId = $item['menu_id'];
+            $menuId = (int) $item['menu_id'];
+            $menuModel = $menuModels->get($menuId);
             $quantity = intval($item['quantity'] ?? 1);
             $seatNumber = $item['seat_number'] ?? 1;
             $index = $item['index'] ?? ($key + 1);
@@ -74,19 +94,9 @@ class CreateOrderedMenu
             // in krypton_woosoo.menus. Always resolve the submitted menu_id
             // through POS so ordered_menus.menu_id, price, and display names
             // remain valid Krypton data instead of client-provided stubs.
-            $isPackageIndicator = $item['is_package'] ?? in_array($menuId, [46, 47, 48, 49]);
-            try {
-                $menuModel = Menu::find($menuId);
-            } catch (\Throwable $e) {
-                report($e);
-                $menuModel = null;
-            }
+            $isPackageIndicator = $item['is_package'] ?? $activePackageMenuIds->has($menuId);
 
-            if ($menuModel === null) {
-                throw new \RuntimeException("Menu item not found: {$menuId}");
-            }
-
-            $price = $menuModel->price ?? ($item['price'] ?? 0.00);
+            $price = $menuModel->price;
             $priceLevelId = $this->getMenuPriceLevel($menuId);
             $orderId = $attr['order_id'];
             $orderCheckId = $attr['order_check_id'] ?? null;
@@ -97,7 +107,7 @@ class CreateOrderedMenu
             $taxRate = config('api.krypton.tax_rate', 0.10);
             $taxAmount = round($totalItemPrice * $taxRate, 2);
             $subTotal = round($totalItemPrice + $taxAmount, 2);
-            $orderedMenu = $this->createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, $isPackageIndicator);
+            $orderedMenu = $this->createOrderedMenu($menuModel, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, $isPackageIndicator);
 
             $local = null;
             // Allow callers to opt-out of creating local mirror rows.
@@ -137,22 +147,9 @@ class CreateOrderedMenu
         return $created;
     }
 
-    protected function createOrderedMenu($menuId, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, bool $isPackageIndicator = false)
+    protected function createOrderedMenu(Menu $menu, $quantity, $seatNumber, $index, $note, $unitPrice, $priceLevelId, $orderId, $orderCheckId, $employeeLogId, bool $isPackageIndicator = false)
     {
-        if (app()->runningUnitTests() || app()->environment('testing') || env('APP_ENV') === 'testing') {
-            $menu = Menu::find($menuId);
-
-            if (! $menu) {
-                throw new \RuntimeException("Menu item not found: {$menuId}");
-            }
-        } else {
-            try {
-                $menu = Menu::findOrFail($menuId);
-            } catch (\Throwable $e) {
-                report($e);
-                throw $e;
-            }
-        }
+        $menuId = (int) $menu->getKey();
         $totalItemPrice = round($unitPrice * $quantity, 2);
         $taxAmount = round($totalItemPrice * config('api.krypton.tax_rate', 0.10), 2);
         $subTotal = round($totalItemPrice + $taxAmount, 2);
@@ -235,15 +232,10 @@ class CreateOrderedMenu
             return $fake;
         }
 
-        try {
-            $orderedMenu = OrderedMenu::fromQuery('CALL create_ordered_menu('.$placeholders.')', $params)->first();
-        } catch (\Throwable $e) {
-            report($e);
-            throw $e;
-        }
+        $orderedMenu = OrderedMenu::fromQuery('CALL create_ordered_menu('.$placeholders.')', $params)->first();
 
         if (! $orderedMenu) {
-            throw new \Exception('Failed to insert ordered menu.');
+            throw new \RuntimeException('Failed to insert ordered menu: stored procedure returned empty result');
         }
 
         // The stored proc may not write order_check_id / original_price — set them explicitly.
@@ -289,19 +281,22 @@ class CreateOrderedMenu
             ->first();
 
         if (! $package) {
-            return;
+            throw new \InvalidArgumentException("Package with krypton_menu_id {$packageMenuId} not found or inactive.", 422);
         }
 
         $allowedModifierIds = $package->modifiers()
             ->pluck('krypton_menu_id')
-            ->map(fn ($id) => (int) $id)
+            ->map(static fn ($id) => (int) $id)
             ->all();
 
         foreach ($modifiers as $modifier) {
             $modifierMenuId = (int) ($modifier['menu_id'] ?? 0);
+            if ($modifierMenuId <= 0) {
+                throw new \InvalidArgumentException("Invalid modifier: menu_id must be greater than 0.", 422);
+            }
 
-            if ($modifierMenuId > 0 && ! in_array($modifierMenuId, $allowedModifierIds, true)) {
-                throw new \RuntimeException("Modifier {$modifierMenuId} is not allowed for package {$packageMenuId}");
+            if (! in_array($modifierMenuId, $allowedModifierIds, true)) {
+                throw new \InvalidArgumentException("Modifier {$modifierMenuId} is not allowed for package {$packageMenuId}.", 422);
             }
         }
     }

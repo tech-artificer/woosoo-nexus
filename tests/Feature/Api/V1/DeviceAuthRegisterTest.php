@@ -156,4 +156,17 @@ class DeviceAuthRegisterTest extends TestCase
         $this->assertNull($updatedDevice?->security_code);
         $this->assertNotNull($updatedDevice?->last_seen_at);
     }
+
+    public function test_register_with_session_cookies_does_not_return_419(): void
+    {
+        $response = $this
+            ->withCookie('laravel_session', 'dummy-session')
+            ->withCookie('XSRF-TOKEN', 'dummy-xsrf')
+            ->postJson('/api/devices/register', [
+                'name' => 'Cookie Tablet',
+                'app_version' => '1.0.0',
+            ]);
+
+        $response->assertStatus(422);
+    }
 }

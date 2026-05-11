@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApiCsrfExemption;
 use App\Support\PublicOrigin;
 use Laravel\Sanctum\Sanctum;
 
@@ -90,7 +91,7 @@ return [
     'middleware' => [
         'authenticate_session' => Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
         'encrypt_cookies' => Illuminate\Cookie\Middleware\EncryptCookies::class,
-        'validate_csrf_token' => Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+        'validate_csrf_token' => ApiCsrfExemption::class,
     ],
 
 ];

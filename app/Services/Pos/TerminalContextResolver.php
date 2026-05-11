@@ -48,6 +48,37 @@ class TerminalContextResolver
             ->where('terminal_id', $terminalId)
             ->first();
 
+        // Look up cash tray session for the current session and terminal
+        $cashTraySession = null;
+        if ($session && $terminalSession) {
+            $cashTraySession = DB::connection('pos')
+                ->table('cash_tray_sessions')
+                ->where('session_id', $session->id)
+                ->where('terminal_session_id', $terminalSession->id)
+                ->whereNull('date_time_closed')
+                ->orderByDesc('id')
+                ->first();
+
+            // Fallback: any open cash tray for this session
+            if (! $cashTraySession) {
+                $cashTraySession = DB::connection('pos')
+                    ->table('cash_tray_sessions')
+                    ->where('session_id', $session->id)
+                    ->whereNull('date_time_closed')
+                    ->orderByDesc('id')
+                    ->first();
+            }
+
+            // Final fallback: most recent cash tray for this session
+            if (! $cashTraySession) {
+                $cashTraySession = DB::connection('pos')
+                    ->table('cash_tray_sessions')
+                    ->where('session_id', $session->id)
+                    ->orderByDesc('id')
+                    ->first();
+            }
+        }
+
         return [
             'session_id'          => (int) ($session->id ?? 0),
             'terminal_session_id' => $terminalSession ? (int) $terminalSession->id : null,
@@ -56,7 +87,7 @@ class TerminalContextResolver
             'revenue_id'          => (int) ($terminalService->revenue_id ?? 1),
             'service_type_id'     => (int) ($terminalService->service_type_id ?? 1),
             'terminal_service_id' => (int) ($terminalService->id ?? 1),
-            'cash_tray_session_id' => null,
+            'cash_tray_session_id' => $cashTraySession ? (int) $cashTraySession->id : null,
         ];
     }
 }

@@ -24,7 +24,6 @@ class PackageController extends Controller
         try {
             $menuOptions = Menu::query()
                 ->select('id', 'name', 'receipt_name', 'is_modifier_only', 'is_available')
-                ->where('is_available', true)
                 ->orderBy('name')
                 ->limit(3000)
                 ->get()
