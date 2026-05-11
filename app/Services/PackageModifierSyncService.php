@@ -89,7 +89,7 @@ class PackageModifierSyncService
      * @param array<int, string> $codes
      * @return array<int, array{krypton_menu_id:int,sort_order:int,receipt_name:string}>
      */
-    private function resolveModifiers(int $packageId, array $codes): array
+    private function resolveModifiers(int $kryptonMenuId, array $codes): array
     {
         $uppercaseCodes = array_map('strtoupper', $codes);
 
@@ -97,6 +97,8 @@ class PackageModifierSyncService
             ->whereIn('receipt_name', $uppercaseCodes)
             ->where('is_modifier_only', true)
             ->get()
+            // Guard against unexpected blank receipt codes from legacy POS data
+            // before we key the collection by normalized receipt_name.
             ->filter(static fn (Menu $menu): bool => is_string($menu->receipt_name) && $menu->receipt_name !== '')
             ->keyBy(static fn (Menu $menu): string => strtoupper($menu->receipt_name));
 
@@ -121,7 +123,7 @@ class PackageModifierSyncService
         if ($missingCodes !== []) {
             throw new RuntimeException(sprintf(
                 'Package %d is missing modifier menu rows for receipt code(s): %s',
-                $packageId,
+                $kryptonMenuId,
                 implode(', ', $missingCodes)
             ));
         }
