@@ -110,6 +110,7 @@ class PosOrderService
                     ->update([
                         'is_voided'         => 1,
                         'date_time_voided'  => $now,
+                        'date_time_closed'  => $now,
                     ]);
 
                 $this->tableService->syncTablesForOrderClosure($orderId);
