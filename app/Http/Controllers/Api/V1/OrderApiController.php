@@ -17,7 +17,7 @@ use App\Models\Krypton\Menu as KryptonMenu;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\PrintEventService;
 use App\Services\PrintTicketService;
-use App\Services\RefillSubmissionService;
+use App\Services\DurableRefillGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -183,7 +183,7 @@ class OrderApiController extends Controller
     public function refill(RefillOrderRequest $request, int $orderId)
     {
         $clientSubmissionId = $request->input('client_submission_id');
-        $refillSubmissionService = app(RefillSubmissionService::class);
+        $refillGuard = app(DurableRefillGuard::class);
 
         Log::info('[REFILL] Received refill request', [
             'order_id' => $orderId,
@@ -230,32 +230,30 @@ class OrderApiController extends Controller
 
         // === DURABLE IDEMPOTENCY GUARD ===
         // Check for existing submission or acquire lock
-        $submissionResult = $refillSubmissionService->acquireOrFindSubmission($device, $deviceOrder, $clientSubmissionId);
-        
-        if ($submissionResult['status'] === 'completed') {
-            // Return cached response
+        $guardResult = $refillGuard->guard($device, $deviceOrder, $clientSubmissionId);
+
+        // Already completed - return cached response
+        if (!$guardResult['proceed'] && $guardResult['response']) {
             Log::info('[REFILL] Returning cached completed response', [
                 'device_id' => $device->id,
                 'order_id' => $orderId,
                 'client_submission_id' => $clientSubmissionId,
             ]);
-            return response()->json(
-                $submissionResult['response'] ?? ['success' => true, 'message' => 'Refill request replayed'],
-                200,
-                ['X-Idempotent-Replay' => 'true', 'X-Refill-Status' => 'COMPLETED']
-            );
+            return $guardResult['response'];
         }
 
-        if ($submissionResult['status'] === 'conflict') {
-            // Already processing
+        // Currently processing - return 409
+        if (!$guardResult['proceed'] && !$guardResult['response']) {
             return response()->json([
                 'success' => false,
                 'message' => 'Duplicate refill request already processing',
-                'submission_status' => $submissionResult['submission']->status,
+                'error' => [
+                    'code' => 'REFILL_IN_PROGRESS',
+                ],
             ], 409);
         }
 
-        $submission = $submissionResult['submission'];
+        $submission = $guardResult['submission'];
 
         // === STATE: PROCESSING → POS_CREATED ===
         // Map incoming items
@@ -292,7 +290,7 @@ class OrderApiController extends Controller
 
             if (! $menu) {
                 $menuRef = $it['menu_id'] ?? $name ?? 'unknown';
-                $refillSubmissionService->markFailed($submission, "Menu item not found: {$menuRef}");
+                $refillGuard->markFailed($submission, "Menu item not found: {$menuRef}");
                 return response()->json(['success' => false, 'message' => "Menu item not found: {$menuRef}"], 422);
             }
 
@@ -335,7 +333,7 @@ class OrderApiController extends Controller
             try {
                 $created = CreateOrderedMenu::run($attrs);
             } catch (\Throwable $e) {
-                $refillSubmissionService->markFailed($submission, $e->getMessage());
+                $refillGuard->markFailed($submission, $e->getMessage());
                 Log::error('[REFILL] POS insert failed', [
                     'device_id' => $device->id,
                     'order_id' => $orderId,
@@ -348,7 +346,7 @@ class OrderApiController extends Controller
             $posOrderedMenuIds = collect($created)->map(fn ($it) => is_array($it) ? ($it['id'] ?? null) : ($it->id ?? null))->filter()->values()->all();
             
             // Mark POS_CREATED state
-            $refillSubmissionService->markPosCreated($submission, $posOrderedMenuIds);
+            $refillGuard->markPosCreated($submission, $posOrderedMenuIds);
         }
 
         // Normalize created items for downstream processing
@@ -367,7 +365,7 @@ class OrderApiController extends Controller
 
         // Guard: if no items created in POS, nothing to mirror locally
         if (empty($posItems)) {
-            $refillSubmissionService->completeSubmission($submission, ['success' => true, 'created' => []]);
+            $refillGuard->markCompleted($submission, ['success' => true, 'created' => []]);
             return response()->json(['success' => true, 'created' => []]);
         }
 
@@ -441,7 +439,7 @@ class OrderApiController extends Controller
                         });
 
                         // Mark MIRRORED state
-                        $refillSubmissionService->markMirrored($submission);
+                        $refillGuard->markMirrored($submission);
                         $lastError = null;
                         break;
                     } catch (\Throwable $e) {
@@ -468,7 +466,7 @@ class OrderApiController extends Controller
                 // Client can retry and we'll resume from MIRRORED step
                 if ($lastError) {
                     // Mark as failed so client can retry
-                    $refillSubmissionService->markFailed($submission, "Local mirror failed: {$lastError}");
+                    $refillGuard->markFailed($submission, "Local mirror failed: {$lastError}");
                     return response()->json([
                         'success' => false,
                         'message' => 'Failed to persist refill locally',
@@ -480,9 +478,10 @@ class OrderApiController extends Controller
             }
 
             // Create print event if not already done
+            $printEvent = null;
             if ($submission->status !== 'PRINT_EVENT_CREATED' && $submission->status !== 'COMPLETED') {
                 try {
-                    DB::transaction(function () use ($deviceOrder, $posItems, $clientSubmissionId, $refillEventMeta) {
+                    DB::transaction(function () use ($deviceOrder, $posItems, $clientSubmissionId, $refillEventMeta, &$printEvent) {
                         $printTicketService = app(PrintTicketService::class);
                         $printEvent = $printTicketService->createRefillPrintEvent(
                             $deviceOrder,
@@ -495,7 +494,9 @@ class OrderApiController extends Controller
                     });
 
                     // Mark PRINT_EVENT_CREATED state
-                    $refillSubmissionService->markPrintEventCreated($submission);
+                    if ($printEvent) {
+                        $refillGuard->markPrintEventCreated($submission, $printEvent);
+                    }
                 } catch (\Throwable $e) {
                     Log::error('[REFILL] Print event creation failed', [
                         'submission_id' => $submission->id,
@@ -525,12 +526,12 @@ class OrderApiController extends Controller
                 'created' => $created,
             ];
 
-            $refillSubmissionService->completeSubmission($submission, $responseBody);
+            $refillGuard->markCompleted($submission, $responseBody);
 
             return response()->json($responseBody);
         } catch (\Throwable $th) {
             report($th);
-            $refillSubmissionService->markFailed($submission, $th->getMessage());
+            $refillGuard->markFailed($submission, $th->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to persist refill', 'error' => $th->getMessage()], 500);
         }
     }

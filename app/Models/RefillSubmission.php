@@ -37,15 +37,16 @@ class RefillSubmission extends Model
         'completed_at',
         'failed_at',
         'pos_ordered_menu_ids',
-        'cached_response',
-        'last_error',
+        'response_payload',
+        'error_message',
         'processing_started_at',
         'processing_lock_id',
+        'print_event_id',
     ];
 
     protected $casts = [
         'pos_ordered_menu_ids' => 'array',
-        'cached_response' => 'array',
+        'response_payload' => 'array',
         'pos_created_at' => 'datetime',
         'mirrored_at' => 'datetime',
         'print_event_created_at' => 'datetime',
@@ -152,5 +153,56 @@ class RefillSubmission extends Model
         }
         
         return $this->processing_started_at->diffInSeconds(now()) > $timeoutSeconds;
+    }
+
+    /**
+     * Check if submission can be replayed (completed with cached response)
+     */
+    public function canReplay(): bool
+    {
+        return $this->status === 'COMPLETED' && !empty($this->response_payload);
+    }
+
+    /**
+     * Get cached response payload
+     */
+    public function getCachedResponse(): ?array
+    {
+        if (empty($this->response_payload)) {
+            return null;
+        }
+        return [
+            'body' => $this->response_payload,
+            'status' => $this->response_status ?? 200,
+        ];
+    }
+
+    /**
+     * Record POS ordered_menu IDs
+     */
+    public function recordPosItems(array $orderedMenuIds): void
+    {
+        $this->pos_ordered_menu_ids = $orderedMenuIds;
+        $this->save();
+    }
+
+    /**
+     * Cache response payload for replay
+     */
+    public function cacheResponse(array $payload, int $status = 200): void
+    {
+        $this->response_payload = $payload;
+        $this->response_status = $status;
+        $this->save();
+    }
+
+    /**
+     * Mark as failed with error message
+     */
+    public function markAsFailed(string $errorMessage): void
+    {
+        $this->error_message = $errorMessage;
+        $this->transitionTo('FAILED');
+        $this->save();
     }
 }

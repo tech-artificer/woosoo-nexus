@@ -286,7 +286,7 @@ class RefillIdempotencyTest extends TestCase
         $this->submissionService->completeSubmission($result['submission'], $cachedResponse);
         
         $result['submission']->refresh();
-        $this->assertEquals($cachedResponse, $result['submission']->cached_response);
+        $this->assertEquals($cachedResponse, $result['submission']->response_payload);
     }
 
     /** @test */
@@ -367,8 +367,8 @@ class RefillIdempotencyTest extends TestCase
         $submission->refresh();
         $this->assertEquals('FAILED', $submission->status);
         $this->assertNotNull($submission->failed_at);
-        $this->assertNotNull($submission->last_error);
-        $this->assertStringContainsString('Connection timeout', $submission->last_error);
+        $this->assertNotNull($submission->error_message);
+        $this->assertStringContainsString('Connection timeout', $submission->error_message);
     }
 
     /** @test */
@@ -488,6 +488,6 @@ class RefillIdempotencyTest extends TestCase
         $this->assertTrue($this->submissionService->completeSubmission($result['submission'], $newResponse));
         
         $result['submission']->refresh();
-        $this->assertEquals($newResponse, $result['submission']->cached_response);
+        $this->assertEquals($newResponse, $result['submission']->response_payload);
     }
 }

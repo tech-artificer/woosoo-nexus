@@ -216,7 +216,7 @@ class DurableRefillGuard
     {
         try {
             $submission->refresh();
-            $submission->transitionTo('FAILED', $errorMessage);
+            $submission->markAsFailed($errorMessage);
 
             Log::warning('Refill submission marked FAILED', [
                 'submission_id' => $submission->id,
