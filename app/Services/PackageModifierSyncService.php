@@ -105,7 +105,7 @@ class PackageModifierSyncService
         $modifiers = [];
         $missingCodes = [];
 
-        foreach (array_values($codes) as $sortOrder => $code) {
+        foreach ($codes as $sortOrder => $code) {
             $menu = $menus->get(strtoupper($code));
 
             if (! $menu) {
@@ -114,7 +114,7 @@ class PackageModifierSyncService
             }
 
             $modifiers[] = [
-                'krypton_menu_id' => (int) $menu->getKey(),
+                'krypton_menu_id' => $menu->getKey(),
                 'sort_order' => $sortOrder,
                 'receipt_name' => $code,
             ];
