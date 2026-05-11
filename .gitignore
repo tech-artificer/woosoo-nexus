@@ -60,3 +60,24 @@ storage/logs/*.log
 /.claude/
 .git-backups/
 public/woosoo-ca.crt
+
+# Runtime log files
+admin-auth-test.log
+composer-direct.log
+composer-install.log
+composer-platform.log
+composer-system.log
+composer-system-platform.log
+
+# Local debug/utility scripts
+debug-csrf.php
+bi_processor.py
+fix_logging.py
+requirements.txt
+
+# Data/SQL dumps and sample files
+krypton_woosoo_bi_views.sql
+sample_drift_report.json
+
+# AI agent runtime files
+skills-lock.json

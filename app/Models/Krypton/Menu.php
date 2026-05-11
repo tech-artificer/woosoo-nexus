@@ -127,6 +127,7 @@ class Menu extends Model
             'beef-bulgogi' => 'beef-bulgogi.png',
             'candied-sweet-potato-goguma-mattang' => 'candied-sweet-potato-goguma-mattang.png',
             'citrus-burst-pepper-samgyupsal' => 'citrus-burst-pepper-samgyupsal.png',
+            'dak-galbi' => 'dak-galbi-plain-or-spicy.png',
             'dak-galbi-plain-or-spicy' => 'dak-galbi-plain-or-spicy.png',
             'gamja-jorim-korean-braised-baby-potatoes' => 'gamja-jorim-korean-braised-baby-potatoes.png',
             'golden-mushroom-beef-roll' => 'golden-mushroom-beef-roll.png',
@@ -141,7 +142,12 @@ class Menu extends Model
             'korean-pickled-radish' => 'korean-pickled-radish.png',
             'korean-potato-salad-gamja-salad' => 'korean-potato-salad-gamja-salad.png',
             'lettuce' => 'lettuce.png',
+            'moksal' => 'moksal-pork-neck.png',
             'moksal-pork-neck' => 'moksal-pork-neck.png',
+            'citrus-burst-woosamgyup' => 'asian-gochu-woosamgyup.png',
+            'secret-spice-samgyupsal' => 'samgyupsal.png',
+            'secret-spice-woosamgyup' => 'woosamgyup.png',
+            'spicy-sesame-woosamgyup' => 'woosamgyup.png',
             'pickled-cucumber' => 'pickled-cucumber.png',
             'plain-samgyupsal' => 'plain-samgyupsal.png',
             'samgyupsal' => 'samgyupsal.png',
@@ -233,9 +239,9 @@ class Menu extends Model
      * Uses a CASE expression for portability (SQLite test DB + MySQL runtime)
      * while preserving the exact incoming codeList order.
      *
-     * @param \\Illuminate\\Database\\Eloquent\\Builder $query
+     * @param \Illuminate\Database\Eloquent\Builder $query
      * @param array<int, string> $codeList
-     * @return \\Illuminate\\Database\\Eloquent\\Builder
+     * @return \Illuminate\Database\Eloquent\Builder
      */
     protected static function orderByReceiptCodeList(Builder $query, array $codeList): Builder
     {

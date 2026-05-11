@@ -159,12 +159,14 @@ return [
     'domain' => value(static function (): ?string {
         $domain = env('SESSION_DOMAIN');
 
+        // Allow null/empty to use request host (needed for IP-based local network access)
         if (! is_string($domain)) {
             return $domain ?: null;
         }
 
         $domain = trim($domain);
 
+        // Empty, 'null', or 'localhost' string means use request host
         return $domain === '' || strcasecmp($domain, 'null') === 0 ? null : $domain;
     }),
 
@@ -179,7 +181,8 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', true),
+    // Allow HTTP cookies for local network access (set SESSION_SECURE_COOKIE=true in production HTTPS)
+    'secure' => env('SESSION_SECURE_COOKIE', false),
 
     /*
     |--------------------------------------------------------------------------

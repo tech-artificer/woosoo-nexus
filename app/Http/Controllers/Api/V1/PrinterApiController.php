@@ -59,7 +59,13 @@ class PrinterApiController extends Controller
 
         $deviceOrder->is_printed = true;
         $printedAtInput = $request->input('printed_at');
-        $deviceOrder->printed_at = $printedAtInput ? Carbon::parse($printedAtInput)->utc() : Carbon::now()->utc();
+        // Fix: Client sends UTC timestamps (with Z suffix or +00:00), but app timezone is Asia/Manila.
+        // Parse the timestamp (respecting its embedded timezone), then convert to app timezone.
+        if ($printedAtInput) {
+            $deviceOrder->printed_at = Carbon::parse($printedAtInput)->setTimezone(config('app.timezone', 'Asia/Manila'));
+        } else {
+            $deviceOrder->printed_at = Carbon::now();
+        }
         $deviceOrder->printed_by = $request->input('printer_id');
         $deviceOrder->save();
 
@@ -156,7 +162,13 @@ class PrinterApiController extends Controller
     {
         $orderIds = $request->input('order_ids');
         $printedAtInput = $request->input('printed_at');
-        $printedAt = $printedAtInput ? Carbon::parse($printedAtInput)->utc() : Carbon::now()->utc();
+        // Fix: Client sends UTC timestamps, but app timezone is Asia/Manila.
+        // Parse the timestamp (respecting its embedded timezone), then convert to app timezone.
+        if ($printedAtInput) {
+            $printedAt = Carbon::parse($printedAtInput)->setTimezone(config('app.timezone', 'Asia/Manila'));
+        } else {
+            $printedAt = Carbon::now();
+        }
         $printerId = $request->input('printer_id');
 
         $updated = [];
@@ -390,9 +402,25 @@ class PrinterApiController extends Controller
     {
         // Optional auth for relay device emergency mode
         $device = Auth::guard('device')->user();
+        $bearerToken = $request->bearerToken();
 
         $error = $request->input('error');
         $appVersion = $request->input('app_version');
+        $failedAt = $request->input('failed_at');
+        $attemptCount = $request->has('attempt_count') ? $request->integer('attempt_count') : null;
+
+        if ($bearerToken && ! $device) {
+            Log::warning('[FAIL] Device auth token rejected', [
+                'print_event_id' => $id,
+                'has_auth_header' => true,
+                'path' => $request->path(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated device token',
+            ], 401);
+        }
 
         try {
             $evt = $this->printEventService->getById($id);
@@ -417,15 +445,23 @@ class PrinterApiController extends Controller
             ]);
         }
 
-        $res = $this->printEventService->fail($id, $error, $device?->id);
+        $res = $this->printEventService->fail(
+            $id,
+            $error,
+            $device?->id,
+            $failedAt,
+            $attemptCount,
+        );
 
         // Update device heartbeat
-        $device->last_seen_at = now();
-        if ($appVersion) {
-            $device->app_version = $appVersion;
+        if ($device) {
+            $device->last_seen_at = now();
+            if ($appVersion) {
+                $device->app_version = $appVersion;
+            }
+            /** @var \App\Models\Device $device */
+            $device->save();
         }
-        /** @var \App\Models\Device $device */
-        $device->save();
 
         return response()->json([
             'success' => true,
@@ -433,8 +469,10 @@ class PrinterApiController extends Controller
             'data' => [
                 'id' => $res['print_event']->id,
                 'attempts' => $res['print_event']->attempts,
+                'attempt_count' => $res['print_event']->attempt_count,
+                'failed_at' => optional($res['print_event']->failed_at)?->toIso8601String(),
                 'was_updated' => $res['was_updated'],
-                'acknowledged_by' => $res['print_event']->acknowledgedByDevice?->name ?? $device->name,
+                'acknowledged_by' => $res['print_event']->acknowledgedByDevice?->name ?? $device?->name ?? 'guest',
             ],
         ]);
     }

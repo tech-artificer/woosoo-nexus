@@ -33,8 +33,8 @@ return [
     'exposed_headers' => [],
     'max_age' => 86400,
     // Must be false when allowed_origins is ['*'].
-    // The CORS spec forbids Access-Control-Allow-Origin: * with credentials.
-    // Tablet PWA uses Bearer token auth — no cookies needed.
-    'supports_credentials' => false,
+    // Enable credentials for web admin login (Inertia uses session cookies + CSRF).
+    // Tablet PWA uses Bearer token auth — credentials don't interfere with that.
+    'supports_credentials' => true,
 
 ];

@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ApiErrorCode;
 use App\Enums\OrderStatus;
 use App\Events\Order\OrderCreated;
+use App\Exceptions\MenuItemUnavailableException;
 use App\Exceptions\SessionNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDeviceOrderRequest;
 use App\Http\Resources\DeviceOrderResource;
 use App\Models\DeviceOrder;
+use App\Models\Package;
 use App\Services\AuditLogService;
 use App\Services\Krypton\OrderService;
+use InvalidArgumentException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -159,6 +163,35 @@ class DeviceOrderApiController extends Controller
             }
 
             return response()->json($responseBody, 201);
+        } catch (InvalidArgumentException $e) {
+            Log::warning('Order creation rejected due to invalid initial payload', [
+                'device_id' => $device?->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($processingKey !== null) {
+                Cache::forget($processingKey);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (MenuItemUnavailableException $e) {
+            Log::warning('Order creation failed: menu item unavailable', [
+                'device_id' => $device?->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($processingKey !== null) {
+                Cache::forget($processingKey);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Some menu items are no longer available. We refreshed the menu. Please review your order again.',
+                'code' => ApiErrorCode::MENU_ITEM_UNAVAILABLE->value,
+            ], 422);
         } catch (SessionNotFoundException $e) {
             // Transaction aborted: No active POS session
             if ($processingKey !== null) {
@@ -168,7 +201,7 @@ class DeviceOrderApiController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
-                'code' => 'SESSION_NOT_FOUND',
+                'code' => ApiErrorCode::SESSION_NOT_FOUND->value,
             ], 503);
         } catch (QueryException $e) {
             Log::error('Order creation failed', [
@@ -216,19 +249,85 @@ class DeviceOrderApiController extends Controller
      * Tablet sends:  { guest_count, package_id, items: [{menu_id, quantity}] }
      * Internal form: { guest_count, items: [{ menu_id: package_id, quantity: guest_count,
      *                   is_package: true, modifiers: [{menu_id, quantity}] }] }
+     *
+     * IMPORTANT: package_id must be resolved to krypton_menu_id for POS integration.
+     * The package_id submitted by the tablet can be either:
+     *   - The krypton_menu_id (preferred)
+     *   - The local packages.id (backward compatibility)
+     * We always normalize to krypton_menu_id for the POS ordered_menus insert.
      */
     private function expandIntentPayload(array $data): array
     {
-        $packageId  = (int) ($data['package_id'] ?? 0);
-        $guestCount = (int) ($data['guest_count'] ?? 1);
-        $modifiers  = array_map(fn ($item) => [
-            'menu_id'  => (int) $item['menu_id'],
-            'quantity' => (int) $item['quantity'],
-        ], $data['items'] ?? []);
+        $packageIdRaw = $data['package_id'] ?? null;
+        if (! is_numeric($packageIdRaw) || (int) $packageIdRaw <= 0) {
+            throw new InvalidArgumentException('Invalid order payload: package_id is required and must be greater than 0.', 422);
+        }
+
+        $guestCountRaw = $data['guest_count'] ?? null;
+        if (! is_numeric($guestCountRaw) || (int) $guestCountRaw <= 0) {
+            throw new InvalidArgumentException('Invalid order payload: guest_count must be greater than 0.', 422);
+        }
+
+        $items = $data['items'] ?? null;
+        if (! is_array($items) || $items === []) {
+            throw new InvalidArgumentException('Invalid order payload: items must be a non-empty array.', 422);
+        }
+
+        $submittedPackageId = (int) $packageIdRaw;
+        $guestCount = (int) $guestCountRaw;
+
+        // Resolve submitted package_id to krypton_menu_id
+        // First try to find by krypton_menu_id (preferred), then fall back to local id
+        $package = Package::query()
+            ->where(function ($query) use ($submittedPackageId) {
+                $query->where('krypton_menu_id', $submittedPackageId)
+                      ->orWhere('id', $submittedPackageId);
+            })
+            ->where('is_active', true)
+            ->first();
+
+        if (! $package) {
+            throw new InvalidArgumentException("Invalid order payload: package_id {$submittedPackageId} not found or inactive.", 422);
+        }
+
+        $kryptonMenuId = $package->krypton_menu_id;
+        if (! $kryptonMenuId || $kryptonMenuId <= 0) {
+            throw new InvalidArgumentException("Invalid order payload: package has no valid krypton_menu_id.", 422);
+        }
+
+        Log::debug('Package ID resolved', [
+            'submitted_package_id' => $submittedPackageId,
+            'local_package_id' => $package->id,
+            'krypton_menu_id' => $kryptonMenuId,
+        ]);
+
+        $modifiers = [];
+
+        foreach ($items as $index => $item) {
+            if (! is_array($item)) {
+                throw new InvalidArgumentException("Invalid initial order payload: items.{$index} must be an object.");
+            }
+
+            $menuIdRaw = $item['menu_id'] ?? null;
+            $quantityRaw = $item['quantity'] ?? null;
+
+            if (! is_numeric($menuIdRaw) || (int) $menuIdRaw <= 0) {
+                throw new InvalidArgumentException("Invalid initial order payload: items.{$index}.menu_id must be greater than 0.");
+            }
+
+            if (! is_numeric($quantityRaw) || (int) $quantityRaw <= 0) {
+                throw new InvalidArgumentException("Invalid initial order payload: items.{$index}.quantity must be greater than 0.");
+            }
+
+            $modifiers[] = [
+                'menu_id' => (int) $menuIdRaw,
+                'quantity' => (int) $quantityRaw,
+            ];
+        }
 
         $data['items'] = [
             [
-                'menu_id'    => $packageId,
+                'menu_id'    => $kryptonMenuId,
                 'quantity'   => $guestCount,
                 'is_package' => true,
                 'modifiers'  => $modifiers,

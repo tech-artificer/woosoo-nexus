@@ -11,19 +11,19 @@ final class PackageModifierCatalog
     {
         return [
             [
-                'name' => 'Set Meal A',
+                'name' => 'Classic Feast',
                 'krypton_menu_id' => 46,
                 'sort_order' => 0,
                 'codes' => ['P1', 'P2', 'P3', 'P4', 'P5'],
             ],
             [
-                'name' => 'Set Meal B',
+                'name' => 'Noble Selection',
                 'krypton_menu_id' => 47,
                 'sort_order' => 1,
                 'codes' => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
             ],
             [
-                'name' => 'Set Meal C',
+                'name' => 'Royal Banquet',
                 'krypton_menu_id' => 48,
                 'sort_order' => 2,
                 'codes' => [

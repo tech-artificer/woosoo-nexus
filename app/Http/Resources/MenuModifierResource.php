@@ -27,11 +27,19 @@ class MenuModifierResource extends JsonResource
             $groupLabel = $this->group?->name ?? null;
         }
 
+        // Prefer kitchen_name or description when the POS `name` is just a bare
+        // receipt code (e.g. "P1", "B10", "C1"). Bare codes match a single letter
+        // followed by one or two digits with nothing else.
+        $displayName = $this->name;
+        if (preg_match('/^[A-Za-z]\d{1,2}$/', trim((string) $displayName))) {
+            $displayName = $this->kitchen_name ?: $this->description ?: $displayName;
+        }
+
         return [
             'id'              => $this->id,
             'group'           => $this->group?->name ?? null,
             'groupName'       => $groupLabel,
-            'name'            => $this->name,
+            'name'            => $displayName,
             'category'        => $this->category?->name ?? null,
             'kitchen_name'    => $this->kitchen_name,
             'receipt_name'    => $this->receipt_name,

@@ -102,7 +102,7 @@ function modifiersToCsv(modifiers: PackageModifierVm[]): string {
 }
 
 const packageMenuOptions = computed(() => {
-  return (props.menuOptions ?? []).filter((item) => !item.is_modifier_only)
+  return props.menuOptions ?? []
 })
 
 const filteredModifierOptions = computed(() => {

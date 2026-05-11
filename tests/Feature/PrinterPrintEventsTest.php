@@ -590,6 +590,35 @@ class PrinterPrintEventsTest extends TestCase
             ->assertStatus(404);
     }
 
+    public function test_fail_returns_401_for_invalid_bearer_token()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'InvalidToken', 'location' => 'IT']);
+        $device = Device::create(['name' => 'device-it', 'ip_address' => '127.0.0.44', 'branch_id' => $branch->id]);
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 55998,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+
+        $this->withHeader('Authorization', 'Bearer invalid-token')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/failed', ['error' => 'Test'])
+            ->assertStatus(401)
+            ->assertJsonPath('success', false);
+    }
+
     public function test_ack_without_printer_id_is_allowed()
     {
         $branch = \App\Models\Branch::create(['name' => 'NoPrinter', 'location' => 'NP']);
@@ -729,6 +758,53 @@ class PrinterPrintEventsTest extends TestCase
             ->postJson('/api/printer/print-events/' . $evt->id . '/failed', ['error' => 'Still failing']);
 
         $resp2->assertStatus(200)->assertJsonPath('data.attempts', 2);
+    }
+
+    public function test_fail_persists_failed_at_and_attempt_count()
+    {
+        $branch = \App\Models\Branch::create(['name' => 'FailAudit', 'location' => 'FA']);
+        $device = Device::create(['name' => 'device-fa2', 'ip_address' => '127.0.0.42', 'branch_id' => $branch->id]);
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 88998,
+            'device_id' => $device->id,
+            'branch_id' => $branch->id,
+            'guest_count' => 1,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => false,
+        ]);
+
+        $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
+        $failedAt = '2026-05-10T10:11:12Z';
+
+        $resp = $this->actingAs($device, 'device')
+            ->postJson('/api/printer/print-events/' . $evt->id . '/failed', [
+                'error' => 'Bluetooth timeout',
+                'attempt_count' => 3,
+                'failed_at' => $failedAt,
+            ]);
+
+        $resp->assertStatus(200)
+            ->assertJsonPath('data.attempt_count', 3);
+
+        $this->assertEquals(
+            Carbon::parse($failedAt)->utc()->toIso8601String(),
+            Carbon::parse((string) $resp->json('data.failed_at'))->utc()->toIso8601String()
+        );
+
+        $evt->refresh();
+        $this->assertEquals(3, $evt->attempt_count);
+        $this->assertEquals(
+            Carbon::parse($failedAt)->utc()->toIso8601String(),
+            Carbon::parse((string) optional($evt->failed_at)?->toIso8601String())->utc()->toIso8601String()
+        );
     }
 
     public function test_fail_after_ack_is_noop()

@@ -60,7 +60,8 @@ class DeviceOrderResource extends BaseResource
             'total' => $this->total ?? ($this->meta['order_check']->total_amount ?? null),
             'guest_count' => $this->guest_count,
             'is_printed' => $this->is_printed ?? false,
-            'printed_at' => $this->printed_at?->toIso8601String(),
+            // Fix: Ensure printed_at is serialized in UTC so frontend displays correct relative time
+            'printed_at' => $this->printed_at?->copy()->utc()->toIso8601String(),
             'printed_by' => $this->printed_by ?? null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

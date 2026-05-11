@@ -84,6 +84,9 @@ abstract class TestCase extends BaseTestCase
         $_ENV['APP_ENV'] = 'testing';
         $_SERVER['APP_ENV'] = 'testing';
 
+        // Skip Vite manifest resolution in tests — assets are not built locally.
+        $this->withoutVite();
+
         // Always run in tests — TestCase.php is only used by the test suite.
         // The original env-detection guard was unreliable in Docker (APP_ENV=production
         // at bootstrap even during phpunit runs), causing the pos connection to remain
