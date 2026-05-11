@@ -91,8 +91,10 @@ class PackageModifierSyncService
      */
     private function resolveModifiers(int $packageId, array $codes): array
     {
+        $uppercaseCodes = array_map('strtoupper', $codes);
+
         $menus = Menu::query()
-            ->whereIn('receipt_name', array_map('strtoupper', $codes))
+            ->whereIn('receipt_name', $uppercaseCodes)
             ->where('is_modifier_only', true)
             ->get()
             ->filter(static fn (Menu $menu): bool => is_string($menu->receipt_name) && $menu->receipt_name !== '')

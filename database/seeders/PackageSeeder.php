@@ -23,7 +23,7 @@ class PackageSeeder extends Seeder
                 $result['modifier_rows_synced']
             ));
         } catch (Throwable $throwable) {
-            $this->command?->warn('Package modifier sync skipped during seeding: '.$throwable->getMessage());
+            $this->command?->warn('Package modifiers were not seeded because the POS sync could not run: '.$throwable->getMessage());
             $this->command?->warn('Run php artisan woosoo:sync-package-modifiers after Krypton POS is reachable.');
         }
     }

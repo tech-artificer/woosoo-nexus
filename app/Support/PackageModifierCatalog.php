@@ -5,7 +5,7 @@ namespace App\Support;
 final class PackageModifierCatalog
 {
     /**
-     * @return array<int, array{name:string,krypton_menu_id:int,sort_order:int,codes:array<int, string>}>
+     * @return list<array{name:string,krypton_menu_id:int,sort_order:int,codes:list<string>}>
      */
     public static function definitions(): array
     {
@@ -36,7 +36,7 @@ final class PackageModifierCatalog
     }
 
     /**
-     * @return array<int, array<int, string>>
+     * @return array<int, list<string>>
      */
     public static function modifierCodesByPackageId(): array
     {
