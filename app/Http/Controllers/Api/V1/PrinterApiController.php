@@ -211,7 +211,7 @@ class PrinterApiController extends Controller
      */
     public function getUnprintedEvents(GetUnprintedOrdersRequest $request)
     {
-        if ($response = $this->printEventsDisabledResponse($request, 'poll')) {
+        if ($response = $this->getPrintEventsDisabledResponseIfNeeded($request, 'poll')) {
             return $response;
         }
 
@@ -302,7 +302,7 @@ class PrinterApiController extends Controller
      */
     public function ackPrintEvent(AckPrintEventRequest $request, int $id)
     {
-        if ($response = $this->printEventsDisabledResponse($request, 'ack')) {
+        if ($response = $this->getPrintEventsDisabledResponseIfNeeded($request, 'ack')) {
             return $response;
         }
 
@@ -400,7 +400,7 @@ class PrinterApiController extends Controller
      */
     public function failPrintEvent(FailPrintEventRequest $request, int $id)
     {
-        if ($response = $this->printEventsDisabledResponse($request, 'fail')) {
+        if ($response = $this->getPrintEventsDisabledResponseIfNeeded($request, 'fail')) {
             return $response;
         }
 
@@ -479,7 +479,13 @@ class PrinterApiController extends Controller
         return true;
     }
 
-    protected function printEventsDisabledResponse($request, string $action)
+    /**
+     * Return a disabled response when the PrintEvent runtime path is turned off.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse|null
+     */
+    protected function getPrintEventsDisabledResponseIfNeeded($request, string $action)
     {
         if ($this->printEventService->isEnabled()) {
             return null;
