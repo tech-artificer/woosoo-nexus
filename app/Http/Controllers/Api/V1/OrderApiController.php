@@ -14,6 +14,7 @@ use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\Menu as KryptonMenu;
+use App\Services\DurableRefillGuard;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\PrintEventService;
 use App\Services\PrintTicketService;
@@ -175,44 +176,29 @@ class OrderApiController extends Controller
      * Persist refill items and dispatch print event.
      *
      * Validates that items are refillable (meats/sides only).
+     *
+     * WS4: Durable refill submission guard ensures idempotent retries cannot
+     * duplicate POS ordered_menu rows. State machine tracks progress from
+     * NEW → PROCESSING → POS_CREATED → MIRRORED → PRINT_EVENT_CREATED → COMPLETED.
      */
     public function refill(RefillOrderRequest $request, int $orderId)
     {
-        $idempotencyKey = trim((string) $request->header('X-Idempotency-Key', ''));
         $clientSubmissionId = $request->input('client_submission_id');
-        $idempotencyScope = null;
-        $processingKey = null;
-        $responseCacheKey = null;
-
-        if ($idempotencyKey !== '') {
-            $requestDevice = $request->user();
-            $requestDeviceId = $requestDevice && isset($requestDevice->id) ? (string) $requestDevice->id : 'anonymous';
-            $idempotencyScope = 'refill:'.$requestDeviceId.':'.$orderId.':'.sha1($idempotencyKey);
-            $processingKey = $idempotencyScope.':processing';
-            $responseCacheKey = $idempotencyScope.':response';
-
-            $cachedResponse = Cache::get($responseCacheKey);
-            if (is_array($cachedResponse)) {
-                return response()->json(
-                    $cachedResponse['body'] ?? ['success' => true, 'message' => 'Refill request replayed'],
-                    (int) ($cachedResponse['status'] ?? 200),
-                    ['X-Idempotent-Replay' => 'true']
-                );
-            }
-
-            // Prevent duplicate in-flight refill requests with the same idempotency key.
-            if (! Cache::add($processingKey, 1, now()->addSeconds(30))) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Duplicate refill request already processing',
-                ], 409);
-            }
+        
+        // Require client_submission_id for idempotent refills
+        if (empty($clientSubmissionId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'client_submission_id is required for refill idempotency',
+                'error' => ['code' => 'MISSING_SUBMISSION_ID'],
+            ], 400);
         }
 
         Log::info('[REFILL] Received refill request', [
             'order_id' => $orderId,
             'ip' => $request->ip(),
             'items_count' => count($request->input('items', [])),
+            'client_submission_id' => $clientSubmissionId,
         ]);
 
         // RefillOrderRequest automatically validates items
@@ -284,32 +270,84 @@ class OrderApiController extends Controller
             ];
         }
 
-        $kctx = app(KryptonContextService::class);
-        $kdata = $kctx->getData();
-        $orderCheckId = $this->resolvePosOrderCheckId($orderId);
+        // WS4: Durable refill submission guard - prevents duplicate POS ordered_menu rows
+        $guard = app(DurableRefillGuard::class);
+        $guardResult = $guard->guard($device, $deviceOrder, $clientSubmissionId);
 
-        $attrs = [
-            'order_id' => $orderId,
-            'order_check_id' => $orderCheckId,
-            // employee_log_id originates from Krypton (POS), not the local app user
-            'employee_log_id' => $kdata['employee_log_id'] ?? null,
-            'device_order_id' => $deviceOrder->id,
-            'items' => $mappedItems,
-        ];
+        // Already completed - return cached response
+        if (!$guardResult['proceed'] && $guardResult['response']->getStatusCode() === 200) {
+            Log::info('[REFILL] Returning cached response from durable guard', [
+                'order_id' => $orderId,
+                'client_submission_id' => $clientSubmissionId,
+                'submission_id' => $guardResult['submission']?->id,
+            ]);
+            return $guardResult['response'];
+        }
 
-        // Run POS-side inserts. Controller handles local mirroring and retries.
-        $attrs['mirror_local'] = false;
-        $created = CreateOrderedMenu::run($attrs);
+        // Already processing - return 409
+        if (!$guardResult['proceed'] && $guardResult['response']->getStatusCode() === 409) {
+            Log::info('[REFILL] Submission already processing', [
+                'order_id' => $orderId,
+                'client_submission_id' => $clientSubmissionId,
+                'submission_id' => $guardResult['submission']?->id,
+            ]);
+            return $guardResult['response'];
+        }
 
-        // Normalize created items: POS returns raw ordered_menu records.
-        // Extract them into objects for consistent handling.
-        $posItems = collect($created)->map(function ($it) {
-            if (is_array($it)) {
-                return (object) $it;
+        $submission = $guardResult['submission'];
+        assert($submission !== null, 'Submission must exist when guard allows proceed');
+
+        // Check if POS insert is already done (from previous attempt)
+        $posCheck = $guard->checkPosAlreadyDone($submission);
+        $posItems = [];
+        $created = [];
+
+        if ($posCheck['already_done']) {
+            // POS already done - fetch the ordered_menu records by IDs
+            Log::info('[REFILL] POS insert already done, reusing ordered_menu IDs', [
+                'order_id' => $orderId,
+                'client_submission_id' => $clientSubmissionId,
+                'ordered_menu_ids' => $posCheck['ordered_menu_ids'],
+            ]);
+            
+            $orderedMenuIds = $posCheck['ordered_menu_ids'] ?? [];
+            if (!empty($orderedMenuIds)) {
+                $posItems = collect($orderedMenuIds)->map(function ($id) {
+                    $row = DB::connection('pos')->table('ordered_menus')->find($id);
+                    return $row ? (object) $row : null;
+                })->filter()->values()->all();
             }
+        } else {
+            // POS insert not done - proceed with CreateOrderedMenu
+            $kctx = app(KryptonContextService::class);
+            $kdata = $kctx->getData();
+            $orderCheckId = $this->resolvePosOrderCheckId($orderId);
 
-            return $it;
-        })->values()->all();
+            $attrs = [
+                'order_id' => $orderId,
+                'order_check_id' => $orderCheckId,
+                // employee_log_id originates from Krypton (POS), not the local app user
+                'employee_log_id' => $kdata['employee_log_id'] ?? null,
+                'device_order_id' => $deviceOrder->id,
+                'items' => $mappedItems,
+            ];
+
+            // Run POS-side inserts. Controller handles local mirroring and retries.
+            $attrs['mirror_local'] = false;
+            $created = CreateOrderedMenu::run($attrs);
+
+            // Normalize created items: POS returns raw ordered_menu records.
+            $posItems = collect($created)->map(function ($it) {
+                if (is_array($it)) {
+                    return (object) $it;
+                }
+                return $it;
+            })->values()->all();
+
+            // Record POS created state with ordered_menu IDs
+            $orderedMenuIds = collect($posItems)->pluck('id')->filter()->values()->all();
+            $guard->markPosCreated($submission, $orderedMenuIds);
+        }
 
         // Guard: if no items created in POS, nothing to mirror locally
         if (empty($posItems)) {
@@ -418,6 +456,9 @@ class OrderApiController extends Controller
                                         // Update device order with print event reference
                                         $deviceOrder->print_event_id = $printEvent->id;
                                         $deviceOrder->save();
+                                        
+                                        // Mark PRINT_EVENT_CREATED in submission state
+                                        $guard->markPrintEventCreated($submission, $printEvent);
                                     } else {
                                         // Legacy fallback - WARNING: non-idempotent path
                                         // TODO: Remove this fallback after WS4 is merged and deployed
@@ -455,7 +496,8 @@ class OrderApiController extends Controller
                         });
                     });
 
-                    // Success — break retry loop
+                    // Success — mark MIRRORED and break retry loop
+                    $guard->markMirrored($submission);
                     break;
                 } catch (\Throwable $e) {
                     if ($attempt >= $maxAttempts) {
@@ -486,22 +528,24 @@ class OrderApiController extends Controller
                 'created' => $created,
             ];
 
-            if ($responseCacheKey) {
-                Cache::put($responseCacheKey, [
-                    'status' => 200,
-                    'body' => $responseBody,
-                ], now()->addMinutes(10));
-            }
+            // Mark COMPLETED with cached response for idempotent replay
+            $guard->markCompleted($submission, $responseBody, 200);
 
             return response()->json($responseBody);
         } catch (\Throwable $th) {
             report($th);
-
-            return response()->json(['success' => false, 'message' => 'Failed to persist refill', 'error' => $th->getMessage()], 500);
-        } finally {
-            if ($processingKey) {
-                Cache::forget($processingKey);
+            
+            // Mark submission as FAILED
+            if (isset($submission) && $submission !== null) {
+                $guard->markFailed($submission, $th->getMessage());
             }
+
+            return response()->json([
+                'success' => false, 
+                'message' => 'Failed to persist refill', 
+                'error' => $th->getMessage(),
+                'submission_id' => isset($submission) ? $submission->id : null,
+            ], 500);
         }
     }
 
