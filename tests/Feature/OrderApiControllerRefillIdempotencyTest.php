@@ -143,7 +143,7 @@ class OrderApiControllerRefillIdempotencyTest extends TestCase
             'device_order_id' => $this->deviceOrder->id,
             'client_submission_id' => $clientSubmissionId,
             'status' => 'COMPLETED',
-            'cached_response' => [
+            'response_payload' => [
                 'success' => true,
                 'order' => ['id' => $this->deviceOrder->id],
                 'cached' => true,
@@ -221,7 +221,7 @@ class OrderApiControllerRefillIdempotencyTest extends TestCase
             'device_order_id' => $otherOrder->id,
             'client_submission_id' => $clientSubmissionId,
             'status' => 'COMPLETED',
-            'cached_response' => ['success' => true],
+            'response_payload' => ['success' => true],
         ]);
 
         // Same client_submission_id but different device/order should create new submission
@@ -364,7 +364,7 @@ class OrderApiControllerRefillIdempotencyTest extends TestCase
             'device_order_id' => $this->deviceOrder->id,
             'client_submission_id' => $clientSubmissionId,
             'status' => 'COMPLETED',
-            'cached_response' => ['success' => true],
+            'response_payload' => ['success' => true],
         ]);
 
         // Only one print event should exist for this submission
