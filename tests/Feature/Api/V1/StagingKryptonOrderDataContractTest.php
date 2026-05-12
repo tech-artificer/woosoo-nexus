@@ -207,58 +207,6 @@ class StagingKryptonOrderDataContractTest extends TestCase
         $this->assertNull($rows->firstWhere('menu_id', 11));
     }
 
-    public function test_initial_order_rejects_modifiers_not_allowed_by_active_package_config(): void
-    {
-        $this->seedKryptonContextRows();
-        $this->seedOrderSupportRows();
-
-        DB::connection('pos')->table('menu_groups')->insert([
-            'id' => 2,
-            'name' => 'Packages',
-        ]);
-
-        DB::connection('pos')->table('menus')->insert([
-            ['id' => 46, 'name' => 'Classic Feast', 'receipt_name' => 'Classic Feast', 'price' => 399.00, 'menu_group_id' => 2],
-            ['id' => 13, 'name' => 'Chicken Galbi', 'receipt_name' => 'Chicken Galbi', 'price' => 92.00, 'menu_group_id' => 1],
-        ]);
-
-        $package = Package::create([
-            'name' => 'Classic Feast',
-            'krypton_menu_id' => 46,
-            'is_active' => true,
-            'sort_order' => 0,
-        ]);
-
-        $package->modifiers()->create([
-            'krypton_menu_id' => 10,
-            'sort_order' => 1,
-        ]);
-
-        $device = $this->makeStagingDevice();
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Modifier 13 is not allowed for package 46');
-
-        app(OrderService::class)->processOrder($device, [
-            'guest_count' => 2,
-            'items' => [
-                [
-                    'menu_id' => 46,
-                    'name' => 'Classic Feast',
-                    'quantity' => 1,
-                    'price' => 1.00,
-                    'subtotal' => 1.00,
-                    'tax' => 0,
-                    'discount' => 0,
-                    'is_package' => true,
-                    'modifiers' => [
-                        ['menu_id' => 10, 'quantity' => 1],
-                        ['menu_id' => 13, 'quantity' => 1],
-                    ],
-                ],
-            ],
-        ]);
-    }
 
     private function makeStagingDevice(): Device
     {

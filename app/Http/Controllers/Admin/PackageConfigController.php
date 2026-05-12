@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\Menu\PackageUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageConfigRequest;
+use App\Models\Device;
 use App\Models\TabletPackageConfig;
 use App\Models\TabletPackageAllowedMenu;
 use Illuminate\Http\Request;
@@ -34,6 +36,8 @@ class PackageConfigController extends Controller
     public function update(StorePackageConfigRequest $request, TabletPackageConfig $packageConfig)
     {
         $packageConfig->update($request->validated());
+
+        $this->broadcastPackageUpdated($packageConfig->id);
 
         return redirect()->back()->with('success', 'Package updated.');
     }
@@ -84,6 +88,18 @@ class PackageConfigController extends Controller
             }
         });
 
+        $this->broadcastPackageUpdated($packageConfig->id);
+
         return redirect()->back()->with('success', 'Allowed menus updated.');
+    }
+
+    /**
+     * Dispatch PackageUpdated to all active devices so tablets invalidate their package cache.
+     */
+    private function broadcastPackageUpdated(?int $packageId = null): void
+    {
+        Device::where('is_active', true)->each(function (Device $device) use ($packageId) {
+            PackageUpdated::dispatch($device->id, $packageId);
+        });
     }
 }

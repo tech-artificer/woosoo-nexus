@@ -55,7 +55,7 @@ class TerminalContextResolver
                 ->table('cash_tray_sessions')
                 ->where('session_id', $session->id)
                 ->where('terminal_session_id', $terminalSession->id)
-                ->whereNull('date_time_closed')
+                ->where('is_open', 1)
                 ->orderByDesc('id')
                 ->first();
 
@@ -64,7 +64,7 @@ class TerminalContextResolver
                 $cashTraySession = DB::connection('pos')
                     ->table('cash_tray_sessions')
                     ->where('session_id', $session->id)
-                    ->whereNull('date_time_closed')
+                    ->where('is_open', 1)
                     ->orderByDesc('id')
                     ->first();
             }

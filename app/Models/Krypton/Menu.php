@@ -100,12 +100,10 @@ class Menu extends Model
 
     public function getImageUrlAttribute()
     {
-        // Use already-loaded image relation to avoid N+1 queries on collections.
-        if ($this->relationLoaded('image')) {
-            $imgPath = $this->image?->path ?? null;
-        } else {
-            $imgPath = MenuImage::where('menu_id', $this->id)->first()?->path ?? null;
-        }
+        // MenuImage is on the default (mysql) connection; Menu is on the pos connection.
+        // with('image') eager-loads against the wrong DB, always yielding null.
+        // Always query MenuImage directly to guarantee the correct connection is used.
+        $imgPath = MenuImage::where('menu_id', $this->id)->value('path');
 
         if ($imgPath) {
             return url('storage/' . $imgPath);
@@ -198,9 +196,9 @@ class Menu extends Model
             46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
             47 => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
             48 => [
-                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
-                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
-                'C1',
+                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10',
+                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9',
+                'C1', 'C2',
             ],
         ];
 
@@ -225,9 +223,9 @@ class Menu extends Model
             46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
             47 => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
             48 => [
-                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
-                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
-                'C1',
+                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10',
+                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9',
+                'C1', 'C2',
             ],
         ];
 
@@ -295,9 +293,9 @@ class Menu extends Model
             46 => ['P1', 'P2', 'P3', 'P4', 'P5'],
             47 => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
             48 => [
-                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
-                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
-                'C1',
+                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10',
+                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9',
+                'C1', 'C2',
             ],
         ];
 

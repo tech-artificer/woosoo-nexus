@@ -5,6 +5,16 @@ export default {
     './resources/**/*.{js,ts,jsx,tsx,vue}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      keyframes: {
+        indeterminate: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(400%)' },
+        },
+      },
+      animation: {
+        indeterminate: 'indeterminate 1.2s ease-in-out infinite',
+      },
+    },
   },
 }

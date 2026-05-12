@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
+use App\Models\DeviceOrder;
 use App\Services\AuditLogService;
 use App\Services\Pos\PosOrderService;
 use App\Services\Pos\PosTableService;
@@ -252,6 +254,14 @@ class PosController extends Controller
             'order_id' => $orderId,
         ]);
 
+        $deviceOrder = DeviceOrder::where('order_id', $orderId)
+            ->whereNotIn('status', [OrderStatus::COMPLETED->value, OrderStatus::VOIDED->value])
+            ->first();
+        if ($deviceOrder) {
+            $deviceOrder->status = OrderStatus::VOIDED;
+            $deviceOrder->save();
+        }
+
         return response()->json(['success' => true, 'message' => 'Order voided in Krypton.']);
     }
 
@@ -270,6 +280,9 @@ class PosController extends Controller
 
         $result = $this->orderService->payOrder($orderId, $validated);
 
+        if (isset($result['error'])) {
+            return response()->json(['success' => false, 'message' => 'Payment processing failed: ' . $result['error']], 500);
+        }
         if (isset($result['not_found'])) {
             return response()->json(['success' => false, 'message' => 'Order not found, already closed, or voided.'], 404);
         }
@@ -282,6 +295,16 @@ class PosController extends Controller
             'amount'     => $validated['amount'],
             'is_settled' => (bool) $result['is_settled'],
         ]);
+
+        if ($result['is_settled']) {
+            $deviceOrder = DeviceOrder::where('order_id', $orderId)
+                ->whereNotIn('status', [OrderStatus::COMPLETED->value, OrderStatus::VOIDED->value])
+                ->first();
+            if ($deviceOrder) {
+                $deviceOrder->status = OrderStatus::COMPLETED;
+                $deviceOrder->save();
+            }
+        }
 
         return response()->json([
             'success'    => true,

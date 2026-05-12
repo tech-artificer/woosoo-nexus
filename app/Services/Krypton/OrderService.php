@@ -180,15 +180,10 @@ class OrderService
                 return $deviceOrder;
             });
         } catch (\Throwable $e) {
-            if ($createdOrderId !== null) {
-                DB::connection('pos')->table('ordered_menus')->where('order_id', $createdOrderId)->delete();
-                DB::connection('pos')->table('order_checks')->where('order_id', $createdOrderId)->delete();
-                DB::connection('pos')->table('table_orders')->where('order_id', $createdOrderId)->delete();
-                DB::connection('pos')->table('orders')->where('id', $createdOrderId)->delete();
-            }
-
             Log::error('Order creation failed', [
+                'request_id' => $this->attributes['request_id'] ?? null,
                 'device_id' => $device->id,
+                'created_order_id' => $createdOrderId,
                 'error' => $e->getMessage(),
             ]);
 

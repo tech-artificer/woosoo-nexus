@@ -10,6 +10,7 @@ use App\Models\Krypton\Menu;
 use App\Models\Package;
 use App\Models\TabletCategory;
 use App\Http\Responses\ApiResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
@@ -45,52 +46,61 @@ class TabletApiController extends Controller
      * 
      * @return \Illuminate\Http\JsonResponse
      */
+    /** Cache key for the resolved packages payload. Busted on admin save/update/delete. */
+    public const PACKAGES_CACHE_KEY = 'tablet.packages.v1';
+
+    /** TTL in seconds — 5 minutes. Short enough to pick up changes if cache flush is missed. */
+    private const PACKAGES_CACHE_TTL = 300;
+
     public function packages(Request $request)
     {
         try {
-            // Load active packages from app DB, ordered for display.
-            $dbPackages = Package::with('modifiers')
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->get();
+            $resolved = Cache::remember(self::PACKAGES_CACHE_KEY, self::PACKAGES_CACHE_TTL, function () {
+                // Load active packages from app DB, ordered for display.
+                $dbPackages = Package::with('modifiers')
+                    ->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->get();
 
-            // Bulk-load all required Krypton menu records in two queries.
-            $packageMenuIds  = $dbPackages->pluck('krypton_menu_id')->filter()->unique()->values()->toArray();
-            $modifierMenuIds = $dbPackages->flatMap(fn ($p) => $p->modifiers->pluck('krypton_menu_id'))
-                ->filter()->unique()->values()->toArray();
-            $allIds = array_values(array_unique(array_merge($packageMenuIds, $modifierMenuIds)));
+                // Bulk-load all required Krypton menu records in two queries.
+                $packageMenuIds  = $dbPackages->pluck('krypton_menu_id')->filter()->unique()->values()->toArray();
+                $modifierMenuIds = $dbPackages->flatMap(fn ($p) => $p->modifiers->pluck('krypton_menu_id'))
+                    ->filter()->unique()->values()->toArray();
+                $allIds = array_values(array_unique(array_merge($packageMenuIds, $modifierMenuIds)));
 
-            $kryptonMenus = Menu::with(['image', 'tax', 'group'])
-                ->whereIn('id', $allIds)
-                ->get()
-                ->keyBy('id');
+                $kryptonMenus = Menu::with(['image', 'tax', 'group'])
+                    ->whereIn('id', $allIds)
+                    ->get()
+                    ->keyBy('id');
 
-            // Stitch Krypton menu models together with their ordered modifiers.
-            $configuredById = $dbPackages->map(function ($dbPackage) use ($kryptonMenus) {
-                $menu = $kryptonMenus->get($dbPackage->krypton_menu_id);
-                if (! $menu) {
-                    return null;
-                }
-                $modifierModels = $dbPackage->modifiers
-                    ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
-                    ->filter()
+                // Stitch Krypton menu models together with their ordered modifiers.
+                $configuredById = $dbPackages->map(function ($dbPackage) use ($kryptonMenus) {
+                    $menu = $kryptonMenus->get($dbPackage->krypton_menu_id);
+                    if (! $menu) {
+                        return null;
+                    }
+                    $modifierModels = $dbPackage->modifiers
+                        ->map(fn ($pm) => $kryptonMenus->get($pm->krypton_menu_id))
+                        ->filter()
+                        ->values();
+                    $menu->setRelation('modifiers', $modifierModels);
+                    return $menu;
+                })->filter()->keyBy('id');
+
+                // Only fetch legacy packages for IDs not already covered by configured packages.
+                // This avoids 4 redundant POS DB queries per request when admin mappings are complete.
+                $coveredIds      = $configuredById->keys()->map(fn ($id) => (int) $id)->toArray();
+                $missingLegacyIds = array_values(array_diff(self::LEGACY_PACKAGE_IDS, $coveredIds));
+                $legacyById      = $missingLegacyIds ? $this->buildLegacyPackages($missingLegacyIds) : collect();
+
+                $result = $legacyById
+                    ->merge($configuredById) // configured packages override legacy by id
                     ->values();
-                $menu->setRelation('modifiers', $modifierModels);
-                return $menu;
-            })->filter()->keyBy('id');
 
-            // Compatibility: include legacy package definitions so the original
-            // package dataset still appears even if admin mappings are incomplete.
-            $legacyById = $this->buildLegacyPackages();
+                return MenuResource::collection($result)->resolve();
+            });
 
-            $result = $legacyById
-                ->merge($configuredById) // configured packages override legacy by id
-                ->values();
-
-            return ApiResponse::success(
-                MenuResource::collection($result),
-                'Packages retrieved successfully'
-            );
+            return ApiResponse::success($resolved, 'Packages retrieved successfully');
         } catch (\Exception $e) {
             Log::error('V2 Tablet API - packages error: ' . $e->getMessage());
             return ApiResponse::error('Failed to retrieve packages', null, 500);
@@ -311,12 +321,13 @@ class TabletApiController extends Controller
     /**
      * Build legacy package menu models with their corresponding legacy modifiers.
      *
+     * @param  int[]  $ids  Subset of LEGACY_PACKAGE_IDS to fetch (only uncovered ones).
      * @return Collection<int, Menu>
      */
-    private function buildLegacyPackages(): Collection
+    private function buildLegacyPackages(array $ids): Collection
     {
         $legacyPackages = Menu::with(['image', 'tax', 'group'])
-            ->whereIn('id', self::LEGACY_PACKAGE_IDS)
+            ->whereIn('id', $ids)
             ->get();
 
         return $legacyPackages

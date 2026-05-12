@@ -1,7 +1,7 @@
 <!-- resources/js/Pages/Menus/EditMenu.vue -->
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Image, Pencil } from 'lucide-vue-next';
@@ -31,9 +31,13 @@ const props = defineProps<{
   menu: Menu;
 }>();
 
-const showDialog = ref(false); // Dialog state
-const previewImage = ref<string | null>(props.menu.img_url); // Image preview
-const localMenu = ref([props.menu]); // Reactive menu data (single item for this component)
+const showDialog = ref(false);
+const previewImage = ref<string | null>(props.menu.img_url);
+
+// Keep preview in sync when Inertia refreshes the parent prop after upload
+watch(() => props.menu.img_url, (newUrl) => {
+  previewImage.value = newUrl;
+});
 
 const form = useForm<{ image: File | null }>({
   image: null,
@@ -51,9 +55,7 @@ function onFileChange(e: Event) {
   const file = input.files[0];
   try {
     form.image = file;
-    previewImage.value = URL.createObjectURL(file); // Update preview
-    // Optimistic update for img_url
-    localMenu.value[0].img_url = previewImage.value;
+    previewImage.value = URL.createObjectURL(file);
   } catch (error: any) {
     console.error('Error while handling file change', error);
   }
@@ -61,15 +63,8 @@ function onFileChange(e: Event) {
 // Submit the image upload
 function submit() {
   form.post(route('menu.upload.image', { menu: props.menu.id }), {
-    forceFormData: true, // <-- THIS is the secret ingredient
-    preserveScroll: true,
-    preserveState: true,
+    forceFormData: true,
     onSuccess: () => {
-      router.reload({
-        only: ['menus'],
-      });
-
-      // console.log('✅ Image uploaded successfully');
       toast('Image Uploaded:', {
         description: 'The previous image has been replaced with your new upload.',
         action: {
@@ -92,7 +87,7 @@ function submit() {
         duration: 5000,
         position: 'top-right',
       });
-      localMenu.value[0].img_url = props.menu.img_url;
+      previewImage.value = props.menu.img_url;
     },
   });
 
@@ -156,9 +151,9 @@ onUnmounted(() => {
         <div class="grid gap-2">
           <Label for="image" class="text-woosoo-dark-gray">Featured Image</Label>
           <Input id="image" type="file" accept="image/*" @change="onFileChange" />
-          <progress v-if="form.progress" :value="form.progress.percentage" max="100">
-            {{ form.progress.percentage }}%
-          </progress>
+          <div v-if="form.processing" class="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+            <div class="h-full bg-woosoo-accent animate-indeterminate rounded-full" />
+          </div>
           <InputError :message="form.errors.image" />
         </div>
 

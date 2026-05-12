@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PrintEventStatus;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
 use Carbon\Carbon;
@@ -41,6 +42,7 @@ class PrintEventService
         $event = PrintEvent::create([
             'device_order_id' => $deviceOrder->id,
             'event_type' => $eventType,
+            'status' => PrintEventStatus::PENDING,
             'meta' => $meta,
         ]);
 
@@ -94,12 +96,13 @@ class PrintEventService
                 throw new \Illuminate\Database\Eloquent\ModelNotFoundException("PrintEvent not found: {$printEventId}");
             }
 
-            // If already acknowledged, do not modify attempts or timestamps.
+            // If already acknowledged/printed, do not modify attempts or timestamps.
             if ($evt->is_acknowledged) {
                 return ['evt' => $evt, 'was_updated' => false];
             }
 
             $evt->is_acknowledged = true;
+            $evt->status = PrintEventStatus::PRINTED;
             $evt->backend_status = 'acked';
             $evt->acknowledged_at = $ackAt;
             if ($printerId !== null) {
@@ -131,10 +134,9 @@ class PrintEventService
             /** @var \App\Models\DeviceOrder|null $order */
             $order = $evt->deviceOrder;
             if ($order) {
-                // Do not overwrite existing printed_at if present; use latest ack time if empty
                 $order->is_printed = 1;
                 $order->printed_by = $printerId ?? $order->printed_by;
-                $order->printed_at = $order->printed_at ?: $ackAt;
+                $order->printed_at = $ackAt;
                 $order->save();
             }
 
@@ -182,6 +184,7 @@ class PrintEventService
             $evt->attempt_count = $attemptCount ?? $evt->attempt_count;
             $evt->last_error = $error;
             $evt->failed_at = $resolvedFailedAt;
+            $evt->status = PrintEventStatus::FAILED;
             $evt->backend_status = 'failed';
             if ($acknowledgedByDeviceId !== null) {
                 $evt->acknowledged_by_device_id = $acknowledgedByDeviceId;
@@ -195,6 +198,44 @@ class PrintEventService
         return [
             'print_event' => $result['evt'],
             'was_updated' => $result['was_updated'],
+        ];
+    }
+
+    /**
+     * Atomically reserve a pending PrintEvent for a specific bridge device.
+     * Returns ['print_event' => ..., 'reserved' => bool].
+     * Returns reserved=false (409) if the job is already reserved/printing/printed.
+     */
+    public function reserve(int $printEventId, int $deviceId): array
+    {
+        $result = DB::transaction(function () use ($printEventId, $deviceId) {
+            $evt = PrintEvent::where('id', $printEventId)->lockForUpdate()->first();
+
+            if (! $evt) {
+                throw new \Illuminate\Database\Eloquent\ModelNotFoundException("PrintEvent not found: {$printEventId}");
+            }
+
+            // Only pending events can be reserved
+            $currentStatus = $evt->status instanceof PrintEventStatus
+                ? $evt->status
+                : PrintEventStatus::tryFrom($evt->status ?? 'pending');
+
+            if ($currentStatus !== PrintEventStatus::PENDING) {
+                return ['evt' => $evt, 'reserved' => false];
+            }
+
+            $evt->status = PrintEventStatus::RESERVED;
+            $evt->reserved_by_device_id = $deviceId;
+            $evt->reserved_at = Carbon::now();
+            $evt->updated_at = Carbon::now()->utc();
+            $evt->save();
+
+            return ['evt' => $evt, 'reserved' => true];
+        });
+
+        return [
+            'print_event' => $result['evt'],
+            'reserved' => $result['reserved'],
         ];
     }
 

@@ -88,10 +88,10 @@ class MenuController extends Controller
                 Storage::disk('public')->delete($oldPath);
             }
 
-            // Save new image
+            // Save new image — timestamp in filename busts browser cache on re-upload
             $file = $request->file('image');
             $slug = Str::slug($menu->name);
-            $filename = "{$slug}." . $file->getClientOriginalExtension();
+            $filename = "{$slug}_" . time() . "." . $file->getClientOriginalExtension();
             $path = $file->storeAs('menu/images', $filename, 'public');
 
             MenuImage::updateOrCreate(

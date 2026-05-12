@@ -21,16 +21,44 @@ Constraint from requirements: **do not include sides in package-modifier logic**
 
 ## 2. Confirmed Package-Modifier Mapping
 
-| Package | Menu ID | Base Price | Modifier Pattern | Modifier IDs |
+| Package | Menu ID | Base Price | Modifier Pattern | Modifier IDs (named, menu_group_id=34) |
 |---|---:|---:|---|---|
-| Classic Feast | 46 | 449.00 | P1-P5 | 49, 50, 51, 52, 53 |
-| Noble Selection | 47 | 499.00 | P1-B3 | 49, 50, 51, 52, 53, 54, 55, 56 |
-| Royal Banquet | 48 | 549.00 | P1-C3 (all meats) | 49-66 (as required) |
+| Classic Feast | 46 | 449.00 | P1-P5 | 114, 115, 116, 117, 118 |
+| Noble Selection | 47 | 499.00 | P1-P5, B1-B3 | 114-118, 124, 125, 126 |
+| Royal Banquet | 48 | 549.00 | P1-P10, B1-B9, C1-C2 | 114-123, 124-132, 133, 134 |
+
+### Modifier ID Reference (menu_group_id = 34)
+
+| receipt_name | menu ID | kitchen_name |
+|---|---:|---|
+| P1 | 114 | Plain Samgyupsal |
+| P2 | 115 | Kajun Bulmat Samgyupsal |
+| P3 | 116 | Yangyeom Samgyupsal |
+| P4 | 117 | Citrus Burst Pepper Samgyupsal |
+| P5 | 118 | Hyangcho Samgyupsal |
+| P6 | 119 | Korean Chili Pepper Samgyupsal |
+| P7 | 120 | Spicy Sesame Samgyupsal |
+| P8 | 121 | Secret Spice Samgyupsal |
+| P9 | 122 | Golden Mushroom Roll |
+| P10 | 123 | Moksal |
+| B1 | 124 | Woosamgyup |
+| B2 | 125 | Beef Bulgogi |
+| B3 | 126 | Asian Gochu Woosamgyup |
+| B4 | 127 | Citrus Burst Woosamgyup |
+| B5 | 128 | Hyangcho Woosamgyup |
+| B6 | 129 | Korean Chili Pepper Beef |
+| B7 | 130 | Spicy Sesame Woosamgyup |
+| B8 | 131 | Secret Spice Woosamgyup |
+| B9 | 132 | Golden Mushroom Beef Roll |
+| C1 | 133 | Dak Galbi |
+| C2 | 134 | Bulgogi Korean Chicken |
 
 ### Notes
 
 - `Royal Banquet` is the most expensive package and includes all meats.
+- **B10 does not exist in Krypton** — removed from all package definitions.
 - For complete item naming, use **`kitchen_name`** (not symbol fields).
+- Modifier resolution uses `menu_group_id = 34` (named tablet menus), not `is_modifier_only = true` (old stub IDs 49–68).
 
 ---
 

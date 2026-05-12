@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\PrintEventStatus;
 use App\Events\Order\OrderPrinted;
 use App\Events\PrintOrder;
 use App\Http\Controllers\Controller;
@@ -237,6 +238,7 @@ class PrinterApiController extends Controller
         ]);
 
         $eventsQuery = PrintEvent::where('is_acknowledged', false)
+            ->whereIn('status', [PrintEventStatus::PENDING->value, PrintEventStatus::RESERVED->value])
             ->when($since, fn ($q) => $q->where('created_at', '>', $since))
             ->with(['deviceOrder', 'deviceOrder.items.menu', 'deviceOrder.table'])
             ->orderBy('created_at', 'asc');
@@ -473,6 +475,51 @@ class PrinterApiController extends Controller
                 'failed_at' => optional($res['print_event']->failed_at)?->toIso8601String(),
                 'was_updated' => $res['was_updated'],
                 'acknowledged_by' => $res['print_event']->acknowledgedByDevice?->name ?? $device?->name ?? 'guest',
+            ],
+        ]);
+    }
+
+    /**
+     * Atomically reserve a print event for the calling bridge device.
+     * Prevents multi-bridge duplicate printing.
+     * Returns 200 on success, 409 if already reserved/printing/printed.
+     */
+    public function reservePrintEvent(int $id)
+    {
+        $device = Auth::guard('device')->user();
+
+        if (! $device) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+        }
+
+        try {
+            $evt = $this->printEventService->getById($id);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Event not found'], 404);
+        }
+
+        $this->authorizeDeviceForEvent($evt, $device);
+
+        $res = $this->printEventService->reserve($id, $device->id);
+
+        if (! $res['reserved']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Print event already claimed',
+                'data' => [
+                    'id' => $res['print_event']->id,
+                    'status' => $res['print_event']->status?->value ?? $res['print_event']->status,
+                ],
+            ], 409);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reserved',
+            'data' => [
+                'id' => $res['print_event']->id,
+                'status' => $res['print_event']->status?->value ?? $res['print_event']->status,
+                'reserved_at' => $res['print_event']->reserved_at?->toIso8601String(),
             ],
         ]);
     }

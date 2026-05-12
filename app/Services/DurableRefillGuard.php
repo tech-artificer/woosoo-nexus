@@ -51,7 +51,7 @@ class DurableRefillGuard
             // Try to find existing submission with lock
             $submission = RefillSubmission::where([
                 'device_id' => $device->id,
-                'order_id' => $order->id,
+                'device_order_id' => $order->id,
                 'client_submission_id' => $clientSubmissionId,
             ])->lockForUpdate()->first();
 
@@ -102,7 +102,7 @@ class DurableRefillGuard
             // Create new submission
             $submission = RefillSubmission::create([
                 'device_id' => $device->id,
-                'order_id' => $order->id,
+                'device_order_id' => $order->id,
                 'client_submission_id' => $clientSubmissionId,
                 'status' => 'NEW',
             ]);

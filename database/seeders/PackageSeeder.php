@@ -12,7 +12,9 @@ use App\Models\Krypton\Menu;
  * hardcoded Set Meal A / B / C configuration.
  *
  * Requires a live Krypton POS DB connection to resolve modifier
- * Krypton menu IDs from receipt_name codes (P1–P9, B1–B10, C1).
+ * Krypton menu IDs from receipt_name codes (P1–P10, B1–B9, C1–C2).
+ * Resolves against menu_group_id = 34 (named tablet menus, IDs 114–134).
+ * B10 does not exist in Krypton and is excluded.
  *
  * Run with:  php artisan db:seed --class=PackageSeeder
  */
@@ -43,9 +45,9 @@ class PackageSeeder extends Seeder
             'krypton_menu_id' => 48,
             'sort_order'      => 2,
             'codes'           => [
-                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9',
-                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10',
-                'C1',
+                'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10',
+                'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9',
+                'C1', 'C2',
             ],
         ],
     ];
@@ -67,7 +69,7 @@ class PackageSeeder extends Seeder
             // Resolve modifier IDs from Krypton by receipt_name.
             try {
                 $modifierMenus = Menu::whereIn('receipt_name', $def['codes'])
-                    ->where('is_modifier_only', true)
+                    ->where('menu_group_id', 34)
                     ->get()
                     ->keyBy('receipt_name');
 

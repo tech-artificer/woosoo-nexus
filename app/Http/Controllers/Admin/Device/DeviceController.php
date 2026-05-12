@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Device;
 
+use App\Events\AppControlEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDeviceRequest;
 use App\Http\Requests\UpdateDeviceRequest;
@@ -368,13 +369,21 @@ class DeviceController extends Controller
                 ]);
         }
 
+        $oldTableId = $device->table_id;
+        $newTableId = $data['table_id'] ?? null;
+
         $device->update([
             'name' => $data['name'],
             'ip_address' => $ipAddress,
             'port' => $data['port'] ?? null,
-            'table_id' => $data['table_id'] ?? null,
+            'table_id' => $newTableId,
             'type' => $data['type'] ?? null,
         ]);
+
+        // Broadcast table change to tablet so it refreshes its table assignment
+        if ((string) $oldTableId !== (string) $newTableId) {
+            AppControlEvent::dispatch($device->id, 'table_changed', ['table_id' => $newTableId]);
+        }
 
         return redirect()
             ->route('devices.index')

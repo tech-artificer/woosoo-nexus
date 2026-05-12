@@ -15,7 +15,7 @@ class RefillSubmissionFactory extends Factory
     {
         return [
             'device_id' => Device::factory(),
-            'order_id' => DeviceOrder::factory(),
+            'device_order_id' => DeviceOrder::factory(),
             'client_submission_id' => $this->faker->uuid,
             'status' => $this->faker->randomElement(['NEW', 'PROCESSING', 'POS_CREATED', 'MIRRORED', 'PRINT_EVENT_CREATED', 'COMPLETED', 'FAILED']),
             'print_event_id' => null,
@@ -23,7 +23,7 @@ class RefillSubmissionFactory extends Factory
             'response_payload' => null,
             'response_status' => null,
             'error_message' => null,
-            'started_at' => now(),
+            'processing_started_at' => now(),
         ];
     }
 
@@ -32,7 +32,7 @@ class RefillSubmissionFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'status' => 'NEW',
-                'started_at' => null,
+                'processing_started_at' => null,
             ];
         });
     }
@@ -42,7 +42,7 @@ class RefillSubmissionFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'status' => 'PROCESSING',
-                'started_at' => now(),
+                'processing_started_at' => now(),
             ];
         });
     }

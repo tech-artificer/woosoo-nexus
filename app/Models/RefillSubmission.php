@@ -38,6 +38,7 @@ class RefillSubmission extends Model
         'failed_at',
         'pos_ordered_menu_ids',
         'response_payload',
+        'response_status',
         'error_message',
         'processing_started_at',
         'processing_lock_id',
@@ -47,6 +48,7 @@ class RefillSubmission extends Model
     protected $casts = [
         'pos_ordered_menu_ids' => 'array',
         'response_payload' => 'array',
+        'response_status' => 'integer',
         'pos_created_at' => 'datetime',
         'mirrored_at' => 'datetime',
         'print_event_created_at' => 'datetime',

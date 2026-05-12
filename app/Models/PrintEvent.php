@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\UtcDateTimeCast;
+use App\Enums\PrintEventStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,6 +27,9 @@ class PrintEvent extends Model
         'printer_id',
         'printer_name',                // NEW: Human-readable printer name
         'event_type',
+        'status',                      // State machine: pending|reserved|printing|printed|failed
+        'reserved_by_device_id',       // Device that reserved this job
+        'reserved_at',                 // When the job was reserved
         'meta',
         'is_acknowledged',
         'acknowledged_at',
@@ -44,6 +48,8 @@ class PrintEvent extends Model
 
     protected $casts = [
         'meta' => 'array',
+        'status' => PrintEventStatus::class,
+        'reserved_at' => UtcDateTimeCast::class,
         'is_acknowledged' => 'boolean',
         'acknowledged_at' => UtcDateTimeCast::class,
         'attempts' => 'integer',           // Backend-managed retry counter.

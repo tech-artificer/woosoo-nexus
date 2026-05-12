@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Order\CreateOrderedMenu;
+use App\Enums\OrderStatus;
 use App\Events\Order\OrderPrinted;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\PrintOrder;
@@ -219,6 +220,16 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
+        // Reject refill against terminal orders (completed, cancelled, voided).
+        $terminalStatuses = [OrderStatus::COMPLETED, OrderStatus::CANCELLED, OrderStatus::VOIDED, OrderStatus::ARCHIVED];
+        if (in_array($deviceOrder->status, $terminalStatuses, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Refill not allowed: order is ' . $deviceOrder->status->value,
+                'error'   => ['code' => 'ORDER_NOT_ACTIVE', 'status' => $deviceOrder->status->value],
+            ], 409);
+        }
+
         // Legacy fallback: no client_submission_id means non-idempotent path
         if (!$clientSubmissionId) {
             Log::warning('[REFILL] Legacy non-idempotent path - no client_submission_id', [
@@ -254,6 +265,7 @@ class OrderApiController extends Controller
         }
 
         $submission = $guardResult['submission'];
+        $isNewSubmission = $guardResult['is_new'] ?? true;
 
         // === STATE: PROCESSING → POS_CREATED ===
         // Map incoming items
@@ -344,9 +356,28 @@ class OrderApiController extends Controller
 
             // Extract POS ordered_menu IDs for idempotency tracking
             $posOrderedMenuIds = collect($created)->map(fn ($it) => is_array($it) ? ($it['id'] ?? null) : ($it->id ?? null))->filter()->values()->all();
-            
-            // Mark POS_CREATED state
-            $refillGuard->markPosCreated($submission, $posOrderedMenuIds);
+
+            // Mark POS_CREATED immediately. If this fails the submission stays in
+            // PROCESSING; the next retry will re-enter this branch and attempt another
+            // POS insert. We therefore treat a marking failure as a hard error so the
+            // client retries — at which point the DB unique constraint will prevent a
+            // second POS insert only if the row was committed. Log loudly so ops can
+            // reconcile manually if the state write fails after POS write succeeded.
+            try {
+                $refillGuard->markPosCreated($submission, $posOrderedMenuIds);
+            } catch (\Throwable $e) {
+                Log::critical('[REFILL] CRITICAL: POS insert succeeded but state mark failed — manual reconciliation may be required', [
+                    'submission_id'     => $submission->id,
+                    'pos_ordered_menu_ids' => $posOrderedMenuIds,
+                    'error'             => $e->getMessage(),
+                ]);
+                return response()->json([
+                    'success'       => false,
+                    'message'       => 'POS insert succeeded but state could not be recorded — please retry',
+                    'pos_created'   => true,
+                    'submission_id' => $submission->id,
+                ], 500);
+            }
         }
 
         // Normalize created items for downstream processing
@@ -506,17 +537,20 @@ class OrderApiController extends Controller
                 }
             }
 
-            // Dispatch events
+            // Dispatch events — only on first-time submission to prevent broadcast
+            // replay when a retry resumes from MIRRORED or PRINT_EVENT_CREATED state.
             $deviceOrder->refresh();
             $freshOrder = $deviceOrder->fresh(['items.menu', 'device.table', 'table', 'serviceRequests']);
-            
-            try {
-                PrintRefill::dispatch($deviceOrder, $posItems);
-                if ($freshOrder) {
-                    OrderStatusUpdated::dispatch($freshOrder);
+
+            if ($isNewSubmission) {
+                try {
+                    PrintRefill::dispatch($deviceOrder, $posItems);
+                    if ($freshOrder) {
+                        OrderStatusUpdated::dispatch($freshOrder);
+                    }
+                } catch (\Throwable $e) {
+                    report($e);
                 }
-            } catch (\Throwable $e) {
-                report($e);
             }
 
             // === STATE: COMPLETED ===

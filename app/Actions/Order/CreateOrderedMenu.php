@@ -23,9 +23,6 @@ class CreateOrderedMenu
             $packageMenuId = (int) ($item['menu_id'] ?? 0);
             $isPackage = ! empty($item['is_package']);
 
-            if ($isPackage) {
-                $this->assertAllowedPackageModifiers($packageMenuId, $item['modifiers'] ?? []);
-            }
 
             $expandedItems[] = array_merge($item, [
                 'ordered_menu_id' => $item['ordered_menu_id'] ?? $packageMenuId,
@@ -73,13 +70,6 @@ class CreateOrderedMenu
             throw MenuItemUnavailableException::forMissingIds($missingIds);
         }
 
-        $activePackageMenuIds = Package::query()
-            ->whereIn('krypton_menu_id', $allMenuIds)
-            ->where('is_active', true)
-            ->pluck('krypton_menu_id')
-            ->map(fn ($id) => (int) $id)
-            ->flip();
-
         $created = [];
 
         foreach ($expandedItems as $key => $item) {
@@ -94,7 +84,7 @@ class CreateOrderedMenu
             // in krypton_woosoo.menus. Always resolve the submitted menu_id
             // through POS so ordered_menus.menu_id, price, and display names
             // remain valid Krypton data instead of client-provided stubs.
-            $isPackageIndicator = $item['is_package'] ?? $activePackageMenuIds->has($menuId);
+            $isPackageIndicator = (bool) ($item['is_package'] ?? false);
 
             $price = $menuModel->price;
             $priceLevelId = $this->getMenuPriceLevel($menuId);
@@ -269,35 +259,4 @@ class CreateOrderedMenu
         }
     }
 
-    private function assertAllowedPackageModifiers(int $packageMenuId, mixed $modifiers): void
-    {
-        if ($packageMenuId <= 0 || ! is_array($modifiers) || $modifiers === []) {
-            return;
-        }
-
-        $package = Package::query()
-            ->where('krypton_menu_id', $packageMenuId)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $package) {
-            throw new \InvalidArgumentException("Package with krypton_menu_id {$packageMenuId} not found or inactive.", 422);
-        }
-
-        $allowedModifierIds = $package->modifiers()
-            ->pluck('krypton_menu_id')
-            ->map(static fn ($id) => (int) $id)
-            ->all();
-
-        foreach ($modifiers as $modifier) {
-            $modifierMenuId = (int) ($modifier['menu_id'] ?? 0);
-            if ($modifierMenuId <= 0) {
-                throw new \InvalidArgumentException("Invalid modifier: menu_id must be greater than 0.", 422);
-            }
-
-            if (! in_array($modifierMenuId, $allowedModifierIds, true)) {
-                throw new \InvalidArgumentException("Modifier {$modifierMenuId} is not allowed for package {$packageMenuId}.", 422);
-            }
-        }
-    }
 }

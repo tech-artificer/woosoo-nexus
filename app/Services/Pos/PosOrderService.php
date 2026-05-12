@@ -6,6 +6,7 @@ use App\Actions\Order\CreateOrder;
 use App\Actions\Order\CreateOrderCheck;
 use App\Actions\Order\CreateTableOrder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PosOrderService
 {
@@ -133,22 +134,38 @@ class PosOrderService
      */
     public function payOrder(string $orderId, array $validated): array
     {
-        $order = DB::connection('pos')
-            ->table('orders')
-            ->where('id', $orderId)
-            ->where('is_open', 1)
-            ->where('is_voided', 0)
-            ->first();
+        try {
+            $order = DB::connection('pos')
+                ->table('orders')
+                ->where('id', $orderId)
+                ->where('is_open', 1)
+                ->where('is_voided', 0)
+                ->first();
+        } catch (\Throwable $e) {
+            Log::error('[PosOrderService] payOrder: POS DB unreachable during order lookup', [
+                'order_id' => $orderId,
+                'error'    => $e->getMessage(),
+            ]);
+            return ['payment' => null, 'is_settled' => 0, 'error' => 'POS database unavailable: ' . $e->getMessage()];
+        }
 
         if (! $order) {
             return ['payment' => null, 'is_settled' => 0, 'not_found' => true];
         }
 
-        $orderCheck = DB::connection('pos')
-            ->table('order_checks')
-            ->where('order_id', $orderId)
-            ->orderByDesc('id')
-            ->first();
+        try {
+            $orderCheck = DB::connection('pos')
+                ->table('order_checks')
+                ->where('order_id', $orderId)
+                ->orderByDesc('id')
+                ->first();
+        } catch (\Throwable $e) {
+            Log::error('[PosOrderService] payOrder: POS DB unreachable during order_check lookup', [
+                'order_id' => $orderId,
+                'error'    => $e->getMessage(),
+            ]);
+            return ['payment' => null, 'is_settled' => 0, 'error' => 'POS database unavailable: ' . $e->getMessage()];
+        }
 
         if (! $orderCheck) {
             return ['payment' => null, 'is_settled' => 0, 'check_not_found' => true];
@@ -165,56 +182,66 @@ class PosOrderService
         $now          = now()->toDateTimeString();
         $paymentRows  = null;
 
-        DB::connection('pos')->transaction(function () use (
-            $orderCheck, $validated, $amount, $change, $newPaid,
-            $isSettled, $now, $orderId, $ctx, &$paymentRows
-        ): void {
-            $paymentRows = DB::connection('pos')->select(
-                'CALL create_check_payment(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [
-                    (int) $orderCheck->id,
-                    (int) $validated['payment_type_id'],
-                    null,
-                    0,
-                    null,
-                    null,
-                    $amount,
-                    $change,
-                    $validated['card_company'] ?? null,
-                    $validated['card_number'] ?? null,
-                    $validated['unique_code'] ?? null,
-                    $validated['auth_code'] ?? null,
-                    (float) ($validated['tip'] ?? 0),
-                    false,
-                    false,
-                    $now,
-                    (int) $ctx['employee_log_id'],
-                    $validated['expiration_date'] ?? null,
-                ]
-            );
+        try {
+            DB::connection('pos')->transaction(function () use (
+                $orderCheck, $validated, $amount, $change, $newPaid,
+                $isSettled, $now, $orderId, $ctx, &$paymentRows
+            ): void {
+                $paymentRows = DB::connection('pos')->select(
+                    'CALL create_check_payment(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [
+                        (int) $orderCheck->id,
+                        (int) $validated['payment_type_id'],
+                        null,
+                        0,
+                        null,
+                        null,
+                        $amount,
+                        $change,
+                        $validated['card_company'] ?? null,
+                        $validated['card_number'] ?? null,
+                        $validated['unique_code'] ?? null,
+                        $validated['auth_code'] ?? null,
+                        (float) ($validated['tip'] ?? 0),
+                        0,
+                        0,
+                        $now,
+                        (int) $ctx['employee_log_id'],
+                        $validated['expiration_date'] ?? null,
+                    ]
+                );
 
-            DB::connection('pos')
-                ->table('order_checks')
-                ->where('id', $orderCheck->id)
-                ->update([
-                    'paid_amount'       => $newPaid,
-                    'change'            => $change,
-                    'is_settled'        => $isSettled,
-                    'date_time_closed'  => $isSettled ? $now : null,
-                ]);
-
-            if ($isSettled === 1) {
                 DB::connection('pos')
-                    ->table('orders')
-                    ->where('id', $orderId)
+                    ->table('order_checks')
+                    ->where('id', $orderCheck->id)
                     ->update([
-                        'is_open'          => 0,
-                        'date_time_closed' => $now,
+                        'paid_amount'       => $newPaid,
+                        'change'            => $change,
+                        'is_settled'        => $isSettled,
+                        'date_time_closed'  => $isSettled ? $now : null,
                     ]);
 
-                $this->tableService->syncTablesForOrderClosure($orderId);
-            }
-        });
+                if ($isSettled === 1) {
+                    DB::connection('pos')
+                        ->table('orders')
+                        ->where('id', $orderId)
+                        ->update([
+                            'is_open'          => 0,
+                            'date_time_closed' => $now,
+                        ]);
+
+                    $this->tableService->syncTablesForOrderClosure($orderId);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error('[PosOrderService] payOrder failed', [
+                'order_id' => $orderId,
+                'amount'   => $amount,
+                'error'    => $e->getMessage(),
+            ]);
+
+            return ['payment' => null, 'is_settled' => 0, 'error' => $e->getMessage()];
+        }
 
         return [
             'payment'    => $paymentRows[0] ?? null,

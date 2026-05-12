@@ -19,6 +19,7 @@ Route::middleware(['print_events.enabled'])->group(function () {
     // These endpoints are for printer relay devices that authenticate via device tokens
     Route::get('/printer/unprinted-events', [PrinterApiController::class, 'getUnprintedEvents']);
     Route::get('/printer/unprinted-orders', [PrinterApiController::class, 'getUnprintedOrders']);
+    Route::post('/printer/print-events/{id}/reserve', [PrinterApiController::class, 'reservePrintEvent']);
     Route::post('/printer/print-events/{id}/ack', [PrinterApiController::class, 'ackPrintEvent']);
     Route::post('/printer/print-events/{id}/failed', [PrinterApiController::class, 'failPrintEvent']);
     Route::post('/printer/heartbeat', [PrinterApiController::class, 'heartbeat']);

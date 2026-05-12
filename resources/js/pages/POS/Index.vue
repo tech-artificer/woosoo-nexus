@@ -143,9 +143,32 @@ const formatDateTime = (value: string | null | undefined): string => {
     })
 }
 
-const getCsrfToken = (): string => {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-    return token || ''
+/**
+ * Read the XSRF-TOKEN cookie value (set by Laravel, readable by JS).
+ * This is the encrypted token — must be sent as X-XSRF-TOKEN so Laravel
+ * can decrypt and compare it against the session. Do NOT send it as
+ * X-CSRF-TOKEN (that header expects the raw unencrypted token from <meta>).
+ */
+const getXsrfCookie = (): string => {
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))
+    return cookie ? decodeURIComponent(cookie.split('=')[1]) : ''
+}
+
+/**
+ * Always refreshes the CSRF cookie before sending the request.
+ * Handles long-lived POS sessions where the XSRF token has expired.
+ */
+const fetchWithCsrf = async (url: string, options: RequestInit): Promise<Response> => {
+    await fetch('/sanctum/csrf-cookie', { credentials: 'include' })
+
+    return fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+            ...(options.headers as Record<string, string>),
+            'X-XSRF-TOKEN': getXsrfCookie(),
+        },
+    })
 }
 
 const loadTablesForTerminal = async (terminalId: string) => {
@@ -243,11 +266,10 @@ const handleEditSave = async (guestCount: number, reference: string | null) => {
 
     actionLoading.value = true
     try {
-        const response = await fetch(route('pos.orders.edit', { orderId: selectedOrderForEdit.value.id }), {
+        const response = await fetchWithCsrf(route('pos.orders.edit', { orderId: selectedOrderForEdit.value.id }), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken(),
                 'X-Requested-With': 'XMLHttpRequest',
                 Accept: 'application/json',
             },
@@ -281,10 +303,9 @@ const handleVoidConfirm = async () => {
 
     actionLoading.value = true
     try {
-        const response = await fetch(route('pos.orders.void', { orderId: selectedOrderForVoid.value.id }), {
+        const response = await fetchWithCsrf(route('pos.orders.void', { orderId: selectedOrderForVoid.value.id }), {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': getCsrfToken(),
                 'X-Requested-With': 'XMLHttpRequest',
                 Accept: 'application/json',
             },
@@ -317,11 +338,10 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
 
     actionLoading.value = true
     try {
-        const response = await fetch(route('pos.orders.pay', { orderId: selectedOrderForPay.value.id }), {
+        const response = await fetchWithCsrf(route('pos.orders.pay', { orderId: selectedOrderForPay.value.id }), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken(),
                 'X-Requested-With': 'XMLHttpRequest',
                 Accept: 'application/json',
             },

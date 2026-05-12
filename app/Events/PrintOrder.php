@@ -31,7 +31,7 @@ class PrintOrder implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('admin.print'),
+            new Channel('admin.orders'),
         ];
     }
 
@@ -64,7 +64,7 @@ class PrintOrder implements ShouldBroadcastNow
             'items' => $this->deviceOrder->items->map(fn ($item) => [
                 'id' => $item->id,
                 'menu_id' => $item->menu_id,
-                'name' => $item->menu?->receipt_name ?? $item->menu?->name ?? null,
+                'name' => $item->menu?->name ?? $item->menu?->receipt_name ?? null,
                 'quantity' => $item->quantity ?? null,
                 'price' => $item->price ?? null,
                 'subtotal' => $item->subtotal ?? null,

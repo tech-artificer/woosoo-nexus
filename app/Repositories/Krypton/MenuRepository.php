@@ -136,7 +136,7 @@ class MenuRepository
      * @return array The list of all menu modifiers.
      * @throws \Exception If the database procedure call fails.
      * 
-     * @example P1, P2, P3, P4, P5, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, C1
+     * @example P1–P10, B1–B9, C1–C2
      */
     public function getMenuModifiers(): EloquentCollection
     {

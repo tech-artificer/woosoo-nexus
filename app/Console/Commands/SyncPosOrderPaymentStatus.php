@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderVoided;
+use App\Events\Order\PaymentCompleted;
 use App\Models\DeviceOrder;
 use App\Services\AuditLogService;
 use Illuminate\Console\Command;
@@ -122,6 +123,7 @@ class SyncPosOrderPaymentStatus extends Command
 
                     if ($nextStatus === OrderStatus::COMPLETED) {
                         OrderCompleted::dispatch($deviceOrder);
+                        PaymentCompleted::dispatch($deviceOrder);
                     }
 
                     if ($nextStatus === OrderStatus::VOIDED) {

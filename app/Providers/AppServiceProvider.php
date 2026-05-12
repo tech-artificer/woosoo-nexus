@@ -68,7 +68,12 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Apply DB-stored POS credentials to the 'pos' connection (overrides .env defaults).
-        $posConnection->applyFromDatabase();
+        // Skip in console context — the pos connection is only used during web/queue requests,
+        // and Schema::hasTable() inside applyFromDatabase() would attempt a MySQL connection
+        // that fails when artisan runs on the host machine outside Docker.
+        if (! $this->app->runningInConsole()) {
+            $posConnection->applyFromDatabase();
+        }
 
         RateLimiter::for('device-order-create', function (Request $request) {
             $deviceId = $request->user('device')?->id ?? $request->user()?->id;

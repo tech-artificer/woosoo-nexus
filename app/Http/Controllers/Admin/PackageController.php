@@ -7,8 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageRequest;
 use App\Http\Requests\Admin\UpdatePackageRequest;
 use App\Http\Resources\PackageResource;
+use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Models\Krypton\Menu;
 use App\Models\Package;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -63,6 +65,8 @@ class PackageController extends Controller
             $this->syncModifiers($package, $data['modifiers'] ?? []);
         });
 
+        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
+
         return redirect()->route('packages.index')->with('success', 'Package created successfully.');
     }
 
@@ -81,12 +85,16 @@ class PackageController extends Controller
             $this->syncModifiers($package, $data['modifiers'] ?? []);
         });
 
+        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
+
         return redirect()->route('packages.index')->with('success', 'Package updated successfully.');
     }
 
     public function destroy(Package $package)
     {
         $package->delete();
+
+        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
 
         return redirect()->route('packages.index')->with('success', 'Package deleted successfully.');
     }

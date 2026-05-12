@@ -7,6 +7,7 @@ use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderCancelled;
 use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderVoided;
+use App\Events\Order\PaymentCompleted;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -41,6 +42,7 @@ class DeviceOrderObserver
                 // Fan-out terminal lifecycle events synchronously after commit.
                 if ($newStatusStr === \App\Enums\OrderStatus::COMPLETED->value) {
                     OrderCompleted::dispatch($deviceOrder);
+                    PaymentCompleted::dispatch($deviceOrder);
                 }
 
                 if ($newStatusStr === \App\Enums\OrderStatus::VOIDED->value) {

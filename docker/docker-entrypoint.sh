@@ -13,4 +13,7 @@ mkdir -p storage/framework/cache \
 chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 chmod -R ug+rwX storage bootstrap/cache 2>/dev/null || true
 
+# Create storage symlink if missing (public/storage → storage/app/public)
+php artisan storage:link --quiet 2>/dev/null || true
+
 exec "$@"

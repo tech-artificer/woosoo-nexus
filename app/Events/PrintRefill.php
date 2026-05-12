@@ -30,7 +30,7 @@ class PrintRefill implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [new Channel('admin.print')];
+        return [new Channel('admin.orders')];
     }
 
     public function broadcastWith(): array
@@ -69,7 +69,7 @@ class PrintRefill implements ShouldBroadcastNow
             'order_id' => $this->deviceOrder?->order_id,
             'session_id' => $this->deviceOrder?->session_id,
             'print_type' => 'REFILL',
-            'refill_number' => $this->deviceOrder?->refill_number,
+            'refill_number' => $this->deviceOrder?->printEvent?->refill_number,
             'tablename' => $this->deviceOrder?->table?->name,
             'guest_count' => $this->deviceOrder?->guest_count,
             'order_number' => $this->deviceOrder?->order_number,

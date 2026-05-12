@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Events\AppControlEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\RotateDeviceSecurityCodeRequest;
 use App\Http\Requests\Api\StoreDeviceApiRequest;
@@ -320,7 +321,15 @@ class DeviceApiController extends Controller
         $this->authorize('update', $device);
 
         $request->validate(['is_active' => ['required', 'boolean']]);
-        $device->update(['is_active' => $request->boolean('is_active')]);
+        $isActive = $request->boolean('is_active');
+        $device->update(['is_active' => $isActive]);
+
+        // Broadcast control event to tablet so it can react immediately
+        if (! $isActive) {
+            AppControlEvent::dispatch($device->id, 'disabled', []);
+        } else {
+            AppControlEvent::dispatch($device->id, 'enabled', []);
+        }
 
         return response()->json(['is_active' => $device->is_active]);
     }
