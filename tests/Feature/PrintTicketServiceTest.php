@@ -13,11 +13,12 @@ use App\Services\PrintTicketService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Tests\Traits\MocksKryptonSession;
 use Tests\TestCase;
 
 class PrintTicketServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksKryptonSession;
 
     private PrintTicketService $service;
     private Device $device;
@@ -31,7 +32,9 @@ class PrintTicketServiceTest extends TestCase
         $this->service = app(PrintTicketService::class);
         
         // Create test data
-        $this->device = Device::factory()->create();
+        $this->mockActiveKryptonSession();
+
+        $this->device = Device::factory()->withTable(1)->create();
         $this->order = DeviceOrder::factory()->create([
             'device_id' => $this->device->id,
             'order_id' => 12345,
@@ -277,13 +280,7 @@ class PrintTicketServiceTest extends TestCase
     /** @test */
     public function it_logs_warning_when_legacy_fallback_is_used_for_initial_order()
     {
-        Log::shouldReceive('warning')
-            ->once()
-            ->with('Legacy non-idempotent print event path used', [
-                'device_order_id' => $this->order->id,
-                'event_type' => 'INITIAL',
-                'reason' => 'No client_submission_id provided'
-            ]);
+        Log::spy();
 
         // Test legacy fallback path by calling OrderService without client_submission_id
         $orderService = app(\App\Services\Krypton\OrderService::class);
@@ -294,13 +291,19 @@ class PrintTicketServiceTest extends TestCase
         ], null); // No client_submission_id
 
         $this->assertInstanceOf(\App\Models\DeviceOrder::class, $result);
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->with('Legacy non-idempotent print event path used', [
+                'device_order_id' => $result->id,
+                'event_type' => 'INITIAL',
+                'reason' => 'No client_submission_id provided',
+            ]);
     }
 
     /** @test */
     public function it_uses_idempotent_path_when_client_submission_id_exists()
     {
-        // Should NOT log any warnings when using idempotent path
-        Log::shouldReceive('warning')->never();
+        Log::spy();
 
         $clientSubmissionId = Str::uuid()->toString();
         
@@ -318,5 +321,9 @@ class PrintTicketServiceTest extends TestCase
         $printEvent = PrintEvent::where('client_submission_id', $clientSubmissionId)->first();
         $this->assertNotNull($printEvent);
         $this->assertEquals("initial:{$result->id}:{$clientSubmissionId}", $printEvent->idempotency_key);
+        Log::shouldNotHaveReceived('warning', [
+            'Legacy non-idempotent print event path used',
+            \Mockery::any(),
+        ]);
     }
 }

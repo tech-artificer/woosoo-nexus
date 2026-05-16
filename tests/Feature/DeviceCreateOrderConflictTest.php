@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
+use App\Models\Package;
 use App\Services\Krypton\OrderService;
 use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,6 +28,16 @@ class DeviceCreateOrderConflictTest extends TestCase
 
         // Mock active Krypton session for all tests
         $this->mockActiveKryptonSession();
+    }
+
+    private function seedTabletPackage(int $kryptonMenuId = 46): void
+    {
+        Package::query()->create([
+            'name' => 'Classic Feast',
+            'krypton_menu_id' => $kryptonMenuId,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
     }
 
     public function test_device_cannot_create_order_when_existing_pending_or_confirmed_exists()
@@ -144,6 +155,7 @@ class DeviceCreateOrderConflictTest extends TestCase
     public function test_order_creation_succeeds_when_realtime_broadcast_is_unavailable(): void
     {
         Branch::create(['name' => 'Main', 'location' => 'HQ']);
+        $this->seedTabletPackage();
 
         $device = Device::create([
             'name' => 'Device Broadcast Failure',
@@ -200,17 +212,10 @@ class DeviceCreateOrderConflictTest extends TestCase
         ])->postJson('/api/devices/create-order', [
             'guest_count' => 1,
             'package_id' => 46,
-            'subtotal' => 1.00,
-            'tax' => 0.00,
-            'discount' => 0.00,
-            'total_amount' => 1.00,
             'items' => [
                 [
                     'menu_id' => 1,
-                    'name' => 'Test Item',
                     'quantity' => 1,
-                    'price' => 1.00,
-                    'subtotal' => 1.00,
                 ],
             ],
         ]);

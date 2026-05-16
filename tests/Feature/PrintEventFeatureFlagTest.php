@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use App\Models\Device;
 use App\Models\DeviceOrder;
+use App\Models\Branch;
+use App\Models\Krypton\Menu;
+use App\Models\Package;
+use App\Models\PackageModifier;
 use App\Models\PrintEvent;
 use App\Services\PrintEventService;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     Config::set('api.print_events_enabled', false);
@@ -93,35 +97,55 @@ describe('PrintEvent feature flag disabled (MVP default)', function () {
     });
 
     it('order submission still works when PrintEvent is disabled', function () {
-        $device = Device::factory()->create();
-        $branch = \App\Models\Branch::factory()->create();
-        $table = \App\Models\Table::factory()->create(['branch_id' => $branch->id]);
-        $menu = \App\Models\Menu::factory()->create();
+        $branch = Branch::factory()->create();
+        $device = Device::factory()->create([
+            'branch_id' => $branch->id,
+            'table_id' => 1,
+        ]);
 
-        // Ensure packages and package modifiers exist
-        $package = \App\Models\Package::factory()->create([
+        DB::connection('pos')->table('tables')->insert([
+            'id' => 1,
+            'name' => 'T1',
+            'is_available' => true,
+            'is_locked' => false,
+        ]);
+
+        Menu::factory()->create([
             'id' => 46,
             'name' => 'Classic Feast',
-            'branch_id' => $branch->id,
+            'receipt_name' => 'Classic Feast',
+            'price' => 100,
         ]);
-        DB::table('package_modifiers')->insert([
-            'package_id' => 46,
-            'menu_id' => $menu->id,
-            'position' => 1,
+        $modifier = Menu::factory()->create([
+            'id' => 10,
+            'name' => 'Test Item',
+            'receipt_name' => 'Test Item',
+            'price' => 0,
         ]);
+
+        $package = Package::create([
+            'name' => 'Classic Feast',
+            'krypton_menu_id' => 46,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        PackageModifier::create([
+            'package_id' => $package->id,
+            'krypton_menu_id' => $modifier->id,
+            'sort_order' => 0,
+        ]);
+
+        $this->createTestSession();
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $device->createToken('test')->plainTextToken,
         ])->postJson('/api/devices/create-order', [
-            'branch_id' => $branch->id,
-            'table_id' => $table->id,
             'guest_count' => 2,
+            'package_id' => 46,
             'items' => [
                 [
-                    'package_id' => 46,
-                    'krypton_menu_id' => $menu->id,
+                    'menu_id' => $modifier->id,
                     'quantity' => 1,
-                    'price' => 100,
                 ],
             ],
         ]);

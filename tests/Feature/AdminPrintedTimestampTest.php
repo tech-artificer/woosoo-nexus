@@ -22,10 +22,10 @@ class AdminPrintedTimestampTest extends TestCase
     }
 
     /**
-     * Test that when an order created hours ago is printed now,
-     * the printed_at timestamp reflects the current print time, not the order creation time.
+     * Test that an order printed shortly after creation records the actual
+     * printer ACK time, not an artificial delayed timestamp.
      */
-    public function test_printed_at_reflects_print_time_not_order_creation_time()
+    public function test_printed_at_reflects_actual_print_time_close_to_order_creation()
     {
         $branch = \App\Models\Branch::create(['name' => 'Test Branch', 'location' => 'Test']);
         $device = Device::create(['name' => 'test-device', 'ip_address' => '127.0.0.1', 'branch_id' => $branch->id]);
@@ -33,8 +33,10 @@ class AdminPrintedTimestampTest extends TestCase
 
         $sessionId = $this->createTestSession();
 
-        // Create an order 8 hours ago
-        $eightHoursAgo = Carbon::now()->subHours(8);
+        $orderPlacedAt = Carbon::parse('2026-05-16 20:00:00', config('app.timezone', 'Asia/Manila'));
+        $actualPrintedAt = $orderPlacedAt->copy()->addSeconds(15);
+        $actualPrintedAtUtc = $actualPrintedAt->copy()->utc();
+
         $order = DeviceOrder::create([
             'order_id' => 12345,
             'device_id' => $device->id,
@@ -47,24 +49,17 @@ class AdminPrintedTimestampTest extends TestCase
             'session_id' => $sessionId,
             'status' => 'confirmed',
             'is_printed' => false,
-            'created_at' => $eightHoursAgo,
-            'updated_at' => $eightHoursAgo,
+            'created_at' => $orderPlacedAt,
+            'updated_at' => $orderPlacedAt,
         ]);
-
-        // Verify order was created 8 hours ago
-        $this->assertTrue($order->created_at->diffInHours(Carbon::now()) >= 8);
 
         // Create a print event
         $evt = PrintEvent::factory()->create(['device_order_id' => $order->id]);
 
-        // Now acknowledge the print with current time (simulating printer just printed)
-        $now = Carbon::now();
-        $printedAtIso = $now->toIso8601String();
-
         $resp = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/printer/print-events/' . $evt->id . '/ack', [
                 'printer_id' => 'PR-TEST-01',
-                'printed_at' => $printedAtIso,
+                'printed_at' => $actualPrintedAtUtc->toIso8601String(),
                 'verification_mode' => 'connected_only',
             ]);
 
@@ -73,15 +68,18 @@ class AdminPrintedTimestampTest extends TestCase
         // Refresh the order
         $order->refresh();
 
-        // Assert printed_at is set and close to now (not 8 hours ago)
+        // Assert printed_at is set to the printer ACK timestamp.
         $this->assertNotNull($order->printed_at);
         $this->assertTrue($order->is_printed);
 
-        // The printed_at should be within the last minute (not 8 hours ago)
-        $printedAtDiffMinutes = $order->printed_at->diffInMinutes(Carbon::now());
-        $this->assertLessThan(2, $printedAtDiffMinutes, 
-            "printed_at should be recent (within 2 minutes), but was {$printedAtDiffMinutes} minutes ago. " .
-            "This suggests printed_at is not being set correctly.");
+        $storedPrintedAt = $order->printed_at->copy()->utc();
+        $printedAtDriftSeconds = abs($storedPrintedAt->diffInSeconds($actualPrintedAt));
+
+        $this->assertLessThanOrEqual(1, $printedAtDriftSeconds,
+            "printed_at should equal the actual printer ACK time. " .
+            "expected_printed_at_manila={$actualPrintedAt->toIso8601String()}, " .
+            "sent_printed_at_utc={$actualPrintedAtUtc->toIso8601String()}, " .
+            "stored_printed_at={$storedPrintedAt->toIso8601String()}.");
 
         // Verify the resource returns the correct timestamps
         $resource = new DeviceOrderResource($order->load('device'));
@@ -90,17 +88,17 @@ class AdminPrintedTimestampTest extends TestCase
         $this->assertNotNull($array['printed_at']);
         $this->assertNotNull($array['created_at']);
 
-        // printed_at should be different from created_at (created 8h ago, printed now)
-        $this->assertNotEquals($array['printed_at'], $array['created_at']);
-
         // Parse and compare
         $resourcePrintedAt = Carbon::parse($array['printed_at']);
         $resourceCreatedAt = Carbon::parse($array['created_at']);
 
-        $diffHours = $resourcePrintedAt->diffInHours($resourceCreatedAt);
-        $this->assertGreaterThanOrEqual(7, $diffHours, 
-            "created_at and printed_at should be at least 7 hours apart (created 8h ago, printed now), " .
-            "but difference was only {$diffHours} hours. This suggests printed_at is using created_at.");
+        $secondsBetweenOrderAndPrint = abs($resourcePrintedAt->diffInSeconds($resourceCreatedAt));
+
+        $this->assertLessThanOrEqual(60, $secondsBetweenOrderAndPrint,
+            "created_at and printed_at should be close because orders print when sent to the kitchen. " .
+            "created_at={$resourceCreatedAt->toIso8601String()}, " .
+            "printed_at={$resourcePrintedAt->toIso8601String()}, " .
+            "seconds_between={$secondsBetweenOrderAndPrint}.");
     }
 
     /**

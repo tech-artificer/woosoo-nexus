@@ -127,6 +127,17 @@ test('menus index marks only menus with an existing uploaded image file', functi
 
     $admin = User::factory()->admin()->create();
 
+    $measureQueryCount = function () use ($admin): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        DB::connection('pos')->flushQueryLog();
+        DB::connection('pos')->enableQueryLog();
+
+        $this->actingAs($admin)->get(route('menus'))->assertOk();
+
+        return count(DB::getQueryLog()) + count(DB::connection('pos')->getQueryLog());
+    };
+
     $this->actingAs($admin)
         ->get(route('menus'))
         ->assertOk()
@@ -146,4 +157,57 @@ test('menus index marks only menus with an existing uploaded image file', functi
             ->where('stats.0.value', 4)
             ->where('stats.1.value', 3)
         );
+
+    $baselineQueryCount = $measureQueryCount();
+
+    DB::connection('pos')->table('menus')->insert([
+        [
+            'id' => 5,
+            'name' => 'E Extra Menu 1',
+            'kitchen_name' => 'E Extra Menu 1',
+            'receipt_name' => 'EXTRA-1',
+            'price' => 500,
+            'is_available' => true,
+            'menu_category_id' => 1,
+            'menu_group_id' => 1,
+            'menu_course_type_id' => 1,
+        ],
+        [
+            'id' => 6,
+            'name' => 'F Extra Menu 2',
+            'kitchen_name' => 'F Extra Menu 2',
+            'receipt_name' => 'EXTRA-2',
+            'price' => 600,
+            'is_available' => true,
+            'menu_category_id' => 1,
+            'menu_group_id' => 1,
+            'menu_course_type_id' => 1,
+        ],
+        [
+            'id' => 7,
+            'name' => 'G Extra Menu 3',
+            'kitchen_name' => 'G Extra Menu 3',
+            'receipt_name' => 'EXTRA-3',
+            'price' => 700,
+            'is_available' => true,
+            'menu_category_id' => 1,
+            'menu_group_id' => 1,
+            'menu_course_type_id' => 1,
+        ],
+        [
+            'id' => 8,
+            'name' => 'H Extra Menu 4',
+            'kitchen_name' => 'H Extra Menu 4',
+            'receipt_name' => 'EXTRA-4',
+            'price' => 800,
+            'is_available' => true,
+            'menu_category_id' => 1,
+            'menu_group_id' => 1,
+            'menu_course_type_id' => 1,
+        ],
+    ]);
+
+    $expandedQueryCount = $measureQueryCount();
+
+    expect($expandedQueryCount - $baselineQueryCount)->toBeLessThanOrEqual(2);
 });

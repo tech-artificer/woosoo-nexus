@@ -5,6 +5,7 @@ namespace Tests\Feature\Order;
 use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceOrder;
+use App\Models\Package;
 use App\Models\Krypton\Order;
 use App\Models\Krypton\Menu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -54,6 +55,16 @@ class TransactionRollbackTest extends TestCase
         $this->createTestSession();
     }
 
+    private function seedTabletPackage(int $kryptonMenuId = 1): void
+    {
+        Package::query()->create([
+            'name' => 'Transaction Test Package',
+            'krypton_menu_id' => $kryptonMenuId,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+    }
+
     protected function tearDown(): void
     {
         try {
@@ -66,6 +77,8 @@ class TransactionRollbackTest extends TestCase
     #[Test]
     public function it_rolls_back_entire_transaction_on_order_service_failure()
     {
+        $this->seedTabletPackage();
+
         $device = Device::factory()->create([
             'table_id' => 1,
             'branch_id' => $this->branch->id,
@@ -151,6 +164,8 @@ class TransactionRollbackTest extends TestCase
     #[Test]
     public function it_ensures_no_orphaned_pos_records_on_local_db_failure()
     {
+        $this->seedTabletPackage();
+
         $device = Device::factory()->create([
             'table_id' => 1,
             'branch_id' => $this->branch->id,
@@ -209,6 +224,8 @@ class TransactionRollbackTest extends TestCase
     #[Test]
     public function it_completes_transaction_atomically_on_success()
     {
+        $this->seedTabletPackage();
+
         $device = Device::factory()->create([
             'table_id' => 1,
             'branch_id' => $this->branch->id,

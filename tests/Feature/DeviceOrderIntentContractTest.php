@@ -2,19 +2,25 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Support\Facades\Validator;
-use App\Http\Requests\StoreDeviceOrderRequest;
+use App\Http\Controllers\Api\V1\DeviceOrderApiController;
 use App\Http\Requests\RefillOrderRequest;
+use App\Http\Requests\StoreDeviceOrderRequest;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Tests\TestCase;
 
 /**
  * Verifies that both request validators accept the exact intent-only
  * payload shapes the tablet staging branch sends, and reject invalid inputs.
  *
- * These are pure validator unit tests (no DB / POS calls).
+ * Most checks are pure validator coverage. The expandIntentPayload check seeds
+ * the package row required by the real controller contract.
  */
 class DeviceOrderIntentContractTest extends TestCase
 {
+    use RefreshDatabase;
+
     // ─── Initial order ────────────────────────────────────────────────────────
 
     public function test_accepts_intent_only_initial_order_payload(): void
@@ -196,7 +202,17 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_expandIntentPayload_shape(): void
     {
-        $controller = new \App\Http\Controllers\Api\V1\DeviceOrderApiController();
+        DB::table('packages')->insert([
+            'id' => 46,
+            'name' => 'Classic Feast',
+            'krypton_menu_id' => 46,
+            'is_active' => true,
+            'sort_order' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $controller = new DeviceOrderApiController();
         $expand = new \ReflectionMethod($controller, 'expandIntentPayload');
         $expand->setAccessible(true);
 

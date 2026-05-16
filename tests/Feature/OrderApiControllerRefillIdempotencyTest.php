@@ -140,7 +140,11 @@ class OrderApiControllerRefillIdempotencyTest extends TestCase
         $response->assertStatus(409);
         $response->assertJson([
             'success' => false,
-            'message' => 'Duplicate refill request already processing',
+            'message' => 'Refill request already processing',
+            'error' => [
+                'code' => 'REFILL_IN_PROGRESS',
+                'submission_status' => 'PROCESSING',
+            ],
         ]);
     }
 
@@ -411,14 +415,15 @@ class OrderApiControllerRefillIdempotencyTest extends TestCase
     {
         $clientSubmissionId = Str::uuid()->toString();
 
-        // Create submission at MIRRORED state
+        // Create a live in-flight submission. MIRRORED without an active lock is
+        // retryable because the refill flow can resume and complete it.
         RefillSubmission::create([
             'device_id' => $this->device->id,
             'device_order_id' => $this->deviceOrder->id,
             'client_submission_id' => $clientSubmissionId,
-            'status' => 'MIRRORED',
+            'status' => 'PROCESSING',
             'pos_ordered_menu_ids' => [100],
-            'mirrored_at' => now(),
+            'processing_started_at' => now(),
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders())
@@ -431,7 +436,7 @@ class OrderApiControllerRefillIdempotencyTest extends TestCase
             ]);
 
         $response->assertStatus(409);
-        $response->assertJsonPath('submission_status', 'MIRRORED');
+        $response->assertJsonPath('error.submission_status', 'PROCESSING');
     }
 
     /** @test */
