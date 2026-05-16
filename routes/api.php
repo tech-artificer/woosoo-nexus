@@ -229,7 +229,7 @@ Route::prefix('v1')->middleware(['auth:device'])->group(function () {
 });
 
 // Admin/device-reset endpoint (requires auth)
-Route::middleware(['requestId','auth:sanctum'])->group(function () {
+Route::middleware(['requestId', 'auth:sanctum'])->group(function () {
     Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
 });
 
@@ -296,6 +296,35 @@ Route::get('/health', function () {
         $services['redis'] = false;
     }
 
+    // Broadcasting integrity check
+    try {
+        $driver = config('broadcasting.default');
+        $reverbApps = config('reverb.apps.apps');
+        $reverbApp = is_array($reverbApps) && count($reverbApps) > 0 ? $reverbApps[0] : null;
+        $broadcastingReverb = config('broadcasting.connections.reverb');
+
+        if ($driver !== 'reverb' || $reverbApp === null) {
+            $broadcastingStatus = ['driver' => $driver, 'consistent' => false];
+        } else {
+            $reverbKey = trim((string) ($reverbApp['key'] ?? ''));
+            $consistent = $reverbKey === trim((string) ($broadcastingReverb['key'] ?? ''))
+                && trim((string) ($reverbApp['secret'] ?? '')) === trim((string) ($broadcastingReverb['secret'] ?? ''))
+                && trim((string) ($reverbApp['app_id'] ?? '')) === trim((string) ($broadcastingReverb['app_id'] ?? ''));
+            $first4 = substr($reverbKey, 0, 4);
+            $broadcastingStatus = [
+                'driver'          => $driver,
+                'key_fingerprint' => $reverbKey !== '' ? "{$first4}...(" . strlen($reverbKey) . "b, sha256:" . substr(hash('sha256', $reverbKey), 0, 8) . ")" : 'none',
+                'host'            => trim((string) config('broadcasting.connections.reverb.options.host', '')),
+                'port'            => (int) config('broadcasting.connections.reverb.options.port', 8080),
+                'scheme'          => trim((string) config('broadcasting.connections.reverb.options.scheme', 'https')),
+                'consistent'      => $consistent,
+            ];
+        }
+        $services['broadcasting'] = $broadcastingStatus;
+    } catch (\Throwable $e) {
+        $services['broadcasting'] = ['driver' => 'unknown', 'consistent' => false];
+    }
+
     // Queue depth — size() on the default queue connection
     $queueDepth = null;
     try {
@@ -307,9 +336,11 @@ Route::get('/health', function () {
     // Determine overall status
     $coreHealthy = $services['mysql'];
     $fullyHealthy = $coreHealthy && $services['redis'];
+    $broadcastingConsistent = $services['broadcasting']['consistent'] ?? true;
+    
     $overallStatus = match (true) {
         !$coreHealthy => 'down',
-        !$fullyHealthy => 'degraded',
+        (!$fullyHealthy || !$broadcastingConsistent) => 'degraded',
         default => 'ok',
     };
 
