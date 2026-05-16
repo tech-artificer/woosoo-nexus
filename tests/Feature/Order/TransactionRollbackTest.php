@@ -75,7 +75,7 @@ class TransactionRollbackTest extends TestCase
     }
 
     #[Test]
-    public function it_rolls_back_entire_transaction_on_order_service_failure()
+    public function it_rolls_back_local_transaction_but_keeps_pos_on_order_service_failure()
     {
         $this->seedTabletPackage();
 
@@ -112,9 +112,12 @@ class TransactionRollbackTest extends TestCase
         // Request should fail
         $this->assertNotEquals(201, $response->status(), 'Order creation should fail with invalid menu_id');
 
-        // Verify NO orders were created in EITHER database (full rollback)
-        $this->assertEquals($initialPosOrderCount, Order::count(), 'No POS orders should be created on failure');
-        $this->assertEquals($initialDeviceOrderCount, DeviceOrder::count(), 'No device orders should be created on failure');
+        // POS-first contract (krypton_woosoo_specs.md, Issue A): the LOCAL
+        // transaction rolls back, but POS rows already written are authoritative
+        // and intentionally NOT compensated (manual POS deletes are forbidden).
+        // The POS order persists and is reconciled out-of-band.
+        $this->assertEquals($initialDeviceOrderCount, DeviceOrder::count(), 'No device orders should be created on local failure');
+        $this->assertEquals($initialPosOrderCount + 1, Order::count(), 'POS order persists (POS-first: no compensating delete)');
     }
 
     #[Test]
