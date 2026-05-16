@@ -162,7 +162,7 @@ class TransactionRollbackTest extends TestCase
     }
 
     #[Test]
-    public function it_ensures_no_orphaned_pos_records_on_local_db_failure()
+    public function it_does_not_compensate_pos_rows_on_local_db_failure_pos_first_contract()
     {
         $this->seedTabletPackage();
 
@@ -208,12 +208,22 @@ class TransactionRollbackTest extends TestCase
             // Request should fail with 500 error
             $response->assertStatus(500);
 
-            // CRITICAL: Verify no orphaned POS orders were created
-            // (OrderService's catch-block must have cleaned up POS-side rows)
+            // POS-first contract (krypton_woosoo_specs.md, Issue A): POS writes
+            // are authoritative, non-rolled-back side effects. On a local-DB
+            // failure the LOCAL transaction rolls back, but POS rows are
+            // intentionally NOT compensated (manual POS deletes are forbidden —
+            // they can destroy valid POS transactions and drift from real
+            // terminal activity). Orphaned POS rows are expected here and are
+            // reconciled out-of-band by the reconciliation worker.
             $this->assertEquals(
-                $initialPosOrderCount,
+                0,
+                DeviceOrder::where('device_id', $device->id)->count(),
+                'Local device order must roll back on local DB failure'
+            );
+            $this->assertEquals(
+                $initialPosOrderCount + 1,
                 Order::count(),
-                'POS orders should NOT be created when local DB fails (cross-db transaction integrity)'
+                'POS order remains (POS-first: no compensating delete)'
             );
         } finally {
             DeviceOrder::flushEventListeners();

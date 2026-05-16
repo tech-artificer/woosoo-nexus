@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\UtcDateTimeCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -55,7 +56,7 @@ class DeviceOrder extends Model
         'sub_total' => 'decimal:2',
         'guest_count' => 'integer',
         'is_printed' => 'boolean',
-        'printed_at' => 'datetime',
+        'printed_at' => UtcDateTimeCast::class,
         'printed_by' => 'string',
     ];
 

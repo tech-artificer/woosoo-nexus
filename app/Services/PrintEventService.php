@@ -77,12 +77,8 @@ class PrintEventService
      */
     public function ack(int $printEventId, ?string $printerId = null, ?string $printedAt = null, ?int $acknowledgedByDeviceId = null, ?string $printerName = null, ?string $verificationMode = null): array
     {
-        // Fix: Client sends UTC timestamps, but app timezone is Asia/Manila.
-        // We need to convert the UTC timestamp to Asia/Manila before storing.
-        // When Laravel reads it back as Asia/Manila, it will be correct.
         if ($printedAt) {
-            // Parse as UTC, then convert to app timezone (Asia/Manila) for storage
-            $ackAt = Carbon::parse($printedAt, 'UTC')->setTimezone(config('app.timezone', 'Asia/Manila'));
+            $ackAt = Carbon::parse($printedAt);
         } else {
             $ackAt = Carbon::now();
         }

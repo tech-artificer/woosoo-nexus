@@ -68,6 +68,23 @@ class DurableRefillGuard
                 }
 
                 if ($submission->isProcessing()) {
+                    if ($submission->isLockExpired()) {
+                        $submission->forceFill([
+                            'status' => 'PROCESSING',
+                            'processing_started_at' => now(),
+                            'failed_at' => null,
+                            'error_message' => null,
+                        ])->save();
+
+                        return [
+                            'submission' => $submission,
+                            'is_new' => false,
+                            'can_replay' => false,
+                            'cached_response' => null,
+                            'is_processing' => false,
+                        ];
+                    }
+
                     return [
                         'submission' => $submission,
                         'is_new' => false,

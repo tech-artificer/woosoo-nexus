@@ -60,10 +60,8 @@ class PrinterApiController extends Controller
 
         $deviceOrder->is_printed = true;
         $printedAtInput = $request->input('printed_at');
-        // Fix: Client sends UTC timestamps (with Z suffix or +00:00), but app timezone is Asia/Manila.
-        // Parse the timestamp (respecting its embedded timezone), then convert to app timezone.
         if ($printedAtInput) {
-            $deviceOrder->printed_at = Carbon::parse($printedAtInput)->setTimezone(config('app.timezone', 'Asia/Manila'));
+            $deviceOrder->printed_at = Carbon::parse($printedAtInput);
         } else {
             $deviceOrder->printed_at = Carbon::now();
         }
@@ -163,10 +161,8 @@ class PrinterApiController extends Controller
     {
         $orderIds = $request->input('order_ids');
         $printedAtInput = $request->input('printed_at');
-        // Fix: Client sends UTC timestamps, but app timezone is Asia/Manila.
-        // Parse the timestamp (respecting its embedded timezone), then convert to app timezone.
         if ($printedAtInput) {
-            $printedAt = Carbon::parse($printedAtInput)->setTimezone(config('app.timezone', 'Asia/Manila'));
+            $printedAt = Carbon::parse($printedAtInput);
         } else {
             $printedAt = Carbon::now();
         }

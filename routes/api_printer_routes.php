@@ -6,7 +6,8 @@ use App\Http\Controllers\Api\V1\PrinterApiController;
 /**
  * PrintEvent API routes
  *
- * NOTE: These endpoints are gated behind the 'print_events.enabled' middleware.
+ * NOTE: These endpoints are gated behind the 'print_events.enabled' middleware
+ * and require a valid device bearer token when the feature is enabled.
  * When NEXUS_PRINT_EVENTS_ENABLED=false (MVP default), these endpoints return
  * 503 Service Unavailable. woosoo-print-bridge is the active print execution
  * path for the current MVP.
@@ -14,7 +15,7 @@ use App\Http\Controllers\Api\V1\PrinterApiController;
  * Enable these routes only for future printer expansion work by setting
  * NEXUS_PRINT_EVENTS_ENABLED=true in your .env file.
  */
-Route::middleware(['print_events.enabled'])->group(function () {
+Route::middleware(['print_events.enabled', 'auth:device'])->group(function () {
     // Printer API endpoints (device-authenticated for branch isolation)
     // These endpoints are for printer relay devices that authenticate via device tokens
     Route::get('/printer/unprinted-events', [PrinterApiController::class, 'getUnprintedEvents']);

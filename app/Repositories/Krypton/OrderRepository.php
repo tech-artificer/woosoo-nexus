@@ -50,16 +50,25 @@ class OrderRepository
                             ->get()
                             ->keyBy('order_id');
 
+        $orderIds = $orders->pluck('id')->all();
+        $orderChecksByOrderId = collect();
+        $orderedMenusByOrderId = collect();
 
-        $mergedOrders = $orders->transform(function ($order) use ($deviceOrders) {
+        if (! empty($orderIds)) {
+            $orderChecksByOrderId = OrderCheck::whereIn('order_id', $orderIds)->get()->keyBy('order_id');
+            $orderedMenusByOrderId = OrderedMenu::whereIn('order_id', $orderIds)->get()->groupBy('order_id');
+        }
+
+
+        $mergedOrders = $orders->transform(function ($order) use ($deviceOrders, $orderChecksByOrderId, $orderedMenusByOrderId) {
             
             $data = $deviceOrders->get($order->id);
 
             $order->deviceOrder = $data;
             $order->device = $data?->device;
             $order->table = $data?->table;
-            $order->orderCheck = OrderCheck::where('order_id', $order->id)->first();
-            $order->orderedMenus = OrderedMenu::where('order_id', $order->id)->get();
+            $order->orderCheck = $orderChecksByOrderId->get($order->id);
+            $order->orderedMenus = $orderedMenusByOrderId->get($order->id, collect());
 
             return $order;
         });

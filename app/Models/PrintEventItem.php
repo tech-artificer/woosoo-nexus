@@ -40,6 +40,6 @@ class PrintEventItem extends Model
      */
     public function deviceOrderItem(): BelongsTo
     {
-        return $this->belongsTo(DeviceOrderItem::class, 'device_order_item_id', 'id');
+        return $this->belongsTo(DeviceOrderItems::class, 'device_order_item_id', 'id');
     }
 }

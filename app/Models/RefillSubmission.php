@@ -64,7 +64,7 @@ class RefillSubmission extends Model
         'NEW' => ['PROCESSING'],
         'PROCESSING' => ['POS_CREATED', 'FAILED'],
         'POS_CREATED' => ['MIRRORED', 'FAILED'],
-        'MIRRORED' => ['PRINT_EVENT_CREATED', 'FAILED'],
+        'MIRRORED' => ['PRINT_EVENT_CREATED', 'COMPLETED', 'FAILED'],
         'PRINT_EVENT_CREATED' => ['COMPLETED', 'FAILED'],
         'COMPLETED' => [], // Terminal state
         'FAILED' => ['PROCESSING'], // Can retry from failed
@@ -109,6 +109,11 @@ class RefillSubmission extends Model
         
         // Set timestamp fields based on state
         switch ($newState) {
+            case 'PROCESSING':
+                $this->processing_started_at = now();
+                $this->failed_at = null;
+                $this->error_message = null;
+                break;
             case 'POS_CREATED':
                 $this->pos_created_at = now();
                 break;
