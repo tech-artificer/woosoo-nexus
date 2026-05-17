@@ -252,3 +252,28 @@ Manual smoke after auth/scoping changes:
 - [Session redirect postmortem](SESSION_REDIRECT_AND_SERVICE_REQUEST_POSTMORTEM_2026-04-24.md) — historical session/service-request incident
 - [Production docker deployment](deployment/production-docker.md) — canonical deployment flow
 - [Documentation audit 2026-05-14](../../docs/audits/DOCS_AUDIT_2026-05-14.md) — what moved where in the 2026-05-14 cleanup
+
+## Addendum 2026-05-17 — Deferred contract change: `/api/health` broadcasting integrity
+
+A Reverb/broadcasting integrity workstream (adds `checkBroadcastingIntegrity()`
+to the inline `/api/health` closure in `routes/api.php` (+~88) and to
+`Api/HealthController.php` (+~90), plus `VerifyIntegrityCommand` and
+`SessionApiController` touches) was developed but is **deliberately NOT merged
+to `staging`**. It is a **contract-surface change to `/api/health`** that has
+**not** been independently reviewed and conflicts with audit item A1
+(HealthController orphan delete-vs-extend) and duplicates logic across
+`routes/api.php` and the controller.
+
+Status: **quarantined** on branch `feature/nexus-broadcast-integrity`
+(commit `32aaf2a`). `staging` ships the unchanged (current) `/api/health`
+behaviour. Before this can land: independent review, a definitive `/api/health`
+contract spec entry, and resolution of audit A1. Tracked as a separate task;
+does not block the `feature/tablet-strict-contract` → `staging` merge (that
+branch does not contain this change).
+
+Related: the POS-first violation found this session (`OrderService::
+compensatePosOrder()` manual POS deletes) was **rejected** per
+`krypton_woosoo_specs.md` Issue A; the two tests that demanded it were
+rewritten to assert POS-first reality. An out-of-band POS reconciliation
+worker is the correct future replacement (not a correctness blocker for
+staging).
