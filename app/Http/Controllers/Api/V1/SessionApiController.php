@@ -137,6 +137,11 @@ class SessionApiController extends Controller
      */
     public function forceEnd(Request $request, int $sessionId): JsonResponse
     {
+        $user = $request->user();
+        if (! (isset($user->is_admin) && $user->is_admin)) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
         $force = (bool) $request->input('force', false);
 
         $openStatuses = [
