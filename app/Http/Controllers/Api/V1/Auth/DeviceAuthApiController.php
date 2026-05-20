@@ -215,7 +215,7 @@ class DeviceAuthApiController extends Controller
             'success' => true,
             'token' => $token,
             'device' => $device,
-            'table' => $device->table()->first(['id', 'name']),
+            'table' => $this->safeLoadDeviceTable($device),
             'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ipToUse,
             'broadcasting' => BroadcastConfig::clientPayload(),
@@ -323,7 +323,7 @@ class DeviceAuthApiController extends Controller
             'success' => true,
             'token' => $newToken,
             'device' => $device,
-            'table' => $device->table()->first(['id', 'name']),
+            'table' => $this->safeLoadDeviceTable($device),
             'expires_at' => $expiresAt->toDateTimeString(),
             'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
@@ -485,7 +485,7 @@ class DeviceAuthApiController extends Controller
         try {
             return $device->table()->first(['id', 'name']);
         } catch (\Throwable $e) {
-            Log::warning('DeviceAuthApiController: POS table lookup failed during authenticate()', [
+            Log::warning('DeviceAuthApiController: POS table lookup failed', [
                 'device_id' => $device->id,
                 'error' => $e->getMessage(),
             ]);

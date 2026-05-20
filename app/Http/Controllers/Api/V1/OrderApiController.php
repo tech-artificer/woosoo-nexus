@@ -23,6 +23,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class OrderApiController extends Controller
 {
@@ -230,13 +231,16 @@ class OrderApiController extends Controller
             ], 409);
         }
 
-        // Legacy fallback: no client_submission_id means non-idempotent path
+        // Generate a server-side submission id if the tablet did not provide one.
+        // This guarantees the durable idempotency guard always runs — the legacy
+        // non-idempotent fallback (processLegacyRefill) is no longer reachable.
         if (!$clientSubmissionId) {
-            Log::warning('[REFILL] Legacy non-idempotent path - no client_submission_id', [
+            $clientSubmissionId = (string) Str::uuid();
+            Log::info('[REFILL] Generated server-side client_submission_id', [
                 'device_id' => $device->id,
                 'order_id' => $orderId,
+                'client_submission_id' => $clientSubmissionId,
             ]);
-            return $this->processLegacyRefill($request, $device, $deviceOrder, $orderId, $validatedData);
         }
 
         // === DURABLE IDEMPOTENCY GUARD ===
