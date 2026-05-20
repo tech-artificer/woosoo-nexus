@@ -16,7 +16,6 @@ use App\Models\DeviceOrderItems;
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\Menu as KryptonMenu;
 use App\Services\Krypton\KryptonContextService;
-use App\Services\PrintEventService;
 use App\Services\PrintTicketService;
 use App\Services\DurableRefillGuard;
 use Illuminate\Http\Request;
@@ -231,9 +230,8 @@ class OrderApiController extends Controller
             ], 409);
         }
 
-        // Generate a server-side submission id if the tablet did not provide one.
-        // This guarantees the durable idempotency guard always runs — the legacy
-        // non-idempotent fallback (processLegacyRefill) is no longer reachable.
+        // Generate a server-side submission id if the tablet did not provide one,
+        // so the durable idempotency guard always runs.
         if (!$clientSubmissionId) {
             $clientSubmissionId = (string) Str::uuid();
             Log::info('[REFILL] Generated server-side client_submission_id', [
@@ -574,189 +572,6 @@ class OrderApiController extends Controller
         }
     }
 
-    /**
-     * Legacy non-idempotent refill path (no client_submission_id)
-     */
-    private function processLegacyRefill(RefillOrderRequest $request, $device, DeviceOrder $deviceOrder, int $orderId, array $validatedData): \Illuminate\Http\JsonResponse
-    {
-        $idempotencyKey = trim((string) $request->header('X-Idempotency-Key', ''));
-        $idempotencyScope = null;
-        $processingKey = null;
-        $responseCacheKey = null;
-
-        if ($idempotencyKey !== '') {
-            $requestDevice = $request->user();
-            $requestDeviceId = $requestDevice && isset($requestDevice->id) ? (string) $requestDevice->id : 'anonymous';
-            $idempotencyScope = 'refill:'.$requestDeviceId.':'.$orderId.':'.sha1($idempotencyKey);
-            $processingKey = $idempotencyScope.':processing';
-            $responseCacheKey = $idempotencyScope.':response';
-
-            $cachedResponse = Cache::get($responseCacheKey);
-            if (is_array($cachedResponse)) {
-                return response()->json(
-                    $cachedResponse['body'] ?? ['success' => true, 'message' => 'Refill request replayed'],
-                    (int) ($cachedResponse['status'] ?? 200),
-                    ['X-Idempotent-Replay' => 'true', 'X-Legacy-Path' => 'true']
-                );
-            }
-
-            if (! Cache::add($processingKey, 1, now()->addSeconds(30))) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Duplicate refill request already processing',
-                ], 409);
-            }
-        }
-
-        // Original legacy processing (kept for backward compatibility)
-        $incomingItems = $validatedData['items'] ?? [];
-        $mappedItems = [];
-
-        foreach ($incomingItems as $i => $it) {
-            $name = trim(strval($it['name'] ?? ''));
-            $quantity = intval($it['quantity'] ?? 1);
-
-            $menu = null;
-            if (! empty($it['menu_id']) && isset($it['price'])) {
-                $menu = (object) ['id' => $it['menu_id'], 'price' => $it['price']];
-            } elseif (! empty($it['menu_id'])) {
-                try {
-                    $menu = KryptonMenu::find($it['menu_id']);
-                } catch (\Throwable $_e) {
-                    $menu = null;
-                }
-            }
-
-            if (! $menu && ! empty($name)) {
-                try {
-                    $menu = KryptonMenu::whereRaw('LOWER(receipt_name) = ?', [strtolower($name)])->first()
-                        ?? KryptonMenu::whereRaw('LOWER(name) = ?', [strtolower($name)])->first();
-                } catch (\Throwable $_e) {
-                    $menu = null;
-                }
-            }
-
-            if (! $menu) {
-                $menuRef = $it['menu_id'] ?? $name ?? 'unknown';
-                return response()->json(['success' => false, 'message' => "Menu item not found: {$menuRef}"], 422);
-            }
-
-            $mappedItems[] = [
-                'menu_id' => $menu->id,
-                'quantity' => $quantity,
-                'index' => $it['index'] ?? ($i + 1),
-                'seat_number' => $it['seat_number'] ?? 1,
-                'note' => $it['note'] ?? 'Refill',
-                'price' => $menu->price,
-            ];
-        }
-
-        $kctx = app(KryptonContextService::class);
-        $kdata = $kctx->getData();
-        $orderCheckId = $this->resolvePosOrderCheckId($orderId);
-
-        $attrs = [
-            'order_id' => $orderId,
-            'order_check_id' => $orderCheckId,
-            'employee_log_id' => $kdata['employee_log_id'] ?? null,
-            'device_order_id' => $deviceOrder->id,
-            'items' => $mappedItems,
-            'mirror_local' => false,
-        ];
-
-        $created = CreateOrderedMenu::run($attrs);
-
-        $posItems = collect($created)->map(function ($it) {
-            return is_array($it) ? (object) $it : $it;
-        })->values()->all();
-
-        if (empty($posItems)) {
-            return response()->json(['success' => true, 'created' => []]);
-        }
-
-        try {
-            $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
-            $menuNames = ! empty($menuIds) ? Menu::whereIn('id', $menuIds)->pluck('name', 'id') : collect();
-
-            $metaItems = collect($posItems)->map(function ($item) use ($menuNames) {
-                $menuId = $item->menu_id;
-                $menuName = $menuNames->get($menuId) ?? $item->name ?? $item->receipt_name;
-                return [
-                    'menu_id' => $menuId,
-                    'quantity' => $item->quantity ?? 1,
-                    'name' => $menuName ?? "Menu #{$menuId}",
-                ];
-            })->values()->all();
-
-            $refillEventMeta = [
-                'items' => $metaItems,
-                'refill_count' => count($mappedItems),
-                'refilled_at' => now()->toIso8601String(),
-            ];
-
-            $localPayloads = [];
-            foreach ($posItems as $pos) {
-                $localPayloads[] = [
-                    'order_id' => $deviceOrder->id,
-                    'ordered_menu_id' => $pos->id,
-                    'menu_id' => $pos->menu_id,
-                    'quantity' => $pos->quantity ?? 1,
-                    'price' => $pos->price ?? ($pos->unit_price ?? 0.00),
-                    'subtotal' => $pos->sub_total ?? ($pos->subtotal ?? 0),
-                    'tax' => $pos->tax ?? 0.00,
-                    'total' => $pos->total ?? 0,
-                    'notes' => isset($pos->note) && trim((string) $pos->note) !== '' ? $pos->note : 'Refill',
-                    'seat_number' => $pos->seat_number ?? 1,
-                    'index' => $pos->index ?? 1,
-                    'is_refill' => true,
-                ];
-            }
-
-            // Legacy local mirror + print event
-            for ($attempt = 1; $attempt <= 3; $attempt++) {
-                try {
-                    DB::transaction(function () use ($deviceOrder, $localPayloads, $refillEventMeta) {
-                        if (! empty($localPayloads)) {
-                            DeviceOrderItems::query()->insert($localPayloads);
-                        }
-
-                        DB::afterCommit(function () use ($deviceOrder, $refillEventMeta) {
-                            try {
-                                app(PrintEventService::class)->createForOrder($deviceOrder, 'REFILL', $refillEventMeta);
-                            } catch (\Throwable $e) {
-                                report($e);
-                            }
-                        });
-                    });
-                    break;
-                } catch (\Throwable $e) {
-                    if ($attempt >= 3) {
-                        throw $e;
-                    }
-                }
-            }
-
-            $freshOrder = DeviceOrder::with(['items.menu', 'table', 'device'])->find($deviceOrder->id);
-            $responseBody = [
-                'success' => true,
-                'order' => $freshOrder ? DeviceOrderResource::make($freshOrder) : null,
-                'created' => $created,
-            ];
-
-            if ($responseCacheKey) {
-                Cache::put($responseCacheKey, ['status' => 200, 'body' => $responseBody], now()->addMinutes(10));
-            }
-
-            return response()->json($responseBody);
-        } catch (\Throwable $th) {
-            report($th);
-            return response()->json(['success' => false, 'message' => 'Failed to persist refill', 'error' => $th->getMessage()], 500);
-        } finally {
-            if ($processingKey) {
-                Cache::forget($processingKey);
-            }
-        }
-    }
 
     /**
      * Fetch POS ordered_menu records by IDs (for retry scenarios)

@@ -17,7 +17,6 @@ use App\Models\Krypton\Order;
 use App\Models\Krypton\Table;
 use App\Models\Krypton\Tax;
 use App\Services\BroadcastService;
-use App\Services\PrintEventService;
 use App\Services\PrintTicketService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
