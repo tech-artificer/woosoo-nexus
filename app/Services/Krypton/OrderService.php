@@ -22,6 +22,7 @@ use App\Services\PrintTicketService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class OrderService
@@ -151,26 +152,15 @@ class OrderService
 
                 DB::afterCommit(function () use ($deviceOrder, $clientSubmissionId) {
                     try {
-                        // WS2: Use PrintTicketService for idempotent print events
-                        if ($clientSubmissionId) {
-                            $printTicketService = app(PrintTicketService::class);
-                            $printEvent = $printTicketService->createInitialPrintEvent($deviceOrder, $clientSubmissionId);
-                            
-                            // Update device order with print event reference
+                        if (config('api.print_events_enabled', false)) {
+                            $submissionId = $clientSubmissionId ?: (string) Str::uuid();
+                            $printEvent = app(PrintTicketService::class)
+                                ->createInitialPrintEvent($deviceOrder, $submissionId);
+
                             $deviceOrder->print_event_id = $printEvent->id;
                             $deviceOrder->save();
-                        } else {
-                            // Legacy fallback - WARNING: non-idempotent path
-                            // TODO: Remove this fallback after WS4 is merged and deployed
-                            Log::warning('Legacy non-idempotent print event path used', [
-                                'device_order_id' => $deviceOrder->id,
-                                'event_type' => 'INITIAL',
-                                'reason' => 'No client_submission_id provided'
-                            ]);
-                            app(PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                            $deviceOrder->refresh();
                         }
-                        
-                        $deviceOrder->refresh();
                         PrintOrder::dispatch($deviceOrder);
                     } catch (\Throwable $e) {
                         report($e);

@@ -278,26 +278,24 @@ class PrintTicketServiceTest extends TestCase
     }
 
     /** @test */
-    public function it_logs_warning_when_legacy_fallback_is_used_for_initial_order()
+    public function it_attaches_items_even_when_client_submission_id_is_missing()
     {
-        Log::spy();
-
-        // Test legacy fallback path by calling OrderService without client_submission_id
+        // When the caller does not pass a client_submission_id, OrderService now
+        // generates one server-side so PrintTicketService can still attach items.
+        // The previous "legacy non-idempotent" path (which created a PrintEvent
+        // with no items) has been removed.
         $orderService = app(\App\Services\Krypton\OrderService::class);
         $result = $orderService->processOrder($this->device, [
             'package_id' => 1,
             'guest_count' => 2,
             'items' => [['menu_id' => 1, 'quantity' => 1]],
-        ], null); // No client_submission_id
+        ], null);
 
         $this->assertInstanceOf(\App\Models\DeviceOrder::class, $result);
-        Log::shouldHaveReceived('warning')
-            ->once()
-            ->with('Legacy non-idempotent print event path used', [
-                'device_order_id' => $result->id,
-                'event_type' => 'INITIAL',
-                'reason' => 'No client_submission_id provided',
-            ]);
+
+        $printEvent = PrintEvent::where('device_order_id', $result->id)->first();
+        $this->assertNotNull($printEvent, 'PrintEvent should be created via PrintTicketService');
+        $this->assertGreaterThan(0, $printEvent->printEventItems()->count(), 'Items should be attached');
     }
 
     /** @test */
