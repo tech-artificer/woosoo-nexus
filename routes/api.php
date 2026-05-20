@@ -228,9 +228,10 @@ Route::prefix('v1')->middleware(['auth:device'])->group(function () {
     Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus']);
 });
 
-// Admin/device-reset endpoint (requires auth)
+// Admin/device-reset endpoints (requires sanctum auth)
 Route::middleware(['requestId', 'auth:sanctum'])->group(function () {
     Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
+    Route::post('/sessions/{sessionId}/force-end', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'forceEnd'])->name('api.sessions.force-end');
 });
 
 // Device API v2 — tablet-ordering-pwa endpoints
