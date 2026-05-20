@@ -7,6 +7,7 @@ use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderVoided;
 use App\Events\Order\PaymentCompleted;
+use App\Events\SessionReset;
 use App\Models\DeviceOrder;
 use App\Services\AuditLogService;
 use Illuminate\Console\Command;
@@ -128,6 +129,12 @@ class SyncPosOrderPaymentStatus extends Command
 
                     if ($nextStatus === OrderStatus::VOIDED) {
                         OrderVoided::dispatch($deviceOrder);
+                    }
+
+                    // Broadcast session.reset on the session channel so the tablet
+                    // ends the session immediately without relying on order-ID matching.
+                    if ($deviceOrder->session_id) {
+                        SessionReset::dispatch((int) $deviceOrder->session_id);
                     }
                 }
             }, 'id');
