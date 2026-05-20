@@ -404,12 +404,12 @@ class OrderApiController extends Controller
             // Build metadata for broadcast (menu names, quantities).
             $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
             $menuNames = ! empty($menuIds)
-                ? Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id')
+                ? Menu::whereIn('id', $menuIds)->pluck('name', 'id')
                 : collect();
 
             $metaItems = collect($posItems)->map(function ($item) use ($menuNames) {
                 $menuId = $item->menu_id;
-                $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
+                $menuName = $menuNames->get($menuId) ?? $item->name ?? $item->receipt_name;
                 return [
                     'menu_id' => $menuId,
                     'quantity' => $item->quantity ?? 1,
@@ -544,7 +544,7 @@ class OrderApiController extends Controller
 
             if ($isNewSubmission) {
                 try {
-                    PrintRefill::dispatch($deviceOrder, $posItems);
+                    PrintRefill::dispatch($deviceOrder, $metaItems);
                     if ($freshOrder) {
                         OrderStatusUpdated::dispatch($freshOrder);
                     }
@@ -672,11 +672,11 @@ class OrderApiController extends Controller
 
         try {
             $menuIds = collect($posItems)->pluck('menu_id')->filter()->unique()->values()->all();
-            $menuNames = ! empty($menuIds) ? Menu::whereIn('id', $menuIds)->pluck('receipt_name', 'id') : collect();
+            $menuNames = ! empty($menuIds) ? Menu::whereIn('id', $menuIds)->pluck('name', 'id') : collect();
 
             $metaItems = collect($posItems)->map(function ($item) use ($menuNames) {
                 $menuId = $item->menu_id;
-                $menuName = $item->name ?? $item->receipt_name ?? $menuNames->get($menuId);
+                $menuName = $menuNames->get($menuId) ?? $item->name ?? $item->receipt_name;
                 return [
                     'menu_id' => $menuId,
                     'quantity' => $item->quantity ?? 1,
