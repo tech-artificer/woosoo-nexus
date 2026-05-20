@@ -20,13 +20,23 @@ use Illuminate\Support\Facades\DB;
 class DeviceApiController extends Controller
 {
     /**
-     * Returns a list of all devices
+     * Returns a list of devices scoped to the authenticated device's branch.
      *
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
-    public function index()
+    public function index(Request $request)
     {
-        return DeviceResource::collection(Device::with('table')->get());
+        $device = $request->user();
+
+        $query = Device::with('table');
+
+        // Scope to the authenticated device's branch (reuses the pattern from
+        // OrderApiController::index() and OrderController::index()).
+        if ($device instanceof Device && isset($device->branch_id)) {
+            $query->where('branch_id', $device->branch_id);
+        }
+
+        return DeviceResource::collection($query->get());
     }
 
     /**

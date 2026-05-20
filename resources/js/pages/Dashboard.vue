@@ -114,7 +114,8 @@ onMounted(() => {
                     <div class="rounded-[24px] border border-black/8 bg-white/72 px-4 py-4 shadow-[0_22px_55px_-42px_rgba(37,37,37,0.4)] dark:border-white/12 dark:bg-white/[0.08]">
                         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Open tables</p>
                         <p class="mt-2 text-2xl font-semibold tracking-tight">{{ props.openOrders?.length ?? 0 }}</p>
-                        <p class="mt-1 text-sm text-muted-foreground">Tables with active ordering activity</p>
+                        <p v-if="props.openOrders?.length" class="mt-1 text-sm text-muted-foreground">Tables with active ordering activity</p>
+                        <p v-else class="mt-1 text-sm text-muted-foreground">No open orders detected</p>
                     </div>
                 </div>
             </div>

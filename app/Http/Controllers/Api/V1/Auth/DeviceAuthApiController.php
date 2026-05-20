@@ -12,6 +12,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceAuthApiController extends Controller
@@ -291,7 +292,7 @@ class DeviceAuthApiController extends Controller
             'success' => true,
             'token' => $token,
             'device' => $device,
-            'table' => $device->table()->first(['id', 'name']),
+            'table' => $this->safeLoadDeviceTable($device),
             'expires_at' => now()->addDays(30)->toDateTimeString(),
             'ip_used' => $ip,
             'broadcasting' => BroadcastConfig::clientPayload(),
@@ -469,6 +470,28 @@ class DeviceAuthApiController extends Controller
             'created_at' => $token->created_at,
             'expires_at' => $token->expires_at ?? null,
         ]);
+    }
+
+    /**
+     * Load the device's associated POS table for response metadata.
+     *
+     * The Table model uses the 'pos' connection. If the POS database is
+     * unavailable, we return null so that the auth response is still delivered
+     * to the tablet. Auth, token issuance, and device state updates all
+     * complete before this call — a POS failure here must NOT cause a 500.
+     */
+    private function safeLoadDeviceTable(Device $device): mixed
+    {
+        try {
+            return $device->table()->first(['id', 'name']);
+        } catch (\Throwable $e) {
+            Log::warning('DeviceAuthApiController: POS table lookup failed during authenticate()', [
+                'device_id' => $device->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     private function isUniqueConstraintViolation(QueryException $e): bool

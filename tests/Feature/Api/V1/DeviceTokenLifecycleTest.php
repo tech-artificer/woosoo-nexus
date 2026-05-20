@@ -177,7 +177,7 @@ class DeviceTokenLifecycleTest extends TestCase
 
         $response = $this->withServerVariables([
             'REMOTE_ADDR' => '127.0.0.1',
-        ])->getJson('/api/devices/login?ip_address=192.168.100.162');
+        ])->postJson('/api/devices/login', ['ip_address' => '192.168.100.162']);
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
@@ -203,7 +203,7 @@ class DeviceTokenLifecycleTest extends TestCase
         ])->withHeaders([
             'Host' => '192.168.100.7:4443',
             'X-Forwarded-Host' => '192.168.100.7',
-        ])->getJson('/api/devices/login');
+        ])->postJson('/api/devices/login');
 
         $response->assertStatus(404)
             ->assertJsonPath('success', false)
@@ -251,7 +251,7 @@ class DeviceTokenLifecycleTest extends TestCase
 
         $response = $this->withServerVariables([
             'REMOTE_ADDR' => '127.0.0.1',
-        ])->getJson('/api/devices/login?ip_address=192.168.100.164');
+        ])->postJson('/api/devices/login', ['ip_address' => '192.168.100.164']);
 
         $response->assertStatus(403)
             ->assertJsonPath('success', false)
@@ -266,7 +266,10 @@ class DeviceTokenLifecycleTest extends TestCase
             'ip_address' => '192.168.100.163',
         ]);
 
-        $response = $this->getJson('/api/devices/login?ip_address=192.168.100.163&passcode=999999');
+        $response = $this->postJson('/api/devices/login', [
+            'ip_address' => '192.168.100.163',
+            'passcode' => '999999',
+        ]);
 
         $response->assertStatus(422)
             ->assertJsonPath('message', 'Invalid passcode');

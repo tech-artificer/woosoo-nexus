@@ -186,8 +186,8 @@ class CsrfMiddlewareTest extends TestCase
     /** @test */
     public function device_login_works_without_csrf_or_auth()
     {
-        $response = $this->getJson('/api/devices/login?passcode=invalid');
-        
+        $response = $this->postJson('/api/devices/login', ['passcode' => 'invalid']);
+
         // Should NOT get 419; real login rejects invalid passcodes with 422.
         $response->assertStatus(422);
     }
