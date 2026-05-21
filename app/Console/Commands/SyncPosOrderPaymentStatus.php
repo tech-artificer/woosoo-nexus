@@ -40,6 +40,23 @@ class SyncPosOrderPaymentStatus extends Command
         /** @var ConnectionInterface $pos */
         $pos = DB::connection('pos');
 
+        // Skip cleanly when POS is unreachable (e.g. dev/staging on a different
+        // network). Without this guard every scheduled tick throws a full
+        // QueryException stack trace into laravel.log — at ~30KB per failure
+        // and one tick per minute the log balloons and the scheduler reports
+        // exit-code-1 alerts continuously. Treating a hard connection failure
+        // as a no-op is correct: there's nothing to sync if POS is offline.
+        try {
+            $pos->getPdo();
+        } catch (\Throwable $e) {
+            Log::info('[pos:sync-payment-statuses] POS DB unreachable — skipping this tick', [
+                'error' => $e->getMessage(),
+            ]);
+            $this->info('POS DB unreachable. Skipping sync.');
+
+            return self::SUCCESS;
+        }
+
         $local
             ->table('device_orders')
             ->select(['id', 'order_id', 'status'])
