@@ -24,6 +24,11 @@ Schedule::command('pulse:check')->everyMinute()->withoutOverlapping()->runInBack
 
 // Split-DB safe payment status reconciliation (POS -> local device_orders).
 // Replaces dependency on cross-server MySQL trigger updates.
+Schedule::command('pos:consume-payment-status-events')
+    ->everyFiveSeconds()
+    ->withoutOverlapping(3)
+    ->runInBackground();
+
 Schedule::command('pos:sync-payment-statuses')
     ->everyMinute()
     ->withoutOverlapping();

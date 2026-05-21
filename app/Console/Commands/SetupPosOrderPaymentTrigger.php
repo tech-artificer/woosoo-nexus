@@ -3,59 +3,36 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class SetupPosOrderPaymentTrigger extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+    private const OrderOutboxTable = 'woosoo_order_status_outbox';
+
+    private const SessionOutboxTable = 'woosoo_session_status_outbox';
+
     protected $signature = 'pos:setup-payment-trigger';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Creates a trigger on orders table in the POS database to update device_orders';
+    protected $description = 'Creates a POS-local payment status outbox and trigger for Nexus reconciliation.';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
-        // POS DB connection (trigger will be created here)
         $connection = DB::connection('pos');
+        $this->createOrderOutboxTable();
+        $this->createSessionOutboxTable();
 
-        // MySQL trigger body can only access tables on the same MySQL server instance.
-        // When app DB and POS DB are on different hosts/ports (e.g., Docker + external POS),
-        // cross-server table updates are impossible from a trigger.
-        if (! $this->isSameMysqlEndpoint()) {
-            $connection->unprepared('DROP TRIGGER IF EXISTS after_payment_update');
+        $connection->unprepared('DROP TRIGGER IF EXISTS after_payment_update');
+        $connection->unprepared('DROP TRIGGER IF EXISTS after_session_close_update');
 
-            $this->error('Cannot create after_payment_update trigger: POS and app databases are on different MySQL endpoints.');
-            $this->line('MySQL triggers cannot update tables on another server/port.');
-            $this->newLine();
-            $this->line('POS endpoint: ' . $this->describeConnectionEndpoint('pos'));
-            $this->line('APP endpoint: ' . $this->describeConnectionEndpoint('mysql'));
-            $this->newLine();
-            $this->line('Action required: use an application-level sync flow for payment status reconciliation.');
-            $this->line('This project now provides: php artisan pos:sync-payment-statuses');
+        if ($connection->getDriverName() !== 'mysql') {
+            $this->info('POS outbox tables created. Trigger creation skipped for non-MySQL POS connection.');
 
-            return self::FAILURE;
+            return self::SUCCESS;
         }
 
-        // App DB (where device_orders lives)
-        $appDb = DB::connection('mysql')->getDatabaseName();
-        $appDbEscaped = str_replace('`', '', $appDb);
-        $fqDeviceOrdersTable = "`{$appDbEscaped}`.`device_orders`";
-
-        // Drop any existing trigger and create a new one that updates device_orders directly
-        $connection->unprepared("DROP TRIGGER IF EXISTS after_payment_update");
-
-        $triggerSql = <<<SQL
+        $orderTriggerSql = <<<'SQL'
         CREATE TRIGGER after_payment_update
         AFTER UPDATE ON `orders`
         FOR EACH ROW
@@ -65,61 +42,127 @@ class SetupPosOrderPaymentTrigger extends Command
               OR NEW.is_voided = 1
               OR (OLD.is_open = 1 AND NEW.is_open = 0)) THEN
 
-            -- Determine the new status for device_orders
-            SET @new_status = CASE 
+            INSERT INTO `woosoo_order_status_outbox` (
+                `pos_order_id`,
+                `target_status`,
+                `is_voided`,
+                `is_open`,
+                `date_time_closed`,
+                `created_at`,
+                `updated_at`
+            ) VALUES (
+                CAST(NEW.id AS UNSIGNED),
+                CASE
                 WHEN NEW.is_voided = 1 THEN 'voided'
                 ELSE 'completed'
-            END;
-
-            -- Directly update device_orders table (cross-database)
-            UPDATE {$fqDeviceOrdersTable}
-            SET 
-                status = @new_status,
-                updated_at = NOW()
-            WHERE order_id = NEW.id;
+                END,
+                NEW.is_voided,
+                NEW.is_open,
+                NEW.date_time_closed,
+                NOW(),
+                NOW()
+            )
+            ON DUPLICATE KEY UPDATE
+                `target_status` = IF(`processed_at` IS NULL, VALUES(`target_status`), `target_status`),
+                `is_voided` = VALUES(`is_voided`),
+                `is_open` = VALUES(`is_open`),
+                `date_time_closed` = VALUES(`date_time_closed`),
+                `last_error` = IF(`processed_at` IS NULL, NULL, `last_error`),
+                `failed_at` = IF(`processed_at` IS NULL, NULL, `failed_at`),
+                `updated_at` = NOW();
 
           END IF;
         END;
         SQL;
 
-        $connection->unprepared($triggerSql);
+        $sessionTriggerSql = <<<'SQL'
+        CREATE TRIGGER after_session_close_update
+        AFTER UPDATE ON `sessions`
+        FOR EACH ROW
+        BEGIN
+          -- Daily POS cashier-session close is restaurant-wide; keep it separate from per-order completion.
+          IF (OLD.date_time_closed IS NULL AND NEW.date_time_closed IS NOT NULL) THEN
 
-        $this->info('Trigger "after_payment_update" created successfully.');
-        $this->info('The trigger will now directly update device_orders status when orders are paid/voided.');
+            INSERT INTO `woosoo_session_status_outbox` (
+                `pos_session_id`,
+                `event_type`,
+                `date_time_closed`,
+                `created_at`,
+                `updated_at`
+            ) VALUES (
+                CAST(NEW.id AS UNSIGNED),
+                'closed',
+                NEW.date_time_closed,
+                NOW(),
+                NOW()
+            )
+            ON DUPLICATE KEY UPDATE
+                `event_type` = IF(`processed_at` IS NULL, VALUES(`event_type`), `event_type`),
+                `date_time_closed` = VALUES(`date_time_closed`),
+                `last_error` = IF(`processed_at` IS NULL, NULL, `last_error`),
+                `failed_at` = IF(`processed_at` IS NULL, NULL, `failed_at`),
+                `updated_at` = NOW();
+
+          END IF;
+        END;
+        SQL;
+
+        $connection->unprepared($orderTriggerSql);
+        $connection->unprepared($sessionTriggerSql);
+
+        $this->info('POS order payment and session-close outbox tables/triggers created successfully.');
+        $this->info('Nexus will consume the POS-local outbox via php artisan pos:consume-payment-status-events.');
 
         return self::SUCCESS;
     }
 
-    private function isSameMysqlEndpoint(): bool
+    private function createOrderOutboxTable(): void
     {
-        $pos = config('database.connections.pos', []);
-        $app = config('database.connections.mysql', []);
+        $schema = Schema::connection('pos');
 
-        $keys = ['host', 'port', 'unix_socket'];
-
-        foreach ($keys as $key) {
-            $left = (string) ($pos[$key] ?? '');
-            $right = (string) ($app[$key] ?? '');
-
-            if ($left !== $right) {
-                return false;
-            }
+        if ($schema->hasTable(self::OrderOutboxTable)) {
+            return;
         }
 
-        return true;
+        $schema->create(self::OrderOutboxTable, function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('pos_order_id');
+            $table->string('target_status', 32);
+            $table->boolean('is_voided')->nullable();
+            $table->boolean('is_open')->nullable();
+            $table->dateTime('date_time_closed')->nullable();
+            $table->unsignedInteger('attempts')->default(0);
+            $table->text('last_error')->nullable();
+            $table->timestamp('failed_at')->nullable();
+            $table->timestamp('processed_at')->nullable();
+            $table->timestamps();
+
+            $table->unique('pos_order_id', 'woosoo_outbox_pos_order_unique');
+            $table->index(['processed_at', 'failed_at', 'attempts'], 'woosoo_outbox_consume_idx');
+        });
     }
 
-    private function describeConnectionEndpoint(string $connection): string
+    private function createSessionOutboxTable(): void
     {
-        $config = config("database.connections.{$connection}", []);
-        $host = (string) ($config['host'] ?? '');
-        $port = (string) ($config['port'] ?? '');
-        $socket = (string) ($config['unix_socket'] ?? '');
+        $schema = Schema::connection('pos');
 
-        if ($socket !== '') {
-            return sprintf('%s (socket: %s)', $connection, $socket);
+        if ($schema->hasTable(self::SessionOutboxTable)) {
+            return;
         }
 
-        return sprintf('%s (%s:%s)', $connection, $host !== '' ? $host : 'unknown-host', $port !== '' ? $port : 'unknown-port');
+        $schema->create(self::SessionOutboxTable, function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('pos_session_id');
+            $table->string('event_type', 32);
+            $table->dateTime('date_time_closed')->nullable();
+            $table->unsignedInteger('attempts')->default(0);
+            $table->text('last_error')->nullable();
+            $table->timestamp('failed_at')->nullable();
+            $table->timestamp('processed_at')->nullable();
+            $table->timestamps();
+
+            $table->unique('pos_session_id', 'woosoo_outbox_pos_session_unique');
+            $table->index(['processed_at', 'failed_at', 'attempts'], 'woosoo_session_outbox_consume_idx');
+        });
     }
 }

@@ -1,7 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PrinterApiController;
+use App\Http\Middleware\UpdateDeviceLastSeen;
+use Illuminate\Support\Facades\Route;
 
 /**
  * PrintEvent API routes
@@ -15,7 +16,7 @@ use App\Http\Controllers\Api\V1\PrinterApiController;
  * Enable these routes only for future printer expansion work by setting
  * NEXUS_PRINT_EVENTS_ENABLED=true in your .env file.
  */
-Route::middleware(['print_events.enabled', 'auth:device'])->group(function () {
+Route::middleware(['print_events.enabled', 'auth:device', UpdateDeviceLastSeen::class])->group(function () {
     // Printer API endpoints (device-authenticated for branch isolation)
     // These endpoints are for printer relay devices that authenticate via device tokens
     Route::get('/printer/unprinted-events', [PrinterApiController::class, 'getUnprintedEvents']);
