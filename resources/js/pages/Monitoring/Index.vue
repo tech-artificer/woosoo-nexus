@@ -45,6 +45,61 @@ interface MonitoringMetrics {
         mysql: boolean;
         pos: boolean;
     };
+    printLatency: {
+        windows: Record<string, {
+            total: number;
+            acked: number;
+            avg_sec: number | null;
+            p50_sec: number | null;
+            p95_sec: number | null;
+            max_sec: number | null;
+        }>;
+        stuck: number;
+        recent: Array<{
+            id: number;
+            device_order_id: number | null;
+            order_number: string | null;
+            table_name: string | null;
+            device_name: string | null;
+            event_type: string;
+            pei_count: number;
+            created_at: string | null;
+            broadcast_at: string | null;
+            reserved_at: string | null;
+            acknowledged_at: string | null;
+            total_sec: number | null;
+            is_acknowledged: boolean;
+        }>;
+    };
+    devices: Array<{
+        id: number;
+        name: string;
+        table_id: number | null;
+        is_active: boolean;
+        last_seen_at: string | null;
+        last_seen_secs_ago: number | null;
+        state: 'green' | 'yellow' | 'red' | 'unknown';
+    }>;
+    activeSessions: Array<{
+        session_id: number;
+        opened_at: string;
+        pos_reachable: boolean;
+        unpaid_count: number;
+        can_safely_force_end: boolean;
+        orders: Array<{
+            id: number;
+            order_id: number | null;
+            order_number: string | null;
+            status: string;
+            is_open: boolean;
+            table_name: string | null;
+            device_name: string | null;
+            guest_count: number | null;
+            total: string | number | null;
+            payment_state: 'paid' | 'unpaid' | 'voided' | 'unknown' | 'no_pos_link' | 'pos_missing' | 'pos_unreachable';
+            created_at: string | null;
+        }>;
+    }>;
     timestamp: string;
 }
 
@@ -120,6 +175,91 @@ const purgePrintEvents = async () => {
     } finally {
         loading.value = false;
     }
+};
+
+const actionMessage = ref<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+const showActionResult = (kind: 'ok' | 'err', text: string) => {
+    actionMessage.value = { kind, text };
+    setTimeout(() => { actionMessage.value = null; }, 8000);
+};
+
+const resetSession = async (sessionId: number) => {
+    if (loading.value) return;
+    if (!confirm(`Reset session ${sessionId}? Tablets will clear local caches but the session stays open in POS.`)) return;
+
+    loading.value = true;
+    try {
+        const res = await axios.post(`/monitoring/sessions/${sessionId}/reset`);
+        showActionResult(res.data?.success ? 'ok' : 'err', res.data?.message ?? 'Reset dispatched.');
+        await refreshMetrics();
+    } catch (e: any) {
+        showActionResult('err', e?.response?.data?.message ?? 'Reset failed — see browser console.');
+        console.error('Reset session failed:', e);
+    } finally {
+        loading.value = false;
+    }
+};
+
+const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, unpaidCount: number) => {
+    if (loading.value) return;
+
+    const force = !canSafelyForceEnd;
+    const prompt = force
+        ? `OVERRIDE: Force-end session ${sessionId} with ${unpaidCount} unpaid order(s)?\n\nThis will void those orders LOCALLY regardless of POS state. The cashier should normally close them in POS first. This action is audit-logged.\n\nType the session ID (${sessionId}) to confirm:`
+        : `Force-end session ${sessionId}? All open orders will be closed (matching POS state) and tablets will be reset.`;
+
+    if (force) {
+        const typed = window.prompt(prompt);
+        if (typed === null) return;
+        if (typed.trim() !== String(sessionId)) {
+            showActionResult('err', 'Session ID did not match — force-end cancelled.');
+            return;
+        }
+    } else if (!confirm(prompt)) {
+        return;
+    }
+
+    loading.value = true;
+    try {
+        const res = await axios.post(`/monitoring/sessions/${sessionId}/force-end`, { force });
+        showActionResult(res.data?.success ? 'ok' : 'err', res.data?.message ?? 'Force-end submitted.');
+        await refreshMetrics();
+    } catch (e: any) {
+        showActionResult('err', e?.response?.data?.message ?? 'Force-end failed — see browser console.');
+        console.error('Force-end failed:', e);
+    } finally {
+        loading.value = false;
+    }
+};
+
+const fmtSecs = (s: number | null): string => {
+    if (s === null || s === undefined) return '—';
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+};
+
+const fmtTime = (iso: string | null): string => iso ? new Date(iso).toLocaleTimeString() : '—';
+
+const latencyBadgeVariant = (sec: number | null): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    if (sec === null) return 'outline';
+    if (sec <= 5) return 'default';
+    if (sec <= 15) return 'secondary';
+    return 'destructive';
+};
+
+const paymentBadgeVariant = (state: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    if (state === 'paid' || state === 'voided') return 'default';
+    if (state === 'unpaid') return 'destructive';
+    return 'outline';
+};
+
+const deviceStateColor = (state: string): string => {
+    if (state === 'green') return 'bg-emerald-500';
+    if (state === 'yellow') return 'bg-yellow-500';
+    if (state === 'red') return 'bg-red-500';
+    return 'bg-gray-400';
 };
 
 onMounted(() => {
@@ -332,6 +472,188 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </table>
                     </div>
                 </CardContent>
+            </Card>
+
+            <!-- Print Latency -->
+            <Card>
+                <CardHeader>
+                    <CardTitle>Print Latency</CardTitle>
+                    <CardDescription>Time from order creation to printer acknowledgement (kitchen SLA: &lt;5s)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div v-for="(stats, label) in metrics.printLatency.windows" :key="label" class="border rounded p-3">
+                            <div class="text-xs text-muted-foreground uppercase">Last {{ label }}</div>
+                            <div class="text-2xl font-bold">{{ stats.acked }}<span class="text-sm text-muted-foreground"> / {{ stats.total }}</span></div>
+                            <div class="text-xs mt-1 space-x-2">
+                                <span>p50 <strong>{{ fmtSecs(stats.p50_sec) }}</strong></span>
+                                <span>p95 <strong>{{ fmtSecs(stats.p95_sec) }}</strong></span>
+                                <span>max <strong>{{ fmtSecs(stats.max_sec) }}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="metrics.printLatency.stuck > 0" class="mb-4 p-3 rounded bg-destructive/10 border border-destructive/20 text-sm">
+                        <strong class="text-destructive">{{ metrics.printLatency.stuck }} stuck event(s)</strong>
+                        — broadcast went out but never acknowledged (&gt;2 min).
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left p-2">#</th>
+                                    <th class="text-left p-2">Order</th>
+                                    <th class="text-left p-2">Type</th>
+                                    <th class="text-left p-2">Items</th>
+                                    <th class="text-left p-2">Created</th>
+                                    <th class="text-left p-2">Broadcast</th>
+                                    <th class="text-left p-2">Reserved</th>
+                                    <th class="text-left p-2">Acked</th>
+                                    <th class="text-left p-2">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="evt in metrics.printLatency.recent" :key="evt.id" class="border-b hover:bg-muted/50">
+                                    <td class="p-2 font-mono">{{ evt.id }}</td>
+                                    <td class="p-2 font-mono text-xs">{{ evt.order_number || '—' }}</td>
+                                    <td class="p-2"><Badge variant="outline">{{ evt.event_type }}</Badge></td>
+                                    <td class="p-2">
+                                        <Badge :variant="evt.pei_count > 0 ? 'default' : 'destructive'">{{ evt.pei_count }}</Badge>
+                                    </td>
+                                    <td class="p-2 text-xs">{{ fmtTime(evt.created_at) }}</td>
+                                    <td class="p-2 text-xs">{{ fmtTime(evt.broadcast_at) }}</td>
+                                    <td class="p-2 text-xs">{{ fmtTime(evt.reserved_at) }}</td>
+                                    <td class="p-2 text-xs">{{ fmtTime(evt.acknowledged_at) }}</td>
+                                    <td class="p-2">
+                                        <Badge :variant="latencyBadgeVariant(evt.total_sec)">{{ fmtSecs(evt.total_sec) }}</Badge>
+                                    </td>
+                                </tr>
+                                <tr v-if="metrics.printLatency.recent.length === 0">
+                                    <td colspan="9" class="p-4 text-center text-muted-foreground">No print events yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <!-- Bridge Devices -->
+            <Card>
+                <CardHeader>
+                    <CardTitle>Devices</CardTitle>
+                    <CardDescription>Registered tablets + print bridges. Green = heartbeat in last 60s.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left p-2">State</th>
+                                    <th class="text-left p-2">ID</th>
+                                    <th class="text-left p-2">Name</th>
+                                    <th class="text-left p-2">Table</th>
+                                    <th class="text-left p-2">Active</th>
+                                    <th class="text-left p-2">Last seen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="d in metrics.devices" :key="d.id" class="border-b hover:bg-muted/50">
+                                    <td class="p-2">
+                                        <span class="inline-block h-2.5 w-2.5 rounded-full" :class="deviceStateColor(d.state)"></span>
+                                    </td>
+                                    <td class="p-2 font-mono">{{ d.id }}</td>
+                                    <td class="p-2">{{ d.name }}</td>
+                                    <td class="p-2">{{ d.table_id ?? '—' }}</td>
+                                    <td class="p-2">
+                                        <Badge :variant="d.is_active ? 'default' : 'outline'">{{ d.is_active ? 'yes' : 'no' }}</Badge>
+                                    </td>
+                                    <td class="p-2 text-xs text-muted-foreground">
+                                        {{ d.last_seen_secs_ago !== null ? fmtSecs(d.last_seen_secs_ago) + ' ago' : 'never' }}
+                                    </td>
+                                </tr>
+                                <tr v-if="metrics.devices.length === 0">
+                                    <td colspan="6" class="p-4 text-center text-muted-foreground">No devices registered.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <!-- Active Sessions -->
+            <Card v-for="sess in metrics.activeSessions" :key="sess.session_id">
+                <CardHeader>
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                            <CardTitle>Active Session #{{ sess.session_id }}</CardTitle>
+                            <CardDescription>
+                                Opened {{ new Date(sess.opened_at).toLocaleString() }}
+                                · POS: <Badge :variant="sess.pos_reachable ? 'default' : 'destructive'" class="ml-1">{{ sess.pos_reachable ? 'reachable' : 'unreachable' }}</Badge>
+                                · Unpaid orders: <Badge :variant="sess.unpaid_count > 0 ? 'destructive' : 'default'" class="ml-1">{{ sess.unpaid_count }}</Badge>
+                            </CardDescription>
+                        </div>
+                        <div class="flex gap-2">
+                            <Button variant="outline" size="sm" :disabled="loading"
+                                @click="resetSession(sess.session_id)">
+                                Reset (clear tablet caches)
+                            </Button>
+                            <Button :variant="sess.can_safely_force_end ? 'default' : 'destructive'" size="sm" :disabled="loading"
+                                @click="forceEndSession(sess.session_id, sess.can_safely_force_end, sess.unpaid_count)">
+                                {{ sess.can_safely_force_end ? 'Force-end' : 'Force-end (OVERRIDE)' }}
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div v-if="actionMessage" class="mb-3 p-3 rounded text-sm" :class="actionMessage.kind === 'ok' ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-destructive/10 border border-destructive/20'">
+                        {{ actionMessage.text }}
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left p-2">DO ID</th>
+                                    <th class="text-left p-2">POS Order</th>
+                                    <th class="text-left p-2">Order #</th>
+                                    <th class="text-left p-2">Table</th>
+                                    <th class="text-left p-2">Device</th>
+                                    <th class="text-left p-2">Guests</th>
+                                    <th class="text-left p-2">Total</th>
+                                    <th class="text-left p-2">Status</th>
+                                    <th class="text-left p-2">Payment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="o in sess.orders" :key="o.id" class="border-b hover:bg-muted/50">
+                                    <td class="p-2 font-mono">{{ o.id }}</td>
+                                    <td class="p-2 font-mono text-xs">{{ o.order_id ?? '—' }}</td>
+                                    <td class="p-2 font-mono text-xs">{{ o.order_number ?? '—' }}</td>
+                                    <td class="p-2">{{ o.table_name ?? '—' }}</td>
+                                    <td class="p-2">{{ o.device_name ?? '—' }}</td>
+                                    <td class="p-2">{{ o.guest_count ?? '—' }}</td>
+                                    <td class="p-2 text-right">{{ o.total ?? '—' }}</td>
+                                    <td class="p-2">
+                                        <Badge :variant="o.is_open ? 'secondary' : 'outline'">{{ o.status }}</Badge>
+                                    </td>
+                                    <td class="p-2">
+                                        <Badge :variant="paymentBadgeVariant(o.payment_state)">{{ o.payment_state }}</Badge>
+                                    </td>
+                                </tr>
+                                <tr v-if="sess.orders.length === 0">
+                                    <td colspan="9" class="p-4 text-center text-muted-foreground">No orders in this session.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card v-if="metrics.activeSessions.length === 0">
+                <CardHeader>
+                    <CardTitle>Active Session</CardTitle>
+                    <CardDescription>No active POS session right now.</CardDescription>
+                </CardHeader>
             </Card>
 
             <!-- Maintenance Actions -->
