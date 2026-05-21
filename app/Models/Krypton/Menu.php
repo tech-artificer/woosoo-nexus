@@ -98,6 +98,19 @@ class Menu extends Model
         return number_format((float) $taxAmount, $decimals, '.', ',');
     }
 
+    /**
+     * Image resolution chain, in order:
+     *   1. menu_images.path  (admin-uploaded via the media library;
+     *      stored under storage/app/public/, served via /storage/ symlink)
+     *   2. Bundled brand asset matched against name/kitchen_name/receipt_name
+     *      slug (lives in public/images/food-assets/, served on :443 and :4443
+     *      via the nginx /images/ location block added 2026-05-21).
+     *   3. Generic placeholder (public/images/menu-placeholder/2.webp).
+     *
+     * Future improvement: per-category placeholders (pork/beef/banchan/etc.)
+     * — requires design assets first; for now a single placeholder is the
+     * defensible default and the brand-asset map covers the active menu.
+     */
     public function getImageUrlAttribute()
     {
         $loadedImage = $this->relationLoaded('image') ? $this->getRelation('image') : null;
@@ -118,7 +131,8 @@ class Menu extends Model
             return asset('images/food-assets/' . $brandImageFile);
         }
 
-        return asset('images/menu-placeholder/1.jpg');
+        // 2.webp is the newer/lighter placeholder; 1.jpg is the legacy one.
+        return asset('images/menu-placeholder/2.webp');
     }
 
     protected function resolveBrandFoodAssetFile(): ?string
