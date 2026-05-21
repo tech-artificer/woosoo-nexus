@@ -153,12 +153,14 @@ class OrderService
                     try {
                         if (config('api.print_events_enabled', false)) {
                             $submissionId = $clientSubmissionId ?: (string) Str::uuid();
-                            $printEvent = app(PrintTicketService::class)
+                            app(PrintTicketService::class)
                                 ->createInitialPrintEvent($deviceOrder, $submissionId);
-
-                            $deviceOrder->print_event_id = $printEvent->id;
-                            $deviceOrder->save();
-                            $deviceOrder->refresh();
+                            // Do NOT write $deviceOrder->print_event_id — that column
+                            // does not exist on device_orders. The schema models the
+                            // relationship the other way (print_events.device_order_id
+                            // FK). Consumers should use DeviceOrder::printEvent() /
+                            // printEvents() relations to resolve the print event id.
+                            // PrintOrder::broadcastWith() already does this correctly.
                         }
                         PrintOrder::dispatch($deviceOrder);
                     } catch (\Throwable $e) {

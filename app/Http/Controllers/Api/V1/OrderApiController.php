@@ -521,9 +521,9 @@ class OrderApiController extends Controller
                             $posItems,
                             $clientSubmissionId
                         );
-
-                        $deviceOrder->print_event_id = $printEvent->id;
-                        $deviceOrder->save();
+                        // device_orders.print_event_id does not exist in the schema;
+                        // print_events owns the FK (device_order_id). Use the
+                        // DeviceOrder::printEvent() relation to look up the latest.
                     });
 
                     // Mark PRINT_EVENT_CREATED state
