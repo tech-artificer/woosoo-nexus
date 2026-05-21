@@ -36,12 +36,12 @@ class SyncPosOrderPaymentStatus extends Command
         try {
             $pos->getPdo();
         } catch (\Throwable $e) {
-            Log::info('[pos:sync-payment-statuses] POS DB unreachable — skipping this tick', [
+            Log::warning('[pos:sync-payment-statuses] POS DB unreachable — skipping this tick', [
                 'error' => $e->getMessage(),
             ]);
-            $this->info('POS DB unreachable. Skipping sync.');
+            $this->warn('POS DB unreachable. Skipping sync.');
 
-            return self::SUCCESS;
+            return self::FAILURE;
         }
 
         $local
