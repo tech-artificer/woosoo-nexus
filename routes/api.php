@@ -1,42 +1,33 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Queue;
-use Laravel\Sanctum\PersonalAccessToken;
-
-use App\Http\Controllers\Api\V1\{
-    DeviceApiController,
-    DeviceOrderApiController,
-    BrowseMenuApiController,
-    TableServiceApiController,
-    Menu\MenuBundleController,
-    ServiceRequestApiController,
-    PrintController,
-    OrderApiController
-};
-
-use App\Http\Controllers\Api\V1\OrderController;
-
-use App\Http\Controllers\Api\V1\Auth\{
-    AuthApiController,
-    DeviceAuthApiController,
-};
-
-use App\Http\Controllers\Api\V2\TabletApiController;
-use App\Http\Controllers\Api\V2\DeviceApiController as DeviceV2ApiController;
-use App\Http\Controllers\Api\DeploymentInfoController;
-
-use App\Http\Controllers\Api\V1\Krypton\{
-    TerminalSessionApiController,
-};
-
+use App\Events\PrintOrder;
 use App\Helpers\BroadcastConfig;
+use App\Http\Controllers\Api\DeploymentInfoController;
+use App\Http\Controllers\Api\V1\Auth\AuthApiController;
+use App\Http\Controllers\Api\V1\Auth\DeviceAuthApiController;
+use App\Http\Controllers\Api\V1\BrowseMenuApiController;
+use App\Http\Controllers\Api\V1\DeviceApiController;
+use App\Http\Controllers\Api\V1\DeviceOrderApiController;
+use App\Http\Controllers\Api\V1\Menu\MenuBundleController;
+use App\Http\Controllers\Api\V1\OrderApiController;
+use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\ServiceRequestApiController;
+use App\Http\Controllers\Api\V1\SessionApiController;
+use App\Http\Controllers\Api\V1\TableServiceApiController;
+use App\Http\Controllers\Api\V2\DeviceApiController as DeviceV2ApiController;
+use App\Http\Controllers\Api\V2\TabletApiController;
+use App\Http\Middleware\RequestId;
+use App\Http\Middleware\UpdateDeviceLastSeen;
+use App\Http\Responses\ApiResponse;
 use App\Models\Device;
 use App\Models\DeviceOrder;
-use App\Events\PrintOrder;
+use App\Models\Krypton\Menu;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\PersonalAccessToken;
 
 Route::options('{any}', function () {
     return response()->noContent();
@@ -85,7 +76,7 @@ Route::get('/device/ip', function (Request $request) {
     return response()->json([
         'ip' => $resolvedIp,
         'request_ip' => $requestIp,
-        'user_agent' => $request->userAgent()
+        'user_agent' => $request->userAgent(),
     ]);
 });
 
@@ -94,7 +85,7 @@ Route::get('/device/ip', function (Request $request) {
 Route::get('/config', function () {
     return response()->json([
         'broadcasting' => BroadcastConfig::clientPayload(),
-        'app_version'  => config('app.version', env('APP_VERSION', '1.0.0')),
+        'app_version' => config('app.version', env('APP_VERSION', '1.0.0')),
     ])->header('Cache-Control', 'public, max-age=300');
 })->name('api.config');
 
@@ -103,8 +94,9 @@ Route::get('/deployment-info', DeploymentInfoController::class)->name('api.deplo
 // NOTE: `device/table` moved into auth:device group below (use GET or POST).
 
 Route::middleware([
-    \App\Http\Middleware\RequestId::class,
+    RequestId::class,
     'auth:device',
+    UpdateDeviceLastSeen::class,
 ])->get('/order/{orderId}/dispatch', function (Request $request, int $orderId) {
     $order = DeviceOrder::where(['order_id' => $orderId])->first();
     PrintOrder::dispatch($order);
@@ -115,7 +107,7 @@ Route::middleware([
 
 // Print endpoint is device-only; moved under auth:device group below.
 
-Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(function () {
+Route::middleware([RequestId::class, 'guest'])->group(function () {
     // Rate limit: 120 requests per minute for guest endpoints (generous for transition)
     Route::middleware('throttle:120,1')->group(function () {
         Route::post('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
@@ -130,279 +122,279 @@ Route::middleware([\App\Http\Middleware\RequestId::class, 'guest'])->group(funct
     Route::middleware('throttle:10,1')->post('/devices/register', [DeviceAuthApiController::class, 'register'])->name('api.devices.register');
 });
 
-Route::middleware([\App\Http\Middleware\RequestId::class, 'api'])->group(function () {
+Route::middleware([RequestId::class, 'api'])->group(function () {
     // Menu endpoints: 300 requests per minute (generous for busy tablets)
     Route::middleware('throttle:300,1')->group(function () {
         Route::get('/menus', [BrowseMenuApiController::class, 'getMenus'])->name('api.menus');
-    Route::get('/menus/with-modifiers', [BrowseMenuApiController::class, 'getMenusWithModifiers'])->name('api.menus.with.modifiers');
-    Route::get('/menus/modifier-groups', [BrowseMenuApiController::class, 'getAllModifierGroups'])->name('api.menus.modifier-groups');
-    Route::get('/menus/modifiers', [BrowseMenuApiController::class, 'getMenuModifiers'])->name('api.menus.modifiers');
-    Route::get('/menus/modifier-groups/{id}/modifiers', [BrowseMenuApiController::class, 'getMenuModifiersByGroup'])->name('api.menus.modifiers.by.group');
-    Route::get('/menus/course', [BrowseMenuApiController::class, 'getMenusByCourse'])->name('api.menus.by.course');
-    Route::get('/menus/group', [BrowseMenuApiController::class, 'getMenusByGroup'])->name('api.menus.by.group');
-    Route::get('/menus/group-raw', [BrowseMenuApiController::class, 'getMenusByGroupRaw'])->name('api.menus.group.raw');
-    Route::get('/menus/modifiers-by-group', [BrowseMenuApiController::class, 'getModifiersGroupedByGroup'])->name('api.menus.modifiers.by.grouped');
-    Route::get('/menus/package-modifiers', [BrowseMenuApiController::class, 'getPackageModifiers'])->name('api.menus.package.modifiers');
-    Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
-    Route::get('/menus/bundle', MenuBundleController::class);
-});
-
-Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group(function () {
-    Route::get('/token/verify', function(Request $request) {
-        $tokenString = $request->bearerToken();
-
-        if (! $tokenString) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'No bearer token provided.',
-            ], 400);
-        }
-
-        $token = PersonalAccessToken::findToken($tokenString);
-        
-        if (! $token || ! $token->tokenable) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Invalid or revoked token.',
-            ], 401);
-        }
-
-        if ($token->expires_at && $token->expires_at->isPast()) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Token expired.',
-            ], 401);
-        }
-
-        return response()->json([
-            'valid' => true,
-            'device' => $token->tokenable->only(['id', 'name']),
-            'created_at' => $token->created_at,
-            'expires_at' => $token->expires_at ?? null,
-        ]);
+        Route::get('/menus/with-modifiers', [BrowseMenuApiController::class, 'getMenusWithModifiers'])->name('api.menus.with.modifiers');
+        Route::get('/menus/modifier-groups', [BrowseMenuApiController::class, 'getAllModifierGroups'])->name('api.menus.modifier-groups');
+        Route::get('/menus/modifiers', [BrowseMenuApiController::class, 'getMenuModifiers'])->name('api.menus.modifiers');
+        Route::get('/menus/modifier-groups/{id}/modifiers', [BrowseMenuApiController::class, 'getMenuModifiersByGroup'])->name('api.menus.modifiers.by.group');
+        Route::get('/menus/course', [BrowseMenuApiController::class, 'getMenusByCourse'])->name('api.menus.by.course');
+        Route::get('/menus/group', [BrowseMenuApiController::class, 'getMenusByGroup'])->name('api.menus.by.group');
+        Route::get('/menus/group-raw', [BrowseMenuApiController::class, 'getMenusByGroupRaw'])->name('api.menus.group.raw');
+        Route::get('/menus/modifiers-by-group', [BrowseMenuApiController::class, 'getModifiersGroupedByGroup'])->name('api.menus.modifiers.by.grouped');
+        Route::get('/menus/package-modifiers', [BrowseMenuApiController::class, 'getPackageModifiers'])->name('api.menus.package.modifiers');
+        Route::get('/menus/category', [BrowseMenuApiController::class, 'getMenusByCategory'])->name('api.menus.by.category');
+        Route::get('/menus/bundle', MenuBundleController::class);
     });
 
-    Route::resource('/devices', DeviceApiController::class)->names('api.devices');
-    // allow both GET and POST for backward compatibility, and require auth:device
-    Route::match(['get','post'], 'device/table', [DeviceApiController::class, 'getTableByIp'])
-        ->name('device.table');
-    Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
-    Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
-    // P0 fix 2026-04-07: throttle order creation to prevent double-tap duplicates (10 req/min per device)
-    Route::post('/devices/create-order', DeviceOrderApiController::class)->middleware('throttle.device:10,1')->name('api.devices.create.order');
+    Route::middleware([RequestId::class, 'auth:device', UpdateDeviceLastSeen::class])->group(function () {
+        Route::get('/token/verify', function (Request $request) {
+            $tokenString = $request->bearerToken();
 
-    Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
-    Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
+            if (! $tokenString) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'No bearer token provided.',
+                ], 400);
+            }
 
-    Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
-    Route::get('/device-orders', [OrderApiController::class, 'index']);
-    // Fetch a device order by its external order id (order_id)
-    Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
+            $token = PersonalAccessToken::findToken($tokenString);
 
-    // Refill endpoint (device-authenticated) and alias for print-refill
-    Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->name('api.order.refill');
-    Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->name('api.order.print-refill');
-    
-    // Session endpoints for devices
-    Route::get('/sessions/current', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.current');
-    Route::post('/sessions/join', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.sessions.join');
-    Route::get('/devices/latest-session', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
-    
-    // Order print endpoints for devices
-    Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->name('api.order.printed');
-    Route::get('/order/{orderId}/print', [OrderApiController::class, 'print'])->name('api.order.print');
-});
+            if (! $token || ! $token->tokenable) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Invalid or revoked token.',
+                ], 401);
+            }
 
-// Printer API routes are feature-gated and device-token authenticated.
-// The route file keeps the print-events feature flag ahead of auth so disabled
-// environments return 503 before evaluating relay credentials.
-Route::middleware([\App\Http\Middleware\RequestId::class])->group(function () {
-    require __DIR__ . '/api_printer_routes.php';
-});
+            if ($token->expires_at && $token->expires_at->isPast()) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Token expired.',
+                ], 401);
+            }
 
-// Device API v1 (device-only endpoints)
-Route::prefix('v1')->middleware(['auth:device'])->group(function () {
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::get('/orders/{order}', [OrderController::class, 'show']);
-    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
-    Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus']);
-});
-
-// Admin/device-reset endpoints (requires sanctum auth)
-Route::middleware(['requestId', 'auth:sanctum'])->group(function () {
-    Route::post('/sessions/{id}/reset', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'reset'])->name('api.sessions.reset');
-    Route::post('/sessions/{sessionId}/force-end', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'forceEnd'])->name('api.sessions.force-end');
-});
-
-// Device API v2 — tablet-ordering-pwa endpoints
-Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group(function () {
-    Route::get('/tablet/packages', [TabletApiController::class, 'packages'])->name('api.v2.tablet.packages');
-    Route::get('/tablet/packages/{id}', [TabletApiController::class, 'packageDetails'])->name('api.v2.tablet.package.details');
-    Route::get('/tablet/meat-categories', [TabletApiController::class, 'meatCategories'])->name('api.v2.tablet.meat-categories');
-    Route::get('/tablet/categories', [TabletApiController::class, 'categories'])->name('api.v2.tablet.categories');
-    Route::get('/tablet/categories/{slug}/menus', [TabletApiController::class, 'categoryMenus'])->name('api.v2.tablet.category.menus');
-});
-
-// Device management API v2 — admin/sanctum endpoints
-Route::prefix('v2')->middleware([\App\Http\Middleware\RequestId::class, 'auth:sanctum'])->group(function () {
-    Route::get('/devices', [DeviceV2ApiController::class, 'index'])->name('api.v2.devices.index');
-    Route::post('/devices', [DeviceV2ApiController::class, 'store'])->name('api.v2.devices.store');
-    Route::get('/devices/metadata', [DeviceV2ApiController::class, 'metadata'])->name('api.v2.devices.metadata');
-    Route::get('/devices/statistics', [DeviceV2ApiController::class, 'statistics'])->name('api.v2.devices.statistics');
-    Route::get('/devices/by-status', [DeviceV2ApiController::class, 'byStatus'])->name('api.v2.devices.by-status');
-    Route::get('/devices/{device}', [DeviceV2ApiController::class, 'show'])->name('api.v2.devices.show');
-    Route::get('/devices/{device}/health', [DeviceV2ApiController::class, 'health'])->name('api.v2.devices.health');
-    Route::get('/devices/{device}/heartbeats', [DeviceV2ApiController::class, 'heartbeats'])->name('api.v2.devices.heartbeats');
-    Route::post('/devices/{device}/status', [DeviceV2ApiController::class, 'toggleStatus'])->name('api.v2.devices.status');
-    Route::post('/devices/{device}/security-code', [DeviceV2ApiController::class, 'regenerateSecurityCode'])->name('api.v2.devices.security-code');
-    Route::patch('/devices/{device}/rotate-security-code', [DeviceV2ApiController::class, 'rotateSecurityCode'])->name('api.v2.devices.rotate-security-code');
-});
-
-// Session alias — PWA calls /api/session/latest; actual route is /api/sessions/current
-Route::middleware([\App\Http\Middleware\RequestId::class, 'auth:device'])->group(function () {
-    Route::get('/session/latest', [\App\Http\Controllers\Api\V1\SessionApiController::class, 'current'])->name('api.session.latest');
-});
-
-// Health endpoint — app DB, Redis, queue depth, version, uptime
-Route::get('/health', function () {
-    $startTime = defined('LARAVEL_START') ? LARAVEL_START : microtime(true);
-
-    $services = [
-        'mysql'  => false,
-        'pos'    => false,
-        'redis'  => false,
-    ];
-
-    // MySQL (app DB)
-    try {
-        DB::connection()->getPdo();
-        $services['mysql'] = true;
-    } catch (\Throwable $e) {
-        // keep false
-    }
-
-    // POS DB
-    try {
-        DB::connection('pos')->getPdo();
-        $services['pos'] = true;
-    } catch (\Throwable $e) {
-        // keep false
-    }
-
-    // Redis — requires CACHE_DRIVER=redis in production
-    try {
-        Cache::store('redis')->set('__health_ping', 1, 5);
-        $services['redis'] = (bool) Cache::store('redis')->get('__health_ping');
-    } catch (\Throwable $e) {
-        $services['redis'] = false;
-    }
-
-    // Broadcasting integrity check
-    try {
-        $driver = config('broadcasting.default');
-        $reverbApps = config('reverb.apps.apps');
-        $reverbApp = is_array($reverbApps) && count($reverbApps) > 0 ? $reverbApps[0] : null;
-        $broadcastingReverb = config('broadcasting.connections.reverb');
-
-        if ($driver !== 'reverb' || $reverbApp === null) {
-            $broadcastingStatus = ['driver' => $driver, 'consistent' => false];
-        } else {
-            $reverbKey = trim((string) ($reverbApp['key'] ?? ''));
-            $consistent = $reverbKey === trim((string) ($broadcastingReverb['key'] ?? ''))
-                && trim((string) ($reverbApp['secret'] ?? '')) === trim((string) ($broadcastingReverb['secret'] ?? ''))
-                && trim((string) ($reverbApp['app_id'] ?? '')) === trim((string) ($broadcastingReverb['app_id'] ?? ''));
-            $first4 = substr($reverbKey, 0, 4);
-            $broadcastingStatus = [
-                'driver'          => $driver,
-                'key_fingerprint' => $reverbKey !== '' ? "{$first4}...(" . strlen($reverbKey) . "b, sha256:" . substr(hash('sha256', $reverbKey), 0, 8) . ")" : 'none',
-                'host'            => trim((string) config('broadcasting.connections.reverb.options.host', '')),
-                'port'            => (int) config('broadcasting.connections.reverb.options.port', 8080),
-                'scheme'          => trim((string) config('broadcasting.connections.reverb.options.scheme', 'https')),
-                'consistent'      => $consistent,
-            ];
-        }
-        $services['broadcasting'] = $broadcastingStatus;
-    } catch (\Throwable $e) {
-        $services['broadcasting'] = ['driver' => 'unknown', 'consistent' => false];
-    }
-
-    // Queue depth — size() on the default queue connection
-    $queueDepth = null;
-    try {
-        $queueDepth = Queue::size();
-    } catch (\Throwable $e) {
-        // Queue driver may not support size() (e.g. sync driver)
-    }
-
-    // Determine overall status
-    $coreHealthy = $services['mysql'];
-    $fullyHealthy = $coreHealthy && $services['redis'];
-    $broadcastingConsistent = $services['broadcasting']['consistent'] ?? true;
-    
-    $overallStatus = match (true) {
-        !$coreHealthy => 'down',
-        (!$fullyHealthy || !$broadcastingConsistent) => 'degraded',
-        default => 'ok',
-    };
-
-    $statusCode = match ($overallStatus) {
-        'down'     => 503,
-        'degraded' => 207,
-        default    => 200,
-    };
-
-    $payload = [
-        'status'         => $overallStatus,
-        'services'       => $services,
-        'queue_depth'    => $queueDepth,
-        'version'        => config('app.version', env('APP_VERSION', '1.0.0')),
-        'environment'    => app()->environment(),
-        'uptime_seconds' => (int) round(microtime(true) - $startTime, 3),
-    ];
-
-    return response()->json([
-        'success' => $overallStatus !== 'down',
-        'data'    => $payload,
-        'message' => 'Health check',
-    ], $statusCode);
-});
-
-// Debug endpoint: returns raw POS stored-proc rows and local Menu rows for a course
-Route::get('/debug/pos/menus/course', function (Request $request) {
-    if (! (app()->environment('local') || config('app.debug'))) {
-        return \App\Http\Responses\ApiResponse::error('Debug endpoint disabled', null, 403);
-    }
-
-    $course = $request->query('course');
-
-    if (! $course) {
-        return \App\Http\Responses\ApiResponse::error('Missing ?course= query param', null, 400);
-    }
-
-    try {
-        $rows = DB::connection('pos')->select('CALL get_menus_by_course(?)', [$course]);
-    } catch (\Throwable $e) {
-        return \App\Http\Responses\ApiResponse::error('Stored procedure call failed: ' . $e->getMessage(), null, 500);
-    }
-
-    $ids = collect($rows)->pluck('id')->unique()->values()->all();
-
-    $menus = [];
-    if (! empty($ids)) {
-        $menus = \App\Models\Krypton\Menu::whereIn('id', $ids)->get()->map(function ($m) {
-            return [
-                'id' => $m->id,
-                'name' => $m->name ?? null,
-                'is_available' => $m->is_available ?? null,
-            ];
+            return response()->json([
+                'valid' => true,
+                'device' => $token->tokenable->only(['id', 'name']),
+                'created_at' => $token->created_at,
+                'expires_at' => $token->expires_at ?? null,
+            ]);
         });
-    }
 
-    return \App\Http\Responses\ApiResponse::success([
-        'course' => $course,
-        'stored_proc_rows' => $rows,
-        'menu_rows' => $menus,
-    ]);
+        Route::resource('/devices', DeviceApiController::class)->names('api.devices');
+        // allow both GET and POST for backward compatibility, and require auth:device
+        Route::match(['get', 'post'], 'device/table', [DeviceApiController::class, 'getTableByIp'])
+            ->name('device.table');
+        Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
+        Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
+        // P0 fix 2026-04-07: throttle order creation to prevent double-tap duplicates (10 req/min per device)
+        Route::post('/devices/create-order', DeviceOrderApiController::class)->middleware('throttle.device:10,1')->name('api.devices.create.order');
 
-});
+        Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
+        Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
+
+        Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
+        Route::get('/device-orders', [OrderApiController::class, 'index']);
+        // Fetch a device order by its external order id (order_id)
+        Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
+
+        // Refill endpoint (device-authenticated) and alias for print-refill
+        Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->name('api.order.refill');
+        Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->name('api.order.print-refill');
+
+        // Session endpoints for devices
+        Route::get('/sessions/current', [SessionApiController::class, 'current'])->name('api.sessions.current');
+        Route::post('/sessions/join', [SessionApiController::class, 'current'])->name('api.sessions.join');
+        Route::get('/devices/latest-session', [SessionApiController::class, 'latestSession'])->name('api.devices.latest-session');
+
+        // Order print endpoints for devices
+        Route::post('/order/{orderId}/printed', [OrderApiController::class, 'markPrinted'])->name('api.order.printed');
+        Route::get('/order/{orderId}/print', [OrderApiController::class, 'print'])->name('api.order.print');
+    });
+
+    // Printer API routes are feature-gated and device-token authenticated.
+    // The route file keeps the print-events feature flag ahead of auth so disabled
+    // environments return 503 before evaluating relay credentials.
+    Route::middleware([RequestId::class])->group(function () {
+        require __DIR__.'/api_printer_routes.php';
+    });
+
+    // Device API v1 (device-only endpoints)
+    Route::prefix('v1')->middleware(['auth:device', UpdateDeviceLastSeen::class])->group(function () {
+        Route::get('/orders', [OrderController::class, 'index']);
+        Route::get('/orders/{order}', [OrderController::class, 'show']);
+        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+        Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus']);
+    });
+
+    // Admin/device-reset endpoints (requires sanctum auth)
+    Route::middleware(['requestId', 'auth:sanctum'])->group(function () {
+        Route::post('/sessions/{id}/reset', [SessionApiController::class, 'reset'])->name('api.sessions.reset');
+        Route::post('/sessions/{sessionId}/force-end', [SessionApiController::class, 'forceEnd'])->name('api.sessions.force-end');
+    });
+
+    // Device API v2 — tablet-ordering-pwa endpoints
+    Route::prefix('v2')->middleware([RequestId::class, 'auth:device', UpdateDeviceLastSeen::class])->group(function () {
+        Route::get('/tablet/packages', [TabletApiController::class, 'packages'])->name('api.v2.tablet.packages');
+        Route::get('/tablet/packages/{id}', [TabletApiController::class, 'packageDetails'])->name('api.v2.tablet.package.details');
+        Route::get('/tablet/meat-categories', [TabletApiController::class, 'meatCategories'])->name('api.v2.tablet.meat-categories');
+        Route::get('/tablet/categories', [TabletApiController::class, 'categories'])->name('api.v2.tablet.categories');
+        Route::get('/tablet/categories/{slug}/menus', [TabletApiController::class, 'categoryMenus'])->name('api.v2.tablet.category.menus');
+    });
+
+    // Device management API v2 — admin/sanctum endpoints
+    Route::prefix('v2')->middleware([RequestId::class, 'auth:sanctum'])->group(function () {
+        Route::get('/devices', [DeviceV2ApiController::class, 'index'])->name('api.v2.devices.index');
+        Route::post('/devices', [DeviceV2ApiController::class, 'store'])->name('api.v2.devices.store');
+        Route::get('/devices/metadata', [DeviceV2ApiController::class, 'metadata'])->name('api.v2.devices.metadata');
+        Route::get('/devices/statistics', [DeviceV2ApiController::class, 'statistics'])->name('api.v2.devices.statistics');
+        Route::get('/devices/by-status', [DeviceV2ApiController::class, 'byStatus'])->name('api.v2.devices.by-status');
+        Route::get('/devices/{device}', [DeviceV2ApiController::class, 'show'])->name('api.v2.devices.show');
+        Route::get('/devices/{device}/health', [DeviceV2ApiController::class, 'health'])->name('api.v2.devices.health');
+        Route::get('/devices/{device}/heartbeats', [DeviceV2ApiController::class, 'heartbeats'])->name('api.v2.devices.heartbeats');
+        Route::post('/devices/{device}/status', [DeviceV2ApiController::class, 'toggleStatus'])->name('api.v2.devices.status');
+        Route::post('/devices/{device}/security-code', [DeviceV2ApiController::class, 'regenerateSecurityCode'])->name('api.v2.devices.security-code');
+        Route::patch('/devices/{device}/rotate-security-code', [DeviceV2ApiController::class, 'rotateSecurityCode'])->name('api.v2.devices.rotate-security-code');
+    });
+
+    // Session alias — PWA calls /api/session/latest; actual route is /api/sessions/current
+    Route::middleware([RequestId::class, 'auth:device', UpdateDeviceLastSeen::class])->group(function () {
+        Route::get('/session/latest', [SessionApiController::class, 'current'])->name('api.session.latest');
+    });
+
+    // Health endpoint — app DB, Redis, queue depth, version, uptime
+    Route::get('/health', function () {
+        $startTime = defined('LARAVEL_START') ? LARAVEL_START : microtime(true);
+
+        $services = [
+            'mysql' => false,
+            'pos' => false,
+            'redis' => false,
+        ];
+
+        // MySQL (app DB)
+        try {
+            DB::connection()->getPdo();
+            $services['mysql'] = true;
+        } catch (Throwable $e) {
+            // keep false
+        }
+
+        // POS DB
+        try {
+            DB::connection('pos')->getPdo();
+            $services['pos'] = true;
+        } catch (Throwable $e) {
+            // keep false
+        }
+
+        // Redis — requires CACHE_DRIVER=redis in production
+        try {
+            Cache::store('redis')->set('__health_ping', 1, 5);
+            $services['redis'] = (bool) Cache::store('redis')->get('__health_ping');
+        } catch (Throwable $e) {
+            $services['redis'] = false;
+        }
+
+        // Broadcasting integrity check
+        try {
+            $driver = config('broadcasting.default');
+            $reverbApps = config('reverb.apps.apps');
+            $reverbApp = is_array($reverbApps) && count($reverbApps) > 0 ? $reverbApps[0] : null;
+            $broadcastingReverb = config('broadcasting.connections.reverb');
+
+            if ($driver !== 'reverb' || $reverbApp === null) {
+                $broadcastingStatus = ['driver' => $driver, 'consistent' => false];
+            } else {
+                $reverbKey = trim((string) ($reverbApp['key'] ?? ''));
+                $consistent = $reverbKey === trim((string) ($broadcastingReverb['key'] ?? ''))
+                    && trim((string) ($reverbApp['secret'] ?? '')) === trim((string) ($broadcastingReverb['secret'] ?? ''))
+                    && trim((string) ($reverbApp['app_id'] ?? '')) === trim((string) ($broadcastingReverb['app_id'] ?? ''));
+                $first4 = substr($reverbKey, 0, 4);
+                $broadcastingStatus = [
+                    'driver' => $driver,
+                    'key_fingerprint' => $reverbKey !== '' ? "{$first4}...(".strlen($reverbKey).'b, sha256:'.substr(hash('sha256', $reverbKey), 0, 8).')' : 'none',
+                    'host' => trim((string) config('broadcasting.connections.reverb.options.host', '')),
+                    'port' => (int) config('broadcasting.connections.reverb.options.port', 8080),
+                    'scheme' => trim((string) config('broadcasting.connections.reverb.options.scheme', 'https')),
+                    'consistent' => $consistent,
+                ];
+            }
+            $services['broadcasting'] = $broadcastingStatus;
+        } catch (Throwable $e) {
+            $services['broadcasting'] = ['driver' => 'unknown', 'consistent' => false];
+        }
+
+        // Queue depth — size() on the default queue connection
+        $queueDepth = null;
+        try {
+            $queueDepth = Queue::size();
+        } catch (Throwable $e) {
+            // Queue driver may not support size() (e.g. sync driver)
+        }
+
+        // Determine overall status
+        $coreHealthy = $services['mysql'];
+        $fullyHealthy = $coreHealthy && $services['redis'];
+        $broadcastingConsistent = $services['broadcasting']['consistent'] ?? true;
+
+        $overallStatus = match (true) {
+            ! $coreHealthy => 'down',
+            (! $fullyHealthy || ! $broadcastingConsistent) => 'degraded',
+            default => 'ok',
+        };
+
+        $statusCode = match ($overallStatus) {
+            'down' => 503,
+            'degraded' => 207,
+            default => 200,
+        };
+
+        $payload = [
+            'status' => $overallStatus,
+            'services' => $services,
+            'queue_depth' => $queueDepth,
+            'version' => config('app.version', env('APP_VERSION', '1.0.0')),
+            'environment' => app()->environment(),
+            'uptime_seconds' => (int) round(microtime(true) - $startTime, 3),
+        ];
+
+        return response()->json([
+            'success' => $overallStatus !== 'down',
+            'data' => $payload,
+            'message' => 'Health check',
+        ], $statusCode);
+    });
+
+    // Debug endpoint: returns raw POS stored-proc rows and local Menu rows for a course
+    Route::get('/debug/pos/menus/course', function (Request $request) {
+        if (! (app()->environment('local') || config('app.debug'))) {
+            return ApiResponse::error('Debug endpoint disabled', null, 403);
+        }
+
+        $course = $request->query('course');
+
+        if (! $course) {
+            return ApiResponse::error('Missing ?course= query param', null, 400);
+        }
+
+        try {
+            $rows = DB::connection('pos')->select('CALL get_menus_by_course(?)', [$course]);
+        } catch (Throwable $e) {
+            return ApiResponse::error('Stored procedure call failed: '.$e->getMessage(), null, 500);
+        }
+
+        $ids = collect($rows)->pluck('id')->unique()->values()->all();
+
+        $menus = [];
+        if (! empty($ids)) {
+            $menus = Menu::whereIn('id', $ids)->get()->map(function ($m) {
+                return [
+                    'id' => $m->id,
+                    'name' => $m->name ?? null,
+                    'is_available' => $m->is_available ?? null,
+                ];
+            });
+        }
+
+        return ApiResponse::success([
+            'course' => $course,
+            'stored_proc_rows' => $rows,
+            'menu_rows' => $menus,
+        ]);
+
+    });
 });
