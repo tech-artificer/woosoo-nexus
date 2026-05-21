@@ -198,8 +198,10 @@ class MonitoringController extends Controller
             ->where('broadcast_at', '<', now()->subMinutes(2))
             ->count();
 
-        // Recent 30 events with full timeline.
+        // Recent 30 events with full timeline. `withCount` avoids N+1 on pei_count
+        // (would otherwise issue 30 extra COUNT queries per poll, every 30s).
         $recent = PrintEvent::with(['deviceOrder.table', 'deviceOrder.device'])
+            ->withCount('printEventItems')
             ->orderByDesc('id')
             ->limit(30)
             ->get()
@@ -215,7 +217,7 @@ class MonitoringController extends Controller
                     'table_name' => $e->deviceOrder?->table?->name,
                     'device_name' => $e->deviceOrder?->device?->name,
                     'event_type' => $e->event_type,
-                    'pei_count' => $e->printEventItems()->count(),
+                    'pei_count' => (int) ($e->print_event_items_count ?? 0),
                     'created_at' => $created?->toIso8601String(),
                     'broadcast_at' => $e->broadcast_at?->toIso8601String(),
                     'reserved_at' => $e->reserved_at?->toIso8601String(),
@@ -242,7 +244,10 @@ class MonitoringController extends Controller
             ->get(['id', 'name', 'table_id', 'is_active', 'last_seen_at', 'branch_id'])
             ->map(function ($d) {
                 $lastSeen = $d->last_seen_at;
-                $secsSince = $lastSeen ? now()->diffInSeconds($lastSeen) : null;
+                // abs() guards against clock skew — if last_seen_at is in the
+                // future (device clock ahead of server), diffInSeconds can be
+                // negative and the green/yellow/red threshold check breaks.
+                $secsSince = $lastSeen ? abs(now()->diffInSeconds($lastSeen)) : null;
                 $state = 'unknown';
                 if ($lastSeen) {
                     if ($secsSince <= 60) {
@@ -271,8 +276,19 @@ class MonitoringController extends Controller
     /**
      * Active KryptonSessions with their open device_orders + payment state.
      * Used by the admin action panel for Reset / Force-end decisions.
+     *
+     * Cached for 20s because every call hits the POS DB twice (latest session
+     * + per-order payment state). At a 30s admin-page poll cadence the cache
+     * still feels live, and one slow POS query no longer stalls the whole
+     * /monitoring/metrics response. Cache is busted from reset/force-end so
+     * post-action refresh always reflects the new state.
      */
     private function getActiveSessions(): array
+    {
+        return Cache::remember('monitoring:active_sessions', 20, fn () => $this->computeActiveSessions());
+    }
+
+    private function computeActiveSessions(): array
     {
         try {
             $latest = KryptonSession::getLatestSession();
@@ -389,9 +405,16 @@ class MonitoringController extends Controller
     public function resetSession(int $id): JsonResponse
     {
         $versionKey = "session:{$id}:version";
-        $version = Cache::has($versionKey)
-            ? Cache::increment($versionKey)
-            : (Cache::put($versionKey, 1) ? 1 : 1);
+        if (Cache::has($versionKey)) {
+            $version = Cache::increment($versionKey);
+        } else {
+            Cache::put($versionKey, 1);
+            $version = 1;
+        }
+
+        // Bust the cached active-sessions snapshot so the next /metrics poll
+        // shows the post-action state immediately instead of waiting 20s.
+        Cache::forget('monitoring:active_sessions');
 
         $broadcastError = null;
         try {
@@ -530,6 +553,10 @@ class MonitoringController extends Controller
         }
 
         $this->dispatchSessionReset($id);
+
+        // Bust the cached active-sessions snapshot so the next /metrics poll
+        // reflects the new state immediately rather than waiting up to 20s.
+        Cache::forget('monitoring:active_sessions');
 
         Log::warning('Monitoring: session force-ended', [
             'session_id' => $id,

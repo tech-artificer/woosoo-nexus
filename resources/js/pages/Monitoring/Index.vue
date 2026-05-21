@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { type BreadcrumbItem } from '@/types';
+import { useToast } from '@/composables/useToast';
 import axios from 'axios';
+
+const { success: toastSuccess, error: toastError } = useToast();
 
 interface MonitoringMetrics {
     unprintedOrders: {
@@ -152,6 +155,9 @@ const toggleAutoRefresh = () => {
 const startAutoRefresh = () => {
     if (refreshInterval.value) return;
     refreshInterval.value = setInterval(() => {
+        // Skip polling while the tab is hidden — saves a MySQL+POS round-trip
+        // every 30s when an admin leaves the tab open in the background.
+        if (typeof document !== 'undefined' && document.hidden) return;
         refreshMetrics();
     }, 30000); // 30 seconds
 };
@@ -177,12 +183,10 @@ const purgePrintEvents = async () => {
     }
 };
 
-const actionMessage = ref<{ kind: 'ok' | 'err'; text: string } | null>(null);
-
-const showActionResult = (kind: 'ok' | 'err', text: string) => {
-    actionMessage.value = { kind, text };
-    setTimeout(() => { actionMessage.value = null; }, 8000);
-};
+// Action feedback uses the global vue-sonner toast (useToast composable)
+// so it floats over the page instead of being rendered inline per-session.
+// Replaces the previous setTimeout-managed inline banner that leaked the
+// timer on unmount and rendered duplicated when multiple sessions existed.
 
 const resetSession = async (sessionId: number) => {
     if (loading.value) return;
@@ -191,10 +195,11 @@ const resetSession = async (sessionId: number) => {
     loading.value = true;
     try {
         const res = await axios.post(`/monitoring/sessions/${sessionId}/reset`);
-        showActionResult(res.data?.success ? 'ok' : 'err', res.data?.message ?? 'Reset dispatched.');
+        const message = res.data?.message ?? 'Reset dispatched.';
+        res.data?.success ? toastSuccess(message) : toastError(message);
         await refreshMetrics();
     } catch (e: any) {
-        showActionResult('err', e?.response?.data?.message ?? 'Reset failed — see browser console.');
+        toastError(e?.response?.data?.message ?? 'Reset failed — see browser console.');
         console.error('Reset session failed:', e);
     } finally {
         loading.value = false;
@@ -213,7 +218,7 @@ const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, un
         const typed = window.prompt(prompt);
         if (typed === null) return;
         if (typed.trim() !== String(sessionId)) {
-            showActionResult('err', 'Session ID did not match — force-end cancelled.');
+            toastError('Session ID did not match — force-end cancelled.');
             return;
         }
     } else if (!confirm(prompt)) {
@@ -223,10 +228,11 @@ const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, un
     loading.value = true;
     try {
         const res = await axios.post(`/monitoring/sessions/${sessionId}/force-end`, { force });
-        showActionResult(res.data?.success ? 'ok' : 'err', res.data?.message ?? 'Force-end submitted.');
+        const message = res.data?.message ?? 'Force-end submitted.';
+        res.data?.success ? toastSuccess(message) : toastError(message);
         await refreshMetrics();
     } catch (e: any) {
-        showActionResult('err', e?.response?.data?.message ?? 'Force-end failed — see browser console.');
+        toastError(e?.response?.data?.message ?? 'Force-end failed — see browser console.');
         console.error('Force-end failed:', e);
     } finally {
         loading.value = false;
@@ -606,9 +612,6 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div v-if="actionMessage" class="mb-3 p-3 rounded text-sm" :class="actionMessage.kind === 'ok' ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-destructive/10 border border-destructive/20'">
-                        {{ actionMessage.text }}
-                    </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
