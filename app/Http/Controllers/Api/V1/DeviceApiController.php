@@ -21,22 +21,22 @@ class DeviceApiController extends Controller
 {
     /**
      * Returns a list of devices scoped to the authenticated device's branch.
-     *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $device = $request->user();
 
-        $query = Device::with('table');
+        $branchId = $device instanceof Device ? ($device->branch_id ?? null) : null;
 
-        // Scope to the authenticated device's branch (reuses the pattern from
-        // OrderApiController::index() and OrderController::index()).
-        if ($device instanceof Device && isset($device->branch_id)) {
-            $query->where('branch_id', $device->branch_id);
+        if ($branchId === null) {
+            return response()->json(['message' => 'No branch context available.'], 403);
         }
 
-        return DeviceResource::collection($query->get());
+        $devices = Device::with('table')
+            ->where('branch_id', $branchId)
+            ->get();
+
+        return ApiResponse::success(DeviceResource::collection($devices));
     }
 
     /**

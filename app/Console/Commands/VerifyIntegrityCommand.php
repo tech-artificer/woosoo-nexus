@@ -251,7 +251,7 @@ class VerifyIntegrityCommand extends Command
     private function checkAppKeyAndPosConfig(&$checks): void
     {
         $appKey = trim((string) config('app.key', ''));
-        $posIp = trim((string) env('POS_IP', '192.168.1.32'));
+        $posIp = trim((string) env('POS_IP'));
 
         $warnings = [];
         if ($appKey === '' || str_starts_with($appKey, 'base64:') === false) {
