@@ -111,7 +111,7 @@ Route::middleware([RequestId::class, 'guest'])->group(function () {
     // Rate limit: 120 requests per minute for guest endpoints (generous for transition)
     Route::middleware('throttle:120,1')->group(function () {
         Route::post('/token/create', [AuthApiController::class, 'createToken'])->name('api.user.token.create');
-        Route::post('/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
+        Route::match(['get', 'post'], '/devices/login', [DeviceAuthApiController::class, 'authenticate'])->name('api.devices.login');
 
         // Print-bridge bootstrap endpoints (no auth required — device identified by IP)
         Route::get('/device/lookup-by-ip', [DeviceAuthApiController::class, 'lookupByIp'])->name('api.device.lookup-by-ip');
