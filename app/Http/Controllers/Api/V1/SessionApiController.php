@@ -284,8 +284,19 @@ class SessionApiController extends Controller
     private function doSessionReset(int $sessionId): void
     {
         try {
-            $version = Cache::increment("session:{$sessionId}:version");
-            SessionReset::dispatch($sessionId, $version);
+            $cacheKey = "session:{$sessionId}:version";
+            if (Cache::has($cacheKey)) {
+                $version = Cache::increment($cacheKey);
+            } else {
+                Cache::put($cacheKey, 1);
+                $version = 1;
+            }
+
+            if ($version === false || $version === null) {
+                $version = 1;
+            }
+
+            SessionReset::dispatch($sessionId, (int) $version);
         } catch (\Throwable $e) {
             Log::warning('[SessionApiController::forceEnd] SessionReset broadcast failed', [
                 'session_id' => $sessionId,

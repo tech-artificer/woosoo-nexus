@@ -284,8 +284,8 @@ class PrinterApiController extends Controller
                     'created_at' => $e->deviceOrder->created_at instanceof \DateTimeInterface ? $e->deviceOrder->created_at->format(DATE_ATOM) : null,
                 ] : null,
                 // Use print_event_items for precise item scoping (e.g. only refill items
-                // for REFILL events). Fall back to all order items only if the event
-                // pre-dates the print_event_items table.
+                // for REFILL events). Events that pre-date the print_event_items table
+                // have no attached items and return an empty list intentionally.
                 'items' => $e->printEventItems->isNotEmpty()
                     ? $e->printEventItems->map(fn ($pei) => [
                         'id'       => $pei->deviceOrderItem?->id,

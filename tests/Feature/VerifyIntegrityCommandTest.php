@@ -33,9 +33,6 @@ class VerifyIntegrityCommandTest extends TestCase
             'app_id' => $appId,
             'options' => ['host' => '127.0.0.1', 'port' => 6001, 'scheme' => 'http'],
         ]);
-        Config::set('reverb.apps.apps.0.key', $key);
-        Config::set('reverb.apps.apps.0.app_id', $appId);
-        Config::set('reverb.apps.apps.0.secret', $secret);
     }
 
     /**

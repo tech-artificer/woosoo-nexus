@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
@@ -17,6 +18,7 @@ use Tests\TestCase;
  */
 class HealthBroadcastingTest extends TestCase
 {
+    use RefreshDatabase;
     private function setConsistentBroadcastConfig(
         string $key = 'testkey12345',
         string $secret = 'testsecret12345',
