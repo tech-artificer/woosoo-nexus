@@ -29,6 +29,12 @@ const isAvailableFiltered = computed(() => {
   if (!hasColumn('is_available')) return false
   return !!table.getColumn('is_available')?.getFilterValue()
 })
+
+const hasUploadedImageColumn = computed(() => hasColumn('has_uploaded_image'))
+const uploadedImageFilter = computed<boolean | undefined>(() => {
+  if (!hasUploadedImageColumn.value) return undefined
+  return table.getColumn('has_uploaded_image')?.getFilterValue() as boolean | undefined
+})
 </script>
 
 <template>
@@ -61,6 +67,33 @@ const isAvailableFiltered = computed(() => {
         title="Group"
         :options="groupOptions"
       />
+
+      <template v-if="hasUploadedImageColumn">
+        <Button
+          variant="outline"
+          size="sm"
+          :class="['h-8 text-xs', uploadedImageFilter === true ? 'border-solid border-primary' : 'border-dashed']"
+          @click="() => {
+            const col = table.getColumn('has_uploaded_image')
+            if (!col) return
+            col.setFilterValue(uploadedImageFilter === true ? undefined : true)
+          }"
+        >
+          Uploaded
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          :class="['h-8 text-xs', uploadedImageFilter === false ? 'border-solid border-primary' : 'border-dashed']"
+          @click="() => {
+            const col = table.getColumn('has_uploaded_image')
+            if (!col) return
+            col.setFilterValue(uploadedImageFilter === false ? undefined : false)
+          }"
+        >
+          Missing
+        </Button>
+      </template>
 
       <Button
         variant="outline"

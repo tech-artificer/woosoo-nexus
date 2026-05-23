@@ -27,6 +27,16 @@ export const columns: ColumnDef<Menu, any>[] = [
     },
   },
   {
+    accessorKey: 'course',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Course' }),
+    cell: ({ row }) => h('div', {}, row.getValue('course')),
+  },
+  {
+    accessorKey: 'group',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Group' }),
+    cell: ({ row }) => h('div', {}, row.getValue('group')),
+  },
+  {
     accessorKey: 'category',
     header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Category' }),
     cell: ({ row }) => h('div', {}, row.getValue('category')),
@@ -43,6 +53,17 @@ export const columns: ColumnDef<Menu, any>[] = [
         ])
       }
       return h('div', { class: 'font-medium' }, '₱' + price.toFixed(2))
+    },
+  },
+  {
+    accessorKey: 'has_uploaded_image',
+    header: ({ column }) => h(DataTableColumnHeader, { column, title: 'Image' }),
+    enableSorting: false,
+    cell: ({ row }) => {
+      const uploaded = row.getValue('has_uploaded_image')
+      return h('div', { class: 'flex items-center justify-center' }, [
+        h(Badge, { variant: uploaded ? 'secondary' : 'outline', class: 'text-xs' }, uploaded ? 'Uploaded' : 'Missing')
+      ])
     },
   },
   {

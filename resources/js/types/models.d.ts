@@ -124,6 +124,7 @@ export interface Menu {
     img_path: string;
     description: string;
     index: number;
+    has_uploaded_image: boolean;
     is_taxable: boolean;
     is_available: boolean;
     is_modifier: boolean;

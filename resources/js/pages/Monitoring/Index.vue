@@ -196,7 +196,7 @@ const resetSession = async (sessionId: number) => {
     try {
         const res = await axios.post(`/monitoring/sessions/${sessionId}/reset`);
         const message = res.data?.message ?? 'Reset dispatched.';
-        res.data?.success ? toastSuccess(message) : toastError(message);
+        if (res.data?.success) { toastSuccess(message) } else { toastError(message) }
         await refreshMetrics();
     } catch (e: any) {
         toastError(e?.response?.data?.message ?? 'Reset failed — see browser console.');
@@ -229,7 +229,7 @@ const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, un
     try {
         const res = await axios.post(`/monitoring/sessions/${sessionId}/force-end`, { force });
         const message = res.data?.message ?? 'Force-end submitted.';
-        res.data?.success ? toastSuccess(message) : toastError(message);
+        if (res.data?.success) { toastSuccess(message) } else { toastError(message) }
         await refreshMetrics();
     } catch (e: any) {
         toastError(e?.response?.data?.message ?? 'Force-end failed — see browser console.');
