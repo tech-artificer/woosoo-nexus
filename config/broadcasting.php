@@ -55,6 +55,7 @@ return [
                     return trim((string) env('REVERB_PUBLIC_HOST')) ?: PublicOrigin::host();
                 }),
                 'port' => env('REVERB_PORT', 8080),
+                'public_host' => env('REVERB_PUBLIC_HOST', PublicOrigin::host()),
                 'public_port' => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 8080)),
                 'scheme' => env('REVERB_SCHEME', PublicOrigin::scheme()),
                 'public_scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', PublicOrigin::scheme())),
