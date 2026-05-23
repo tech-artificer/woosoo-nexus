@@ -30,7 +30,7 @@
     },
     "dependencies": {
         "@inertiajs/core": "^2.2.19",
-        "@inertiajs/vue3": "^2.3.6",
+        "@inertiajs/vue3": "^3.2.0",
         "@internationalized/date": "^3.12.1",
         "@tailwindcss/vite": "^4.2.4",
         "@tanstack/vue-table": "^8.21.3",
