@@ -6,6 +6,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Branch;
 use App\Models\Device;
+use App\Models\User;
 use App\Support\DeviceSecurityCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -161,6 +162,34 @@ class DeviceTokenLifecycleTest extends TestCase
         $newPlain = $response->json('token');
         $this->assertNotEmpty($newPlain);
         $this->assertNotEquals($plainToken, $newPlain, 'Refreshed token should differ from old token');
+    }
+
+    /**
+     * Test: Refresh returns 401 (not 500) when called from a web session
+     * Purpose: Guard against TransientToken::$id crash for admin callers
+     */
+    public function test_refresh_returns_401_when_called_with_web_session(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin, 'web')
+            ->postJson('/api/devices/refresh');
+
+        $response->assertStatus(401);
+    }
+
+    /**
+     * Test: Logout returns 401 (not 500) when called from a web session
+     * Purpose: Guard against TransientToken::$id crash for admin callers
+     */
+    public function test_logout_returns_401_when_called_with_web_session(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin, 'web')
+            ->postJson('/api/devices/logout');
+
+        $response->assertStatus(401);
     }
 
     public function test_claimed_tablet_can_login_by_trusted_ip_without_setup_code(): void

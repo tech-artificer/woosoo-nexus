@@ -9,6 +9,7 @@ use App\Models\Device;
 use App\Services\AuditLogService;
 use App\Support\DeviceSecurityCode;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -303,14 +304,21 @@ class DeviceAuthApiController extends Controller
      * Revoke the current token and issue a new one with the same
      * abilities and expiration time.
      */
-    public function refresh(Request $request)
+    public function refresh(Request $request): JsonResponse
     {
         $device = $request->user();
 
-        $currentToken = $request->user()?->currentAccessToken();
-        if ($currentToken) {
-            $request->user()->tokens()->where('id', $currentToken->id)->delete();
+        if (! $device instanceof Device) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
         }
+
+        $currentToken = $device->currentAccessToken();
+
+        if (! $currentToken instanceof PersonalAccessToken) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $device->tokens()->where('id', $currentToken->id)->delete();
 
         $newToken = $device->createToken(
             name: 'device-auth',
@@ -320,11 +328,11 @@ class DeviceAuthApiController extends Controller
         $expiresAt = now()->addDays(7);
 
         return response()->json([
-            'success' => true,
-            'token' => $newToken,
-            'device' => $device,
-            'table' => $this->safeLoadDeviceTable($device),
-            'expires_at' => $expiresAt->toDateTimeString(),
+            'success'      => true,
+            'token'        => $newToken,
+            'device'       => $device,
+            'table'        => $this->safeLoadDeviceTable($device),
+            'expires_at'   => $expiresAt->toDateTimeString(),
             'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
     }
@@ -332,16 +340,21 @@ class DeviceAuthApiController extends Controller
     /**
      * Revoke the token of the device that made the request and logout.
      */
-    public function logout(Request $request)
+    public function logout(Request $request): JsonResponse
     {
-        $current = $request->user()?->currentAccessToken();
-        if ($current) {
-            $request->user()->tokens()->where('id', $current->id)->delete();
+        $device = $request->user();
+
+        if (! $device instanceof Device) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        return response()->json([
-            'message' => 'Successfully logged out',
-        ]);
+        $current = $device->currentAccessToken();
+
+        if ($current instanceof PersonalAccessToken) {
+            $device->tokens()->where('id', $current->id)->delete();
+        }
+
+        return response()->json(['message' => 'Successfully logged out']);
     }
 
     /**
