@@ -116,9 +116,14 @@ class Menu extends Model
         $loadedImage = $this->relationLoaded('image') ? $this->getRelation('image') : null;
         $imgPath = $loadedImage?->path;
 
-        if (! $this->relationLoaded('image')) {
-            // MenuImage is on the default (mysql) connection; Menu is on the pos connection.
-            // Fall back to a direct lookup only when the image relation was not eager-loaded.
+        // MenuImage lives on the default (mysql) connection; Menu lives on the pos connection.
+        // Eager-loading `image` across connections silently binds an empty relation, which
+        // marks it as "loaded" — the old `! relationLoaded(...)` gate then skipped the
+        // fallback and we leaked brand-asset/placeholder URLs even when an upload existed.
+        // Fall back to a direct lookup whenever the path is missing, regardless of how the
+        // relation reports itself. Callers serving collections should use
+        // `Menu::attachUploadedImages($collection)` to keep this from issuing N+1 queries.
+        if ($imgPath === null) {
             $imgPath = MenuImage::where('menu_id', $this->id)->value('path');
         }
 
@@ -133,6 +138,56 @@ class Menu extends Model
 
         // 2.webp is the newer/lighter placeholder; 1.jpg is the legacy one.
         return asset('images/menu-placeholder/2.webp');
+    }
+
+    /**
+     * Bulk-attach uploaded MenuImage records to a Menu or collection of Menus.
+     *
+     * Works around the cross-connection eager-load gap (Menu on `pos`, MenuImage on
+     * `mysql`). Call this immediately after fetching Menu models that will be
+     * serialized through `MenuResource` / `MenuModifierResource`, so each
+     * `image_url` accessor sees a populated relation and avoids per-row queries.
+     *
+     * Accepts a single Menu, an Eloquent/Support Collection of Menus, an array of
+     * Menus, or null. Silently no-ops on empty input. Models that are not Menu
+     * instances are skipped.
+     *
+     * @param  Menu|iterable<Menu>|null  $menus
+     */
+    public static function attachUploadedImages($menus): void
+    {
+        if ($menus === null) {
+            return;
+        }
+
+        if ($menus instanceof self) {
+            $menus = [$menus];
+        }
+
+        $collection = collect($menus);
+        if ($collection->isEmpty()) {
+            return;
+        }
+
+        $ids = $collection
+            ->filter(fn ($m) => $m instanceof self)
+            ->pluck('id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $images = MenuImage::whereIn('menu_id', $ids)->get()->keyBy('menu_id');
+
+        foreach ($collection as $menu) {
+            if ($menu instanceof self) {
+                $menu->setRelation('image', $images->get($menu->id));
+            }
+        }
     }
 
     protected function resolveBrandFoodAssetFile(): ?string
