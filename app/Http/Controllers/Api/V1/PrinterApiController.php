@@ -236,7 +236,7 @@ class PrinterApiController extends Controller
         $eventsQuery = PrintEvent::where('is_acknowledged', false)
             ->whereIn('status', [PrintEventStatus::PENDING->value, PrintEventStatus::RESERVED->value])
             ->when($since, fn ($q) => $q->where('created_at', '>', $since))
-            ->with(['deviceOrder', 'deviceOrder.items.menu', 'deviceOrder.table'])
+            ->with(['deviceOrder', 'deviceOrder.table', 'printEventItems.deviceOrderItem.menu'])
             ->orderBy('created_at', 'asc');
 
         // Restrict to events for the same branch as the authenticated device
@@ -283,14 +283,19 @@ class PrinterApiController extends Controller
                     'guest_count' => $e->deviceOrder->guest_count,
                     'created_at' => $e->deviceOrder->created_at instanceof \DateTimeInterface ? $e->deviceOrder->created_at->format(DATE_ATOM) : null,
                 ] : null,
-                'items' => $e->deviceOrder?->items?->map(fn ($it) => [
-                    'id' => $it->id,
-                    'menu_id' => $it->menu_id,
-                    'name' => $it->menu?->receipt_name ?? $it->menu?->name ?? null,
-                    'quantity' => $it->quantity,
-                    'price' => $it->price,
-                    'subtotal' => $it->subtotal,
-                ])->values() ?? [],
+                // Use print_event_items for precise item scoping (e.g. only refill items
+                // for REFILL events). Events that pre-date the print_event_items table
+                // have no attached items and return an empty list intentionally.
+                'items' => $e->printEventItems->isNotEmpty()
+                    ? $e->printEventItems->map(fn ($pei) => [
+                        'id'       => $pei->deviceOrderItem?->id,
+                        'menu_id'  => $pei->deviceOrderItem?->menu_id,
+                        'name'     => $pei->deviceOrderItem?->menu?->name ?? $pei->deviceOrderItem?->menu?->receipt_name ?? null,
+                        'quantity' => $pei->quantity,
+                        'price'    => $pei->deviceOrderItem?->price,
+                        'subtotal' => $pei->deviceOrderItem?->subtotal,
+                    ])->values()
+                    : collect(),
             ];
         });
 

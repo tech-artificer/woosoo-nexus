@@ -3,6 +3,7 @@
 namespace App\Repositories\Krypton;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 
 use App\Models\Krypton\Order;
@@ -133,17 +134,14 @@ class OrderRepository
             ->get();
     }
 
-    public function getOpenOrdersForSession($sessionId) {
+    public function getOpenOrdersForSession($sessionId): Collection
+    {
         try {
-            if (app()->environment('testing') || env('APP_ENV') === 'testing') {
-                return Order::where('session_id', $sessionId)->get();
-            }
-
-            return Order::fromQuery("CALL get_open_orders_for_session(?)", [$sessionId]);
+            return Order::where('session_id', $sessionId)
+                ->where('is_open', 1)
+                ->get();
         } catch (\Exception $e) {
-            // If the stored procedure is not available (tests or missing POS DB),
-            // log and return an empty collection to avoid breaking callers.
-            \Illuminate\Support\Facades\Log::warning('Stored procedure get_open_orders_for_session failed: '.$e->getMessage());
+            Log::warning("Failed to fetch open orders for session {$sessionId}: {$e->getMessage()}");
             return collect([]);
         }
     }

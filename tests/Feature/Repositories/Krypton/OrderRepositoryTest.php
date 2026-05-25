@@ -144,3 +144,26 @@ test('getAllOrdersWithDeviceData hydrates order checks and ordered menus in bulk
     expect($expandedResult->first()->orderCheck)->not->toBeNull();
     expect($expandedResult->first()->orderedMenus)->toHaveCount(2);
 });
+
+it('getOpenOrdersForSession returns only open orders for the given session', function () {
+    $repo = new OrderRepository();
+
+    DB::connection('pos')->table('orders')->insert([
+        ['id' => 10, 'session_id' => 99, 'is_open' => true,  'is_voided' => false, 'is_transferred' => false, 'is_available' => true, 'created_on' => now()],
+        ['id' => 11, 'session_id' => 99, 'is_open' => false, 'is_voided' => false, 'is_transferred' => false, 'is_available' => true, 'created_on' => now()],
+        ['id' => 12, 'session_id' => 88, 'is_open' => true,  'is_voided' => false, 'is_transferred' => false, 'is_available' => true, 'created_on' => now()],
+    ]);
+
+    $result = $repo->getOpenOrdersForSession(99);
+
+    expect($result)->toHaveCount(1);
+    expect($result->first()->id)->toBe(10);
+});
+
+it('getOpenOrdersForSession returns empty collection for unknown session', function () {
+    $repo = new OrderRepository();
+
+    $result = $repo->getOpenOrdersForSession(999);
+
+    expect($result)->toBeEmpty();
+});

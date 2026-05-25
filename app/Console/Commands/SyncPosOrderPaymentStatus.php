@@ -2,13 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\OrderStatus;
-use App\Events\Order\OrderCompleted;
-use App\Events\Order\OrderStatusUpdated;
-use App\Events\Order\OrderVoided;
-use App\Events\Order\PaymentCompleted;
-use App\Models\DeviceOrder;
-use App\Services\AuditLogService;
+use App\Services\Pos\PosOrderStatusFinalizer;
 use Illuminate\Console\Command;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\DB;
@@ -20,24 +14,35 @@ class SyncPosOrderPaymentStatus extends Command
 
     protected $description = 'Synchronize paid/voided POS orders into local device_orders for split-database deployments.';
 
-    public function handle(): int
+    public function handle(PosOrderStatusFinalizer $finalizer): int
     {
         $chunkSize = max(1, (int) $this->option('chunk'));
         $totalChecked = 0;
         $totalUpdated = 0;
 
-        $openStatuses = [
-            OrderStatus::PENDING->value,
-            OrderStatus::CONFIRMED->value,
-            OrderStatus::IN_PROGRESS->value,
-            OrderStatus::READY->value,
-            OrderStatus::SERVED->value,
-        ];
+        $openStatuses = PosOrderStatusFinalizer::OPEN_STATUSES;
 
         /** @var ConnectionInterface $local */
-        $local = DB::connection('mysql');
+        $local = DB::connection();
         /** @var ConnectionInterface $pos */
         $pos = DB::connection('pos');
+
+        // Skip cleanly when POS is unreachable (e.g. dev/staging on a different
+        // network). Without this guard every scheduled tick throws a full
+        // QueryException stack trace into laravel.log — at ~30KB per failure
+        // and one tick per minute the log balloons and the scheduler reports
+        // exit-code-1 alerts continuously. Treating a hard connection failure
+        // as a no-op is correct: there's nothing to sync if POS is offline.
+        try {
+            $pos->getPdo();
+        } catch (\Throwable $e) {
+            Log::warning('[pos:sync-payment-statuses] POS DB unreachable — skipping this tick', [
+                'error' => $e->getMessage(),
+            ]);
+            $this->warn('POS DB unreachable. Skipping sync.');
+
+            return self::FAILURE;
+        }
 
         $local
             ->table('device_orders')
@@ -45,7 +50,7 @@ class SyncPosOrderPaymentStatus extends Command
             ->whereNotNull('order_id')
             ->whereIn('status', $openStatuses)
             ->orderBy('id')
-            ->chunkById($chunkSize, function ($rows) use (&$totalChecked, &$totalUpdated, $pos, $local): void {
+            ->chunkById($chunkSize, function ($rows) use (&$totalChecked, &$totalUpdated, $pos, $finalizer): void {
                 $totalChecked += $rows->count();
 
                 $posOrderIds = $rows
@@ -81,53 +86,18 @@ class SyncPosOrderPaymentStatus extends Command
                         continue;
                     }
 
-                    $nextStatus = ((int) ($posOrder->is_voided ?? 0) === 1)
-                        ? OrderStatus::VOIDED
-                        : OrderStatus::COMPLETED;
+                    $nextStatus = PosOrderStatusFinalizer::terminalStatusFromPosOrder($posOrder);
 
-                    if ((string) $row->status === $nextStatus->value) {
+                    if (! $nextStatus || (string) $row->status === $nextStatus->value) {
                         continue;
                     }
 
-                    $updated = $local
-                        ->table('device_orders')
-                        ->where('id', (int) $row->id)
-                        ->update([
-                            'status' => $nextStatus->value,
-                            'updated_at' => now(),
-                        ]);
-
-                    if ($updated === 0) {
-                        continue;
-                    }
-
-                    $totalUpdated++;
-
-                    AuditLogService::orderStatusChanged(
-                        null,
+                    if ($finalizer->finalizeDeviceOrderId(
                         (int) $row->id,
-                        (string) $row->status,
-                        $nextStatus->value,
-                        null,
-                        'system'
-                    );
-
-                    $deviceOrder = DeviceOrder::query()->find((int) $row->id);
-                    if (! $deviceOrder) {
-                        continue;
-                    }
-
-                    // This update path bypasses Eloquent mutators/observers intentionally,
-                    // so we manually emit the real-time events expected by tablet/admin clients.
-                    OrderStatusUpdated::dispatch($deviceOrder);
-
-                    if ($nextStatus === OrderStatus::COMPLETED) {
-                        OrderCompleted::dispatch($deviceOrder);
-                        PaymentCompleted::dispatch($deviceOrder);
-                    }
-
-                    if ($nextStatus === OrderStatus::VOIDED) {
-                        OrderVoided::dispatch($deviceOrder);
+                        $nextStatus,
+                        'system:pos-sync'
+                    )) {
+                        $totalUpdated++;
                     }
                 }
             }, 'id');

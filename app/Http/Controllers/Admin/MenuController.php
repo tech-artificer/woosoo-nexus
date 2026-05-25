@@ -23,12 +23,12 @@ class MenuController extends Controller
             $menus = collect([]);
         }
 
-        $menuImages = MenuImage::whereIn('menu_id', $menus->pluck('id')->all())
-            ->get()
-            ->keyBy('menu_id');
+        // Cross-connection workaround: MenuImage lives on the default mysql connection,
+        // Menu lives on the pos connection. with('image') silently fails across that
+        // boundary; this helper does a single bulk lookup and patches the relation.
+        Menu::attachUploadedImages($menus);
 
-        $menus = $menus->map(function ($menu) use ($menuImages) {
-            $menu->setRelation('image', $menuImages->get($menu->id));
+        $menus = $menus->map(function ($menu) {
             $imagePath = $menu->image?->path;
 
             return [

@@ -485,7 +485,7 @@ Example item in `events` array:
 
 ### Notes for implementers
 
-- Servers create PrintEvents via `PrintEventService::createForOrder($deviceOrder, 'INITIAL')` when an order is created. The printer app should prefer PrintEvents when available and fall back to `/api/orders/unprinted` only if needed.
+- Servers create PrintEvents via `PrintTicketService::createInitialPrintEvent($deviceOrder, $clientSubmissionId)` when an order is created, and `PrintTicketService::createRefillPrintEvent(...)` on refills. Both writers attach `print_event_items` rows so the polling response includes the actual ordered items. The printer app should prefer PrintEvents when available and fall back to `/api/orders/unprinted` only if needed.
 - Keep `limit` server-side capped at `200` to avoid large responses. The default is `100`.
 - Acknowledgements are idempotent — clients should call ack and treat `was_updated === false` as an already-handled event.
 
