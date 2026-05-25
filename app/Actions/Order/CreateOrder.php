@@ -52,7 +52,6 @@ class CreateOrder
 
             // terminal_session_id can be null if not available from POS context
             $terminalSessionId = $attr['terminal_session_id'] ?? null;
-            $dateTimeOpened = now(); // Current date and time
             $dateTimeClosed = null; // Order is open initially
             $revenueId = $attr['revenue_id'] ?? 1; // Default revenue center
             $terminalId = $attr['terminal_id'] ?? 1; // Current POS terminal ID
@@ -72,10 +71,15 @@ class CreateOrder
             $terminalServiceId = $attr['terminal_service_id'];
             $isOnlineOrder = $attr['is_online_order']; // Default to false, can be set based on request
 
+            // date_time_opened is intentionally omitted here and replaced with NOW()
+            // inline in the stored procedure call below. Using PHP now() would anchor
+            // the timestamp to the Pi's system clock; if the Pi and the Krypton MySQL
+            // Windows machine have a clock difference, the POS table timer immediately
+            // shows a non-zero elapsed time on order creation.
             $params = [
                 $sessionId,
                 $terminalSessionId,
-                $dateTimeOpened,
+                // date_time_opened → NOW() inline in query (see placeholder below)
                 $dateTimeClosed,
                 $revenueId,
                 $terminalId,
@@ -115,8 +119,10 @@ class CreateOrder
                 ]);
             }
 
-            $placeholdersArray = array_fill(0, count($params), '?');
-            $placeholders = implode(', ', $placeholdersArray);
+            // Build placeholders: first 2 as bound params, then NOW() for date_time_opened,
+            // then the remaining 17 params. Total = 20 SP arguments.
+            $remainingCount = count($params) - 2;
+            $placeholders = '?, ?, NOW(), ' . implode(', ', array_fill(0, $remainingCount, '?'));
             // Call the procedure
             $order = Order::fromQuery('CALL create_order('.$placeholders.')', $params)->first();
 
