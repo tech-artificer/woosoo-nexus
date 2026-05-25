@@ -14,7 +14,27 @@ class DeviceOrderItems extends Model
 {
     use SoftDeletes, HasFactory;
     protected $table = 'device_order_items';
-    protected $guarded = [];
+    protected $fillable = [
+        'order_id',
+        'ordered_menu_id',
+        'menu_id',
+        'quantity',
+        'price',
+        'subtotal',
+        'tax',
+        'discount',
+        'total',
+        'notes',
+        'seat_number',
+        'index',
+        'is_refill',
+        'is_printed',
+        'printed_at',
+        'printed_by_print_event_id',
+        'print_type',
+        'status',
+        'client_submission_id',
+    ];
 
     protected $casts = [
         'price' => 'decimal:4',
