@@ -25,6 +25,7 @@ class Menu extends Model
     protected $guarded = [];
     protected $appends = ['computed_modifiers'];
     public $timestamps = false;
+    protected bool $uploadedImagesAttached = false;
 
     protected $casts = [
         'is_taxable' => 'boolean',
@@ -117,13 +118,10 @@ class Menu extends Model
         $imgPath = $loadedImage?->path;
 
         // MenuImage lives on the default (mysql) connection; Menu lives on the pos connection.
-        // Eager-loading `image` across connections silently binds an empty relation, which
-        // marks it as "loaded" — the old `! relationLoaded(...)` gate then skipped the
-        // fallback and we leaked brand-asset/placeholder URLs even when an upload existed.
-        // Fall back to a direct lookup whenever the path is missing, regardless of how the
-        // relation reports itself. Callers serving collections should use
-        // `Menu::attachUploadedImages($collection)` to keep this from issuing N+1 queries.
-        if ($imgPath === null) {
+        // Eager-loading `image` across connections can bind an empty relation, so one-off
+        // callers still need the direct fallback. Bulk callers mark the lookup as completed
+        // through `attachUploadedImages()` so missing images do not cause N+1 queries.
+        if ($imgPath === null && ! $this->uploadedImagesAttached) {
             $imgPath = MenuImage::where('menu_id', $this->id)->value('path');
         }
 
@@ -186,6 +184,7 @@ class Menu extends Model
         foreach ($collection as $menu) {
             if ($menu instanceof self) {
                 $menu->setRelation('image', $images->get($menu->id));
+                $menu->uploadedImagesAttached = true;
             }
         }
     }

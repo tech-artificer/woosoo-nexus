@@ -4,13 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Page Not Found — Woosoo Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             min-height: 100vh;
-            background-color: #0a0a0a;
+            background-color: #181411;
             color: #e5e5e5;
-            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+            font-family: 'Roboto Flex', ui-sans-serif, system-ui, sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;

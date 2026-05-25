@@ -5,8 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="asset-base-url" content="{{ asset('') }}">
-        <meta name="theme-color" content="{{ ($appearance ?? 'system') == 'dark' ? '#252525' : '#ffffff' }}" media="(prefers-color-scheme: light)">
-        <meta name="theme-color" content="#252525" media="(prefers-color-scheme: dark)">
+        <meta name="theme-color" content="{{ ($appearance ?? 'system') == 'dark' ? '#181411' : '#f8f4ed' }}" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#181411" media="(prefers-color-scheme: dark)">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -26,12 +26,12 @@
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
-                background-color: oklch(1 0 0);
+                background-color: #f8f4ed;
                 color-scheme: light;
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: #181411;
                 color-scheme: dark;
             }
         </style>

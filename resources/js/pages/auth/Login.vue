@@ -1,15 +1,15 @@
 <script setup lang="ts">
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { asset } from '@/lib/utils';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowRight, CheckCircle2, LoaderCircle, ShieldCheck } from 'lucide-vue-next';
 import axios from 'axios';
+import { ArrowRight, CheckCircle2, LoaderCircle, ShieldCheck } from 'lucide-vue-next';
 
 defineProps<{
     title?: string;
@@ -38,49 +38,49 @@ const submit = async () => {
 <template>
     <Head title="Log in" />
 
-    <main
-        id="main-content"
-        class="relative flex min-h-svh overflow-hidden bg-[linear-gradient(180deg,rgba(255,249,243,1)_0%,rgba(247,243,237,1)_48%,rgba(242,240,236,1)_100%)] text-foreground"
-    >
-        <div class="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top_left,rgba(246,181,109,0.2),transparent_58%)]" />
-        <div class="absolute inset-y-0 right-0 hidden w-2/5 bg-[radial-gradient(circle_at_center,rgba(37,37,37,0.08),transparent_70%)] lg:block" />
-
+    <main id="main-content" class="relative flex min-h-svh overflow-hidden bg-background text-foreground">
         <div class="relative mx-auto flex w-full max-w-[1360px] flex-1 flex-col justify-center px-5 py-4 sm:px-8 sm:py-6 lg:px-10 lg:py-6 xl:py-8">
-
-                        <div
-                            v-if="warning"
-                            data-testid="session-warning"
-                            class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
-                            role="status"
-                            aria-live="polite"
-                        >
-                            {{ warning }}
-                        </div>
+            <div
+                v-if="warning"
+                data-testid="session-warning"
+                class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
+                role="status"
+                aria-live="polite"
+            >
+                {{ warning }}
+            </div>
             <div class="grid flex-1 items-center gap-5 xl:grid-cols-[minmax(0,0.96fr)_minmax(460px,0.88fr)] 2xl:gap-6">
-                <section class="relative hidden self-stretch overflow-hidden rounded-[2rem] border border-black/8 bg-[#252525] text-white shadow-[0_24px_80px_rgba(37,37,37,0.22)] xl:flex xl:max-h-[calc(100svh-4rem)]">
+                <section
+                    class="relative hidden self-stretch overflow-hidden rounded-[2rem] border border-black/8 bg-[#252525] text-white shadow-[0_24px_80px_rgba(37,37,37,0.22)] xl:flex xl:max-h-[calc(100svh-4rem)]"
+                >
                     <img
                         :src="coverImage"
                         alt="Woosoo restaurant interior"
                         width="1200"
                         height="1600"
                         class="absolute inset-0 h-full w-full object-cover opacity-24"
-                    >
+                    />
                     <div class="absolute inset-0 bg-[linear-gradient(145deg,rgba(37,37,37,0.88),rgba(37,37,37,0.62),rgba(176,128,71,0.66))]" />
 
                     <div class="relative flex h-full w-full flex-col justify-between p-6 sm:p-7 xl:p-8">
                         <div class="flex items-center justify-between gap-4">
-                            <Link :href="route('home')" class="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium tracking-[0.18em] text-white/92 uppercase backdrop-blur-sm transition hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent">
+                            <Link
+                                :href="route('home')"
+                                class="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm font-medium tracking-[0.18em] text-white/92 uppercase backdrop-blur-sm transition hover:bg-white/14 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:outline-none"
+                            >
                                 <AppLogoIcon class="h-11 w-11 rounded-full object-cover" />
                                 <span>{{ title ?? 'Woosoo Admin' }}</span>
                             </Link>
-                            <div class="hidden rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-medium text-white/75 backdrop-blur-sm sm:block">
+                            <div
+                                class="hidden rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-medium text-white/75 backdrop-blur-sm sm:block"
+                            >
                                 Verified staff access
                             </div>
                         </div>
 
                         <div class="mx-auto flex max-w-lg flex-1 flex-col justify-center text-left">
                             <p class="text-sm font-semibold tracking-[0.28em] text-[#f6b56d] uppercase">Operations sign-in</p>
-                            <h1 class="mt-4 font-header text-4xl font-semibold leading-tight text-white 2xl:text-5xl">
+                            <h1 class="mt-4 font-header text-4xl leading-tight font-semibold text-white 2xl:text-5xl">
                                 Calm, focused access to the Woosoo back office.
                             </h1>
                             <p class="mt-5 max-w-md text-base leading-7 text-white/76">
@@ -92,7 +92,9 @@ const submit = async () => {
                                     <ShieldCheck class="mt-0.5 h-5 w-5 shrink-0 text-[#f6b56d]" />
                                     <div>
                                         <p class="text-sm font-semibold tracking-[0.08em] text-white uppercase">Secure admin workspace</p>
-                                        <p class="mt-1 text-sm leading-6 text-white/72">One entry point for operational controls, with verified staff access and session protection.</p>
+                                        <p class="mt-1 text-sm leading-6 text-white/72">
+                                            One entry point for operational controls, with verified staff access and session protection.
+                                        </p>
                                     </div>
                                 </div>
 
@@ -100,7 +102,9 @@ const submit = async () => {
                                     <CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-[#f6b56d]" />
                                     <div>
                                         <p class="text-sm font-semibold tracking-[0.08em] text-white uppercase">What you can manage</p>
-                                        <p class="mt-1 text-sm leading-6 text-white/72">Dashboard, devices, menus, reporting, configuration, and other daily back-office tools.</p>
+                                        <p class="mt-1 text-sm leading-6 text-white/72">
+                                            Dashboard, devices, menus, reporting, configuration, and other daily back-office tools.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -109,7 +113,9 @@ const submit = async () => {
                 </section>
 
                 <section class="flex items-center justify-center xl:justify-end">
-                    <div class="w-full max-w-[540px] rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_22px_60px_rgba(37,37,37,0.14)] backdrop-blur-xl sm:p-7 lg:p-8">
+                    <div
+                        class="w-full max-w-[540px] rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_22px_60px_rgba(37,37,37,0.14)] backdrop-blur-xl sm:p-7 lg:p-8"
+                    >
                         <div class="flex flex-col gap-4">
                             <div class="flex items-center gap-3">
                                 <div class="rounded-2xl bg-[#fff6ea] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
@@ -182,7 +188,9 @@ const submit = async () => {
                                 <InputError :message="form.errors.password" />
                             </div>
 
-                            <div class="flex flex-col gap-3 border-y border-black/8 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10">
+                            <div
+                                class="flex flex-col gap-3 border-y border-black/8 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10"
+                            >
                                 <Label for="remember" class="inline-flex cursor-pointer items-center gap-3 text-sm text-muted-foreground">
                                     <Checkbox
                                         id="remember"
@@ -207,8 +215,11 @@ const submit = async () => {
                             </Button>
                         </form>
 
-                        <div class="mt-6 rounded-[1.5rem] border border-black/8 bg-black/[0.02] px-5 py-4 text-sm leading-6 text-muted-foreground dark:border-white/10 dark:bg-white/[0.04]">
-                            Use your assigned staff credentials. If you cannot access the workspace, contact the system administrator before creating a new account.
+                        <div
+                            class="mt-6 rounded-[1.5rem] border border-black/8 bg-black/[0.02] px-5 py-4 text-sm leading-6 text-muted-foreground dark:border-white/10 dark:bg-white/[0.04]"
+                        >
+                            Use your assigned staff credentials. If you cannot access the workspace, contact the system administrator before creating
+                            a new account.
                         </div>
                     </div>
                 </section>
