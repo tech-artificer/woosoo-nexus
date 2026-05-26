@@ -215,6 +215,39 @@
     margin-top: 18px;
   }
   .note strong { color: var(--text); }
+  .screenshot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+  }
+  .screenshot-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .screenshot-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--surface2);
+  }
+  .screenshot-caption {
+    border-top: 1px solid rgba(249,208,161,0.12);
+    padding: 14px 16px 16px;
+  }
+  .screenshot-caption strong {
+    display: block;
+    color: var(--gold-light);
+    font-family: 'Kanit', sans-serif;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .screenshot-caption span {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
   footer {
     padding: 20px 32px;
     display: flex;
@@ -231,7 +264,7 @@
     nav { align-items: stretch; padding: 0 14px; }
     .nav-brand { margin-right: 14px; }
     .container { padding: 0 20px; }
-    .quick-links, .grid { grid-template-columns: 1fr; }
+    .quick-links, .grid, .screenshot-grid { grid-template-columns: 1fr; }
     footer { flex-direction: column; }
   }
 </style>
@@ -362,6 +395,23 @@
         </div>
       </div>
 
+      <div class="screenshot-grid">
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/nexus-dashboard-redacted.png" alt="Woosoo Nexus dashboard overview showing sales, order, guest, and session summary cards with private metrics redacted">
+          <figcaption class="screenshot-caption">
+            <strong>Dashboard overview</strong>
+            <span>Start here to check today&apos;s sales, order count, guest count, current session, open tables, and high-level activity. Private metrics are hidden in this guide image.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/nexus-orders-live.png" alt="Woosoo Nexus orders page with live orders, order history, filters, export action, and table controls">
+          <figcaption class="screenshot-caption">
+            <strong>Orders</strong>
+            <span>Use Live Orders for pending or in-progress work. Use Order History, filters, search, and export when reviewing completed or voided orders.</span>
+          </figcaption>
+        </figure>
+      </div>
+
       <div class="grid" style="margin-top: 18px;">
         <div class="card">
           <h3>Create or add a device</h3>
@@ -429,6 +479,30 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="screenshot-grid">
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/nexus-devices-redacted.png" alt="Woosoo Nexus devices page with create device action, totals, device table, and redacted private connection values">
+          <figcaption class="screenshot-caption">
+            <strong>Devices</strong>
+            <span>Click Create Device to register a tablet or bridge. Use the list to review table assignment, last seen status, and security readiness. Private connection values are hidden in this guide image.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/nexus-menus-live.png" alt="Woosoo Nexus menu management page with menu counts, filters, item list, prices, image status, and availability status">
+          <figcaption class="screenshot-caption">
+            <strong>Menus</strong>
+            <span>Use filters and search to find menu items. Review availability, category, group, image status, and pricing before service.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/nexus-packages-live.png" alt="Woosoo Nexus packages page with new package form and configured packages table">
+          <figcaption class="screenshot-caption">
+            <strong>Packages</strong>
+            <span>Create packages by naming the offer, choosing the package menu, selecting modifier menus, setting display order, and saving it as active when ready for tablets.</span>
+          </figcaption>
+        </figure>
       </div>
 
       <div class="note">
@@ -513,6 +587,92 @@
             </div>
           </div>
         </div>
+      </div>
+      <div class="screenshot-grid">
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-welcome.png" alt="Tablet ordering welcome screen with Begin the Feast button">
+          <figcaption class="screenshot-caption">
+            <strong>Welcome screen</strong>
+            <span>Tap Begin the Feast when the table is ready to start ordering.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-guest-count.png" alt="Tablet guest count screen with plus, minus, and ready to feast controls">
+          <figcaption class="screenshot-caption">
+            <strong>Guest count</strong>
+            <span>Set the number of guests, then continue to package selection.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-package-selection.png" alt="Tablet package selection screen with Classic Feast, Noble Selection, and Royal Banquet choices">
+          <figcaption class="screenshot-caption">
+            <strong>Package selection</strong>
+            <span>Choose a package and preview what meats or inclusions belong to that package.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-menu-browse.png" alt="Tablet menu screen with category tabs and menu item cards">
+          <figcaption class="screenshot-caption">
+            <strong>Menu browsing</strong>
+            <span>Use category tabs, item cards, and add controls to build the table order.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-menu-search.png" alt="Tablet refill menu screen with filters, search, and send to kitchen action">
+          <figcaption class="screenshot-caption">
+            <strong>Refills and add-ons</strong>
+            <span>During service, browse available refill items, adjust quantities, and send new requests to the kitchen.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-review-order.png" alt="Tablet review and send to kitchen screen with order items and package summary">
+          <figcaption class="screenshot-caption">
+            <strong>Review order</strong>
+            <span>Confirm the selected package and items before sending the order.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-order-submitted.png" alt="Tablet placing order screen shown after confirmation">
+          <figcaption class="screenshot-caption">
+            <strong>Submitting order</strong>
+            <span>The tablet shows progress while the order is being sent.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-in-session.png" alt="Tablet in-session order screen with current package, items, order summary, and staff actions">
+          <figcaption class="screenshot-caption">
+            <strong>In session</strong>
+            <span>Guests can view the active order, request refills or add-ons, and call staff when needed.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-session-ended.png" alt="Tablet session ended thank you screen">
+          <figcaption class="screenshot-caption">
+            <strong>Session ended</strong>
+            <span>The tablet thanks the guests and prepares to return to the welcome screen.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-settings-create-pin.png" alt="Tablet staff settings screen for creating a new PIN">
+          <figcaption class="screenshot-caption">
+            <strong>Create staff PIN</strong>
+            <span>Staff create a PIN before opening protected tablet settings.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-settings-enter-pin.png" alt="Tablet staff settings screen for entering a PIN">
+          <figcaption class="screenshot-caption">
+            <strong>Enter staff PIN</strong>
+            <span>Use the protected PIN flow to open settings without exposing setup controls to guests.</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-card">
+          <img src="/docs/user-manual/screenshots/tablet-settings-device-setup.png" alt="Tablet staff settings setup screen with private connection values redacted">
+          <figcaption class="screenshot-caption">
+            <strong>Device setup</strong>
+            <span>Register the tablet with the security code from Nexus and verify connection status. Private connection values are hidden in this guide image.</span>
+          </figcaption>
+        </figure>
       </div>
       <div class="note">
         <strong>Guest-facing rule:</strong> Guests should use the tablet for ordering and service requests only.
