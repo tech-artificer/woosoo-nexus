@@ -307,8 +307,8 @@ function executeDelete() {
                 <div v-for="menu in filteredModifierOptions" :key="menu.id" class="flex items-start gap-2 rounded-sm px-1 py-1 hover:bg-muted/60">
                   <Checkbox
                     :id="`modifier-${menu.id}`"
-                    :checked="isModifierSelected(menu.id)"
-                    @update:checked="(value: boolean | 'indeterminate') => toggleModifier(menu.id, value === true)"
+                    :model-value="isModifierSelected(menu.id)"
+                    @update:model-value="(value: boolean | 'indeterminate') => toggleModifier(menu.id, value === true)"
                   />
                   <Label :for="`modifier-${menu.id}`" class="cursor-pointer leading-tight">
                     <span class="font-medium">{{ menu.name }}</span>
