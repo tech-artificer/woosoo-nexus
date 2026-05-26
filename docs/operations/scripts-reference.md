@@ -2,24 +2,36 @@
 
 This document lists active operational script entrypoints.
 
-## Deployment scripts
+## Deployment Scripts
 
-- `scripts/deployment/verify-tablet-deploy-context.sh`
-- `scripts/deployment/deploy-tablet.sh`
-- `scripts/deployment/apply-woosoo-config.sh`
-- `scripts/deployment/woosoo-health.sh`
-- `scripts/deployment/woosoo-backup.sh`
+| Script | Purpose |
+|---|---|
+| `scripts/deployment/doctor.sh` | Preflight check — verifies environment, network, and config before deployment |
+| `scripts/deployment/apply-woosoo-config.sh` | Applies config from `/etc/woosoo/woosoo.env` to the platform |
+| `scripts/deployment/deploy.sh` | Full platform deploy (pulls latest, rebuilds, restarts services) |
+| `scripts/deployment/verify-tablet-deploy-context.sh` | Preflight only — validates Nexus and Tablet git state before tablet deploy |
+| `scripts/deployment/deploy-tablet.sh` | Deploy Tablet PWA from explicit Nexus and Tablet git refs |
+| `scripts/deployment/woosoo-health.sh` | Post-deploy health check |
+| `scripts/deployment/woosoo-backup.sh` | Database and volume backup |
 
-## Canonical execution context
+## Canonical Execution Context
 
-Run production deployment scripts from:
+Run all production deployment scripts from the platform root on the server:
 
-`E:\Projects\woosoo-nexus`
+```bash
+cd /opt/woosoo/woosoo-platform
+```
 
-Use Docker orchestration via:
+Docker orchestration is via `compose.yaml` in this directory:
 
-`compose.yaml`
+```bash
+docker compose --env-file ./woosoo-nexus/.env -f compose.yaml <command>
+```
 
-## Non-canonical scripts
+> **Note:** Do not run deployment scripts from a Windows path or from inside the `woosoo-nexus/`
+> subdirectory — always run from `/opt/woosoo/woosoo-platform` on the Pi server.
 
-Historical or deprecated script workflows are archived under `docs/archive/` and are not production authority.
+## Non-Canonical Scripts
+
+Historical or deprecated script workflows are archived under `docs/archive/` and are not
+production authority. Do not use them for live deployments.

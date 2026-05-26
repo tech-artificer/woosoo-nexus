@@ -98,7 +98,10 @@ class PackageController extends Controller
 
     public function destroy(Package $package)
     {
-        $package->delete();
+        DB::transaction(function () use ($package) {
+            $package->modifiers()->delete();
+            $package->delete();
+        });
 
         Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
 

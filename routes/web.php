@@ -48,6 +48,8 @@ Route::get('/devices/download-certificate', [DeviceController::class, 'downloadC
 Route::get('/devices/certificate', [DeviceController::class, 'certificatePage'])
     ->name('devices.certificate');
 
+Route::view('/user-manual', 'manual.user')->name('public.user-manual');
+
 Route::middleware(['auth'])->group(function () {
     // Dashboard is available to any authenticated user
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

@@ -55,7 +55,8 @@ RUN npm ci && npm run build
 COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
 COPY docker/php/zzz-app.conf /usr/local/etc/php-fpm.d/zzz-app.conf
 
-RUN composer run-script post-autoload-dump 2>/dev/null || true \
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs storage/app/public \
+    && composer run-script post-autoload-dump --verbose \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
