@@ -21,6 +21,14 @@ final class PublicOrigin
         $host = trim((string) (env('PUBLIC_HOST') ?: parse_url((string) env('APP_URL'), PHP_URL_HOST)));
 
         if ($host === '') {
+            // Build-time / package:discover escape hatch: when running under CLI
+            // with no .env loaded (Docker build context), return a placeholder so
+            // config files can be statically loaded. Runtime always has .env, so
+            // this branch is never hit when serving requests.
+            if (php_sapi_name() === 'cli' && env('APP_ENV') === null) {
+                return 'build.placeholder';
+            }
+
             throw new \RuntimeException(
                 'PUBLIC_HOST or APP_URL must be set in .env. '
                 . 'This value drives APP_URL, CORS, Sanctum, broadcasting, and mail config.'
