@@ -39,6 +39,42 @@ Only restaurant network values are included. Do not use older sample values from
 | Krypton Woosoo PC | POS database host | Static IPv4 setup, POS database availability |
 | Platform Docker Stack | Runtime orchestration | Compose services, deployment scripts, certificates, logs |
 
+## How To Navigate The Apps
+
+### Woosoo Nexus Admin
+
+After login, use the left sidebar. Admin users see three groups:
+
+| Group | Pages | When to use |
+|---|---|---|
+| Main | Dashboard, Orders, POS, Menus, Packages, User Management, Devices, Service Requests | Daily operations, device setup, order monitoring, staff/user work, menu/package updates |
+| Analytics | Reports, Daily Sales, Hourly Sales, Guest Count, Menu Items, Order Status, Print Audit, Discount & Tax | End-of-day checks, sales analysis, print audit, guest and menu reporting |
+| Configuration | Branches, Access Control, Accessibility, Event Logs, Reverb Service, Monitoring | System setup, role/permission control, audit logs, realtime health, queue/database checks |
+
+Use **Dashboard** for the live overview, **Orders** for live orders and order history,
+**Devices** for tablet and relay setup, **Monitoring** for queue/database/Reverb health,
+and **Manual** for the in-app guide library. For POS-specific table/order inspection,
+use **POS** from the Main group.
+
+### Tablet Ordering PWA
+
+The customer-facing tablet path is:
+
+1. Open the welcome screen at `/`.
+2. If the tablet is not registered, open **Settings** from the gear icon, enter or create the PIN, and complete registration.
+3. Tap **Begin the Feast**.
+4. Select guest count on `/order/start`.
+5. Choose a dining package on `/order/packageSelection`.
+6. Browse meats, sides, desserts, and drinks on `/menu`.
+7. Open the order summary and continue to `/order/review`.
+8. Submit the order; the app sends `POST /api/devices/create-order`.
+9. The tablet moves to `/order/in-session` for submitted items, refills, service requests, and session status.
+10. When the session ends, the tablet shows `/order/session-ended` and returns to the welcome screen for the next table.
+
+Staff-only tablet maintenance is under `/settings`. The emergency same-origin reset route is
+`/sw-reset`; use it only for dedicated-origin recovery when normal settings maintenance cannot
+refresh the active tablet app.
+
 ## Directory Structure
 
 ```text
