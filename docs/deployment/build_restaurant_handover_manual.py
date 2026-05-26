@@ -184,9 +184,9 @@ def save_deployment_workflow_diagram():
     title_font = font(29, True)
     body_font = font(23)
     steps = [
-        ((100, 220, 430, 420), "Preflight\nsudo bash scripts/deployment/doctor.sh"),
-        ((540, 220, 870, 420), "Apply Config\nsudo bash scripts/deployment/apply-woosoo-config.sh"),
-        ((980, 220, 1310, 420), "Deploy\nsudo bash scripts/deployment/deploy.sh"),
+        ((100, 220, 430, 420), "Preflight\nsudo bash\nscripts/deployment/\ndoctor.sh"),
+        ((540, 220, 870, 420), "Apply Config\nsudo bash\nscripts/deployment/\napply-woosoo-config.sh"),
+        ((980, 220, 1310, 420), "Deploy\nsudo bash\nscripts/deployment/\ndeploy.sh"),
         ((1420, 220, 1720, 420), "Verify\nps, logs, smoke checks"),
     ]
     for xy, text in steps:
@@ -426,7 +426,7 @@ def add_business_requirements(doc):
     add_heading(doc, "1. Business Requirements", 1)
     for item in [
         "Restaurant ordering must run on the local LAN during normal service.",
-        "Woosoo Nexus owns pricing, packages, sessions, orders, POS/Krypton integration, realtime events, and print events.",
+        "Backend owns truth: Woosoo Nexus owns pricing, packages, sessions, orders, POS/Krypton integration, realtime events, and print events.",
         "The Tablet Ordering PWA sends customer intent only and must not send pricing, tax, totals, POS mapping, or backend state.",
         "The Print Bridge proves last-mile printer outcome through heartbeat, reserve, ACK, and failed flows.",
         "Operators need repeatable deployment, log checking, troubleshooting, rollback, and handover acceptance steps.",
@@ -527,8 +527,69 @@ def add_app_manuals(doc):
             bullet(doc, item)
 
 
+def add_navigation_guide(doc):
+    add_heading(doc, "5. How To Navigate The Apps", 1)
+    add_heading(doc, "Woosoo Nexus Admin", 2)
+    doc.add_paragraph(
+        "After login, use the left sidebar. Admin users see Main, Analytics, and Configuration groups."
+    )
+    add_table(
+        doc,
+        ["Group", "Pages", "When to use"],
+        [
+            (
+                "Main",
+                "Dashboard, Orders, POS, Menus, Packages, User Management, Devices, Service Requests",
+                "Daily operations, device setup, order monitoring, staff/user work, menu/package updates",
+            ),
+            (
+                "Analytics",
+                "Reports, Daily Sales, Hourly Sales, Guest Count, Menu Items, Order Status, Print Audit, Discount & Tax",
+                "End-of-day checks, sales analysis, print audit, guest and menu reporting",
+            ),
+            (
+                "Configuration",
+                "Branches, Access Control, Accessibility, Event Logs, Reverb Service, Monitoring",
+                "System setup, role/permission control, audit logs, realtime health, queue/database checks",
+            ),
+        ],
+        [1.25, 2.85, 2.4],
+    )
+    for item in [
+        "Use Dashboard for the live overview.",
+        "Use Orders for live orders and order history.",
+        "Use Devices for tablet and relay setup.",
+        "Use Monitoring for queue, database, and Reverb health.",
+        "Use Manual for the in-app guide library.",
+        "Use POS for POS-specific terminal, table, and order inspection.",
+    ]:
+        bullet(doc, item)
+
+    add_heading(doc, "Tablet Ordering PWA", 2)
+    doc.add_paragraph("The customer-facing tablet path is:")
+    for step in [
+        "Open the welcome screen at /.",
+        "If the tablet is not registered, open Settings from the gear icon, enter or create the PIN, and complete registration.",
+        "Tap Begin the Feast.",
+        "Select guest count on /order/start.",
+        "Choose a dining package on /order/packageSelection.",
+        "Browse meats, sides, desserts, and drinks on /menu.",
+        "Open the order summary and continue to /order/review.",
+        "Submit the order; the app sends POST /api/devices/create-order.",
+        "Use /order/in-session for submitted items, refills, service requests, and session status.",
+        "When the session ends, /order/session-ended returns the tablet toward the welcome screen for the next table.",
+    ]:
+        numbered(doc, step)
+    add_note(
+        doc,
+        "Staff-only tablet maintenance",
+        "Tablet settings live under /settings. The /sw-reset route is an emergency same-origin reset path and should be used only for dedicated-origin recovery when normal settings maintenance cannot refresh the active tablet app.",
+        "warn",
+    )
+
+
 def add_directories_and_commands(doc):
-    add_heading(doc, "5. Directory Structure And Common Commands", 1)
+    add_heading(doc, "6. Directory Structure And Common Commands", 1)
     add_code(
         doc,
         "/opt/woosoo/woosoo-platform/\n"
@@ -568,7 +629,7 @@ def add_directories_and_commands(doc):
 
 
 def add_workflows(doc):
-    add_heading(doc, "6. Operational Workflows", 1)
+    add_heading(doc, "7. Operational Workflows", 1)
     flows = [
         (
             "First-Time Restaurant Setup",
@@ -617,7 +678,7 @@ def add_workflows(doc):
 
 
 def add_screenshot_placeholders(doc):
-    add_heading(doc, "7. Screenshot Placeholders", 1)
+    add_heading(doc, "8. Screenshot Placeholders", 1)
     placeholders = [
         ("Windows adapter list", "Active Ethernet adapter is selected on the Krypton Woosoo PC."),
         ("Krypton PC IPv4 properties", "IPv4 shows IP 192.168.1.32, mask 255.255.255.0, gateway 192.168.1.1."),
@@ -633,7 +694,7 @@ def add_screenshot_placeholders(doc):
 
 
 def add_troubleshooting(doc):
-    add_heading(doc, "8. Troubleshooting", 1)
+    add_heading(doc, "9. Troubleshooting", 1)
     add_table(
         doc,
         ["Symptom", "First Check", "Command / Action"],
@@ -652,7 +713,7 @@ def add_troubleshooting(doc):
 
 
 def add_handover(doc):
-    add_heading(doc, "9. Final Handover Acceptance", 1)
+    add_heading(doc, "10. Final Handover Acceptance", 1)
     for item in [
         "Nexus reachable at https://192.168.1.31.",
         "Tablet PWA reachable at https://192.168.1.31:4443.",
@@ -681,6 +742,8 @@ def verify_docx_text(path: Path):
         "docker compose --env-file ./woosoo-nexus/.env -f compose.yaml ps",
         "Final Handover Acceptance",
         "Backend owns truth",
+        "Begin the Feast",
+        "Woosoo Nexus Admin",
     ]
     missing_phrases = [phrase for phrase in required_phrases if phrase not in text]
     if missing or forbidden or missing_phrases:
@@ -705,6 +768,7 @@ def build():
     add_specs(doc)
     add_diagrams(doc, paths)
     add_app_manuals(doc)
+    add_navigation_guide(doc)
     add_directories_and_commands(doc)
     add_workflows(doc)
     add_screenshot_placeholders(doc)
