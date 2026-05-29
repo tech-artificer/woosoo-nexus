@@ -35,12 +35,13 @@ export { default as SidebarTrigger } from './SidebarTrigger.vue'
 
 export { useSidebar } from './utils'
 
+// WOOSOO STEP 1 — active state changed from white bg to amber brand bg
 export const sidebarMenuButtonVariants = cva(
-  'peer/menu-button flex w-full items-center gap-3 overflow-hidden rounded-2xl px-3 py-2.5 text-left text-sm outline-hidden ring-sidebar-ring transition-[width,height,padding,background-color,color,box-shadow,transform] duration-200 hover:bg-white/10 hover:text-white focus-visible:ring-2 active:bg-white/10 active:text-white disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-white data-[active=true]:text-woosoo-dark-gray data-[active=true]:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.6)] data-[active=true]:font-semibold data-[state=open]:hover:bg-white/10 data-[state=open]:hover:text-white group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:pr-0! group-data-[collapsible=icon]:justify-center [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
+  'peer/menu-button flex w-full items-center gap-3 overflow-hidden rounded-md px-3 py-2.5 text-left text-sm outline-hidden ring-sidebar-ring transition-[width,height,padding,background-color,color,box-shadow,transform] duration-200 hover:bg-white/8 hover:text-white focus-visible:ring-2 active:bg-white/10 active:text-white disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-[#2a1e0c] data-[active=true]:text-[#F6B56D] data-[active=true]:border data-[active=true]:border-[#3d2c14] data-[active=true]:shadow-none data-[active=true]:font-semibold data-[state=open]:hover:bg-white/10 data-[state=open]:hover:text-white group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:pr-0! group-data-[collapsible=icon]:justify-center [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
   {
     variants: {
       variant: {
-        default: 'hover:bg-white/10 hover:text-white',
+        default: 'hover:bg-white/8 hover:text-white',
         outline:
           'bg-white/6 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] hover:bg-white/10 hover:text-white',
       },

@@ -283,3 +283,23 @@
         scrollbar-color: hsl(0 0% 100% / 0.14) transparent;
     }
 }
+
+/* ============================================================
+   WOOSOO STEP 1 — Brand alignment additions
+   Sidebar active nav item: left amber bar indicator
+   ============================================================ */
+
+[data-sidebar="menu-button"][data-active="true"] {
+    position: relative;
+}
+
+[data-sidebar="menu-button"][data-active="true"]::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: #F6B56D; /* --color-woosoo-accent */
+    border-radius: 0 2px 2px 0;
+}
