@@ -197,11 +197,12 @@ const configNavItems: NavItem[] = [
         variant="inset"
         class="border-none"
     >
+        <!-- WOOSOO STEP 1: removed glassmorphism card wrapper, now flat logo row -->
         <SidebarHeader class="px-3 pt-3">
-            <div class="overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.04))] p-3 text-white shadow-[0_26px_65px_-42px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+            <div class="pb-2 border-b border-white/8">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton as-child size="lg" class="rounded-[22px] bg-white/8 hover:bg-white/12 data-[active=true]:bg-white data-[active=true]:text-woosoo-dark-gray">
+                        <SidebarMenuButton as-child size="lg" class="hover:bg-white/8">
                             <Link :href="route('dashboard')">
                                 <AppLogo />
                             </Link>
