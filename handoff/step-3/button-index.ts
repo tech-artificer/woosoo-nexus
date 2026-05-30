@@ -9,6 +9,11 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // `default` — primary CTA: large elevation shadow + lift on hover (-translate-y-0.5)
+        //             Use for standalone call-to-action buttons (forms, empty states, hero sections).
+        // `brand`   — brand-coloured button in compact/card contexts: tighter shadow-xs, no lift,
+        //             explicit focus ring. Use inside cards, tables, or tight layouts where
+        //             the elevation lift would be visually too heavy.
         default:
           "bg-woosoo-accent text-woosoo-dark-gray shadow-[0_18px_40px_-24px_rgba(176,128,71,0.7)] hover:bg-woosoo-accent/92 hover:-translate-y-0.5",
         destructive:

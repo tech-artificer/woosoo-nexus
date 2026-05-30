@@ -38,8 +38,18 @@ import {
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
+interface AuthUser {
+    id: number
+    name: string
+    email: string
+    is_admin: boolean
+}
+interface PagePropsAuth {
+    user: AuthUser
+}
+
 const page = usePage()
-const user = computed(() => (page.props.auth as any)?.user)
+const user = computed(() => (page.props.auth as PagePropsAuth)?.user)
 const isAdmin = computed(() => Boolean(user.value?.is_admin))
 
 const currentPath = computed(() => normalizePath(page.url))

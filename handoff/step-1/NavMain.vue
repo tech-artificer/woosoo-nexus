@@ -103,7 +103,7 @@ function normalizePath(value: string) {
                     :tooltip="item.title"
                     class="text-white/78"
                 >
-                    <Link :href="item.href" :is-active="isActive(item.href)">
+                    <Link :href="item.href ?? '#'" :is-active="isActive(item.href ?? '#')">
                         <component :is="item.icon" class="m-0 h-4 w-4 border-transparent" />
                         <span class="font-semibold">{{ item.title }}</span>
                     </Link>
