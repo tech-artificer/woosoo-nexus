@@ -57,14 +57,24 @@ const currencyFormatter = (value: unknown) => {
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6">
-            <!-- Header -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold">{{ props.title }}</h1>
-                    <p class="text-sm text-muted-foreground mt-1">Identify peak hours and sales patterns throughout the
-                        day</p>
+        <div class="space-y-5">
+            <!-- Hero -->
+            <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="relative space-y-3">
+                    <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">Analytics · Hourly Sales</span>
+                    <div>
+                        <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{{ props.title }}</h1>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Identify peak hours and sales patterns throughout the day.</p>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Date range -->
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date range:</span>
+                <span class="text-sm font-medium">{{ props.startDate ?? '—' }}</span>
+                <span class="text-muted-foreground">→</span>
+                <span class="text-sm font-medium">{{ props.endDate ?? 'today' }}</span>
             </div>
 
             <!-- Summary Cards -->
@@ -135,16 +145,16 @@ const currencyFormatter = (value: unknown) => {
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
-                                <tr class="border-b">
-                                    <th class="text-left py-3 px-4 font-semibold">Hour</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Transactions</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Total Sales</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Avg Order</th>
+                                <tr class="border-b border-black/8 dark:border-white/10">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Hour</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Transactions</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Total Sales</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Avg Order</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="row in props.data" :key="row.hour" class="border-b hover:bg-muted/50"
-                                     :class="{ 'bg-amber-50': peakHour && row.hour === peakHour.hour }">
+                                <tr v-for="row in props.data" :key="row.hour" class="border-b border-black/6 transition-colors hover:bg-black/[0.025] dark:border-white/8 dark:hover:bg-white/[0.03]"
+                                     :class="{ 'bg-woosoo-accent/8 dark:bg-woosoo-accent/6': peakHour && row.hour === peakHour.hour }">
                                     <td class="py-3 px-4 font-medium">{{ row.hour_label }}</td>
                                     <td class="text-right py-3 px-4">{{ row.transaction_count }}</td>
                                     <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_sales) }}</td>

@@ -54,13 +54,24 @@ const numberFormatter = (value: unknown) => {
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6">
-            <!-- Header -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold">{{ props.title }}</h1>
-                    <p class="text-sm text-muted-foreground mt-1">Track guest volume and dining trends</p>
+        <div class="space-y-5">
+            <!-- Hero -->
+            <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="relative space-y-3">
+                    <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">Analytics · Guest Count</span>
+                    <div>
+                        <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{{ props.title }}</h1>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Track guest volume and dining trends.</p>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Date range -->
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date range:</span>
+                <span class="text-sm font-medium">{{ props.startDate ?? '—' }}</span>
+                <span class="text-muted-foreground">→</span>
+                <span class="text-sm font-medium">{{ props.endDate ?? 'today' }}</span>
             </div>
 
             <!-- Summary Cards -->
@@ -90,9 +101,9 @@ const numberFormatter = (value: unknown) => {
                         <CardTitle class="text-sm font-medium">Busiest Day</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div v-if="maxGuestDay" class="bg-card border rounded-lg p-4">
-                        <div class="text-2xl font-bold">{{ maxGuestDay.total_guests }}</div>
-                        <p class="text-xs text-muted-foreground mt-1">{{ maxGuestDay.date }}</p>
+                        <div v-if="maxGuestDay">
+                            <div class="text-2xl font-bold">{{ maxGuestDay.total_guests }}</div>
+                            <p class="text-xs text-muted-foreground mt-1">{{ maxGuestDay.date }}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -131,15 +142,15 @@ const numberFormatter = (value: unknown) => {
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
-                                <tr class="border-b">
-                                    <th class="text-left py-3 px-4 font-semibold">Date</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Total Guests</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Orders</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Avg Guests/Order</th>
+                                <tr class="border-b border-black/8 dark:border-white/10">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Date</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Total Guests</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Orders</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Avg Guests/Order</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="row in props.data" :key="row.date" class="border-b hover:bg-muted/50">
+                                <tr v-for="row in props.data" :key="row.date" class="border-b border-black/6 transition-colors hover:bg-black/[0.025] dark:border-white/8 dark:hover:bg-white/[0.03]">
                                     <td class="py-3 px-4">{{ row.date }}</td>
                                     <td class="text-right py-3 px-4">{{ row.total_guests }}</td>
                                     <td class="text-right py-3 px-4">{{ row.order_count }}</td>
