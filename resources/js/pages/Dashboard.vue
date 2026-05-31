@@ -76,14 +76,15 @@ onMounted(() => {});
     <Head :title="props.title" :description="props.description" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <!-- WOOSOO STEP 4: icon containers rounded-2xl → rounded-xl; inner stat cards border-black/8 unified -->
         <div class="space-y-6">
             <div class="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.8fr)]">
                 <div
-                    class="relative overflow-hidden rounded-[28px] border border-border/70 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm md:px-6"
+                    class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm md:px-6 dark:border-white/10"
                 >
                     <div class="relative space-y-3">
                         <span
-                            class="inline-flex rounded-full border border-border/70 bg-accent/15 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase"
+                            class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase"
                             >Live operations</span
                         >
                         <div>
@@ -97,14 +98,14 @@ onMounted(() => {});
 
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                     <div
-                        class="rounded-[24px] border border-black/8 bg-white/72 px-4 py-4 shadow-[0_22px_55px_-42px_rgba(37,37,37,0.4)] dark:border-white/12 dark:bg-white/[0.08]"
+                        class="rounded-[22px] border border-black/8 bg-white/72 px-4 py-4 shadow-[0_22px_55px_-42px_rgba(37,37,37,0.36)] dark:border-white/10 dark:bg-white/[0.06]"
                     >
                         <p class="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">Session</p>
                         <p class="mt-2 text-2xl font-semibold tracking-tight">{{ props.sessionId ? '#' + props.sessionId : '\u2014' }}</p>
                         <p class="mt-1 text-sm text-muted-foreground">Current operational window</p>
                     </div>
                     <div
-                        class="rounded-[24px] border border-black/8 bg-white/72 px-4 py-4 shadow-[0_22px_55px_-42px_rgba(37,37,37,0.4)] dark:border-white/12 dark:bg-white/[0.08]"
+                        class="rounded-[22px] border border-black/8 bg-white/72 px-4 py-4 shadow-[0_22px_55px_-42px_rgba(37,37,37,0.36)] dark:border-white/10 dark:bg-white/[0.06]"
                     >
                         <p class="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">Open tables</p>
                         <p class="mt-2 text-2xl font-semibold tracking-tight">{{ props.openOrders?.length ?? 0 }}</p>
@@ -118,13 +119,13 @@ onMounted(() => {});
                 <Card
                     v-for="dashCard in dashCards"
                     :key="dashCard.title"
-                    class="gap-4 border-black/8 px-1 transition-transform duration-200 hover:-translate-y-1 hover:shadow-[0_30px_70px_-46px_rgba(37,37,37,0.45)] dark:border-white/10"
+                    class="gap-4 px-1 transition-transform duration-200 hover:-translate-y-1 hover:shadow-[0_30px_70px_-46px_rgba(37,37,37,0.42)]"
                 >
                     <CardHeader class="flex flex-row items-start justify-between p-5 pb-1">
                         <CardTitle class="text-sm font-medium text-muted-foreground">
                             {{ dashCard.title }}
                         </CardTitle>
-                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-primary dark:text-accent">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/12 text-primary dark:text-accent">
                             <component :is="dashCard.icon" class="size-5 shrink-0" />
                         </div>
                     </CardHeader>
@@ -140,7 +141,7 @@ onMounted(() => {});
             </div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <Card class="border-black/8 dark:border-white/10">
+                <Card>
                     <CardHeader class="p-5 pb-1">
                         <CardTitle class="text-lg font-semibold">Sales Trend</CardTitle>
                         <p class="text-sm text-muted-foreground">Revenue movement across the current reporting window.</p>
@@ -149,7 +150,7 @@ onMounted(() => {});
                         <LineChart />
                     </CardContent>
                 </Card>
-                <Card class="border-black/8 dark:border-white/10">
+                <Card>
                     <CardHeader class="p-5 pb-1">
                         <CardTitle class="text-lg font-semibold">Distribution</CardTitle>
                         <p class="text-sm text-muted-foreground">Quick split of activity across the active data set.</p>

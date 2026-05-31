@@ -7,7 +7,7 @@ interface StatCard {
   title: string
   value: string | number
   subtitle?: string
-  variant?: 'default' | 'primary' | 'accent' | 'danger'
+  variant?: 'default' | 'primary' | 'accent' | 'destructive' | 'danger'
   icon?: Component
   delta?: number // percent change, optional
   sparkline?: number[] // optional sparkline data
@@ -30,8 +30,9 @@ const getAccent = (variant: StatCard['variant']) => {
     case 'primary':
       return 'bg-primary/10 border-primary/20 text-primary'
     case 'accent':
-      return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+      return 'bg-woosoo-green/10 border-woosoo-green/20 text-woosoo-green'
     case 'danger':
+    case 'destructive':
       return 'bg-destructive/10 border-destructive/20 text-destructive'
     default:
       return 'bg-card border-border text-card-foreground'
@@ -56,16 +57,16 @@ const getSparkPoints = (arr?: number[]) => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
     <div v-for="card in normalizedCards" :key="card.title" :class="['p-4 rounded-lg shadow-sm border', getAccent(card.variant)]">
       <div class="flex items-start justify-between gap-4">
         <div class="flex-1">
           <div class="text-xs text-muted-foreground font-medium">{{ card.title }}</div>
-          <div class="mt-1 text-3xl font-bold leading-tight">{{ card.value }}</div>
+          <div class="mt-1 text-3xl font-semibold leading-tight tabular-nums">{{ card.value }}</div>
         </div>
         <div class="flex flex-col items-end">
           <component v-if="card.icon" :is="card.icon" class="h-6 w-6 opacity-80" />
-          <div v-if="typeof card.delta !== 'undefined'" :class="['mt-2 text-sm font-medium', card.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive']">
+          <div v-if="typeof card.delta !== 'undefined'" :class="['mt-2 text-sm font-medium', card.delta >= 0 ? 'text-woosoo-green' : 'text-destructive']">
             <span v-if="card.delta >= 0">+{{ card.delta }}%</span>
             <span v-else>{{ card.delta }}%</span>
           </div>
