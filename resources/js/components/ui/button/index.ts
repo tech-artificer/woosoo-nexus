@@ -3,11 +3,17 @@ import { cva } from "class-variance-authority"
 
 export { default as Button } from "./Button.vue"
 
+// WOOSOO STEP 3: rounded-xl → rounded-lg (matches --radius: 0.5rem brand token)
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-[rgb(246_181_109_/_0.22)] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-[rgb(246_181_109_/_0.22)] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
+        // `default` — primary CTA: large elevation shadow + lift on hover (-translate-y-0.5)
+        //             Use for standalone call-to-action buttons (forms, empty states, hero sections).
+        // `brand`   — brand-coloured button in compact/card contexts: tighter shadow-xs, no lift,
+        //             explicit focus ring. Use inside cards, tables, or tight layouts where
+        //             the elevation lift would be visually too heavy.
         default:
           "bg-woosoo-accent text-woosoo-dark-gray shadow-[0_18px_40px_-24px_rgba(176,128,71,0.7)] hover:bg-woosoo-accent/92 hover:-translate-y-0.5",
         destructive:
@@ -18,7 +24,8 @@ export const buttonVariants = cva(
           "bg-secondary/80 text-secondary-foreground shadow-xs hover:bg-secondary",
         ghost:
           "text-foreground/80 hover:bg-black/5 hover:text-foreground dark:text-foreground/80 dark:hover:bg-white/[0.07]",
-        link: "text-primary underline-offset-4 hover:underline",
+        link:
+          "text-primary underline-offset-4 hover:underline",
         brand:
           "bg-woosoo-accent text-woosoo-dark-gray shadow-xs hover:bg-woosoo-accent/90 focus-visible:ring-woosoo-accent/40",
       },

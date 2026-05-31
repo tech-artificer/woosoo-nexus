@@ -36,13 +36,13 @@ These are the brand tokens and patterns used throughout the system. Every change
 
 ### Raw Tailwind colors to NEVER use (replace with tokens above)
 
-```
+```text
 text-emerald-*  bg-emerald-*  → woosoo-green
 text-yellow-*   bg-yellow-*   → woosoo-accent / woosoo-primary-dark
 text-amber-*    bg-amber-*    → woosoo-accent / woosoo-primary-dark (context-dependent)
 text-blue-600   bg-blue-600   → woosoo-blue
 text-rose-*     bg-rose-*     → destructive
-text-orange-*                 → woosoo-orange (only if specifically orange is needed)
+text-orange-*                 → woosoo-accent  (amber is the closest brand token)
 text-purple-*   text-indigo-* → no brand equivalent; use woosoo-blue
 ```
 
@@ -161,7 +161,7 @@ text-purple-*   text-indigo-* → no brand equivalent; use woosoo-blue
 **Icon color map** (in the `reportLinks` array, change `color` values):
 ```
 'text-emerald-500'  → 'text-woosoo-green'
-'text-orange-500'   → 'text-woosoo-orange'
+'text-orange-500'   → 'text-woosoo-accent'
 'text-blue-500'     → 'text-woosoo-blue'
 'text-purple-500'   → 'text-woosoo-blue'       (no purple token; blue is closest)
 'text-indigo-500'   → 'text-woosoo-blue'

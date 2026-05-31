@@ -36,7 +36,7 @@ function toggleDark() {
         <div class="flex h-[52px] items-center justify-between gap-4 border-b border-border/60 bg-background px-5 dark:border-white/[0.06]">
             <!-- Left: sidebar trigger + page title -->
             <div class="flex min-w-0 items-center gap-3">
-                <SidebarTrigger class="size-8 rounded-md text-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-[#f6b56d]/40" />
+                <SidebarTrigger class="size-8 rounded-md text-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-woosoo-accent/40" />
                 <div class="min-w-0">
                     <h2 class="truncate font-header text-lg font-semibold tracking-tight text-foreground">
                         {{ currentTitle }}
@@ -52,7 +52,7 @@ function toggleDark() {
                 <button
                     type="button"
                     :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-                    class="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f6b56d]/40"
+                    class="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-woosoo-accent/40"
                     @click="toggleDark"
                 >
                     <Sun v-if="isDark" class="size-4" />
