@@ -1,5 +1,16 @@
-<!-- Repository-specific Copilot instructions for woosoo-nexus -->
-# Woosoo Nexus — Integrated Restaurant POS + Admin Panel + Relay Printer App
+---
+status: canonical
+last_reviewed: 2026-05-31
+scope: woosoo-nexus
+---
+
+# Woosoo Nexus — AI Agent Onboarding
+
+Detailed onboarding for AI coding agents (Claude Code) working in `woosoo-nexus`. Loaded on
+demand, not part of the always-on boot layer — the agent operating system is the root
+`../AGENTS.md`, and per-app hard rules are in `.agents.md`. Indexed from `docs/INDEX.md`.
+
+## Integrated Restaurant POS + Admin Panel + Relay Printer App
 
 **Purpose:** Help AI agents become productive in woosoo-nexus monorepo. Focus on discoverable patterns, runnable commands, and concrete examples across three integrated products.
 
@@ -406,7 +417,7 @@ flutter test --coverage    # Generate coverage report
 - Service: `print-service/index.js` (Express) — receives POST /print, writes to `/tmp/printjob.txt`, executes `lp` command (Linux printer utility)
 - Events: `PrintOrder`, `PrintRefill` broadcast on `admin.print` channel
 - **Note**: `lp` command is Linux-specific; Windows deployment uses different print handling.
-- **Windows development tip**: On Windows run the `print-service` under WSL with CUPS installed or stub printing locally. A simple local stub is to set an env var `PRINT_CMD=echo` and adjust `print-service/index.js` to use `process.env.PRINT_CMD || 'lp'` for the print command, or configure the service to write jobs to a folder for inspection. See `docs/printer_manual.md` for deployment guidance.
+- **Windows development tip**: On Windows run the `print-service` under WSL with CUPS installed or stub printing locally. A simple local stub is to set an env var `PRINT_CMD=echo` and adjust `print-service/index.js` to use `process.env.PRINT_CMD || 'lp'` for the print command, or configure the service to write jobs to a folder for inspection. See `docs/printer_readme.md` for printer integration guidance.
 
 **Database Patterns**
 - Migrations: `database/migrations/*` (Laravel app schema only)

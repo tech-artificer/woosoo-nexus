@@ -10,11 +10,12 @@ const delegatedProps = reactiveOmit(props, 'class')
 </script>
 
 <template>
+  <!-- WOOSOO STEP 3: warm tinted bg, border, h-10 — matches brand card/sidebar aesthetic -->
   <TabsList
     data-slot="tabs-list"
     v-bind="delegatedProps"
     :class="cn(
-      'bg-muted text-muted-foreground inline-flex h-9 w-fit self-start items-center justify-start rounded-lg p-0.75',
+      'inline-flex h-10 w-fit self-start items-center justify-start rounded-lg border border-black/8 bg-black/[0.04] p-1 text-muted-foreground dark:border-white/10 dark:bg-white/[0.05]',
       props.class,
     )"
   >
