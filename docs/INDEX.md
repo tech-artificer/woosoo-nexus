@@ -2,6 +2,10 @@
 
 This is the authoritative navigation root for active documentation.
 
+## AI Agent Onboarding
+
+- [`docs/AI_ONBOARDING.md`](AI_ONBOARDING.md) — detailed Claude Code onboarding (setup, architecture, patterns); load on demand
+
 ## Deployment
 
 - [`docs/deployment/production-docker.md`](deployment/production-docker.md) — canonical production Docker deployment flow

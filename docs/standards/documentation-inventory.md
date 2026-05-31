@@ -6,10 +6,7 @@ Status values: KEEP, ARCHIVE, DELETE.
 |---|---|---|
 | `.agents.md` | KEEP | Active or canonical |
 | `.ai-context.md` | KEEP | Active or canonical |
-| `.github/COPILOT_PROMPT_GUIDELINES.md` | KEEP | Active or canonical |
-| `.github/COPILOT_PROMPT.md` | KEEP | Active or canonical |
-| `.github/copilot-instructions.md` | KEEP | Active or canonical |
-| `.github/PROMPT_TEMPLATES.md` | KEEP | Active or canonical |
+| `docs/AI_ONBOARDING.md` | KEEP | AI agent onboarding for Claude Code |
 | `CHANGELOG.md` | KEEP | Active or canonical |
 | `docker/certs/README.md` | KEEP | Active or canonical |
 | `docs/AGENT_WORKFLOWS.md` | KEEP | Active or canonical |
