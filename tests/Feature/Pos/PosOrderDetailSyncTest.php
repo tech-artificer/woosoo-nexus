@@ -161,6 +161,74 @@ class PosOrderDetailSyncTest extends TestCase
         $this->assertSame('order.details.updated', $event->broadcastAs());
     }
 
+    public function test_consumer_uses_latest_order_check_when_multiple_exist(): void
+    {
+        Event::fake([OrderDetailsUpdated::class]);
+
+        $order = DeviceOrder::factory()->confirmed()->create([
+            'order_id' => 900304,
+            'subtotal' => 0.00,
+            'tax'      => 0.00,
+            'discount' => 0.00,
+            'total'    => 0.00,
+        ]);
+
+        $this->seedPosOrder(900304, guestCount: 2);
+
+        // Lower-ID check: stale inflated values that must NOT be picked up.
+        DB::connection('pos')->table('order_checks')->insert([
+            'order_id'        => 900304,
+            'subtotal_amount' => 999.00,
+            'tax_amount'      => 99.00,
+            'discount_amount' => 0.00,
+            'total_amount'    => 1098.00,
+        ]);
+
+        // Higher-ID check: the real values the consumer must use.
+        $this->seedPosCheck(900304, subtotal: 50.00, tax: 5.00, discount: 2.00, total: 53.00);
+
+        $outboxId = $this->insertDetailOutboxRow($order->order_id);
+
+        $this->artisan('pos:consume-order-detail-events')->assertExitCode(0);
+
+        $this->assertOutboxProcessed($outboxId);
+
+        $order->refresh();
+        $this->assertEquals(50.00, (float) $order->subtotal);
+        $this->assertEquals(5.00, (float) $order->tax);
+        $this->assertEquals(2.00, (float) $order->discount);
+        $this->assertEquals(53.00, (float) $order->total);
+    }
+
+    public function test_consumer_persists_null_pos_totals_over_stale_local_values(): void
+    {
+        Event::fake([OrderDetailsUpdated::class]);
+
+        $order = DeviceOrder::factory()->confirmed()->create([
+            'order_id' => 900305,
+            'discount' => 50.00,
+        ]);
+
+        $this->seedPosOrder(900305, guestCount: 1);
+
+        // POS check has a null discount — must propagate and overwrite the stale local value.
+        DB::connection('pos')->table('order_checks')->insert([
+            'order_id'        => 900305,
+            'subtotal_amount' => 100.00,
+            'tax_amount'      => 10.00,
+            'discount_amount' => null,
+            'total_amount'    => 110.00,
+        ]);
+
+        $outboxId = $this->insertDetailOutboxRow($order->order_id);
+
+        $this->artisan('pos:consume-order-detail-events')->assertExitCode(0);
+
+        $this->assertOutboxProcessed($outboxId);
+
+        $this->assertNull(DeviceOrder::find($order->id)->discount);
+    }
+
     private function seedPosOrder(int $posOrderId, int $guestCount): void
     {
         DB::connection('pos')->table('orders')->insert([

@@ -133,18 +133,21 @@ class ConsumePosOrderDetailEvents extends Command
             $deviceOrder->guest_count = (int) $guestCount;
         }
 
-        $check = $pos->table('order_checks')->where('order_id', $posOrderId)->first();
+        $check = $pos->table('order_checks')
+            ->where('order_id', $posOrderId)
+            ->orderByDesc('id')
+            ->first();
         if ($check !== null) {
-            if (isset($check->subtotal_amount)) {
+            if (property_exists($check, 'subtotal_amount')) {
                 $deviceOrder->subtotal = $check->subtotal_amount;
             }
-            if (isset($check->tax_amount)) {
+            if (property_exists($check, 'tax_amount')) {
                 $deviceOrder->tax = $check->tax_amount;
             }
-            if (isset($check->discount_amount)) {
+            if (property_exists($check, 'discount_amount')) {
                 $deviceOrder->discount = $check->discount_amount;
             }
-            if (isset($check->total_amount)) {
+            if (property_exists($check, 'total_amount')) {
                 $deviceOrder->total = $check->total_amount;
             }
         }
