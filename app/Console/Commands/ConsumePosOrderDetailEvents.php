@@ -78,6 +78,14 @@ class ConsumePosOrderDetailEvents extends Command
                     );
                 }
 
+                // Refresh POS-authoritative detail values onto the local row
+                // BEFORE broadcasting. The outbox row carries only pos_order_id;
+                // guest_count lives on POS `orders` and the monetary totals on
+                // POS `order_checks`. Without this, OrderBroadcastPayload would
+                // serialize the stale local columns and the detail update the
+                // trigger fired for would be silently lost.
+                $this->refreshDetailFromPos($deviceOrder, $posOrderId);
+
                 $broadcaster->detailsUpdated($deviceOrder);
 
                 DB::connection('pos')
@@ -105,6 +113,45 @@ class ConsumePosOrderDetailEvents extends Command
         $this->info("POS detail outbox consumed: processed={$processed}, failed={$failed}, limit={$limit}");
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * Re-read POS-authoritative detail columns and persist them onto the local
+     * DeviceOrder so the broadcast carries fresh values. POS is the source of
+     * truth: `guest_count` on `orders`, monetary totals on `order_checks`
+     * (`Order` hasOne `OrderCheck` by `order_id`). The tablet renders these
+     * read-only and never recomputes pricing. The POS connection is already
+     * proven reachable (the outbox read above succeeded), so a missing row
+     * simply returns null and is skipped rather than treated as an error.
+     */
+    private function refreshDetailFromPos(DeviceOrder $deviceOrder, int $posOrderId): void
+    {
+        $pos = DB::connection('pos');
+
+        $guestCount = $pos->table('orders')->where('id', $posOrderId)->value('guest_count');
+        if ($guestCount !== null) {
+            $deviceOrder->guest_count = (int) $guestCount;
+        }
+
+        $check = $pos->table('order_checks')->where('order_id', $posOrderId)->first();
+        if ($check !== null) {
+            if (isset($check->subtotal_amount)) {
+                $deviceOrder->subtotal = $check->subtotal_amount;
+            }
+            if (isset($check->tax_amount)) {
+                $deviceOrder->tax = $check->tax_amount;
+            }
+            if (isset($check->discount_amount)) {
+                $deviceOrder->discount = $check->discount_amount;
+            }
+            if (isset($check->total_amount)) {
+                $deviceOrder->total = $check->total_amount;
+            }
+        }
+
+        if ($deviceOrder->isDirty()) {
+            $deviceOrder->save();
+        }
     }
 
     private function recordFailure(object $row, \Throwable $e): void
