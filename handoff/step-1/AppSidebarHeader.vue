@@ -33,7 +33,7 @@ const currentTitle = computed(() => props.breadcrumbs.at(-1)?.title ?? 'Workspac
             </div>
 
             <div class="hidden items-center gap-2 text-xs font-medium text-muted-foreground md:flex">
-                <span class="inline-flex h-2 w-2 rounded-full bg-woosoo-green"></span>
+                <span class="inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                 Secure workspace
             </div>
         </div>

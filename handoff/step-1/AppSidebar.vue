@@ -38,8 +38,18 @@ import {
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
+interface AuthUser {
+    id: number
+    name: string
+    email: string
+    is_admin: boolean
+}
+interface PagePropsAuth {
+    user: AuthUser
+}
+
 const page = usePage()
-const user = computed(() => (page.props.auth as any)?.user)
+const user = computed(() => (page.props.auth as PagePropsAuth)?.user)
 const isAdmin = computed(() => Boolean(user.value?.is_admin))
 
 const currentPath = computed(() => normalizePath(page.url))
@@ -56,7 +66,6 @@ function isActiveRoute(href?: string) {
     if (!href) {
         return false
     }
-
     const targetPath = normalizePath(href)
     return currentPath.value === targetPath || currentPath.value.startsWith(`${targetPath}/`)
 }
@@ -120,7 +129,6 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-// All report routes exist under /reports prefix
 const analyticsNavItems: NavItem[] = [
     {
         title: 'Reports',
