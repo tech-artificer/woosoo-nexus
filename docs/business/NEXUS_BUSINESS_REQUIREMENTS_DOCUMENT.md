@@ -131,10 +131,12 @@ The order management system tracks every order from creation through completion,
 **Order Lifecycle States:**
 
 ```
-PENDING → AWAITING_PRINT → COMPLETED
-                         → VOIDED
-                         → REFILLED
+PENDING → CONFIRMED → IN_PROGRESS → READY → SERVED → COMPLETED
+        ↘           ↘            ↘       ↘         ↘
+         CANCELLED   VOIDED       VOIDED   VOIDED    VOIDED
 ```
+
+Terminal states (no further transitions): `COMPLETED`, `CANCELLED`, `VOIDED`, `ARCHIVED`.
 
 **Capabilities:**
 - Create orders from tablet devices via authenticated API
