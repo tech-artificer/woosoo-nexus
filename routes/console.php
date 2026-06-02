@@ -33,6 +33,14 @@ Schedule::command('pos:sync-payment-statuses')
     ->everyMinute()
     ->withoutOverlapping();
 
+// NEX-CASE-013: drain POS-local order-detail outbox; same cadence as the
+// payment consumer because POS detail edits (guest_count, totals via
+// order_checks) must reach the tablet within seconds to stay non-stale.
+Schedule::command('pos:consume-order-detail-events')
+    ->everyFiveSeconds()
+    ->withoutOverlapping(3)
+    ->runInBackground();
+
 // REMOVED 2026-04-07: ProcessOrderLogs schedule disabled for production hardening.
 // The job depends on `order_update_logs`, which does not exist in production DB.
 // Do NOT re-enable periodic dispatch without a migration + queue architecture plan.
