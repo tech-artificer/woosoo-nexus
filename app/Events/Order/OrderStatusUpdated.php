@@ -31,7 +31,13 @@ class OrderStatusUpdated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [ 
+        // NEX-CASE-013: tablet subscribes to `orders.{order_id}` (per
+        // `contracts/websocket-events.contract.md`). Without this channel the
+        // tablet never receives status transitions — a silent terminal-event
+        // drop in the SessionReset family. `device.{device_id}` is kept for
+        // legacy listeners; removal is a breaking change tracked separately.
+        return [
+            new Channel("orders.{$this->order->order_id}"),
             new Channel("device.{$this->order->device_id}"),
             new Channel('admin.orders'),
         ];
