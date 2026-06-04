@@ -29,6 +29,8 @@ test('the login page shows the session-expired warning banner', function () {
     $this->withSession(['warning' => 'Your session expired. Please sign in again.'])
         ->get('/login')
         ->assertOk()
-            ->assertSee('&quot;warning&quot;:&quot;Your session expired. Please sign in again.&quot;', false)
-            ->assertSee('&quot;canResetPassword&quot;:true', false);
+        ->assertInertia(fn ($page) => $page
+            ->where('flash.warning', 'Your session expired. Please sign in again.')
+            ->has('canResetPassword')
+        );
 });
