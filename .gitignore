@@ -81,3 +81,6 @@ sample_drift_report.json
 
 # AI agent runtime files
 skills-lock.json
+
+# Generated documentation artifacts
+*.docx

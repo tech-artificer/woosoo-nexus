@@ -113,7 +113,7 @@ export const columns: ColumnDef<Device, any>[] = [
           'span',
           {
             class: hasSecurityCode
-              ? 'inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700'
+              ? 'inline-flex items-center rounded-full bg-woosoo-green/10 px-2 py-0.5 text-xs font-medium text-woosoo-green'
               : 'inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700',
           },
           hasSecurityCode ? 'Set' : 'Not Set'

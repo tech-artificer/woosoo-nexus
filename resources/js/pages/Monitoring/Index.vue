@@ -262,10 +262,10 @@ const paymentBadgeVariant = (state: string): 'default' | 'secondary' | 'destruct
 };
 
 const deviceStateColor = (state: string): string => {
-    if (state === 'green') return 'bg-emerald-500';
-    if (state === 'yellow') return 'bg-yellow-500';
-    if (state === 'red') return 'bg-red-500';
-    return 'bg-gray-400';
+    if (state === 'green') return 'bg-woosoo-green';
+    if (state === 'yellow') return 'bg-woosoo-accent';
+    if (state === 'red') return 'bg-destructive';
+    return 'bg-muted-foreground';
 };
 
 onMounted(() => {
@@ -288,32 +288,39 @@ const breadcrumbs: BreadcrumbItem[] = [
 
         <Head title="System Monitoring" />
 
-        <div class="space-y-6">
+        <div class="space-y-5">
             <!-- Header -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold tracking-tight">System Monitoring</h1>
-                    <p class="text-muted-foreground">Real-time order processing and print failure tracking</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <Button variant="outline" size="sm" @click="toggleAutoRefresh"
-                        :class="{ 'bg-primary/10': autoRefresh }">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2"
-                            :class="{ 'animate-spin': autoRefresh }" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {{ autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}
-                    </Button>
-                    <Button size="sm" @click="refreshMetrics" :disabled="loading">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2"
-                            :class="{ 'animate-spin': loading }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Refresh Now
-                    </Button>
+            <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="space-y-3">
+                        <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                            System health
+                        </span>
+                        <div>
+                            <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">System Monitoring</h1>
+                            <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Real-time order processing and print failure tracking</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <Button variant="outline" size="sm" @click="toggleAutoRefresh"
+                            :class="{ 'bg-woosoo-accent/10 text-woosoo-primary-dark': autoRefresh }">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2"
+                                :class="{ 'animate-spin': autoRefresh }" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {{ autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}
+                        </Button>
+                        <Button size="sm" @click="refreshMetrics" :disabled="loading">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2"
+                                :class="{ 'animate-spin': loading }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Refresh Now
+                        </Button>
+                    </div>
                 </div>
             </div>
 
