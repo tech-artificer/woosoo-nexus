@@ -40,12 +40,17 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6">
-            <!-- Header -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold">{{ props.title }}</h1>
-                    <p class="text-sm text-muted-foreground mt-1">Kitchen ticket print history and audit trail</p>
+        <div class="space-y-5">
+            <!-- Hero -->
+            <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="relative space-y-3">
+                    <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                        Analytics · Print Audit
+                    </span>
+                    <div>
+                        <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{{ props.title }}</h1>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Kitchen ticket print history and audit trail.</p>
+                    </div>
                 </div>
             </div>
 
@@ -93,7 +98,7 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
             </div>
 
             <!-- Print Jobs Table -->
-            <Card>
+            <Card class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
                 <CardHeader>
                     <CardTitle>Print Job Log</CardTitle>
                     <CardDescription>Complete kitchen ticket history</CardDescription>
@@ -102,17 +107,17 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
-                                <tr class="border-b">
-                                    <th class="text-left py-3 px-4 font-semibold">Order #</th>
-                                    <th class="text-left py-3 px-4 font-semibold">Printed By</th>
-                                    <th class="text-left py-3 px-4 font-semibold">Printed At</th>
-                                    <th class="text-center py-3 px-4 font-semibold">Status</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Total</th>
-                                    <th class="text-center py-3 px-4 font-semibold">Device</th>
+                                <tr class="border-b border-black/8 dark:border-white/10">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Order #</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Printed By</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Printed At</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Status</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Total</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Device</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="row in props.data" :key="row.id" class="border-b hover:bg-muted/50">
+                                <tr v-for="row in props.data" :key="row.id" class="border-b border-black/6 transition-colors hover:bg-black/[0.025] dark:border-white/8 dark:hover:bg-white/[0.03]">
                                     <td class="py-3 px-4 font-medium">#{{ row.order_number }}</td>
                                     <td class="py-3 px-4">{{ row.printed_by || '-' }}</td>
                                     <td class="py-3 px-4 text-xs">{{ new Date(row.printed_at).toLocaleString() }}</td>

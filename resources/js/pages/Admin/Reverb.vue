@@ -32,13 +32,13 @@ const pollingInterval = ref<ReturnType<typeof setInterval> | null>(null)
 const liveStatus = ref<ServiceInfo>(props.service)
 
 const statusConfig = {
-    running: { color: 'bg-green-500', icon: CheckCircle, label: 'Running' },
-    stopped: { color: 'bg-red-500', icon: XCircle, label: 'Stopped' },
-    paused: { color: 'bg-yellow-500', icon: AlertCircle, label: 'Paused' },
-    not_installed: { color: 'bg-gray-500', icon: AlertCircle, label: 'Not Installed' },
-    unknown: { color: 'bg-gray-400', icon: AlertCircle, label: 'Unknown' },
-    error: { color: 'bg-red-600', icon: XCircle, label: 'Error' },
-    'N/A': { color: 'bg-gray-400', icon: AlertCircle, label: 'N/A' },
+    running: { color: 'bg-woosoo-green', icon: CheckCircle, label: 'Running' },
+    stopped: { color: 'bg-destructive', icon: XCircle, label: 'Stopped' },
+    paused: { color: 'bg-woosoo-accent text-woosoo-dark-gray', icon: AlertCircle, label: 'Paused' },
+    not_installed: { color: 'bg-muted-foreground', icon: AlertCircle, label: 'Not Installed' },
+    unknown: { color: 'bg-muted-foreground', icon: AlertCircle, label: 'Unknown' },
+    error: { color: 'bg-destructive', icon: XCircle, label: 'Error' },
+    'N/A': { color: 'bg-muted-foreground', icon: AlertCircle, label: 'N/A' },
 }
 
 const normalizeStatus = (status: string): ServiceInfo['status'] => {
@@ -87,14 +87,26 @@ onUnmounted(() => {
     <Head title="Reverb Service" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6">
+        <div class="space-y-5">
+            <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="relative space-y-3">
+                    <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                        WebSocket service
+                    </span>
+                    <div>
+                        <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Reverb Service</h1>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Monitor the WebSocket service status used by live admin updates.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Status Card -->
-            <Card class="max-w-2xl">
+            <Card>
                 <CardHeader>
                     <CardTitle class="flex items-center justify-between">
                         <span>{{ liveStatus.label }}</span>
                         <Badge 
-                            :class="[getStatusConfig(liveStatus.status).color, 'text-white']"
+                            :class="[getStatusConfig(liveStatus.status).color, getStatusConfig(liveStatus.status).color.includes('text-') ? '' : 'text-white']"
                         >
                             <component 
                                 :is="getStatusConfig(liveStatus.status).icon" 

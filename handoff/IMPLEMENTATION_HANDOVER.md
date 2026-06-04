@@ -8,6 +8,25 @@
 
 ---
 
+## Execution note for the live tree
+
+This handoff is a reference, not a blind copy script. The current `woosoo-nexus`
+tree may already contain parts of Steps 1-4, user edits, or later compatibility
+aliases. Always compare each target file against the live source before applying
+changes.
+
+- Apply visual diffs only; preserve existing props, routes, event handlers, Echo
+  listeners, Inertia form handling, and backend contracts.
+- Treat `danger` button/badge callers as legacy compatibility and normalize new
+  or touched callers to `destructive` when the primitive already supports it.
+- Verify wrapper/grid guidance against the current component first. If the file
+  already uses a responsive pattern, keep it and only remove stale visual classes.
+- The login redesign is intentionally separate from this remaining-page handoff.
+  Do not overwrite an existing dirty `resources/js/pages/auth/Login.vue` without
+  a separate review of that file.
+
+---
+
 ## How to read this document
 
 Each page section contains:

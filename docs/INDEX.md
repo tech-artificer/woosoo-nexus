@@ -15,6 +15,7 @@ This is the authoritative navigation root for active documentation.
 ## Architecture
 
 - [`docs/architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — platform architecture and runtime topology
+- [`docs/software-development/`](software-development/) — software development documentation package: process, product, and user documentation
 
 ## Operations
 
