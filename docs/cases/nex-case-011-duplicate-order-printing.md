@@ -10,9 +10,9 @@ scope: app
 - task_slug: nex-case-011-duplicate-order-printing
 - tier: 1
 - branch: fix/nex-011-duplicate-print
-- status: QUEUED
-- last_completed_agent: intake
-- next_agent: executioner
+- status: IMPLEMENTED
+- last_completed_agent: executioner
+- next_agent: reviewer
 - active_runner: claude
 - interrupted: false
 - interrupt_reason: none
@@ -233,7 +233,11 @@ Add this block before the `$deviceOrder->is_printed = true` assignment in
 
 ## Executioner Verdict
 
-Pending.
+Applied 2026-06-04. Three sites changed:
+- `PrinterApiController::markPrinted` — removed `PrintOrder::dispatch()`, removed unused import.
+- `PrinterApiController::markPrintedBulk` — removed `PrintOrder::dispatch()`.
+- `OrderApiController::markPrinted` — removed `PrintOrder::dispatch()`; added `is_printed` early-return guard (closes nex-005).
+`PrintOrder` import removed from `PrinterApiController` (now unused). No other changes.
 
 ## Remaining Risks
 

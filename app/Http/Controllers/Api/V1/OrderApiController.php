@@ -633,12 +633,23 @@ class OrderApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Session mismatch'], 403);
         }
 
+        if ($deviceOrder->is_printed) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Order was already printed',
+                'data' => [
+                    'order_id' => $deviceOrder->order_id,
+                    'is_printed' => $deviceOrder->is_printed,
+                    'printed_at' => $deviceOrder->printed_at,
+                ],
+            ]);
+        }
+
         $deviceOrder->is_printed = true;
         $deviceOrder->printed_at = now();
         $deviceOrder->save();
 
         try {
-            PrintOrder::dispatch($deviceOrder);
             OrderPrinted::dispatch($deviceOrder);
         } catch (\Throwable $e) {
             report($e);

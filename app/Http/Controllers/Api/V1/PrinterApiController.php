@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\PrintEventStatus;
 use App\Events\Order\OrderPrinted;
-use App\Events\PrintOrder;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AckPrintEventRequest;
 use App\Http\Requests\FailPrintEventRequest;
@@ -69,7 +68,6 @@ class PrinterApiController extends Controller
         $deviceOrder->save();
 
         try {
-            PrintOrder::dispatch($deviceOrder);
             OrderPrinted::dispatch($deviceOrder);
         } catch (\Throwable $e) {
             report($e);
@@ -193,7 +191,6 @@ class PrinterApiController extends Controller
             ]);
 
             try {
-                PrintOrder::dispatch($order);
                 OrderPrinted::dispatch($order);
             } catch (\Throwable $e) {
                 report($e);
