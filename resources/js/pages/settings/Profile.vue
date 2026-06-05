@@ -53,7 +53,7 @@ const submit = () => {
 
                 <div
                     v-if="isDefaultAdminEmail"
-                    class="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/25 dark:text-amber-100"
+                    class="rounded-2xl border border-woosoo-accent/30 bg-woosoo-accent/10 px-4 py-3 text-sm leading-6 text-woosoo-primary-dark dark:border-woosoo-accent/25 dark:bg-woosoo-accent/8 dark:text-woosoo-primary-light"
                 >
                     This account is still using the default admin email. Update it to a real address so password recovery and verification emails reach the correct owner.
                 </div>

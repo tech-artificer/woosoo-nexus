@@ -174,39 +174,40 @@ function bulkDestroy() {
   <Head :title="title ?? 'Permissions'" :description="description" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="space-y-6">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-2">
-          <h1 class="text-2xl font-bold tracking-tight">Permissions</h1>
-          <p class="max-w-2xl text-muted-foreground">
-            {{ description ?? 'Create and remove the granular permissions that roles can be assigned.' }}
-          </p>
-        </div>
+    <div class="space-y-5">
+      <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+        <div class="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div class="space-y-3">
+            <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Access control
+            </span>
+            <div>
+              <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Permissions</h1>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                {{ description ?? 'Create and remove the granular permissions that roles can be assigned.' }}
+              </p>
+            </div>
+          </div>
 
-        <div class="grid w-full gap-3 sm:grid-cols-3 lg:w-auto lg:min-w-105">
-          <Card>
-            <CardHeader class="pb-2">
-              <CardDescription>Total Permissions</CardDescription>
-              <CardTitle class="text-2xl">{{ permissions.length }}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader class="pb-2">
-              <CardDescription>Assigned Roles</CardDescription>
-              <CardTitle class="text-2xl">{{ totalAssignedRoles }}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader class="pb-2">
-              <CardDescription>Selected</CardDescription>
-              <CardTitle class="text-2xl">{{ selectedCount }}</CardTitle>
-            </CardHeader>
-          </Card>
+          <div class="grid w-full gap-3 sm:grid-cols-3 lg:w-auto lg:min-w-105">
+            <div class="rounded-[18px] border border-black/8 bg-white/72 px-4 py-3 dark:border-white/10 dark:bg-white/[0.06]">
+              <p class="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">Total</p>
+              <p class="mt-1 text-2xl font-semibold tabular-nums">{{ permissions.length }}</p>
+            </div>
+            <div class="rounded-[18px] border border-black/8 bg-white/72 px-4 py-3 dark:border-white/10 dark:bg-white/[0.06]">
+              <p class="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">Assigned</p>
+              <p class="mt-1 text-2xl font-semibold tabular-nums">{{ totalAssignedRoles }}</p>
+            </div>
+            <div class="rounded-[18px] border border-black/8 bg-white/72 px-4 py-3 dark:border-white/10 dark:bg-white/[0.06]">
+              <p class="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">Selected</p>
+              <p class="mt-1 text-2xl font-semibold tabular-nums">{{ selectedCount }}</p>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <Card>
+        <Card class="rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
           <CardHeader>
             <CardTitle class="flex items-center gap-2">
               <Plus class="h-4 w-4" />
@@ -253,7 +254,7 @@ function bulkDestroy() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card class="rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
           <CardHeader class="gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div class="space-y-1">
               <CardTitle>Permission Registry</CardTitle>
@@ -271,7 +272,7 @@ function bulkDestroy() {
             </div>
           </CardHeader>
           <CardContent>
-            <div class="overflow-x-auto rounded-md border">
+            <div class="overflow-x-auto rounded-xl border border-black/8 dark:border-white/10">
               <Table>
                 <TableHeader>
                   <TableRow>

@@ -469,23 +469,23 @@ onUnmounted(() => {
     <Head :title="title" :description="description" />
    
     <AppLayout :breadcrumbs="breadcrumbs">
-      <div class="space-y-4 px-1 sm:px-2">
+      <div class="space-y-4">
         <!-- WebSocket connection status pill -->
         <div class="flex items-center justify-end">
           <span
             :class="[
               'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
-              echoStatus === 'connected'    && 'bg-emerald-50 text-emerald-700',
-              echoStatus === 'connecting'   && 'bg-yellow-50 text-yellow-700',
-              echoStatus === 'disconnected' && 'bg-rose-50 text-rose-700',
+              echoStatus === 'connected'    && 'bg-woosoo-green/10 text-woosoo-green',
+              echoStatus === 'connecting'   && 'bg-woosoo-accent/10 text-woosoo-primary-dark',
+              echoStatus === 'disconnected' && 'bg-destructive/10 text-destructive',
             ]"
           >
             <span
               :class="[
                 'h-1.5 w-1.5 rounded-full',
-                echoStatus === 'connected'    && 'bg-emerald-500',
-                echoStatus === 'connecting'   && 'bg-yellow-500 animate-pulse',
-                echoStatus === 'disconnected' && 'bg-rose-500',
+                echoStatus === 'connected'    && 'bg-woosoo-green',
+                echoStatus === 'connecting'   && 'bg-woosoo-accent animate-pulse',
+                echoStatus === 'disconnected' && 'bg-destructive',
               ]"
             />
             <span v-if="echoStatus === 'connected'">Live</span>
@@ -501,7 +501,7 @@ onUnmounted(() => {
                             Live Orders
                             <Badge
                               v-if="localOrders.length > 0"
-                              class="h-5 min-w-5 rounded-full px-1.5 text-xs tabular-nums bg-blue-600 text-white"
+                              class="h-5 min-w-5 rounded-full bg-woosoo-accent px-1.5 text-xs tabular-nums text-woosoo-dark-gray"
                             >
                               {{ localOrders.length }}
                             </Badge>
@@ -520,7 +520,7 @@ onUnmounted(() => {
                         </span>
                     </TabsTrigger>
                 </TabsList>
-                <TabsContent value="live_orders" class="pt-3 px-1 sm:px-2 space-y-4">
+                <TabsContent value="live_orders" class="space-y-4 pt-3">
                   <!-- Filters have been moved into the Orders DataTable toolbar -->
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <!-- Always reactive — derived from localOrders/localOrderHistory, never from static server prop -->
@@ -537,7 +537,7 @@ onUnmounted(() => {
                     />
                   </div>
                 </TabsContent>
-                <TabsContent value="order_history" class="pt-3 px-1 sm:px-2 space-y-4">
+                <TabsContent value="order_history" class="space-y-4 pt-3">
                   <div class="w-full overflow-x-auto">
                     <DataTable
                       :data="localOrderHistory"

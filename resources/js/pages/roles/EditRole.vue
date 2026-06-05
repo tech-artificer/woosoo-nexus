@@ -40,21 +40,28 @@ const breadcrumbs: BreadcrumbItem[] = [
   <Head :title="`Edit: ${role.name}`" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="max-w-2xl mx-auto p-6 space-y-6">
-      <div class="flex items-center gap-4">
-        <Link :href="route('roles.show', role.id)">
-          <Button variant="ghost" size="sm">
-            <ChevronLeft class="h-4 w-4 mr-1" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 class="text-2xl font-bold tracking-tight">Edit Role</h1>
-          <p class="text-muted-foreground">Update "{{ role.name }}" and its permissions</p>
+    <div class="space-y-5">
+      <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+        <div class="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div class="space-y-3">
+            <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Access control
+            </span>
+            <div>
+              <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Edit Role</h1>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Update "{{ role.name }}" and its permissions.</p>
+            </div>
+          </div>
+          <Link :href="route('roles.show', role.id)">
+            <Button variant="ghost" size="sm">
+              <ChevronLeft class="mr-1 h-4 w-4" />
+              Back
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <Card>
+      <Card class="rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
         <CardHeader>
           <CardTitle>Role Details</CardTitle>
           <CardDescription>Modify the role name or adjust permission assignments.</CardDescription>

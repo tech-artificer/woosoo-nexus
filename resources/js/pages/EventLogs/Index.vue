@@ -36,10 +36,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 const getLevelColor = (level: string) => {
-  if (level.includes('ERROR')) return 'bg-red-500';
-  if (level.includes('WARNING')) return 'bg-yellow-500';
-  if (level.includes('INFO')) return 'bg-blue-500';
-  return 'bg-gray-500';
+  if (level.includes('ERROR')) return 'bg-destructive';
+  if (level.includes('WARNING')) return 'bg-woosoo-accent text-woosoo-dark-gray';
+  if (level.includes('INFO')) return 'bg-woosoo-blue';
+  return 'bg-muted-foreground';
 }
 
 const filteredLogs = computed(() => {
@@ -69,7 +69,19 @@ const filteredLogs = computed(() => {
   <AppLayout :breadcrumbs="breadcrumbs">
     <Head :title="title" />
     
-    <div class="space-y-6">
+    <div class="space-y-5">
+      <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+        <div class="relative space-y-3">
+          <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            System
+          </span>
+          <div>
+            <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{{ title }}</h1>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">{{ description }}</p>
+          </div>
+        </div>
+      </div>
+
       <div class="flex flex-col sm:flex-row gap-3">
         <Input 
           v-model="searchQuery" 
@@ -89,7 +101,7 @@ const filteredLogs = computed(() => {
         </Select>
       </div>
 
-      <div v-if="isSuperAdmin" class="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded">
+      <div v-if="isSuperAdmin" class="flex items-center gap-2 rounded-xl border border-woosoo-accent/25 bg-woosoo-accent/10 p-3">
         <input 
           type="checkbox" 
           id="show-raw" 
@@ -101,8 +113,8 @@ const filteredLogs = computed(() => {
         </label>
       </div>
 
-      <div class="rounded-lg border bg-card">
-        <div class="bg-muted/50 text-card-foreground p-4 rounded-t-lg border-b">
+      <div class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
+        <div class="border-b border-black/8 bg-muted/35 p-4 text-card-foreground dark:border-white/10">
           <span class="text-sm font-medium">Application Logs (Sanitized)</span>
         </div>
         <div class="p-4 max-h-[60vh] overflow-auto space-y-2">
@@ -124,7 +136,7 @@ const filteredLogs = computed(() => {
                     {{ entry.message }}
                   </div>
                   <details v-if="showRaw && entry.raw" class="mt-2">
-                    <summary class="text-xs text-blue-600 cursor-pointer hover:underline">
+                    <summary class="cursor-pointer text-xs text-woosoo-blue hover:underline">
                       Show full stack trace
                     </summary>
                     <pre class="mt-2 text-xs bg-slate-900 text-slate-100 p-2 rounded overflow-x-auto">{{ entry.raw }}</pre>
