@@ -65,8 +65,10 @@ application (the equivalent of `php artisan tinker`) — useful for verifying an
 `OrderStatus` transition, a `lorisleiva/laravel-actions` action, a Spatie
 permission, or an Eloquent relationship against real data.
 
-It is **enabled for local development** in this repo via
-`BOOST_TINKER_TOOL_ENABLED=true` (see the env example files).
+`config/boost.php` reads `env('BOOST_TINKER_TOOL_ENABLED', false)` — so the
+config default is **off** as a safe fallback. The local env templates
+(`.env.example`, `.env.local.example`) intentionally opt in by setting
+`BOOST_TINKER_TOOL_ENABLED=true`; the Docker/production template sets it `false`.
 
 Safety:
 
