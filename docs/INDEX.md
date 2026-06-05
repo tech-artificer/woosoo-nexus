@@ -5,6 +5,7 @@ This is the authoritative navigation root for active documentation.
 ## AI Agent Onboarding
 
 - [`docs/AI_ONBOARDING.md`](AI_ONBOARDING.md) — detailed Claude Code onboarding (setup, architecture, patterns); load on demand
+- [`docs/LARAVEL_BOOST_GUIDE.md`](LARAVEL_BOOST_GUIDE.md) — Laravel Boost day-to-day usage, MCP tools, and guardrails
 
 ## Deployment
 
