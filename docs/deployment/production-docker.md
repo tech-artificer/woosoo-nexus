@@ -1,5 +1,12 @@
 # Docker Deployment Guide
 
+> **⚠ Authority has moved.** Production Docker authority is now the
+> platform-root `compose.yaml` in the sibling `woosoo-platform/` repo, **not**
+> `woosoo-nexus/compose.yaml`. Follow `woosoo-platform/docs/deployment/DEPLOYMENT_GUIDE.md`
+> for the current Pi deploy flow (`scripts/deployment/deploy-all.sh`). This
+> document is retained for service-topology reference; the commands below that
+> say "run from `woosoo-nexus/`" are stale.
+
 This guide covers the canonical Docker Compose deployment for **Woosoo Nexus** (admin panel + API) and the **Tablet Ordering PWA**.
 
 ---
@@ -10,7 +17,7 @@ This guide covers the canonical Docker Compose deployment for **Woosoo Nexus** (
 parent-folder/                    ← both repos must be siblings
 ├── woosoo-nexus/
 │   ├── Dockerfile                # PHP-FPM image (Laravel)
-│   ├── compose.yaml              # Full stack definition
+│   ├── compose.yaml              # Legacy — reference only; authoritative stack is woosoo-platform/compose.yaml
 │   ├── docker/
 │   │   ├── nginx/
 │   │   │   └── default.conf      # Reverse proxy + TLS + WebSocket
@@ -39,8 +46,9 @@ parent-folder/                    ← both repos must be siblings
 
 ## Setup
 
-> Production deployment authority is `woosoo-nexus/compose.yaml`.  
-> Run production Docker operations from `woosoo-nexus` only.
+> Production deployment authority is the platform-root `compose.yaml` in the
+> sibling `woosoo-platform/` repo. Run production Docker operations from
+> `woosoo-platform/` only — see `woosoo-platform/docs/deployment/DEPLOYMENT_GUIDE.md`.
 
 ### 1. TLS Certificates
 
@@ -75,7 +83,8 @@ Minimum values to configure:
 ### 3. Build and start
 
 ```sh
-# Run from woosoo-nexus/
+# ⚠ Stale — run from woosoo-platform/ using the platform-root compose.yaml instead.
+# See woosoo-platform/docs/deployment/DEPLOYMENT_GUIDE.md → scripts/deployment/deploy-all.sh
 docker compose up -d --build
 ```
 

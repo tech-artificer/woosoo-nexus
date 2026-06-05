@@ -98,10 +98,17 @@ onMounted(fetchSettings)
   <Head title="Settings" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="max-w-2xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">Branch Settings</h1>
-        <p class="text-muted-foreground">Configure per-branch preferences and integrations.</p>
+    <div class="space-y-5">
+      <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+        <div class="relative space-y-3">
+          <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            Configuration
+          </span>
+          <div>
+            <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Branch Settings</h1>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Configure per-branch preferences and integrations.</p>
+          </div>
+        </div>
       </div>
 
       <div v-if="loading" class="text-sm text-muted-foreground">Loading settings…</div>

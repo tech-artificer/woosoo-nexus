@@ -374,11 +374,14 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
     <Head :title="pageTitle" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8">
-            <section class="rounded-[28px] border border-border/60 bg-card/95 p-5 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80 sm:p-6 lg:p-8">
+        <div class="space-y-5">
+            <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div class="max-w-3xl space-y-2">
-                        <h2 class="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                    <div class="max-w-3xl space-y-3">
+                        <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                            Live table view
+                        </span>
+                        <h2 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                             POS
                         </h2>
                         <p class="text-sm leading-6 text-muted-foreground sm:text-base">
@@ -387,33 +390,33 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             Restaurant tables shown here are Krypton's real live tables.
                         </p>
                     </div>
-                    <div class="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300">
+                    <div class="rounded-2xl border border-woosoo-green/30 bg-woosoo-green/10 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-woosoo-green">
                         Data Source: Krypton Only
                     </div>
                 </div>
             </section>
 
             <section class="grid gap-4 sm:grid-cols-4">
-                <div class="rounded-2xl border border-border/60 bg-card/95 px-5 py-4 shadow-sm">
+                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
                     <p class="text-xs uppercase tracking-wide text-muted-foreground">Terminals</p>
                     <p class="mt-1 text-2xl font-semibold">{{ totalTerminals }}</p>
                 </div>
-                <div class="rounded-2xl border border-border/60 bg-card/95 px-5 py-4 shadow-sm">
+                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
                     <p class="text-xs uppercase tracking-wide text-muted-foreground">Active Terminals</p>
                     <p class="mt-1 text-2xl font-semibold">{{ activeTerminals }}</p>
                 </div>
-                <div class="rounded-2xl border border-border/60 bg-card/95 px-5 py-4 shadow-sm">
+                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
                     <p class="text-xs uppercase tracking-wide text-muted-foreground">Open Orders</p>
                     <p class="mt-1 text-2xl font-semibold">{{ totalOpenOrders }}</p>
                 </div>
-                <div class="rounded-2xl border border-border/60 bg-card/95 px-5 py-4 shadow-sm">
+                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
                     <p class="text-xs uppercase tracking-wide text-muted-foreground">Current Session</p>
                     <p class="mt-1 text-lg font-semibold">#{{ currentSession?.id || '—' }} • {{ currentSessionStatus }}</p>
                     <p class="text-xs text-muted-foreground">Opened: {{ formatDateTime(currentSession?.date_time_opened) }}</p>
                 </div>
             </section>
 
-            <section class="rounded-[28px] border border-border/60 bg-card/95 p-4 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80 sm:p-5 lg:p-6">
+            <section class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 p-4 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 sm:p-5 lg:p-6">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">POS &gt; Terminal</h3>
                     <p class="text-xs text-muted-foreground">Pick a terminal, then click a table to manage orders.</p>
@@ -424,13 +427,13 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             v-for="terminal in terminals"
                             :key="terminal.id"
                             type="button"
-                            class="group rounded-3xl border border-border/60 bg-gradient-to-b from-slate-900/95 to-slate-950 p-4 text-left shadow-lg transition-all hover:-translate-y-0.5 hover:border-primary/70 hover:shadow-primary/20"
-                            :class="String(selectedTerminalId) === String(terminal.id) ? 'ring-2 ring-primary/70' : ''"
+                            class="group rounded-[22px] border border-black/8 bg-gradient-to-b from-slate-900/95 to-slate-950 p-4 text-left shadow-lg transition-all hover:-translate-y-0.5 hover:border-woosoo-accent/70 hover:shadow-woosoo-accent/20 dark:border-white/10"
+                            :class="String(selectedTerminalId) === String(terminal.id) ? 'ring-2 ring-woosoo-accent/70' : ''"
                             @click="loadTablesForTerminal(String(terminal.id))"
                         >
                             <div class="mb-3 flex items-center justify-between">
                                 <span class="inline-flex items-center gap-1 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/80">
-                                    <Circle :size="8" :class="Number(terminal.is_active) ? 'fill-emerald-400 text-emerald-400' : 'fill-rose-400 text-rose-400'" />
+                                    <Circle :size="8" :class="Number(terminal.is_active) ? 'fill-woosoo-green text-woosoo-green' : 'fill-destructive text-destructive'" />
                                     {{ Number(terminal.is_active) ? 'Active' : 'Inactive' }}
                                 </span>
                                 <span class="text-[10px] font-semibold uppercase tracking-wider text-white/60">ID {{ terminal.id }}</span>
@@ -438,7 +441,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
 
                             <div class="mx-auto mb-4 flex h-44 w-full max-w-[220px] items-center justify-center rounded-[1.7rem] border-[10px] border-slate-700 bg-slate-800 shadow-inner">
                                 <div class="flex h-full w-full flex-col items-center justify-center rounded-[1.2rem] bg-slate-900 text-center text-white/90">
-                                    <MonitorSmartphone class="mb-2 h-10 w-10 text-primary" />
+                                    <MonitorSmartphone class="mb-2 h-10 w-10 text-woosoo-accent" />
                                     <p class="px-2 text-sm font-semibold leading-tight">{{ terminal.name }}</p>
                                     <p class="mt-1 text-[11px] text-white/50">{{ terminal.type }}</p>
                                 </div>
@@ -448,7 +451,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                                 <p><span class="text-white/45">IP:</span> {{ terminal.ip_address || '—' }}</p>
                                 <p><span class="text-white/45">Port:</span> {{ terminal.port ?? '—' }}</p>
                                 <p><span class="text-white/45">Session:</span> #{{ terminal.session_id || '—' }} • {{ terminal.session_closed_at ? 'Closed' : 'Open' }}</p>
-                                <p><span class="text-white/45">Open Orders:</span> <span class="font-semibold text-primary">{{ Number(terminal.open_orders_count) }}</span></p>
+                                <p><span class="text-white/45">Open Orders:</span> <span class="font-semibold text-woosoo-accent">{{ Number(terminal.open_orders_count) }}</span></p>
                             </div>
                         </button>
                     </div>
@@ -456,8 +459,8 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
             </section>
 
             <!-- Tables Section -->
-            <section class="rounded-[28px] border border-border/60 bg-card/95 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80">
-                <div class="border-b px-4 py-4 sm:px-5">
+            <section class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
+                <div class="border-b border-black/8 px-4 py-4 dark:border-white/10 sm:px-5">
                     <div class="flex items-center justify-between gap-4">
                         <div>
                             <h3 class="text-base font-semibold">POS &gt; Terminal &gt; Tables</h3>
@@ -467,7 +470,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                         </div>
                         <div class="text-right text-xs text-muted-foreground">
                             <p>Registered Tables: <span class="font-semibold text-foreground">{{ tables.length }}</span></p>
-                            <p>Occupied Tables: <span class="font-semibold text-rose-500">{{ occupiedTables }}</span></p>
+                            <p>Occupied Tables: <span class="font-semibold text-destructive">{{ occupiedTables }}</span></p>
                         </div>
                     </div>
                 </div>
@@ -481,7 +484,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                         </div>
                     </div>
 
-                    <div v-else-if="tablesError" class="rounded-xl border border-rose-300/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+                    <div v-else-if="tablesError" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                         {{ tablesError }}
                     </div>
 
@@ -510,7 +513,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                 </DialogHeader>
 
                 <div class="max-h-[62vh] overflow-auto px-6 py-4">
-                    <div class="mb-4 rounded-xl border border-border/60 bg-muted/30 p-4">
+                    <div class="mb-4 rounded-xl border border-black/8 bg-muted/30 p-4 dark:border-white/10">
                         <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add Order by Table</p>
                         <div class="flex flex-wrap items-end gap-3">
                             <div>
@@ -553,11 +556,11 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                         </div>
                     </div>
 
-                    <div v-else-if="ordersError" class="rounded-xl border border-rose-300/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+                    <div v-else-if="ordersError" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                         {{ ordersError }}
                     </div>
 
-                    <div v-else-if="selectedOrders.length === 0" class="rounded-xl border border-border/60 bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                    <div v-else-if="selectedOrders.length === 0" class="rounded-xl border border-black/8 bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground dark:border-white/10">
                         No open orders found for this device in Krypton.
                     </div>
 
@@ -575,7 +578,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="order in selectedOrders" :key="order.id" class="border-b border-border/40 align-top">
+                            <tr v-for="order in selectedOrders" :key="order.id" class="border-b border-black/6 align-top transition-colors hover:bg-black/[0.025] dark:border-white/8 dark:hover:bg-white/[0.03]">
                                 <td class="px-2 py-3 font-medium">#{{ order.id }}<br><span class="text-xs text-muted-foreground">{{ order.reference || '—' }}</span></td>
                                 <td class="px-2 py-3">{{ order.date_time_opened || '—' }}</td>
                                 <td class="px-2 py-3">{{ order.table_names || 'Unassigned' }}</td>

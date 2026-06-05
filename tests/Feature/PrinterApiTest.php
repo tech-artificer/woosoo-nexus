@@ -9,6 +9,7 @@ use App\Models\Device;
 use App\Models\DeviceOrder;
 use Illuminate\Support\Facades\Event;
 use App\Events\PrintOrder;
+use App\Events\Order\OrderPrinted;
 use Laravel\Sanctum\Sanctum;
 
 class PrinterApiTest extends TestCase
@@ -18,14 +19,14 @@ class PrinterApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Mock active Krypton session for all tests
         $this->mockActiveKryptonSession();
     }
 
     public function test_mark_printed_sets_flags_and_dispatches_events()
     {
-        Event::fake([PrintOrder::class]);
+        Event::fake([PrintOrder::class, OrderPrinted::class]);
 
         // Create branch and device directly
         $branch = \App\Models\Branch::create(['name' => 'Test Branch', 'location' => 'Test Location']);
@@ -46,7 +47,6 @@ class PrinterApiTest extends TestCase
             'table_id' => 1,
             'terminal_session_id' => 1,
             'session_id' => $sessionId,
-            'terminal_session_id' => 1,
             'status' => 'confirmed',
             'is_printed' => false,
         ]);
@@ -54,7 +54,7 @@ class PrinterApiTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/orders/' . $order->order_id . '/printed', [
                 'printed_at' => now()->toIso8601String(),
-                'printer_id' => 'test-printer-01'
+                'printer_id' => 'test-printer-01',
             ]);
 
         $response->assertStatus(200)
@@ -66,12 +66,54 @@ class PrinterApiTest extends TestCase
             'printed_by' => 'test-printer-01',
         ]);
 
-        Event::assertDispatched(PrintOrder::class);
+        // Ack path emits OrderPrinted (post-print state notification) — never PrintOrder (print command).
+        // Dispatching PrintOrder from an ack was the root cause of duplicate kitchen tickets (nex-case-011).
+        Event::assertDispatched(OrderPrinted::class);
+        Event::assertNotDispatched(PrintOrder::class);
+    }
+
+    public function test_mark_printed_returns_early_when_already_printed()
+    {
+        Event::fake([PrintOrder::class, OrderPrinted::class]);
+
+        $branch = \App\Models\Branch::create(['name' => 'Test Branch', 'location' => 'Test Location']);
+        $device = Device::create(['name' => 'test-device', 'ip_address' => '192.168.1.102', 'branch_id' => $branch->id]);
+        $token = $device->createToken('device-auth')->plainTextToken;
+
+        $sessionId = $this->createTestSession();
+
+        $order = DeviceOrder::create([
+            'order_id' => 777777,
+            'device_id' => $device->id,
+            'guest_count' => 2,
+            'total' => 10,
+            'subtotal' => 10,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $sessionId,
+            'status' => 'confirmed',
+            'is_printed' => true,
+            'printed_at' => now()->subMinutes(5),
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/orders/' . $order->order_id . '/printed', [
+                'printed_at' => now()->toIso8601String(),
+                'printer_id' => 'retry-printer-01',
+            ]);
+
+        // Idempotency guard: returns success with original printed_at, no side effects
+        $response->assertStatus(200)
+            ->assertJson(['success' => true, 'message' => 'Order was already printed']);
+
+        // No events fired on idempotent re-ack — bridge retry must not trigger another print
+        Event::assertNotDispatched(PrintOrder::class);
+        Event::assertNotDispatched(OrderPrinted::class);
     }
 
     public function test_mark_printed_bulk_partial_success()
     {
-        Event::fake([PrintOrder::class]);
+        Event::fake([PrintOrder::class, OrderPrinted::class]);
 
         $branch = \App\Models\Branch::create(['name' => 'Test Branch', 'location' => 'Test Location']);
         $device = Device::create(['name' => 'test-device', 'ip_address' => '192.168.1.101', 'branch_id' => $branch->id]);
@@ -94,6 +136,8 @@ class PrinterApiTest extends TestCase
         $this->assertDatabaseHas('device_orders', ['order_id' => $order1->order_id, 'is_printed' => 1, 'printed_by' => 'bulk-printer-01']);
         $this->assertDatabaseHas('device_orders', ['order_id' => $order2->order_id, 'is_printed' => 1]);
 
-        Event::assertDispatched(PrintOrder::class);
+        // Bulk ack: OrderPrinted fires for newly-printed orders; PrintOrder must never fire from an ack path.
+        Event::assertDispatched(OrderPrinted::class);
+        Event::assertNotDispatched(PrintOrder::class);
     }
 }

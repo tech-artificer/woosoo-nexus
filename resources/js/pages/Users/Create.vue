@@ -18,9 +18,22 @@ defineProps<{
 <template>
   <Head :title="title" :description="description" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex h-full flex-1 flex-col gap-4 rounded p-6">
-      <h2 class="text-lg font-semibold">Create User</h2>
-      <UserForm form-type="create" />
+    <div class="space-y-5">
+      <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+        <div class="relative space-y-3">
+          <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            User management
+          </span>
+          <div>
+            <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Create User</h1>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">{{ description }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-[26px] border border-black/8 bg-card/92 p-5 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 sm:p-6">
+        <UserForm form-type="create" />
+      </div>
     </div>
   </AppLayout>
 </template>

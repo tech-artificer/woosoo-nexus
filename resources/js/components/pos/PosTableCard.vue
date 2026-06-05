@@ -23,8 +23,8 @@ const handleClick = () => {
         class="group relative rounded-2xl border p-4 text-left transition-all duration-200"
         :class="[
             Number(table.is_occupied)
-                ? 'border-rose-400/70 bg-rose-500/10'
-                : 'border-emerald-400/40 bg-emerald-500/10',
+                ? 'border-destructive/40 bg-destructive/10'
+                : 'border-woosoo-green/30 bg-woosoo-green/10',
             selected ? 'ring-2 ring-primary/70' : '',
             'hover:border-primary hover:shadow-lg hover:-translate-y-0.5'
         ]"
@@ -35,7 +35,7 @@ const handleClick = () => {
             <TableProperties class="h-4 w-4 text-foreground/70" />
             <span
                 class="text-[10px] font-semibold uppercase tracking-wide"
-                :class="Number(table.is_occupied) ? 'text-rose-500' : 'text-emerald-600'"
+                :class="Number(table.is_occupied) ? 'text-destructive' : 'text-woosoo-green'"
             >
                 {{ Number(table.is_occupied) ? 'Occupied' : 'Available' }}
             </span>
@@ -56,8 +56,8 @@ const handleClick = () => {
             class="absolute right-3 top-3 flex h-2 w-2"
             aria-hidden="true"
         >
-            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
-            <span class="relative inline-flex h-2 w-2 rounded-full bg-rose-500"></span>
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-destructive"></span>
         </div>
     </button>
 </template>

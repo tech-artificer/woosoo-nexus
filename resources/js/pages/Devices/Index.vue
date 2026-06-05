@@ -7,7 +7,6 @@ import { type BreadcrumbItem } from '@/types';
 import { columns } from '@/components/Devices/columns';
 import DataTable from '@/components/Devices/DataTable.vue'
 import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
-import StatsCards from '@/components/Stats/StatsCards.vue'
 import { ref, computed, toRefs } from 'vue'
 import {
     Dialog,
@@ -58,12 +57,15 @@ const openDeviceDetail = (device: Device) => {
     <Head :title="title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8">
-            <section class="rounded-[28px] border border-border/60 bg-card/95 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80">
-                <div class="flex flex-col gap-6 p-5 sm:p-6 lg:p-8">
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div class="space-y-5">
+            <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div class="max-w-2xl space-y-2">
-                            <h2 class="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                            <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                                Device management
+                            </span>
+                            <h2 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                                 Devices
                             </h2>
                             <p class="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
@@ -80,17 +82,27 @@ const openDeviceDetail = (device: Device) => {
                         </div>
                     </div>
 
-                    <StatsCards
-                        :cards="(stats ?? [
-                            { title: 'Total Devices', value: (devices || []).length, subtitle: 'Registered devices', variant: 'primary' },
-                            { title: 'Security Ready', value: securityReadyCount, subtitle: 'Devices with security code', variant: 'accent' },
-                        ])"
-                    />
+                    <div class="grid grid-cols-2 gap-3 lg:w-[420px]">
+                        <div class="rounded-[18px] border border-black/8 bg-white/72 px-4 py-4 dark:border-white/10 dark:bg-white/[0.06]">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">Total Devices</p>
+                            <p class="mt-2 text-2xl font-semibold tracking-tight tabular-nums">
+                                {{ stats?.total_devices ?? (devices || []).length }}
+                            </p>
+                            <p class="mt-1 text-sm text-muted-foreground">Registered devices</p>
+                        </div>
+                        <div class="rounded-[18px] border border-black/8 bg-white/72 px-4 py-4 dark:border-white/10 dark:bg-white/[0.06]">
+                            <p class="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">Security Ready</p>
+                            <p class="mt-2 text-2xl font-semibold tracking-tight tabular-nums">
+                                {{ stats?.security_ready ?? securityReadyCount }}
+                            </p>
+                            <p class="mt-1 text-sm text-muted-foreground">Devices with security code</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <section class="rounded-[28px] border border-border/60 bg-card/95 shadow-sm shadow-black/5 backdrop-blur-sm dark:bg-card/80">
-                <div class="p-4 sm:p-6 lg:p-8">
+            <section class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
+                <div class="p-4 sm:p-6">
                     <DataTable
                         :data="devices"
                         :columns="columns"

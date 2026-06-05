@@ -47,19 +47,30 @@ function handleCreateRole() {
   <Head title="Roles & Permissions" />
 
   <AuthenticatedLayout :breadcrumbs="breadcrumbs">
-    <div class="p-6 space-y-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold tracking-tight">Roles & Permissions</h1>
-          <p class="text-muted-foreground">Manage system roles and their associated permissions</p>
+    <div class="space-y-5">
+      <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+        <div class="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div class="space-y-3">
+            <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Access control
+            </span>
+            <div>
+              <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Roles & Permissions</h1>
+              <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Manage system roles and their associated permissions.</p>
+            </div>
+          </div>
+          <Button @click="handleCreateRole">
+            <Plus class="mr-2 h-4 w-4" />
+            New Role
+          </Button>
         </div>
-        <Button @click="handleCreateRole">
-          <Plus class="mr-2 h-4 w-4" />
-          New Role
-        </Button>
       </div>
 
-      <DataTable :columns="columns" :data="roles.data" />
+      <div class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
+        <div class="p-4 sm:p-6">
+          <DataTable :columns="columns" :data="roles.data" />
+        </div>
+      </div>
     </div>
 
     <Sheet v-model:open="showCreateSheet">
