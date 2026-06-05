@@ -5,6 +5,7 @@ use App\Jobs\RetryUnacknowledgedPrintEvents;
 use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
+use App\Models\RefillSubmission;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -23,9 +24,22 @@ Schedule::command('pulse:check')->everyMinute()->withoutOverlapping()->runInBack
 
 // Split-DB safe payment status reconciliation (POS -> local device_orders).
 // Replaces dependency on cross-server MySQL trigger updates.
+Schedule::command('pos:consume-payment-status-events')
+    ->everyFiveSeconds()
+    ->withoutOverlapping(3)
+    ->runInBackground();
+
 Schedule::command('pos:sync-payment-statuses')
     ->everyMinute()
     ->withoutOverlapping();
+
+// NEX-CASE-013: drain POS-local order-detail outbox; same cadence as the
+// payment consumer because POS detail edits (guest_count, totals via
+// order_checks) must reach the tablet within seconds to stay non-stale.
+Schedule::command('pos:consume-order-detail-events')
+    ->everyFiveSeconds()
+    ->withoutOverlapping(3)
+    ->runInBackground();
 
 // REMOVED 2026-04-07: ProcessOrderLogs schedule disabled for production hardening.
 // The job depends on `order_update_logs`, which does not exist in production DB.
@@ -40,6 +54,38 @@ Schedule::job(new RetryUnacknowledgedPrintEvents)->everyMinute()->withoutOverlap
 Schedule::job(new CheckStaleRelayHeartbeats)
     ->everyThreeMinutes()
     ->withoutOverlapping(10);
+
+// Release refill submissions stuck in a non-terminal "processing" state for more
+// than 5 minutes. Without this, a crashed worker mid-refill leaves the row holding
+// the idempotency lock, blocking every future retry from the same tablet.
+// Mirrors RefillSubmission::isLockExpired() default timeout (300s).
+Schedule::call(function () {
+    $cutoff = now()->subSeconds(300);
+    $stuck = RefillSubmission::whereIn('status', RefillSubmission::PROCESSING_STATES)
+        ->where(function ($q) use ($cutoff) {
+            $q->where('processing_started_at', '<', $cutoff)
+              ->orWhereNull('processing_started_at');
+        })
+        ->get();
+
+    if ($stuck->isEmpty()) {
+        return;
+    }
+
+    foreach ($stuck as $row) {
+        try {
+            $row->markAsFailed('Released by stale-lock sweeper after 5 min in ' . $row->status);
+        } catch (\Throwable $e) {
+            Log::warning('[RefillSubmission] Sweeper failed to release row', [
+                'id' => $row->id,
+                'status' => $row->status,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    Log::warning('[RefillSubmission] Released stuck rows', ['count' => $stuck->count()]);
+})->name('refill-submission-sweeper')->everyMinute()->withoutOverlapping();
 
 // Container-aware scheduler memory monitoring.
 // Emits warnings when RSS/peak usage crosses configured thresholds.

@@ -66,7 +66,8 @@ function normalizePath(value: string) {
                     :is-active="isActive(item.href)" 
                     :key="item.title"
                 >  
-                    <CollapsibleTrigger class="flex min-h-10 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-white/78 transition-colors hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:text-woosoo-dark-gray group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+                    <!-- WOOSOO STEP 1: active bg → amber tint, text → amber -->
+                    <CollapsibleTrigger class="flex min-h-10 w-full items-center gap-3 rounded-md px-3 py-2.5 text-white/78 transition-colors hover:bg-white/8 hover:text-white data-[active=true]:bg-[#2a1e0c] data-[active=true]:text-[#F6B56D] data-[active=true]:border data-[active=true]:border-[#3d2c14] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
                     <component :is="item.icon" class="m-0 h-4 w-4 border-transparent" />
                     <span class="font-semibold group-data-[collapsible=icon]:hidden">{{ item.title }}</span>
                     <ChevronRight class="ml-auto transition-transform group-data-[collapsible=icon]:hidden group-data-[state=open]/collapsible:rotate-90" />
@@ -76,7 +77,13 @@ function normalizePath(value: string) {
                     <SidebarGroupContent>
                     <SidebarMenu class="space-y-1 px-2">
                         <SidebarMenuItem v-for="childItem in item.items" :key="childItem.title">
-                        <SidebarMenuButton as-child :is-active="isActive(childItem?.href)" :tooltip="childItem.title" class="text-white/72 data-[active=true]:text-woosoo-dark-gray">
+                        <!-- WOOSOO STEP 1: child active → amber -->
+                        <SidebarMenuButton
+                            as-child
+                            :is-active="isActive(childItem?.href)"
+                            :tooltip="childItem.title"
+                            class="text-white/72 data-[active=true]:text-[#F6B56D] data-[active=true]:bg-[#2a1e0c] data-[active=true]:border data-[active=true]:border-[#3d2c14]"
+                        >
                             <Link :is-active="isActive(childItem?.href)" :href="childItem.href ?? '#'">
                                 <component :is="childItem.icon" class="m-0 h-4 w-4 border-transparent" />
                                 <span class="font-semibold">{{ childItem.title }}</span>
@@ -89,7 +96,13 @@ function normalizePath(value: string) {
                 </SidebarGroup>
             </Collapsible> 
                 
-                <SidebarMenuButton v-else as-child :is-active="isActive(item.href)" :tooltip="item.title" class="text-white/78 data-[active=true]:text-woosoo-dark-gray">
+                <SidebarMenuButton
+                    v-else
+                    as-child
+                    :is-active="isActive(item.href)"
+                    :tooltip="item.title"
+                    class="text-white/78"
+                >
                     <Link :href="item.href" :is-active="isActive(item.href)">
                         <component :is="item.icon" class="m-0 h-4 w-4 border-transparent"/>
                         <span class="font-semibold">{{ item.title }}</span>

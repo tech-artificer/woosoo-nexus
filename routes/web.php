@@ -48,6 +48,8 @@ Route::get('/devices/download-certificate', [DeviceController::class, 'downloadC
 Route::get('/devices/certificate', [DeviceController::class, 'certificatePage'])
     ->name('devices.certificate');
 
+Route::view('/user-manual', 'manual.user')->name('public.user-manual');
+
 Route::middleware(['auth'])->group(function () {
     // Dashboard is available to any authenticated user
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -290,6 +292,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [MonitoringController::class, 'index'])->name('index');
         Route::get('/metrics', [MonitoringController::class, 'metrics'])->name('metrics');
         Route::post('/purge-print-events', [MonitoringController::class, 'purgePrintEvents'])->name('purge-print-events');
+        // Admin session controls — surface the SessionApiController logic over
+        // web (session) auth so the monitoring Vue page can call them with the
+        // admin's existing session cookies + CSRF, no Sanctum token required.
+        Route::post('/sessions/{id}/reset', [MonitoringController::class, 'resetSession'])->name('sessions.reset');
+        Route::post('/sessions/{id}/force-end', [MonitoringController::class, 'forceEndSession'])->name('sessions.force-end');
     });
 
     // POS Connection — admin-only configuration for the 3rd-party Krypton database.

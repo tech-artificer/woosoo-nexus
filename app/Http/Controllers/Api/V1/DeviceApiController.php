@@ -20,13 +20,23 @@ use Illuminate\Support\Facades\DB;
 class DeviceApiController extends Controller
 {
     /**
-     * Returns a list of all devices
-     *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     * Returns a list of devices scoped to the authenticated device's branch.
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        return DeviceResource::collection(Device::with('table')->get());
+        $device = $request->user();
+
+        $branchId = $device instanceof Device ? ($device->branch_id ?? null) : null;
+
+        if ($branchId === null) {
+            return response()->json(['message' => 'No branch context available.'], 403);
+        }
+
+        $devices = Device::with('table')
+            ->where('branch_id', $branchId)
+            ->get();
+
+        return ApiResponse::success(DeviceResource::collection($devices));
     }
 
     /**

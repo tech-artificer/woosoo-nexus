@@ -17,11 +17,11 @@ use App\Models\Krypton\Order;
 use App\Models\Krypton\Table;
 use App\Models\Krypton\Tax;
 use App\Services\BroadcastService;
-use App\Services\PrintEventService;
 use App\Services\PrintTicketService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class OrderService
@@ -151,26 +151,17 @@ class OrderService
 
                 DB::afterCommit(function () use ($deviceOrder, $clientSubmissionId) {
                     try {
-                        // WS2: Use PrintTicketService for idempotent print events
-                        if ($clientSubmissionId) {
-                            $printTicketService = app(PrintTicketService::class);
-                            $printEvent = $printTicketService->createInitialPrintEvent($deviceOrder, $clientSubmissionId);
-                            
-                            // Update device order with print event reference
-                            $deviceOrder->print_event_id = $printEvent->id;
-                            $deviceOrder->save();
-                        } else {
-                            // Legacy fallback - WARNING: non-idempotent path
-                            // TODO: Remove this fallback after WS4 is merged and deployed
-                            Log::warning('Legacy non-idempotent print event path used', [
-                                'device_order_id' => $deviceOrder->id,
-                                'event_type' => 'INITIAL',
-                                'reason' => 'No client_submission_id provided'
-                            ]);
-                            app(PrintEventService::class)->createForOrder($deviceOrder, 'INITIAL');
+                        if (config('api.print_events_enabled', false)) {
+                            $submissionId = $clientSubmissionId ?: (string) Str::uuid();
+                            app(PrintTicketService::class)
+                                ->createInitialPrintEvent($deviceOrder, $submissionId);
+                            // Do NOT write $deviceOrder->print_event_id — that column
+                            // does not exist on device_orders. The schema models the
+                            // relationship the other way (print_events.device_order_id
+                            // FK). Consumers should use DeviceOrder::printEvent() /
+                            // printEvents() relations to resolve the print event id.
+                            // PrintOrder::broadcastWith() already does this correctly.
                         }
-                        
-                        $deviceOrder->refresh();
                         PrintOrder::dispatch($deviceOrder);
                     } catch (\Throwable $e) {
                         report($e);

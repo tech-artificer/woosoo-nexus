@@ -12,7 +12,7 @@ class TableRepository
     public function getActiveTableOrders()
     {
         try {
-            if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            if (app()->environment('testing')) {
                 return Table::all();
             }
 
@@ -26,7 +26,7 @@ class TableRepository
     public function getActiveTableOrdersByTableGroup($tableGroupId)
     {
         try {
-            if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            if (app()->environment('testing')) {
                 return collect([]);
             }
 
@@ -41,7 +41,7 @@ class TableRepository
     public static function getActiveTableOrderByTable($tableId)
     {   
         try {
-            if (app()->environment('testing') || env('APP_ENV') === 'testing') {
+            if (app()->environment('testing')) {
                 return Table::where('id', $tableId)->first();
             }
 

@@ -86,6 +86,12 @@ class TabletApiController extends Controller
                     ->get()
                     ->keyBy('id');
 
+                // Cross-connection patch (MenuImage on mysql, Menu on pos) — without this
+                // the image_url accessor falls through to brand-asset/placeholder URLs
+                // even when an admin-uploaded image exists. Covers both package menus
+                // and the modifier menus the tablet PWA renders inside each package.
+                Menu::attachUploadedImages($kryptonMenus);
+
                 $modifierDescriptions = ModifierDescription::query()
                     ->whereIn('krypton_menu_id', $modifierMenuIds)
                     ->pluck('description', 'krypton_menu_id');
@@ -274,6 +280,9 @@ class TabletApiController extends Controller
                 ->get()
                 ->keyBy('id');
 
+            // Cross-connection patch — see Menu::attachUploadedImages docblock.
+            Menu::attachUploadedImages($kryptonMenus);
+
             $package = $kryptonMenus->get($id);
             if (! $package) {
                 return ApiResponse::error('Package not found in POS', null, 404);
@@ -369,9 +378,10 @@ class TabletApiController extends Controller
             // Fetch menus using the mapped method
             $menus = ($categoryMap[$normalizedSlug])();
             
-            // Ensure images are loaded
+            // Cross-connection patch — $menus->load(['image']) silently fails because
+            // MenuImage lives on a different DB connection. Use the bulk helper instead.
             if ($menus->isNotEmpty()) {
-                $menus->load(['image']);
+                Menu::attachUploadedImages($menus);
             }
 
             return ApiResponse::success(

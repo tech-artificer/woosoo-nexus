@@ -55,6 +55,17 @@ class HealthController
             $health['services']['queue'] = ['status' => 'unknown', 'error' => $e->getMessage()];
         }
 
+        // Check broadcasting configuration integrity
+        try {
+            $broadcastingStatus = $this->checkBroadcastingIntegrity();
+            $health['services']['broadcasting'] = $broadcastingStatus;
+            if (!$broadcastingStatus['consistent']) {
+                $health['status'] = 'degraded';
+            }
+        } catch (\Exception $e) {
+            $health['services']['broadcasting'] = ['status' => 'unknown', 'error' => $e->getMessage()];
+        }
+
         // Determine HTTP status code
         $httpStatus = match ($health['status']) {
             'ok' => 200,
@@ -63,5 +74,84 @@ class HealthController
         };
 
         return response()->json($health, $httpStatus);
+    }
+
+    /**
+     * Check Reverb configuration consistency
+     *
+     * @return array
+     */
+    private function checkBroadcastingIntegrity(): array
+    {
+        $driver = config('broadcasting.default');
+
+        if ($driver !== 'reverb') {
+            return [
+                'driver' => $driver,
+                'consistent' => false,
+            ];
+        }
+
+        $reverbApps = config('reverb.apps.apps');
+        if (!is_array($reverbApps) || count($reverbApps) === 0) {
+            return [
+                'driver' => 'reverb',
+                'consistent' => false,
+            ];
+        }
+
+        $reverbApp = $reverbApps[0];
+        $broadcastingReverb = config('broadcasting.connections.reverb');
+
+        $reverbKey = trim((string) ($reverbApp['key'] ?? ''));
+        $reverbSecret = trim((string) ($reverbApp['secret'] ?? ''));
+        $reverbId = trim((string) ($reverbApp['app_id'] ?? ''));
+
+        $broadcastKey = trim((string) ($broadcastingReverb['key'] ?? ''));
+        $broadcastSecret = trim((string) ($broadcastingReverb['secret'] ?? ''));
+        $broadcastId = trim((string) ($broadcastingReverb['app_id'] ?? ''));
+
+        $consistent = $reverbKey === $broadcastKey
+            && $reverbSecret === $broadcastSecret
+            && $reverbId === $broadcastId
+            && trim((string) env('REVERB_APP_KEY')) === $reverbKey
+            && trim((string) env('REVERB_APP_ID')) === $reverbId
+            && trim((string) env('REVERB_APP_SECRET')) === $reverbSecret;
+
+        $host = trim((string) config('broadcasting.connections.reverb.options.host', ''));
+        $port = (int) config('broadcasting.connections.reverb.options.port', 8080);
+        $scheme = trim((string) config('broadcasting.connections.reverb.options.scheme', 'https'));
+
+        // Create a fingerprint of the key (redacted)
+        $keyFingerprint = $this->createKeyFingerprint($reverbKey);
+
+        return [
+            'driver' => $driver,
+            'key_fingerprint' => $keyFingerprint,
+            'host' => $host,
+            'port' => $port,
+            'scheme' => $scheme,
+            'consistent' => $consistent,
+        ];
+    }
+
+    /**
+     * Create a redacted fingerprint of the key
+     *
+     * @param string $key
+     * @return string
+     */
+    private function createKeyFingerprint(string $key): string
+    {
+        $key = trim($key);
+        if ($key === '') {
+            return 'none';
+        }
+
+        $first4 = substr($key, 0, 4);
+        $length = strlen($key);
+        $shaPrefix = substr(hash('sha256', $key), 0, 8);
+
+        return "{$first4}...({$length}b, sha256:{$shaPrefix})";
     }
 }

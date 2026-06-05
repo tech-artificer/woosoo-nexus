@@ -97,7 +97,7 @@ class ApiCsrfExemptionTest extends TestCase
         // Test real IP-based device login fallback (no auth required)
         $response = $this->withHeaders([
             'Accept' => 'application/json',
-        ])->get('/api/devices/login');
+        ])->post('/api/devices/login');
 
         // Should not return 419 for device login
         $response->assertStatus(200)

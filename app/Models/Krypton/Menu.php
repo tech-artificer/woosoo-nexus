@@ -25,6 +25,7 @@ class Menu extends Model
     protected $guarded = [];
     protected $appends = ['computed_modifiers'];
     public $timestamps = false;
+    protected bool $uploadedImagesAttached = false;
 
     protected $casts = [
         'is_taxable' => 'boolean',
@@ -98,14 +99,29 @@ class Menu extends Model
         return number_format((float) $taxAmount, $decimals, '.', ',');
     }
 
+    /**
+     * Image resolution chain, in order:
+     *   1. menu_images.path  (admin-uploaded via the media library;
+     *      stored under storage/app/public/, served via /storage/ symlink)
+     *   2. Bundled brand asset matched against name/kitchen_name/receipt_name
+     *      slug (lives in public/images/food-assets/, served on :443 and :4443
+     *      via the nginx /images/ location block added 2026-05-21).
+     *   3. Generic placeholder (public/images/menu-placeholder/2.webp).
+     *
+     * Future improvement: per-category placeholders (pork/beef/banchan/etc.)
+     * — requires design assets first; for now a single placeholder is the
+     * defensible default and the brand-asset map covers the active menu.
+     */
     public function getImageUrlAttribute()
     {
         $loadedImage = $this->relationLoaded('image') ? $this->getRelation('image') : null;
         $imgPath = $loadedImage?->path;
 
-        if (! $this->relationLoaded('image')) {
-            // MenuImage is on the default (mysql) connection; Menu is on the pos connection.
-            // Fall back to a direct lookup only when the image relation was not eager-loaded.
+        // MenuImage lives on the default (mysql) connection; Menu lives on the pos connection.
+        // Eager-loading `image` across connections can bind an empty relation, so one-off
+        // callers still need the direct fallback. Bulk callers mark the lookup as completed
+        // through `attachUploadedImages()` so missing images do not cause N+1 queries.
+        if ($imgPath === null && ! $this->uploadedImagesAttached) {
             $imgPath = MenuImage::where('menu_id', $this->id)->value('path');
         }
 
@@ -118,7 +134,59 @@ class Menu extends Model
             return asset('images/food-assets/' . $brandImageFile);
         }
 
-        return asset('images/menu-placeholder/1.jpg');
+        // 2.webp is the newer/lighter placeholder; 1.jpg is the legacy one.
+        return asset('images/menu-placeholder/2.webp');
+    }
+
+    /**
+     * Bulk-attach uploaded MenuImage records to a Menu or collection of Menus.
+     *
+     * Works around the cross-connection eager-load gap (Menu on `pos`, MenuImage on
+     * `mysql`). Call this immediately after fetching Menu models that will be
+     * serialized through `MenuResource` / `MenuModifierResource`, so each
+     * `image_url` accessor sees a populated relation and avoids per-row queries.
+     *
+     * Accepts a single Menu, an Eloquent/Support Collection of Menus, an array of
+     * Menus, or null. Silently no-ops on empty input. Models that are not Menu
+     * instances are skipped.
+     *
+     * @param  Menu|iterable<Menu>|null  $menus
+     */
+    public static function attachUploadedImages($menus): void
+    {
+        if ($menus === null) {
+            return;
+        }
+
+        if ($menus instanceof self) {
+            $menus = [$menus];
+        }
+
+        $collection = collect($menus);
+        if ($collection->isEmpty()) {
+            return;
+        }
+
+        $ids = $collection
+            ->filter(fn ($m) => $m instanceof self)
+            ->pluck('id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $images = MenuImage::whereIn('menu_id', $ids)->get()->keyBy('menu_id');
+
+        foreach ($collection as $menu) {
+            if ($menu instanceof self) {
+                $menu->setRelation('image', $images->get($menu->id));
+                $menu->uploadedImagesAttached = true;
+            }
+        }
     }
 
     protected function resolveBrandFoodAssetFile(): ?string

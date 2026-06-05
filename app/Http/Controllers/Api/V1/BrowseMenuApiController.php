@@ -39,12 +39,21 @@ class BrowseMenuApiController extends Controller
                 ->where('id', $request->menu_id)
                 ->where('is_available', true)
                 ->first();
+            // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
+            Menu::attachUploadedImages($menu);
+            if ($menu) {
+                Menu::attachUploadedImages($menu->getRelation('modifiers'));
+            }
             return new MenuResource($menu);
         }
 
         $menus = $this->menuRepository->getMenus();
-        
-        return MenuResource::collection($menus->load(['modifiers', 'image', 'group', 'category', 'course', 'tax'])) ?? [];
+        $menus = $menus->load(['modifiers', 'image', 'group', 'category', 'course', 'tax']);
+        Menu::attachUploadedImages($menus);
+        // Modifiers are nested Menu instances and ultimately call image_url too.
+        Menu::attachUploadedImages($menus->flatMap(fn ($m) => $m->getRelation('modifiers') ?? collect()));
+
+        return MenuResource::collection($menus) ?? [];
     }
     
     /**
@@ -82,6 +91,9 @@ class BrowseMenuApiController extends Controller
                 return $m;
             })->unique('id')->values();
         }
+
+        // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
+        Menu::attachUploadedImages($menus);
       
         if ( $request->has('modifiers') && $request->modifiers == true ) {
             $modifierGroupIds = $menus->pluck('id')->filter()->unique()->values()->all();
@@ -91,8 +103,11 @@ class BrowseMenuApiController extends Controller
             foreach ($menus as $menu) {
                 $menu->setRelation('modifiers', $modifiersByGroupId->get($menu->id, collect())->values());
             }
+
+            // Nested modifier Menus also resolve image_url — patch in one bulk query.
+            Menu::attachUploadedImages($menus->flatMap(fn ($m) => $m->getRelation('modifiers') ?? collect()));
         }
-        
+
         return MenuResource::collection($menus) ?? [];
     }
 
@@ -114,6 +129,9 @@ class BrowseMenuApiController extends Controller
                 $q->where('name', $groupName);
             })
             ->get();
+
+        // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
+        Menu::attachUploadedImages($menus);
 
         return MenuModifierResource::collection($menus);
     }
@@ -139,8 +157,13 @@ class BrowseMenuApiController extends Controller
         $packageParents = [46, 47, 48];
 
         if( $request->has('menu_id') ) {
-            
+
             $menu = Menu::with(['modifiers', 'image', 'group', 'category', 'course', 'tax'])->where('id', $request->menu_id)->first();
+            // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
+            Menu::attachUploadedImages($menu);
+            if ($menu) {
+                Menu::attachUploadedImages($menu->getRelation('modifiers'));
+            }
             return new MenuResource($menu);
         }
 
@@ -154,6 +177,10 @@ class BrowseMenuApiController extends Controller
                 $pkg->setRelation('modifiers', $pkg->loadModifiers());
             }
 
+            // Cross-connection patch on packages + their nested modifier menus.
+            Menu::attachUploadedImages($packages);
+            Menu::attachUploadedImages($packages->flatMap(fn ($p) => $p->getRelation('modifiers') ?? collect()));
+
             return MenuResource::collection($packages);
         }
 
@@ -161,6 +188,7 @@ class BrowseMenuApiController extends Controller
             ->whereIn('id', $menus->pluck('id'))
             ->where('is_available', true)
             ->get();
+        Menu::attachUploadedImages($menusWithModifiers);
 
         $computedModifierIds = $menusWithModifiers
             ->pluck('computed_modifiers')
@@ -179,6 +207,7 @@ class BrowseMenuApiController extends Controller
                 ->where('is_available', true)
                 ->get()
                 ->keyBy('id');
+            Menu::attachUploadedImages($computedModifierModels);
         }
 
         $groupNames = $menusWithModifiers
@@ -197,20 +226,18 @@ class BrowseMenuApiController extends Controller
             $groupRowsByName->put($groupName, $groupRows);
 
             $groupModifierIds = $groupRows->pluck('id')->filter()->unique()->values()->all();
-            $groupModifierModelsByName->put(
-                $groupName,
-                $groupModifierIds === []
-                    ? collect()
-                    : Menu::with(['image', 'group', 'category'])
-                        ->whereIn('id', $groupModifierIds)
-                        ->where('is_modifier_only', true)
-                        ->where('is_available', true)
-                        ->get()
-                        ->keyBy('id')
-            );
+            $groupModifierBatch = $groupModifierIds === []
+                ? collect()
+                : Menu::with(['image', 'group', 'category'])
+                    ->whereIn('id', $groupModifierIds)
+                    ->where('is_modifier_only', true)
+                    ->where('is_available', true)
+                    ->get();
+            Menu::attachUploadedImages($groupModifierBatch);
+            $groupModifierModelsByName->put($groupName, $groupModifierBatch->keyBy('id'));
         }
 
-        $prefixModifiers = Menu::with(['image', 'group', 'category'])
+        $prefixModifiersFlat = Menu::with(['image', 'group', 'category'])
             ->whereHas('group', function ($q) {
                 $q->where('name', 'Meat Order');
             })
@@ -221,10 +248,13 @@ class BrowseMenuApiController extends Controller
                     ->orWhere('receipt_name', 'like', 'B%')
                     ->orWhere('receipt_name', 'like', 'C%');
             })
-            ->get()
-            ->groupBy(function ($menu) {
-                return strtoupper(substr((string) ($menu->receipt_name ?? ''), 0, 1));
-            });
+            ->get();
+        // Attach uploaded images BEFORE the groupBy so every grouped collection
+        // already carries the correct image relation when MenuModifierResource runs.
+        Menu::attachUploadedImages($prefixModifiersFlat);
+        $prefixModifiers = $prefixModifiersFlat->groupBy(function ($menu) {
+            return strtoupper(substr((string) ($menu->receipt_name ?? ''), 0, 1));
+        });
 
         foreach ($menusWithModifiers as $menu) {
             $computed = collect($menu->computed_modifiers ?? []);
@@ -281,6 +311,10 @@ class BrowseMenuApiController extends Controller
             $pkg->setRelation('modifiers', $pkg->loadModifiers());
         }
 
+        // Cross-connection patch — packages + their nested modifier Menus.
+        Menu::attachUploadedImages($packages);
+        Menu::attachUploadedImages($packages->flatMap(fn ($p) => $p->getRelation('modifiers') ?? collect()));
+
         return MenuResource::collection($packages);
     }
 
@@ -306,16 +340,18 @@ class BrowseMenuApiController extends Controller
         ]);
         
         $menusByCourse = collect($this->menuRepository->getMenusByCourse($request->course))->pluck('id') ?? [];
-  
+
         $query = Menu::with(['image', 'group', 'category', 'course', 'tax'])->whereIn('id', $menusByCourse);
-        
+
         // // Allow frontend to request unavailable items explicitly
         // if (! $request->boolean('include_unavailable')) {
         //     $query->where('is_available', true);
         // }
 
         $menus = $query->get();
-        
+        // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
+        Menu::attachUploadedImages($menus);
+
         return MenuResource::collection($menus);
     }
 
@@ -345,6 +381,7 @@ class BrowseMenuApiController extends Controller
         }
 
         $menus = $query->get();
+        Menu::attachUploadedImages($menus);
 
         return MenuResource::collection($menus);
     }
@@ -375,6 +412,7 @@ class BrowseMenuApiController extends Controller
         }
 
         $menus = $query->get();
+        Menu::attachUploadedImages($menus);
 
         return MenuResource::collection($menus);
     }
@@ -417,6 +455,9 @@ class BrowseMenuApiController extends Controller
         }
 
         $modifiers = $package->loadModifiers();
+        // Cross-connection MenuImage patch — modifier menus are what the tablet
+        // PWA actually shows; without this they fall back to brand-asset URLs.
+        Menu::attachUploadedImages($modifiers);
 
         return MenuModifierResource::collection($modifiers);
     }
@@ -464,6 +505,7 @@ class BrowseMenuApiController extends Controller
                 ->where('receipt_name', 'like', $prefix . '%')
                 ->where('is_modifier_only', true)
                 ->get();
+            Menu::attachUploadedImages($mods);
 
             $result[$label] = MenuModifierResource::collection($mods);
         }
@@ -505,6 +547,12 @@ class BrowseMenuApiController extends Controller
                 foreach ($menus as $m) {
                     $m->setRelation('modifiers', $m->loadModifiers());
                 }
+
+                // Cross-connection MenuImage patch on top-level menus and their nested
+                // modifier menus so MenuResource emits /storage/menu/images/... URLs
+                // when an admin upload exists.
+                Menu::attachUploadedImages($menus);
+                Menu::attachUploadedImages($menus->flatMap(fn ($m) => $m->getRelation('modifiers') ?? collect()));
 
                 // Convert Resource collection to array using the current request
                 $menuRows = MenuResource::collection($menus)->toArray($request);

@@ -265,6 +265,7 @@
     <a href="#download">Download</a>
     <a href="#android">Android</a>
     <a href="#ios">iOS</a>
+    <a href="/user-manual">User Manual</a>
   </div>
   @auth
   <a href="/dashboard" class="nav-login">Dashboard →</a>
@@ -330,10 +331,33 @@
 
 <div class="divider"></div>
 
+<!-- USER MANUAL -->
+<section id="manual">
+  <div class="container">
+    <div class="section-tag">§02 — User Manual</div>
+    <h2>Learn How to Use <span style="color:var(--gold)">Woosoo</span></h2>
+    <p class="section-desc">
+      Open the public user manual for staff-friendly navigation guides covering the Nexus dashboard,
+      device setup, and the tablet ordering screens. Restricted server details are not included.
+    </p>
+    <div class="download-wrap">
+      <a href="/user-manual" class="btn-download">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 2.5h7.5L13 5v8.5H3V2.5zM10.5 2.5V5H13M5 8h6M5 10.5h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Open User Manual
+      </a>
+      <div class="download-hint">Navigation guide for staff and tablet users · No login required</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
 <!-- ANDROID STEPS -->
 <section id="android">
   <div class="container">
-    <div class="section-tag">§02 — Install Guide</div>
+    <div class="section-tag">§03 — Install Guide</div>
     <h2>Install on Your Device</h2>
     <p class="section-desc">
       Follow the steps for your device type. After installation, open the tablet ordering app

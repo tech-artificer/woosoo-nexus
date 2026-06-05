@@ -25,9 +25,31 @@ class DeviceController extends Controller
         private readonly CertificatePathResolver $certificatePathResolver,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $assignedTableIds = Device::active()->whereNotNull('table_id')->pluck('table_id');
+        $user = $request->user();
+
+        // Scope devices to the admin's branch. Resolve the branch ID from the
+        // user's branch relationship (BelongsToMany via branch_user pivot).
+        // Falls back to the sole branch in a single-branch install.
+        $branchId = null;
+        if ($user && method_exists($user, 'branches')) {
+            try {
+                $branchId = $user->branches()->select('branches.id')->value('branches.id');
+            } catch (\Throwable $e) {
+                // Fallback below.
+            }
+        }
+        if ($branchId === null) {
+            $branchCount = Branch::query()->count();
+            if ($branchCount === 1) {
+                $branchId = (int) Branch::query()->value('id');
+            }
+        }
+
+        $assignedTableIds = Device::active()->whereNotNull('table_id')
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
+            ->pluck('table_id');
         // Fetch tables from 3rd-party DB that are NOT assigned
         try {
             $unassignedTables = Table::whereNotIn('id', $assignedTableIds)->get();
@@ -39,6 +61,7 @@ class DeviceController extends Controller
         // devices directly from the Devices page.
         $devices = Device::withTrashed()
             ->with('table', 'branch')
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
             ->get()
             ->each(fn (Device $device) => $device->makeVisible('deleted_at'));
         $securityReadyCount = $devices->whereNotNull('security_code_generated_at')->count();
@@ -50,6 +73,7 @@ class DeviceController extends Controller
         $start = $today->copy()->subDays(6)->startOfDay();
 
         $daily = Device::where('created_at', '>=', $start)
+            ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
             ->selectRaw('DATE(created_at) as date, COUNT(*) as cnt')
             ->groupBy('date')
             ->orderBy('date')

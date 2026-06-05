@@ -130,6 +130,6 @@ npm test
 
 ## See Also
 
-- [../../docs/printer_manual.md](../../docs/printer_manual.md) — Hardware integration
+- [../../docs/printer_readme.md](../../docs/printer_readme.md) — Hardware integration
 - [../../docs/printer_app.md](../../docs/printer_app.md) — Relay device integration
 - [../../docs/print-events-contract.md](../../docs/print-events-contract.md) — Full ACK contract

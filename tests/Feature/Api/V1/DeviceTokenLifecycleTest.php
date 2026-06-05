@@ -6,6 +6,7 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\Branch;
 use App\Models\Device;
+use App\Models\User;
 use App\Support\DeviceSecurityCode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -163,6 +164,34 @@ class DeviceTokenLifecycleTest extends TestCase
         $this->assertNotEquals($plainToken, $newPlain, 'Refreshed token should differ from old token');
     }
 
+    /**
+     * Test: Refresh returns 401 (not 500) when called from a web session
+     * Purpose: Guard against TransientToken::$id crash for admin callers
+     */
+    public function test_refresh_returns_401_when_called_with_web_session(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin, 'web')
+            ->postJson('/api/devices/refresh');
+
+        $response->assertStatus(401);
+    }
+
+    /**
+     * Test: Logout returns 401 (not 500) when called from a web session
+     * Purpose: Guard against TransientToken::$id crash for admin callers
+     */
+    public function test_logout_returns_401_when_called_with_web_session(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin, 'web')
+            ->postJson('/api/devices/logout');
+
+        $response->assertStatus(401);
+    }
+
     public function test_claimed_tablet_can_login_by_trusted_ip_without_setup_code(): void
     {
         config()->set('device.allow_client_supplied_ip', true);
@@ -177,7 +206,7 @@ class DeviceTokenLifecycleTest extends TestCase
 
         $response = $this->withServerVariables([
             'REMOTE_ADDR' => '127.0.0.1',
-        ])->getJson('/api/devices/login?ip_address=192.168.100.162');
+        ])->postJson('/api/devices/login', ['ip_address' => '192.168.100.162']);
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true)
@@ -203,7 +232,7 @@ class DeviceTokenLifecycleTest extends TestCase
         ])->withHeaders([
             'Host' => '192.168.100.7:4443',
             'X-Forwarded-Host' => '192.168.100.7',
-        ])->getJson('/api/devices/login');
+        ])->postJson('/api/devices/login');
 
         $response->assertStatus(404)
             ->assertJsonPath('success', false)
@@ -251,7 +280,7 @@ class DeviceTokenLifecycleTest extends TestCase
 
         $response = $this->withServerVariables([
             'REMOTE_ADDR' => '127.0.0.1',
-        ])->getJson('/api/devices/login?ip_address=192.168.100.164');
+        ])->postJson('/api/devices/login', ['ip_address' => '192.168.100.164']);
 
         $response->assertStatus(403)
             ->assertJsonPath('success', false)
@@ -266,7 +295,10 @@ class DeviceTokenLifecycleTest extends TestCase
             'ip_address' => '192.168.100.163',
         ]);
 
-        $response = $this->getJson('/api/devices/login?ip_address=192.168.100.163&passcode=999999');
+        $response = $this->postJson('/api/devices/login', [
+            'ip_address' => '192.168.100.163',
+            'passcode' => '999999',
+        ]);
 
         $response->assertStatus(422)
             ->assertJsonPath('message', 'Invalid passcode');
