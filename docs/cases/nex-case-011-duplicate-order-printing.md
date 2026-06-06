@@ -8,22 +8,22 @@ scope: app
 
 ## Run State
 - task_slug: nex-case-011-duplicate-order-printing
-- tier: 1
+- tier: 3
 - branch: fix/nex-011-duplicate-print
-- status: IMPLEMENTED
+- status: COMPLETE
 - last_completed_agent: executioner
-- next_agent: reviewer
+- next_agent: done
 - active_runner: claude
 - interrupted: false
 - interrupt_reason: none
-- updated: 2026-06-04
+- updated: 2026-06-05
 
 ## Handoff
-- Phase in progress: intake complete; ready for implementation.
-- Done so far: Root causes fully isolated with file + line citations. Three distinct duplicate-print vectors identified; two are in nexus, one is a bridge-side amplifier. Fix is surgical — no schema changes, no new abstractions.
-- Exact next action: Executioner to (1) remove `PrintOrder::dispatch()` from all `markPrinted` paths (both controllers), (2) add `is_printed` idempotency guard to `OrderApiController::markPrinted`, (3) verify the bridge receives only `OrderPrinted` on ack and no spurious re-print. nex-case-005 (legacy non-idempotent path) is addressed by action (2) and can be closed together.
-- Working-tree state: no app edits applied yet.
-- Risks / do-not-redo: Do not remove `PrintOrder::dispatch()` from `OrderService::processOrder()` — that is the correct initial print trigger. Only remove it from the ack/mark-printed paths. Do not touch the `OrderPrinted` dispatches — those are the correct post-print notifications. Do not enable `NEXUS_PRINT_EVENTS_ENABLED` as part of this fix; the PrintEvent system is separately gated.
+- Phase in progress: none — COMPLETE.
+- Done so far: Root cause isolated (two vectors). Code fix executed and approved: `PrintOrder::dispatch()` removed from all `markPrinted` ack paths in both controllers; `is_printed` idempotency guard added to `OrderApiController::markPrinted`; nex-case-005 closed inline. PR #163 merged to woosoo-nexus `dev` on 2026-06-04.
+- Exact next action (operator, on Pi — Bucket B): confirm `NEXUS_PRINT_EVENTS_ENABLED=true`; disable 3rd-party Krypton POS printer so only BT thermal printer prints; verify one order → one ticket on BT only, POS still receives order for billing.
+- Working-tree state: PR #163 merged to woosoo-nexus `dev`. No further code changes needed for this case.
+- Risks / do-not-redo: Do not remove `PrintOrder::dispatch()` from `OrderService::processOrder()` — that is the correct initial print trigger. Do not touch the `OrderPrinted` dispatches. Do not disable `CreateOrderedMenu` — the POS needs the mirror for billing; only the POS printer output is suppressed.
 
 ## Tier
 1 — operational P1. Duplicate kitchen tickets cause double-cooking, waste, and staff confusion. Gates dev→staging promotion.
