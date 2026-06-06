@@ -1,6 +1,6 @@
 ---
 status: canonical
-last_reviewed: 2026-06-05
+last_reviewed: 2026-06-06
 scope: woosoo-nexus
 ---
 
@@ -9,9 +9,11 @@ scope: woosoo-nexus
 [Laravel Boost](https://laravel.com/docs/boost) gives AI coding agents
 Laravel-specific, version-pinned context and live tooling for this codebase. This
 guide explains how to use it day-to-day and the guardrails to be aware of. It is
-**additive** to the agent operating model — the always-on rules still live in the
-root `../AGENTS.md` and per-app `.agents.md`; Boost just makes agents more
-accurate inside those rules.
+**additive** to the agent operating model — the always-on rules still live in
+[`../.agents.md`](../.agents.md) (per-app hard rules) and
+[`../AGENTS.md`](../AGENTS.md) (ecosystem operating model; pointer to platform
+governance). Boost just makes agents more accurate inside those rules. When
+`CLAUDE.md` and `AGENTS.md`/`.agents.md` disagree, the governance docs win.
 
 ## What was installed
 
@@ -32,11 +34,44 @@ Boost is **inert unless `APP_ENV=local`** (or `APP_DEBUG=true`). It never runs i
 production/CI by design. Confirm it is active:
 
 ```bash
-php artisan list | grep boost      # should list boost:install, boost:mcp, boost:update, ...
+php artisan list | grep boost      # Bash/WSL — lists boost:* when Boost is registered
 ```
 
-In an editor that supports MCP (e.g. Claude Code), the `laravel-boost` server
-loads automatically from `.mcp.json`.
+```powershell
+php artisan list boost                              # PowerShell — same, when Boost is registered
+php artisan list --raw | Select-String boost        # fallback filter
+```
+
+These commands only work when Boost is active (local env gate). In production
+Docker (`APP_ENV=production`), expect `There are no commands defined in the
+"boost" namespace` — that is expected, not a broken install.
+
+### Editor setup (Claude Code and Cursor)
+
+Boost writes editor-specific config. Both editors can coexist — no need to remove
+Claude Code config when adding Cursor.
+
+| Editor | MCP config | Guidelines file |
+|--------|------------|-----------------|
+| Claude Code | `.mcp.json` | `CLAUDE.md` |
+| Cursor | `.cursor/mcp.json` | `AGENTS.md` (Boost **appends** `<laravel-boost-guidelines>`; existing pointer content is preserved) |
+
+Claude Code loads the `laravel-boost` server automatically from `.mcp.json`. For
+Cursor, run `php artisan boost:install` and select **Cursor** to auto-write
+`.cursor/mcp.json` and append guidelines to `AGENTS.md`. After Cursor install,
+skim `AGENTS.md` to confirm the governance pointer block is still intact above
+the appended Boost block.
+
+## Configuration
+
+From `config/boost.php`. All toggles only matter when Boost's environment gate
+passes (`APP_ENV=local` or `APP_DEBUG=true`).
+
+| Env var | Config key | Default | Purpose |
+|---------|------------|---------|---------|
+| `BOOST_ENABLED` | `enabled` | `true` | Master switch — when false, Boost routes/commands/MCP registration are off |
+| `BOOST_BROWSER_LOGS_WATCHER` | `browser_logs_watcher` | `true` | Pairs with the `browser-logs` MCP tool |
+| `BOOST_TINKER_TOOL_ENABLED` | `tinker_tool_enabled` | `false` | Opt-in Tinker MCP tool — see [The Tinker tool](#the-tinker-tool--power-and-safety) |
 
 ## The MCP tools and when to use them
 
@@ -68,16 +103,26 @@ permission, or an Eloquent relationship against real data.
 `config/boost.php` reads `env('BOOST_TINKER_TOOL_ENABLED', false)` — so the
 config default is **off** as a safe fallback. The local env templates
 (`.env.example`, `.env.local.example`) intentionally opt in by setting
-`BOOST_TINKER_TOOL_ENABLED=true`; the Docker/production template sets it `false`.
+`BOOST_TINKER_TOOL_ENABLED=true`; `.env.docker.example` sets it `false`.
 
 Safety:
 
 - It runs **local-only** (Boost's environment gate) — never in production.
-- The primary `woosoo` connection uses a privileged DB user, so treat it like a
-  live tinker shell: **don't run destructive code**. The `pos` connection is
-  read-only at the DB-user level.
+- The primary `mysql` connection (database `woosoo`) uses a privileged DB user,
+  so treat it like a live tinker shell: **don't run destructive code**. The `pos`
+  connection is read-only at the DB-user level.
 - To opt out, set `BOOST_TINKER_TOOL_ENABLED=false` in your `.env` (or unset it —
   it defaults to off in `config/boost.php`).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| No `boost:*` commands | Run `composer install`; confirm `APP_ENV=local` or `APP_DEBUG=true`; check `BOOST_ENABLED` |
+| MCP server fails to start | Wrong PHP on PATH; run from repo root; confirm local env gate |
+| `tinker` tool missing from MCP | Add `BOOST_TINKER_TOOL_ENABLED=true` to `.env` (or copy from `.env.example` — existing `.env` files created before the toggle will not have the line) |
+| `search-docs` fails in cloud | Allowlist `boost.laravel.com` |
+| Stale guidelines after package upgrade | `php artisan boost:update` |
 
 ## Maintenance
 
@@ -88,6 +133,8 @@ php artisan boost:install    # re-run to add more agents/editors or change featu
 
 ## Relationship to governance
 
-`CLAUDE.md` (Boost coding conventions) and `AGENTS.md` / `.agents.md` (the agent
-operating model and hard rules) are complementary and both loaded — Boost does
-not replace or modify the governance docs.
+`CLAUDE.md` (Boost coding conventions) and [`AGENTS.md`](../AGENTS.md) /
+[`.agents.md`](../.agents.md) (the agent operating model and hard rules) are
+complementary and both loaded — Boost does not replace or modify the governance
+docs. When `CLAUDE.md` and `AGENTS.md`/`.agents.md` disagree, the governance
+docs win.
