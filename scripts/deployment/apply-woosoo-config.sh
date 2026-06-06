@@ -45,6 +45,36 @@ require_var WOOSOO_CIDR
 require_var WOOSOO_NEXUS_PATH
 require_var WOOSOO_SCHEME
 
+# WOOSOO_ENV selects the environment profile: local | staging | production.
+WOOSOO_ENV="${WOOSOO_ENV:-production}"
+case "$WOOSOO_ENV" in
+  local)
+    _APP_ENV="local"
+    _APP_DEBUG="true"
+    _LOG_LEVEL="debug"
+    ;;
+  staging)
+    _APP_ENV="staging"
+    _APP_DEBUG="false"
+    _LOG_LEVEL="info"
+    ;;
+  production)
+    _APP_ENV="production"
+    _APP_DEBUG="false"
+    _LOG_LEVEL="error"
+    ;;
+  *)
+    echo "ERROR: WOOSOO_ENV='${WOOSOO_ENV}' is not valid. Allowed values: local | staging | production" >&2
+    exit 1
+    ;;
+esac
+# SESSION_SECURE_COOKIE is derived from WOOSOO_SCHEME, not from WOOSOO_ENV.
+if [[ "${WOOSOO_SCHEME}" == "https" ]]; then
+  _SESSION_SECURE_COOKIE="true"
+else
+  _SESSION_SECURE_COOKIE="false"
+fi
+
 WOOSOO_APPLY_STATIC_IP="${WOOSOO_APPLY_STATIC_IP:-true}"
 WOOSOO_RESTART_DOCKER="${WOOSOO_RESTART_DOCKER:-true}"
 WOOSOO_DOCKER_COMPOSE="${WOOSOO_DOCKER_COMPOSE:-docker compose -f compose.yaml}"
@@ -295,6 +325,7 @@ fi
 
 safe_backup_file ".env"
 
+echo "Environment:   $WOOSOO_ENV (APP_ENV=${_APP_ENV}, APP_DEBUG=${_APP_DEBUG}, LOG_LEVEL=${_LOG_LEVEL}, SESSION_SECURE_COOKIE=${_SESSION_SECURE_COOKIE})"
 echo "Updating Laravel .env..."
 db_password_value="${WOOSOO_DB_PASSWORD:-change_this_password}"
 db_root_password_value="${WOOSOO_DB_ROOT_PASSWORD:-change_this_root_password}"
@@ -302,8 +333,8 @@ set_env "PUBLIC_SCHEME" "$WOOSOO_SCHEME"
 set_env "PUBLIC_HOST" "$WOOSOO_HOST"
 set_env "PUBLIC_HTTP_PORT" "80"
 set_env "PUBLIC_HTTPS_PORT" "443"
-set_env "APP_ENV" "production"
-set_env "APP_DEBUG" "false"
+set_env "APP_ENV" "$_APP_ENV"
+set_env "APP_DEBUG" "$_APP_DEBUG"
 set_env "APP_URL" "${WOOSOO_SCHEME}://${WOOSOO_HOST}"
 set_env "ASSET_URL" "${WOOSOO_SCHEME}://${WOOSOO_HOST}"
 set_env "APP_TIMEZONE" "${WOOSOO_TIMEZONE:-Asia/Manila}"
@@ -344,13 +375,15 @@ set_env "VITE_REVERB_APP_KEY" "${WOOSOO_REVERB_APP_KEY:-change_this_reverb_key}"
 set_env "VITE_REVERB_HOST" "$WOOSOO_HOST"
 set_env "VITE_REVERB_PORT" "443"
 set_env "VITE_REVERB_SCHEME" "$WOOSOO_SCHEME"
-set_env "SESSION_DOMAIN" "$WOOSOO_HOST"
-set_env "SESSION_SECURE_COOKIE" "true"
+# SESSION_DOMAIN left empty so the cookie is scoped to whatever host the
+# request arrives on — prevents 419s when accessing from multiple IPs/hostnames.
+set_env "SESSION_DOMAIN" ""
+set_env "SESSION_SECURE_COOKIE" "$_SESSION_SECURE_COOKIE"
 set_env "SESSION_SAME_SITE" "lax"
 set_env "SANCTUM_STATEFUL_DOMAINS" "${WOOSOO_HOST},${WOOSOO_HOST}:443,${WOOSOO_HOST}:80,${WOOSOO_HOST}:4443"
 set_env "CORS_ALLOWED_ORIGINS" "${WOOSOO_SCHEME}://${WOOSOO_HOST},http://${WOOSOO_HOST},${WOOSOO_SCHEME}://${WOOSOO_HOST}:4443"
 set_env "DEVICE_AUTH_PASSCODE" "${WOOSOO_DEVICE_AUTH_PASSCODE:-}"
-set_env "LOG_LEVEL" "error"
+set_env "LOG_LEVEL" "$_LOG_LEVEL"
 
 if ! grep -qE '^APP_KEY=base64:.+' .env; then
   echo "INFO: APP_KEY is not set. Before first production use, run: $WOOSOO_DOCKER_COMPOSE exec -T $WOOSOO_APP_SERVICE php artisan key:generate"
