@@ -1,6 +1,6 @@
 ---
 status: canonical
-last_reviewed: 2026-05-31
+last_reviewed: 2026-06-06
 scope: woosoo-nexus
 ---
 
@@ -675,6 +675,7 @@ flutter analyze                        # Code analysis (Dart)
 - Test: `tests/Feature/DeviceTableTest.php` (Pest feature test)
 
 **Documentation**
+- `docs/LARAVEL_BOOST_GUIDE.md` — Laravel Boost MCP tools, Tinker guardrails, Cursor setup
 - `docs/API_MAP.md` — API endpoint reference (request/response shapes)
 - `docs/BRANCH_CRUD_IMPLEMENTATION.md` — example CRUD implementation
 - `docs/ROLES_IMPLEMENTATION_COMPLETE.md` — roles/permissions guide
