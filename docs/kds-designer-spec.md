@@ -10,13 +10,13 @@
 
 A **wall-mounted kitchen-facing screen** that replaces paper slips with a live queue of order tickets. Staff tap directly on the screen to advance orders through three workflow stages. The admin's web session authenticates the device (v1 — device-token auth is a future iteration).
 
-**Access route:** `/kds` — admin-only, same auth gate as all other admin pages.
+**Access route (to be implemented):** `/kds` — admin-only, same auth gate as all other admin pages. The `Route::prefix('kds')` group must be added to `routes/web.php` as part of the KDS implementation (see §16).
 
 ---
 
 ## 2. Top-Level Layout
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ TOPBAR  [Woosoo logo / "Kitchen Display"]   [Density: Comfortable/Compact ▾]  │
 │          [🔕 Mute / 🔔 Chime toggle]                          [Clock HH:MM]  │
@@ -61,7 +61,7 @@ The backend has a 9-case `OrderStatus` enum. The KDS maps these to 3 kitchen-fac
 
 Each ticket represents one `DeviceOrder`. Cards must be readable at ≥ 2 m distance.
 
-```
+```text
 ┌─ [overdue pulse border-left] ─────────────────────────────┐
 │  TABLE 7           [Stage badge: Preparing]   ⏱ 08:42     │
 │  Ticket #1042 · 4 guests                                   │
@@ -206,7 +206,7 @@ For the KDS specifically:
 
 Tapping the "Void" button on any active ticket opens a confirmation dialog (uses existing shadcn `Dialog`).
 
-```
+```text
 ┌────────────────────────────────────┐
 │  Void Order — Table 7              │
 │                                    │
@@ -223,7 +223,7 @@ Tapping the "Void" button on any active ticket opens a confirmation dialog (uses
 
 - Reason is **required** — "Confirm Void" is disabled until one radio is selected.
 - "Confirm Void" button: destructive style (red).
-- On confirm: POSTs to `/kds/orders/{id}/void` with `{ reason }`.
+- On confirm: POSTs to `/kds/orders/{id}/void` with `{ reason }` — **planned route** (to be implemented in §16; not yet in `routes/web.php`). The existing POS void path is `POST /pos/orders/{orderId}/void`; the KDS route will expose the same action under the `/kds` prefix.
 - Reason is persisted in `OrderUpdateLog.meta` for the audit trail.
 
 ---
