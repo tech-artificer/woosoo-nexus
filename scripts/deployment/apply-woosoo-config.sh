@@ -69,11 +69,18 @@ case "$WOOSOO_ENV" in
     ;;
 esac
 # SESSION_SECURE_COOKIE is derived from WOOSOO_SCHEME, not from WOOSOO_ENV.
-if [[ "${WOOSOO_SCHEME}" == "https" ]]; then
-  _SESSION_SECURE_COOKIE="true"
-else
-  _SESSION_SECURE_COOKIE="false"
-fi
+case "$WOOSOO_SCHEME" in
+  https)
+    _SESSION_SECURE_COOKIE="true"
+    ;;
+  http)
+    _SESSION_SECURE_COOKIE="false"
+    ;;
+  *)
+    echo "ERROR: WOOSOO_SCHEME='${WOOSOO_SCHEME}' is not valid. Allowed values: http | https" >&2
+    exit 1
+    ;;
+esac
 
 WOOSOO_APPLY_STATIC_IP="${WOOSOO_APPLY_STATIC_IP:-true}"
 WOOSOO_RESTART_DOCKER="${WOOSOO_RESTART_DOCKER:-true}"
@@ -113,10 +120,17 @@ escape_ere() {
 set_env() {
   local key="$1"
   local value="$2"
+  local mode="${3:-quoted}"
   local file=".env"
   local rendered escaped_key
 
-  rendered="$(quote_env_value "$value")"
+  # Boolean-like flags (e.g. APP_DEBUG, SESSION_SECURE_COOKIE) must be written as
+  # bare true/false literals; Laravel treats the quoted string "false" as truthy.
+  if [[ "$mode" == "raw" ]]; then
+    rendered="$value"
+  else
+    rendered="$(quote_env_value "$value")"
+  fi
   escaped_key="$(escape_ere "$key")"
 
   if grep -qE "^${escaped_key}=" "$file"; then
@@ -334,7 +348,7 @@ set_env "PUBLIC_HOST" "$WOOSOO_HOST"
 set_env "PUBLIC_HTTP_PORT" "80"
 set_env "PUBLIC_HTTPS_PORT" "443"
 set_env "APP_ENV" "$_APP_ENV"
-set_env "APP_DEBUG" "$_APP_DEBUG"
+set_env "APP_DEBUG" "$_APP_DEBUG" raw
 set_env "APP_URL" "${WOOSOO_SCHEME}://${WOOSOO_HOST}"
 set_env "ASSET_URL" "${WOOSOO_SCHEME}://${WOOSOO_HOST}"
 set_env "APP_TIMEZONE" "${WOOSOO_TIMEZONE:-Asia/Manila}"
@@ -378,7 +392,7 @@ set_env "VITE_REVERB_SCHEME" "$WOOSOO_SCHEME"
 # SESSION_DOMAIN left empty so the cookie is scoped to whatever host the
 # request arrives on — prevents 419s when accessing from multiple IPs/hostnames.
 set_env "SESSION_DOMAIN" ""
-set_env "SESSION_SECURE_COOKIE" "$_SESSION_SECURE_COOKIE"
+set_env "SESSION_SECURE_COOKIE" "$_SESSION_SECURE_COOKIE" raw
 set_env "SESSION_SAME_SITE" "lax"
 set_env "SANCTUM_STATEFUL_DOMAINS" "${WOOSOO_HOST},${WOOSOO_HOST}:443,${WOOSOO_HOST}:80,${WOOSOO_HOST}:4443"
 set_env "CORS_ALLOWED_ORIGINS" "${WOOSOO_SCHEME}://${WOOSOO_HOST},http://${WOOSOO_HOST},${WOOSOO_SCHEME}://${WOOSOO_HOST}:4443"
