@@ -58,6 +58,12 @@ Route::middleware(['auth'])->group(function () {
     // Admin-only routes
     Route::middleware(['can:admin'])->group(function () {
         // Orders
+        Route::get('/kds', function () {
+            return Inertia::render('KDS/Display', [
+                'title' => 'Kitchen Display',
+            ]);
+        })->name('kds.display');
+
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
         Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('orders.destroy');
