@@ -130,6 +130,36 @@ class DeviceOrderIntentContractTest extends TestCase
         );
     }
 
+    public function test_initial_order_request_strips_non_intent_fields_before_validation(): void
+    {
+        $request = StoreDeviceOrderRequest::create('/api/devices/create-order', 'POST', [
+            'guest_count'  => 2,
+            'package_id'   => 47,
+            'total_amount' => 123.45,
+            'items'        => [
+                [
+                    'menu_id'  => 15,
+                    'quantity' => 1,
+                    'price'    => 99.99,
+                    'name'     => 'Ignored',
+                ],
+            ],
+        ]);
+
+        $request->setContainer($this->app)->validateResolved();
+
+        $this->assertSame(
+            [
+                'guest_count' => 2,
+                'package_id'  => 47,
+                'items'       => [
+                    ['menu_id' => 15, 'quantity' => 1],
+                ],
+            ],
+            $request->validated()
+        );
+    }
+
     // ─── Refill order ─────────────────────────────────────────────────────────
 
     public function test_accepts_intent_only_refill_payload(): void
