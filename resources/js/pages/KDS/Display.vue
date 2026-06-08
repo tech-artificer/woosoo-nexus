@@ -197,6 +197,14 @@ onBeforeUnmount(() => {
   --kds-font-d: Raleway, ui-sans-serif, system-ui, sans-serif;
   --kds-font-s: Kanit, ui-sans-serif, system-ui, sans-serif;
   --kds-font-m: "JetBrains Mono", "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Weight scale — see .interface-design/system.md. Capped at 700 to de-shout. */
+  --kds-weight-display: 700;
+  --kds-weight-hero: 700;
+  --kds-weight-cta: 700;
+  --kds-weight-label: 600;
+  --kds-weight-body: 500;
+  --kds-weight-data: 600;
+  --kds-weight-caption: 500;
 }
 
 html:has(.kds-viewport),
@@ -262,7 +270,7 @@ body:has(.kds-viewport) {
   color: var(--kds-fg1);
   font-family: var(--kds-font-s);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: var(--kds-weight-label);
   padding: 0 16px;
   text-transform: uppercase;
 }
@@ -334,14 +342,14 @@ body:has(.kds-viewport) {
 :deep(.kds-brand-name) {
   font-family: var(--kds-font-d);
   font-size: 16px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-display);
   line-height: 1;
 }
 
 :deep(.kds-brand-sub) {
   color: var(--kds-accent);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-label);
   letter-spacing: 0.14em;
   line-height: 1.15;
   text-transform: uppercase;
@@ -364,13 +372,15 @@ body:has(.kds-viewport) {
 :deep(.kds-metric strong) {
   font-family: var(--kds-font-m);
   font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--kds-weight-data);
   line-height: 1;
 }
 
 :deep(.kds-metric span) {
   color: var(--kds-fg3);
   font-size: 9px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-label);
   letter-spacing: 0.22em;
   text-transform: uppercase;
 }
@@ -402,7 +412,7 @@ body:has(.kds-viewport) {
   gap: 7px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-label);
   padding: 0 13px;
   text-transform: uppercase;
 }
@@ -434,6 +444,8 @@ body:has(.kds-viewport) {
 :deep(.kds-clock strong) {
   display: block;
   font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--kds-weight-data);
   line-height: 1;
 }
 
@@ -441,7 +453,7 @@ body:has(.kds-viewport) {
   display: block;
   color: var(--kds-fg3);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: var(--kds-weight-caption);
   letter-spacing: 0.14em;
   margin-top: 3px;
   text-transform: uppercase;
@@ -472,7 +484,7 @@ body:has(.kds-viewport) {
   color: var(--kds-fg1);
   font-family: var(--kds-font-s);
   font-size: 13px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-label);
   padding: 0 14px;
   text-transform: uppercase;
 }
@@ -487,6 +499,8 @@ body:has(.kds-viewport) {
   color: var(--kds-fg2);
   font-family: var(--kds-font-m);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--kds-weight-data);
 }
 
 :deep(.kds-filter-chip.is-active) {
@@ -565,7 +579,7 @@ body:has(.kds-viewport) {
 :deep(.kds-status-block > span) {
   color: var(--kds-fg3);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-label);
   letter-spacing: 0.22em;
   text-transform: uppercase;
 }
@@ -574,7 +588,7 @@ body:has(.kds-viewport) {
   color: var(--kds-fg0);
   font-family: var(--kds-font-s);
   font-size: 32px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-hero);
   line-height: 1;
 }
 
@@ -582,6 +596,7 @@ body:has(.kds-viewport) {
   color: var(--kds-fg2);
   font-family: var(--kds-font-m);
   font-size: 11px;
+  font-weight: var(--kds-weight-caption);
   margin-top: 7px;
 }
 
@@ -616,7 +631,7 @@ body:has(.kds-viewport) {
   color: var(--kds-fg1);
   font-family: var(--kds-font-s);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-label);
   letter-spacing: 0.12em;
   padding: 4px 10px;
   text-transform: uppercase;
@@ -637,7 +652,7 @@ body:has(.kds-viewport) {
   border-bottom: 1px solid rgb(255 255 255 / 0.06);
   color: var(--kds-void);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: var(--kds-weight-body);
   margin: 0;
   padding: 10px 16px;
 }
@@ -664,7 +679,7 @@ body:has(.kds-viewport) {
   color: var(--kds-fg0);
   font-family: var(--kds-font-s);
   font-size: 16px;
-  font-weight: 800;
+  font-weight: var(--kds-weight-body);
   padding: 0 16px;
   text-align: left;
 }
@@ -701,6 +716,8 @@ body:has(.kds-viewport) {
 :deep(.kds-item-qty) {
   color: var(--kds-accent);
   font-family: var(--kds-font-m);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--kds-weight-data);
   min-width: 34px;
 }
 
@@ -762,7 +779,7 @@ body:has(.kds-viewport) {
   color: #17100b;
   font-family: var(--kds-font-s);
   font-size: 14px;
-  font-weight: 900;
+  font-weight: var(--kds-weight-cta);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -804,10 +821,12 @@ body:has(.kds-viewport) {
   color: var(--kds-fg0);
   font-family: var(--kds-font-d);
   font-size: 34px;
+  font-weight: var(--kds-weight-display);
 }
 
 :deep(.kds-empty span) {
   font-size: 16px;
+  font-weight: var(--kds-weight-body);
 }
 
 @media (prefers-reduced-motion: reduce) {
