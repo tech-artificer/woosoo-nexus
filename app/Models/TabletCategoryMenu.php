@@ -15,10 +15,12 @@ class TabletCategoryMenu extends Model
         'tablet_category_id',
         'krypton_menu_id',
         'sort_order',
+        'is_featured',
     ];
 
     protected $casts = [
         'sort_order' => 'integer',
+        'is_featured' => 'boolean',
     ];
 
     public function category(): BelongsTo

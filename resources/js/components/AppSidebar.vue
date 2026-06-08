@@ -15,6 +15,7 @@ import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     LayoutDashboard,
+    LayoutGrid,
     ListOrdered,
     UserCog,
     MonitorSmartphone,
@@ -35,6 +36,7 @@ import {
     Printer,
     Tag,
     Monitor,
+    Table2,
 } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
@@ -70,6 +72,13 @@ const mainNavItems: NavItem[] = [
         hasSubItems: false,
     },
     {
+        title: 'Tables',
+        href: route('tables.index'),
+        icon: Table2,
+        isActive: isActiveRoute(route('tables.index')),
+        hasSubItems: false,
+    },
+    {
         title: 'Orders',
         href: route('orders.index'),
         icon: ListOrdered,
@@ -92,16 +101,16 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Packages',
-        href: route('packages.index'),
+        href: route('package-configs.index'),
         icon: Package,
-        isActive: isActiveRoute(route('packages.index')),
+        isActive: isActiveRoute(route('package-configs.index')),
         hasSubItems: false,
     },
     {
-        title: 'User Management',
-        href: route('users.index'),
-        icon: UserCog,
-        isActive: isActiveRoute(route('users.index')),
+        title: 'Tablet Categories',
+        href: route('tablet-categories.index'),
+        icon: LayoutGrid,
+        isActive: isActiveRoute(route('tablet-categories.index')),
         hasSubItems: false,
     },
     {
@@ -109,6 +118,13 @@ const mainNavItems: NavItem[] = [
         href: route('devices.index'),
         icon: MonitorSmartphone,
         isActive: isActiveRoute(route('devices.index')),
+        hasSubItems: false,
+    },
+    {
+        title: 'User Management',
+        href: route('users.index'),
+        icon: UserCog,
+        isActive: isActiveRoute(route('users.index')),
         hasSubItems: false,
     },
     {
