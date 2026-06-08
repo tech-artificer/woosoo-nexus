@@ -24,6 +24,14 @@ class KdsController extends Controller
         OrderStatus::ARCHIVED,
     ];
 
+    private const TERMINAL_ITEM_STATUSES = [
+        OrderStatus::SERVED,
+        OrderStatus::COMPLETED,
+        OrderStatus::CANCELLED,
+        OrderStatus::VOIDED,
+        OrderStatus::ARCHIVED,
+    ];
+
     public function index(Request $request): Response
     {
         $orders = DeviceOrder::with(['device.table', 'table', 'items.menu'])
@@ -58,17 +66,33 @@ class KdsController extends Controller
             return response()->json(['message' => 'No advance available from current state.'], 422);
         }
 
-        // Mark Ready gate: all items must be done
-        if ($current === OrderStatus::IN_PROGRESS) {
-            if ($order->items->contains(fn ($it) => ! (bool) ($it->done ?? false))) {
-                return response()->json(['message' => 'All items must be marked done before advancing to Ready.'], 422);
-            }
-        }
+        $gateMessage = null;
 
-        DB::transaction(function () use ($order, $next) {
+        DB::transaction(function () use ($order, $current, $next, &$gateMessage) {
+            // Lock order row — serialises concurrent advance() calls and toggleItem() writes.
+            DeviceOrder::lockForUpdate()->find($order->id);
+
+            // Mark Ready gate: re-check items under lock to eliminate TOCTOU with toggleItem().
+            if ($current === OrderStatus::IN_PROGRESS) {
+                $hasUndone = DeviceOrderItems::where('order_id', $order->id)
+                    ->where('done', false)
+                    ->lockForUpdate()
+                    ->exists();
+
+                if ($hasUndone) {
+                    $gateMessage = 'All items must be marked done before advancing to Ready.';
+
+                    return;
+                }
+            }
+
             $order->status = $next;
             $order->save();
         });
+
+        if ($gateMessage !== null) {
+            return response()->json(['message' => $gateMessage], 422);
+        }
 
         Log::info('[KDS] advance', ['order_id' => $order->id, 'to' => $next->value, 'admin_id' => auth()->id()]);
 
@@ -80,7 +104,16 @@ class KdsController extends Controller
 
     public function toggleItem(DeviceOrderItems $item): JsonResponse
     {
+        $item->loadMissing('device_order');
+
+        if (in_array($item->device_order->status, self::TERMINAL_ITEM_STATUSES)) {
+            return response()->json(['message' => 'Cannot toggle items on a completed or closed order.'], 422);
+        }
+
         DB::transaction(function () use ($item) {
+            // Lock the parent order row so concurrent advance() must wait until this write commits.
+            DeviceOrder::lockForUpdate()->find($item->order_id);
+
             $item->done = ! (bool) ($item->done ?? false);
             $item->done_at = $item->done ? now() : null;
             $item->save();

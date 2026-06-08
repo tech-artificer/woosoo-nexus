@@ -76,3 +76,50 @@ test('non-admin cannot access kds advance endpoint', function () {
         ->postJson("/kds/orders/{$order->id}/advance")
         ->assertForbidden();
 });
+
+test('cannot toggle item on a served order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Cannot toggle items on a completed or closed order.']);
+});
+
+test('cannot toggle item on a voided order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::VOIDED]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Cannot toggle items on a completed or closed order.']);
+});
+
+test('cannot toggle item on a completed order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::COMPLETED]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Cannot toggle items on a completed or closed order.']);
+});
+
+test('mark ready gate re-checks items inside the transaction', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
+
+    // Simulate an item that was done when initially loaded but undone before advance commits.
+    $item->update(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'All items must be marked done before advancing to Ready.']);
+});
