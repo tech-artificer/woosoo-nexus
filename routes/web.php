@@ -1,37 +1,36 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-
-
-use App\Http\Controllers\Admin\{
-    DashboardController,
-    OrderController,
-    PosController,
-    MenuController,
-    UserController,
-    Device\DeviceController,
-    ManualController,
-    AccessibilityController,
-    RoleController,
-    PermissionController,
-    PackageController,
-    PackageConfigController,
-    TabletCategoryController,
-    MediaLibraryController,
-    BranchController,
-    ReverbController,
-    MonitoringController,
-    PosConnectionController
-};
-use App\Http\Controllers\Admin\ServiceRequestController;
+use App\Enums\OrderStatus;
+use App\Events\Order\OrderCompleted;
+use App\Events\Order\OrderVoided;
+use App\Http\Controllers\Admin\AccessibilityController;
+use App\Http\Controllers\Admin\BranchController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\Device\DeviceController;
 use App\Http\Controllers\Admin\EventLogController;
-
-use App\Http\Controllers\Admin\Reports\{
-    SalesController,
-    ReportController,
-};
+use App\Http\Controllers\Admin\KdsController;
+use App\Http\Controllers\Admin\ManualController;
+use App\Http\Controllers\Admin\MediaLibraryController;
+use App\Http\Controllers\Admin\MenuController;
+use App\Http\Controllers\Admin\MonitoringController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PackageConfigController;
+use App\Http\Controllers\Admin\PackageController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\PosConnectionController;
+use App\Http\Controllers\Admin\PosController;
+use App\Http\Controllers\Admin\Reports\ReportController;
+use App\Http\Controllers\Admin\ReverbController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\ServiceRequestController;
+use App\Http\Controllers\Admin\TabletCategoryController;
+use App\Http\Controllers\Admin\UserController;
+use App\Models\DeviceOrder;
+use App\Services\LocalBranchResolver;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 // Handle CORS preflight — return 204 No Content with no body
 Route::options('/{any}', function () {
@@ -58,11 +57,7 @@ Route::middleware(['auth'])->group(function () {
     // Admin-only routes
     Route::middleware(['can:admin'])->group(function () {
         // Orders
-        Route::get('/kds', function () {
-            return Inertia::render('KDS/Display', [
-                'title' => 'Kitchen Display',
-            ]);
-        })->name('kds.display');
+        Route::get('/kds', [KdsController::class, 'index'])->name('kds.display');
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
@@ -78,14 +73,14 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/pos/orders/{orderId}', [PosController::class, 'editOrder'])->name('pos.orders.edit');
         Route::post('/pos/orders/{orderId}/void', [PosController::class, 'voidOrder'])->name('pos.orders.void');
         Route::post('/pos/orders/{orderId}/pay', [PosController::class, 'payOrder'])->name('pos.orders.pay');
-        
+
         // Bulk operations with rate limiting (60 requests/min to prevent abuse)
         Route::middleware(['throttle:60,1'])->group(function () {
             Route::post('/orders/bulk-complete', [OrderController::class, 'bulkComplete'])->name('orders.bulk-complete');
             Route::post('/orders/bulk-void', [OrderController::class, 'bulkVoid'])->name('orders.bulk-void');
             Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->name('orders.bulk-status');
         });
-        
+
         // Admin: update single order status
         Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
         // Device order API for strict verification
@@ -136,7 +131,7 @@ Route::middleware(['auth'])->group(function () {
         ];
 
         Route::get('/admin/api/settings', function () use ($settingsDefaults) {
-            $branch = app(\App\Services\LocalBranchResolver::class)->resolve();
+            $branch = app(LocalBranchResolver::class)->resolve();
 
             if (! $branch) {
                 return response()->json(['message' => 'No active branch configured.'], 422);
@@ -145,8 +140,8 @@ Route::middleware(['auth'])->group(function () {
             return response()->json(array_merge($settingsDefaults, $branch->settings ?? []));
         })->name('admin.settings.get');
 
-        Route::put('/admin/api/settings', function (\Illuminate\Http\Request $request) use ($settingsDefaults) {
-            $branch = app(\App\Services\LocalBranchResolver::class)->resolve();
+        Route::put('/admin/api/settings', function (Request $request) {
+            $branch = app(LocalBranchResolver::class)->resolve();
 
             if (! $branch) {
                 return response()->json(['message' => 'No active branch configured.'], 422);
@@ -237,7 +232,7 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // Update device_orders directly (admin only)
-        Route::post('/pos/fill-order', function (\Illuminate\Http\Request $request) {
+        Route::post('/pos/fill-order', function (Request $request) {
             $user = $request->user();
             if (! $user || ! ($user->is_admin ?? false)) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
@@ -256,25 +251,25 @@ Route::middleware(['auth'])->group(function () {
 
             try {
                 // Update local device_orders table directly
-                $deviceOrder = \App\Models\DeviceOrder::where('order_id', $orderId)->first();
+                $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
                 if ($deviceOrder) {
-                    $newStatus = $isVoided 
-                        ? \App\Enums\OrderStatus::VOIDED 
-                        : \App\Enums\OrderStatus::COMPLETED;
+                    $newStatus = $isVoided
+                        ? OrderStatus::VOIDED
+                        : OrderStatus::COMPLETED;
                     $deviceOrder->update(['status' => $newStatus]);
 
                     // Dispatch appropriate event
                     if ($isVoided) {
-                        \App\Events\Order\OrderVoided::dispatch($deviceOrder);
+                        OrderVoided::dispatch($deviceOrder);
                     } else {
-                        \App\Events\Order\OrderCompleted::dispatch($deviceOrder);
+                        OrderCompleted::dispatch($deviceOrder);
                     }
 
                     return response()->json(['success' => true, 'order' => $deviceOrder]);
                 }
 
                 return response()->json(['success' => false, 'message' => 'Device order not found'], 404);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
             }
         })->name('pos.fill-order');

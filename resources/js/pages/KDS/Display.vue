@@ -8,18 +8,19 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, elapsedFor, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
-import { kdsMockTickets } from '@/components/KDS/kdsMockData'
+import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
+import { useKdsBoard } from '@/components/KDS/useKdsBoard'
+import { useKdsEcho } from '@/components/KDS/useKdsEcho'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 
-defineProps<{
+const props = defineProps<{
   title: string
+  initialTickets: KdsTicket[]
 }>()
 
-const tickets = ref<KdsTicket[]>(kdsMockTickets.map((ticket) => ({
-  ...ticket,
-  items: ticket.items.map((item) => ({ ...item })),
-})))
+const board = useKdsBoard(props.initialTickets)
+const tickets = board.tickets
+useKdsEcho(board)
 const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())

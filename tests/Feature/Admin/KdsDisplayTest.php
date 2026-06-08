@@ -15,7 +15,7 @@ test('non-admin users cannot access the KDS display', function () {
         ->assertForbidden();
 });
 
-test('admins can open the mock KDS display', function () {
+test('admins can open the KDS display with a tickets prop', function () {
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
@@ -24,5 +24,6 @@ test('admins can open the mock KDS display', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('KDS/Display')
             ->where('title', 'Kitchen Display')
+            ->has('initialTickets')
         );
 });
