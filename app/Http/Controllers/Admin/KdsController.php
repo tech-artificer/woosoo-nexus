@@ -69,8 +69,15 @@ class KdsController extends Controller
         $gateMessage = null;
 
         DB::transaction(function () use ($order, $current, $next, &$gateMessage) {
-            // Lock order row — serialises concurrent advance() calls and toggleItem() writes.
-            DeviceOrder::lockForUpdate()->find($order->id);
+            // Re-read with lock so we both serialise concurrent writers and write to the current DB row.
+            $locked = DeviceOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Guard: concurrent advance() already moved this order; our $current is stale.
+            if ($locked->status !== $current) {
+                $gateMessage = 'Order state changed concurrently; please retry.';
+
+                return;
+            }
 
             // Mark Ready gate: re-check items under lock to eliminate TOCTOU with toggleItem().
             if ($current === OrderStatus::IN_PROGRESS) {
@@ -86,8 +93,8 @@ class KdsController extends Controller
                 }
             }
 
-            $order->status = $next;
-            $order->save();
+            $locked->status = $next;
+            $locked->save();
         });
 
         if ($gateMessage !== null) {
@@ -96,6 +103,7 @@ class KdsController extends Controller
 
         Log::info('[KDS] advance', ['order_id' => $order->id, 'to' => $next->value, 'admin_id' => auth()->id()]);
 
+        $order->refresh();
         $order->load(['device.table', 'table', 'items.menu', 'serviceRequests']);
         app(OrderBroadcaster::class)->statusChanged($order);
 
@@ -104,20 +112,26 @@ class KdsController extends Controller
 
     public function toggleItem(DeviceOrderItems $item): JsonResponse
     {
-        $item->loadMissing('device_order');
+        $gateMessage = null;
 
-        if (in_array($item->device_order->status, self::TERMINAL_ITEM_STATUSES)) {
-            return response()->json(['message' => 'Cannot toggle items on a completed or closed order.'], 422);
-        }
+        DB::transaction(function () use ($item, &$gateMessage) {
+            // Re-read order under lock; serialises with concurrent advance() and re-checks terminal status.
+            $order = DeviceOrder::lockForUpdate()->findOrFail($item->order_id);
 
-        DB::transaction(function () use ($item) {
-            // Lock the parent order row so concurrent advance() must wait until this write commits.
-            DeviceOrder::lockForUpdate()->find($item->order_id);
+            if (in_array($order->status, self::TERMINAL_ITEM_STATUSES)) {
+                $gateMessage = 'Cannot toggle items on a completed or closed order.';
+
+                return;
+            }
 
             $item->done = ! (bool) ($item->done ?? false);
             $item->done_at = $item->done ? now() : null;
             $item->save();
         });
+
+        if ($gateMessage !== null) {
+            return response()->json(['message' => $gateMessage], 422);
+        }
 
         Log::info('[KDS] toggle item', ['item_id' => $item->id, 'done' => $item->done, 'admin_id' => auth()->id()]);
 

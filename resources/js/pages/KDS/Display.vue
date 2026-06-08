@@ -9,7 +9,6 @@ import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
 import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
-import { kdsMockTickets } from '@/components/KDS/kdsMockData'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 
 const props = defineProps<{
@@ -18,9 +17,7 @@ const props = defineProps<{
 }>()
 
 function seedTickets(source: KdsTicket[]): KdsTicket[] {
-  const base = source.length > 0 ? source : kdsMockTickets
-
-  return base.map((ticket) => ({
+  return source.map((ticket) => ({
     ...ticket,
     items: ticket.items.map((item) => ({ ...item, done: item.done === true })),
   }))
