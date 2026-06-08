@@ -127,10 +127,19 @@ export function stateLabel(state: KdsTicketState): string {
 
 export function canAdvanceTicket(ticket: KdsTicket): boolean {
   if (ticket.state === 'preparing') {
-    return ticket.items.every((item) => item.done)
+    return ticket.items.every((item) => item.done === true)
   }
 
   return nextStateFor(ticket.state) !== null
+}
+
+/** Primary action `:disabled` — Mark Ready gated until every checklist item is done. */
+export function isAdvanceBlocked(ticket: KdsTicket): boolean {
+  if (nextStateFor(ticket.state) === null) {
+    return false
+  }
+
+  return !canAdvanceTicket(ticket)
 }
 
 export function applyAdvance(ticket: KdsTicket, now: number): KdsTicket {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import axios from 'axios'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
@@ -9,9 +8,8 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { ACTIVE_STATES, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
-import { useKdsBoard } from '@/components/KDS/useKdsBoard'
-import { useKdsEcho } from '@/components/KDS/useKdsEcho'
+import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
+import { kdsMockTickets } from '@/components/KDS/kdsMockData'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 
 const props = defineProps<{
@@ -19,13 +17,19 @@ const props = defineProps<{
   initialTickets: KdsTicket[]
 }>()
 
-const board = useKdsBoard(props.initialTickets)
-const tickets = board.tickets
-useKdsEcho(board)
+function seedTickets(source: KdsTicket[]): KdsTicket[] {
+  const base = source.length > 0 ? source : kdsMockTickets
+
+  return base.map((ticket) => ({
+    ...ticket,
+    items: ticket.items.map((item) => ({ ...item, done: item.done === true })),
+  }))
+}
+
+const tickets = ref<KdsTicket[]>(seedTickets(props.initialTickets))
 const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
-const canvasScale = ref(1)
 let timer: ReturnType<typeof setInterval> | null = null
 
 const activeTickets = computed(() => tickets.value.filter((ticket) => ACTIVE_STATES.includes(ticket.state)))
@@ -49,14 +53,38 @@ const counts = computed<Record<KdsFilter, number>>(() => ({
   voided: tickets.value.filter((ticket) => ticket.state === 'voided').length,
 }))
 
-function updateCanvasScale() {
-  if (typeof window === 'undefined') {
+function updateTicket(ticketId: string, updater: (ticket: KdsTicket) => KdsTicket) {
+  tickets.value = tickets.value.map((ticket) => ticket.id === ticketId ? updater(ticket) : ticket)
+}
+
+function toggleItem(ticketId: string, itemId: string) {
+  updateTicket(ticketId, (ticket) => {
+    if (ticket.state === 'served' || ticket.state === 'voided') {
+      return ticket
+    }
+
+    return {
+      ...ticket,
+      items: ticket.items.map((item) => item.id === itemId ? { ...item, done: !item.done } : item),
+    }
+  })
+}
+
+function advanceTicket(ticketId: string) {
+  const ticket = tickets.value.find((item) => item.id === ticketId)
+
+  if (!ticket) {
     return
   }
 
-  const safeWidth = window.innerWidth - 16
-  const safeHeight = window.innerHeight - 16
-  canvasScale.value = Math.min(safeWidth / 1280, safeHeight / 800, 1.5)
+  if (!canAdvanceTicket(ticket)) {
+    toast.warning('Complete all checklist items first.', {
+      duration: 3500,
+    })
+    return
+  }
+
+  updateTicket(ticketId, (current) => applyAdvance(current, now.value))
 }
 
 function toggleDensity() {
@@ -65,53 +93,6 @@ function toggleDensity() {
     window.localStorage.setItem('kds-density', density.value)
   } catch {
     // Storage is optional for kiosk browsers.
-  }
-}
-
-function updateTicket(ticketId: string, updater: (ticket: KdsTicket) => KdsTicket) {
-  tickets.value = tickets.value.map((ticket) => ticket.id === ticketId ? updater(ticket) : ticket)
-}
-
-async function toggleItem(ticketId: string, itemId: string) {
-  const ticket = tickets.value.find((t) => t.id === ticketId)
-  if (!ticket || ticket.state === 'served' || ticket.state === 'voided') {
-    return
-  }
-
-  // Optimistic update
-  updateTicket(ticketId, (t) => ({
-    ...t,
-    items: t.items.map((it) => it.id === itemId ? { ...it, done: !it.done } : it),
-  }))
-
-  try {
-    await axios.post(`/kds/items/${itemId}/toggle`)
-  } catch {
-    // Revert optimistic update on failure
-    updateTicket(ticketId, (t) => ({
-      ...t,
-      items: t.items.map((it) => it.id === itemId ? { ...it, done: !it.done } : it),
-    }))
-    toast.error('Could not update item. Please try again.', { duration: 3000 })
-  }
-}
-
-async function advanceTicket(ticketId: string) {
-  const ticket = tickets.value.find((t) => t.id === ticketId)
-  if (!ticket) {
-    return
-  }
-
-  if (!canAdvanceTicket(ticket)) {
-    toast.warning('Complete all checklist items first.', { duration: 3500 })
-    return
-  }
-
-  try {
-    await axios.post(`/kds/orders/${ticketId}/advance`)
-  } catch (err: any) {
-    const msg = err?.response?.data?.message ?? 'Could not advance ticket. Please try again.'
-    toast.error(msg, { duration: 3500 })
   }
 }
 
@@ -133,9 +114,6 @@ onMounted(() => {
     // Storage is optional for kiosk browsers.
   }
 
-  updateCanvasScale()
-  window.addEventListener('resize', updateCanvasScale)
-  window.addEventListener('orientationchange', updateCanvasScale)
   timer = setInterval(() => {
     now.value = Date.now()
   }, 1000)
@@ -146,8 +124,6 @@ onBeforeUnmount(() => {
     clearInterval(timer)
     timer = null
   }
-  window.removeEventListener('resize', updateCanvasScale)
-  window.removeEventListener('orientationchange', updateCanvasScale)
 })
 </script>
 
@@ -155,11 +131,7 @@ onBeforeUnmount(() => {
   <Head :title="title" />
 
   <main class="kds-viewport" aria-label="Woosoo Kitchen Display">
-    <div class="kds-device-frame">
-      <section
-        class="kds-canvas"
-        :style="{ transform: `scale(${canvasScale})` }"
-      >
+    <section class="kds-shell">
         <KdsCommandBar
           :active="counts.active"
           :new-count="counts.new"
@@ -197,8 +169,7 @@ onBeforeUnmount(() => {
           </div>
           <KdsEmptyState v-else />
         </section>
-      </section>
-    </div>
+    </section>
     <Toaster position="top-center" rich-colors />
   </main>
 </template>
@@ -231,14 +202,21 @@ onBeforeUnmount(() => {
 html:has(.kds-viewport),
 body:has(.kds-viewport) {
   overflow: hidden;
+  margin: 0;
+  width: 100%;
+  height: 100%;
   background: var(--kds-bg0);
 }
 </style>
 
 <style scoped>
 .kds-viewport {
+  display: flex;
+  flex-direction: column;
+  width: 100dvw;
+  height: 100dvh;
   min-height: 100dvh;
-  width: 100vw;
+  max-height: 100dvh;
   overflow: hidden;
   background:
     radial-gradient(circle at 18% 0%, rgb(246 181 109 / 0.08), transparent 24%),
@@ -247,30 +225,23 @@ body:has(.kds-viewport) {
   font-family: var(--kds-font-s);
   letter-spacing: 0;
   padding:
-    max(8px, env(safe-area-inset-top))
-    max(8px, env(safe-area-inset-right))
-    max(8px, env(safe-area-inset-bottom))
-    max(8px, env(safe-area-inset-left));
+    env(safe-area-inset-top, 0)
+    env(safe-area-inset-right, 0)
+    env(safe-area-inset-bottom, 0)
+    env(safe-area-inset-left, 0);
   touch-action: manipulation;
+  box-sizing: border-box;
 }
 
-.kds-device-frame {
+.kds-shell {
   display: grid;
-  min-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
-  place-items: center;
-}
-
-.kds-canvas {
-  display: grid;
-  grid-template-rows: 68px 58px minmax(0, 1fr);
-  width: 1280px;
-  height: 800px;
+  grid-template-rows: minmax(68px, auto) minmax(58px, auto) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  transform-origin: center;
-  border: 1px solid rgb(255 255 255 / 0.08);
-  border-radius: 16px;
   background: var(--kds-bg0);
-  box-shadow: 0 32px 120px rgb(0 0 0 / 0.62);
 }
 
 .kds-subbar {
@@ -493,7 +464,7 @@ body:has(.kds-viewport) {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 42px;
+  min-height: 44px;
   min-width: 116px;
   border: 1px solid rgb(255 255 255 / 0.08);
   border-radius: 8px;
@@ -685,7 +656,7 @@ body:has(.kds-viewport) {
 
 :deep(.kds-item-row) {
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   gap: 10px;
   border: 0;
   border-top: 1px solid rgb(255 255 255 / 0.045);
@@ -699,7 +670,7 @@ body:has(.kds-viewport) {
 }
 
 :deep(.density-compact .kds-item-row) {
-  min-height: 40px;
+  min-height: 44px;
   font-size: 15px;
 }
 
@@ -815,7 +786,7 @@ body:has(.kds-viewport) {
 :deep(.kds-empty) {
   display: grid;
   height: 100%;
-  min-height: 540px;
+  min-height: 0;
   place-items: center;
   align-content: center;
   gap: 10px;
@@ -837,12 +808,6 @@ body:has(.kds-viewport) {
 
 :deep(.kds-empty span) {
   font-size: 16px;
-}
-
-@media (max-width: 900px), (max-height: 620px) {
-  .kds-viewport {
-    overflow: auto;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
