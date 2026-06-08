@@ -58,6 +58,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['can:admin'])->group(function () {
         // Orders
         Route::get('/kds', [KdsController::class, 'index'])->name('kds.display');
+        Route::post('/kds/orders/{order}/advance', [KdsController::class, 'advance'])->name('kds.advance');
+        Route::post('/kds/items/{item}/toggle', [KdsController::class, 'toggleItem'])->name('kds.toggle-item');
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');

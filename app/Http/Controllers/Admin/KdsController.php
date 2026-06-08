@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Broadcasting\OrderBroadcaster;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
+use App\Models\DeviceOrderItems;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,6 +35,75 @@ class KdsController extends Controller
             'title' => 'Kitchen Display',
             'initialTickets' => $orders->map(fn ($order) => $this->toTicket($order))->values(),
         ]);
+    }
+
+    public function advance(DeviceOrder $order): JsonResponse
+    {
+        $order->loadMissing('items');
+        $current = $order->status;
+
+        // Auto-advance pending through confirmed (pending is transient)
+        if ($current === OrderStatus::PENDING) {
+            DB::transaction(function () use ($order) {
+                $order->status = OrderStatus::CONFIRMED;
+                $order->save();
+            });
+            $order->refresh();
+            $current = OrderStatus::CONFIRMED;
+        }
+
+        $next = $this->nextStatus($current);
+
+        if ($next === null) {
+            return response()->json(['message' => 'No advance available from current state.'], 422);
+        }
+
+        // Mark Ready gate: all items must be done
+        if ($current === OrderStatus::IN_PROGRESS) {
+            if ($order->items->contains(fn ($it) => ! (bool) ($it->done ?? false))) {
+                return response()->json(['message' => 'All items must be marked done before advancing to Ready.'], 422);
+            }
+        }
+
+        DB::transaction(function () use ($order, $next) {
+            $order->status = $next;
+            $order->save();
+        });
+
+        Log::info('[KDS] advance', ['order_id' => $order->id, 'to' => $next->value, 'admin_id' => auth()->id()]);
+
+        $order->load(['device.table', 'table', 'items.menu', 'serviceRequests']);
+        app(OrderBroadcaster::class)->statusChanged($order);
+
+        return response()->json(['status' => $next->value]);
+    }
+
+    public function toggleItem(DeviceOrderItems $item): JsonResponse
+    {
+        DB::transaction(function () use ($item) {
+            $item->done = ! (bool) ($item->done ?? false);
+            $item->done_at = $item->done ? now() : null;
+            $item->save();
+        });
+
+        Log::info('[KDS] toggle item', ['item_id' => $item->id, 'done' => $item->done, 'admin_id' => auth()->id()]);
+
+        app(OrderBroadcaster::class)->itemToggled($item);
+
+        return response()->json([
+            'done' => (bool) $item->done,
+            'done_at' => $item->done_at?->toIso8601String(),
+        ]);
+    }
+
+    private function nextStatus(OrderStatus $status): ?OrderStatus
+    {
+        return match ($status) {
+            OrderStatus::CONFIRMED => OrderStatus::IN_PROGRESS,
+            OrderStatus::IN_PROGRESS => OrderStatus::READY,
+            OrderStatus::READY => OrderStatus::SERVED,
+            default => null,
+        };
     }
 
     private function toTicket(DeviceOrder $order): array
@@ -59,9 +133,9 @@ class KdsController extends Controller
                 'id' => (string) $it->id,
                 'qty' => (int) ($it->quantity ?? 1),
                 'name' => $it->menu?->receipt_name ?? $it->menu?->name ?? $it->name ?? '',
-                'done' => false,
+                'done' => (bool) ($it->done ?? false),
             ])->values()->all(),
-            'recalled' => null,
+            'recalled' => $order->recalled ?? 0,
             'voidReason' => null,
         ];
     }

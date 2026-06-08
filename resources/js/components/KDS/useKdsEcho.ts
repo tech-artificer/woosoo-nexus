@@ -6,12 +6,20 @@ type Board = ReturnType<typeof useKdsBoard>
 export function useKdsEcho(board: Board) {
   let channel: ReturnType<typeof window.Echo.channel> | null = null
 
-  function handleEvent(e: unknown): void {
+  function handleOrderEvent(e: unknown): void {
     const payload = (e as any)?.order ?? e
     if (!payload?.id) {
       return
     }
     board.applyOrderUpdate(payload)
+  }
+
+  function handleItemToggle(e: unknown): void {
+    const payload = e as any
+    if (!payload?.item_id) {
+      return
+    }
+    board.applyItemToggle(payload)
   }
 
   onMounted(() => {
@@ -22,11 +30,12 @@ export function useKdsEcho(board: Board) {
 
     channel = window.Echo.channel('admin.orders')
     channel
-      .listen('.order.created', handleEvent)
-      .listen('.order.updated', handleEvent)
-      .listen('.order.voided', handleEvent)
-      .listen('.order.completed', handleEvent)
-      .listen('.order.cancelled', handleEvent)
+      .listen('.order.created', handleOrderEvent)
+      .listen('.order.updated', handleOrderEvent)
+      .listen('.order.voided', handleOrderEvent)
+      .listen('.order.completed', handleOrderEvent)
+      .listen('.order.cancelled', handleOrderEvent)
+      .listen('.item.toggled', handleItemToggle)
   })
 
   onBeforeUnmount(() => {

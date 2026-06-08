@@ -17,12 +17,13 @@ namespace App\Broadcasting;
  */
 enum BroadcastEvent: string
 {
-    case OrderCreated        = 'order.created';
-    case OrderUpdated        = 'order.updated';
-    case OrderCompleted      = 'order.completed';
-    case OrderVoided         = 'order.voided';
-    case OrderCancelled      = 'order.cancelled';
+    case OrderCreated = 'order.created';
+    case OrderUpdated = 'order.updated';
+    case OrderCompleted = 'order.completed';
+    case OrderVoided = 'order.voided';
+    case OrderCancelled = 'order.cancelled';
     case OrderDetailsUpdated = 'order.details.updated';
-    case PrintRequested      = 'order.print.requested';
-    case SessionReset        = 'session.reset';
+    case PrintRequested = 'order.print.requested';
+    case ItemToggled = 'item.toggled';
+    case SessionReset = 'session.reset';
 }

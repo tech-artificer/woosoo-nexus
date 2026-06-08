@@ -2,18 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Krypton\Menu;
 use App\Enums\ItemStatus;
+use App\Models\Krypton\Menu;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DeviceOrderItems extends Model
 {
-    use SoftDeletes, HasFactory;
+    use HasFactory, SoftDeletes;
+
     protected $table = 'device_order_items';
+
     protected $fillable = [
         'order_id',
         'ordered_menu_id',
@@ -28,6 +30,8 @@ class DeviceOrderItems extends Model
         'seat_number',
         'index',
         'is_refill',
+        'done',
+        'done_at',
         'is_printed',
         'printed_at',
         'printed_by_print_event_id',
@@ -44,6 +48,8 @@ class DeviceOrderItems extends Model
         'total' => 'decimal:4',
         'status' => ItemStatus::class,
         'is_refill' => 'boolean',
+        'done' => 'boolean',
+        'done_at' => 'datetime',
         'is_printed' => 'boolean',
         'printed_at' => 'datetime',
     ];

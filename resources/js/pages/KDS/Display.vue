@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
+import axios from 'axios'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
@@ -8,7 +9,7 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
+import { ACTIVE_STATES, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
 import { useKdsEcho } from '@/components/KDS/useKdsEcho'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
@@ -71,34 +72,47 @@ function updateTicket(ticketId: string, updater: (ticket: KdsTicket) => KdsTicke
   tickets.value = tickets.value.map((ticket) => ticket.id === ticketId ? updater(ticket) : ticket)
 }
 
-function toggleItem(ticketId: string, itemId: string) {
-  updateTicket(ticketId, (ticket) => {
-    if (ticket.state === 'served' || ticket.state === 'voided') {
-      return ticket
-    }
+async function toggleItem(ticketId: string, itemId: string) {
+  const ticket = tickets.value.find((t) => t.id === ticketId)
+  if (!ticket || ticket.state === 'served' || ticket.state === 'voided') {
+    return
+  }
 
-    return {
-      ...ticket,
-      items: ticket.items.map((item) => item.id === itemId ? { ...item, done: !item.done } : item),
-    }
-  })
+  // Optimistic update
+  updateTicket(ticketId, (t) => ({
+    ...t,
+    items: t.items.map((it) => it.id === itemId ? { ...it, done: !it.done } : it),
+  }))
+
+  try {
+    await axios.post(`/kds/items/${itemId}/toggle`)
+  } catch {
+    // Revert optimistic update on failure
+    updateTicket(ticketId, (t) => ({
+      ...t,
+      items: t.items.map((it) => it.id === itemId ? { ...it, done: !it.done } : it),
+    }))
+    toast.error('Could not update item. Please try again.', { duration: 3000 })
+  }
 }
 
-function advanceTicket(ticketId: string) {
-  const ticket = tickets.value.find((item) => item.id === ticketId)
-
+async function advanceTicket(ticketId: string) {
+  const ticket = tickets.value.find((t) => t.id === ticketId)
   if (!ticket) {
     return
   }
 
   if (!canAdvanceTicket(ticket)) {
-    toast.warning('Complete all checklist items first.', {
-      duration: 3500,
-    })
+    toast.warning('Complete all checklist items first.', { duration: 3500 })
     return
   }
 
-  updateTicket(ticketId, (current) => applyAdvance(current, now.value))
+  try {
+    await axios.post(`/kds/orders/${ticketId}/advance`)
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? 'Could not advance ticket. Please try again.'
+    toast.error(msg, { duration: 3500 })
+  }
 }
 
 function recallTicket(ticketId: string) {

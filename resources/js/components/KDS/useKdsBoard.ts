@@ -14,8 +14,18 @@ type OrderPayload = {
     quantity: number
     name: string
     is_refill?: boolean
+    done?: boolean
+    done_at?: string | null
   }>
-  void_reason?: string
+  recalled?: number | null
+  void_reason?: string | null
+}
+
+type ItemTogglePayload = {
+  item_id: string | number
+  order_id: string | number
+  done: boolean
+  done_at: string | null
 }
 
 const HIDDEN_STATUSES = new Set(['completed', 'cancelled', 'archived'])
@@ -45,10 +55,10 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
       id: String(it.id),
       qty: it.quantity ?? 1,
       name: it.name ?? '',
-      done: false,
+      done: (it.done ?? false),
     })),
-    recalled: undefined,
-    voidReason: payload.void_reason,
+    recalled: payload.recalled ?? undefined,
+    voidReason: payload.void_reason ?? undefined,
   }
 }
 
@@ -73,5 +83,23 @@ export function useKdsBoard(initialTickets: KdsTicket[]) {
     }
   }
 
-  return { tickets, applyOrderUpdate }
+  function applyItemToggle(payload: ItemTogglePayload): void {
+    const orderId = String(payload.order_id)
+    const itemId = String(payload.item_id)
+
+    tickets.value = tickets.value.map((t) => {
+      if (t.id !== orderId) {
+        return t
+      }
+
+      return {
+        ...t,
+        items: t.items.map((it) =>
+          it.id === itemId ? { ...it, done: payload.done } : it,
+        ),
+      }
+    })
+  }
+
+  return { tickets, applyOrderUpdate, applyItemToggle }
 }

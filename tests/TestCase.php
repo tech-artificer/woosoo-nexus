@@ -311,6 +311,7 @@ abstract class TestCase extends BaseTestCase
                     $table->string('order_number')->nullable();
                     $table->uuid('order_uuid')->nullable()->unique();
                     $table->string('status')->nullable();
+                    $table->smallInteger('recalled')->default(0);
                     $table->decimal('subtotal', 8, 2)->nullable();
                     $table->decimal('tax', 8, 2)->nullable();
                     $table->decimal('discount', 8, 2)->nullable();
@@ -347,6 +348,8 @@ abstract class TestCase extends BaseTestCase
                     $table->integer('seat_number')->nullable();
                     $table->integer('index')->nullable();
                     $table->boolean('is_refill')->default(false);
+                    $table->boolean('done')->default(false);
+                    $table->timestamp('done_at')->nullable();
                     $table->boolean('is_printed')->default(false);
                     $table->timestamp('printed_at')->nullable();
                     $table->unsignedBigInteger('printed_by_print_event_id')->nullable();
@@ -370,6 +373,7 @@ abstract class TestCase extends BaseTestCase
                 $table->string('order_number')->nullable();
                 $table->uuid('order_uuid')->nullable()->unique();
                 $table->string('status')->nullable();
+                $table->smallInteger('recalled')->default(0);
                 $table->decimal('subtotal', 8, 2)->nullable();
                 $table->decimal('tax', 8, 2)->nullable();
                 $table->decimal('discount', 8, 2)->nullable();
@@ -402,6 +406,8 @@ abstract class TestCase extends BaseTestCase
                 $table->integer('seat_number')->nullable();
                 $table->integer('index')->nullable();
                 $table->boolean('is_refill')->default(false);
+                $table->boolean('done')->default(false);
+                $table->timestamp('done_at')->nullable();
                 $table->boolean('is_printed')->default(false);
                 $table->timestamp('printed_at')->nullable();
                 $table->unsignedBigInteger('printed_by_print_event_id')->nullable();
@@ -497,7 +503,7 @@ abstract class TestCase extends BaseTestCase
                     // If we can't get the level, assume we need to purge
                     $level = 1;
                 }
-                
+
                 // Rollback all nested transactions/savepoints
                 while ($level > 0) {
                     try {
