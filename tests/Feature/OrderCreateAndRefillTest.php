@@ -2,27 +2,28 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Tests\Traits\MocksKryptonSession;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Mockery;
+use App\Enums\OrderStatus;
 use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
 use App\Services\Krypton\KryptonContextService;
-use App\Enums\OrderStatus;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Mockery;
+use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 
 class OrderCreateAndRefillTest extends TestCase
 {
-    use RefreshDatabase, MocksKryptonSession;
+    use MocksKryptonSession, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Mock active Krypton session for all tests
         $this->mockActiveKryptonSession();
 
@@ -50,7 +51,7 @@ class OrderCreateAndRefillTest extends TestCase
         ]);
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         Mockery::close();
         parent::tearDown();
@@ -111,7 +112,7 @@ class OrderCreateAndRefillTest extends TestCase
         $qb->shouldReceive('where')->andReturnSelf();
         $qb->shouldReceive('whereIn')->andReturnSelf();
         $qb->shouldReceive('delete')->andReturn(true);
-        $qb->shouldReceive('first')->andReturn((object)[
+        $qb->shouldReceive('first')->andReturn((object) [
             'id' => 9002,
             'order_id' => 1001,
             'menu_id' => 46,
@@ -124,7 +125,7 @@ class OrderCreateAndRefillTest extends TestCase
         $posConn->shouldReceive('table')->with('ordered_menus')->andReturn($qb);
 
         $realDb = DB::getFacadeRoot();
-            DB::shouldReceive('getDefaultConnection')->andReturn('testing');
+        DB::shouldReceive('getDefaultConnection')->andReturn('testing');
         DB::shouldReceive('connection')->andReturnUsing(function ($name = null) use ($posConn, $realDb) {
             if ($name === 'pos') {
                 return $posConn;
@@ -148,18 +149,17 @@ class OrderCreateAndRefillTest extends TestCase
                     'menu_id' => 46,
                     'name' => 'Classic Feast',
                     'quantity' => 2,
-                    'price' => 399.00,
                     'index' => 2,
                     'seat_number' => 1,
                     'note' => 'Refill',
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/order/1001/refill', $payload);
 
         $response->assertStatus(200)->assertJson(['success' => true]);
