@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { toast } from 'vue-sonner'
-import { Plus, Pencil, Trash2, Eye, Check } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Check } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import type { BreadcrumbItem } from '@/types'
 import { Button } from '@/components/ui/button'

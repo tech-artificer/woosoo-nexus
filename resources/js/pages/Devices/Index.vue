@@ -3,16 +3,14 @@ import { computed, ref } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { toast } from 'vue-sonner'
 import {
-    MonitorSmartphone, Wifi, WifiOff, AlertTriangle, Battery, BatteryLow,
-    BatteryMedium, RotateCcw, Plus, Eye, Download, RefreshCw, ShieldCheck,
-    ShieldAlert, Lock,
+    MonitorSmartphone, RotateCcw, Plus, Eye, Download, RefreshCw, ShieldCheck,
+    ShieldAlert,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
 import { type BreadcrumbItem } from '@/types'
 import type { Device } from '@/types/models'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
     AlertDialog,
     AlertDialogAction,
