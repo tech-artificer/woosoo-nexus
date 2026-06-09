@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Broadcasting;
 
+use App\Events\Kds\ItemToggled;
 use App\Events\Order\OrderCancelled;
 use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderCreated;
@@ -11,6 +12,7 @@ use App\Events\Order\OrderDetailsUpdated;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderVoided;
 use App\Models\DeviceOrder;
+use App\Models\DeviceOrderItems;
 use App\Services\BroadcastService;
 use InvalidArgumentException;
 
@@ -49,18 +51,23 @@ class OrderBroadcaster
         $this->broadcastService->safeBroadcast(new OrderDetailsUpdated($order));
     }
 
+    public function itemToggled(DeviceOrderItems $item): void
+    {
+        $this->broadcastService->safeBroadcast(new ItemToggled($item));
+    }
+
     /**
      * Dispatch the appropriate terminal event for an order finalization.
      *
-     * @param string $status one of: completed, voided, cancelled
+     * @param  string  $status  one of: completed, voided, cancelled
      */
     public function finalized(DeviceOrder $order, string $status): void
     {
         $event = match ($status) {
             'completed' => new OrderCompleted($order),
-            'voided'    => new OrderVoided($order),
+            'voided' => new OrderVoided($order),
             'cancelled' => new OrderCancelled($order),
-            default     => throw new InvalidArgumentException(
+            default => throw new InvalidArgumentException(
                 "OrderBroadcaster::finalized cannot route status [{$status}]"
             ),
         };

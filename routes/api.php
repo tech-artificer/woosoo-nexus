@@ -25,6 +25,7 @@ use App\Models\Krypton\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -375,7 +376,9 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
         try {
             $rows = DB::connection('pos')->select('CALL get_menus_by_course(?)', [$course]);
         } catch (Throwable $e) {
-            return ApiResponse::error('Stored procedure call failed: '.$e->getMessage(), null, 500);
+            Log::error('[debug/pos] stored procedure failed', ['error' => $e->getMessage(), 'course' => $course]);
+
+            return ApiResponse::error('POS stored procedure failed. Check Laravel log.', null, 500);
         }
 
         $ids = collect($rows)->pluck('id')->unique()->values()->all();

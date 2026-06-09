@@ -15,6 +15,30 @@ class StoreDeviceOrderRequest extends FormRequest
     }
 
     /**
+     * Strip any non-intent fields before validation so client-supplied pricing,
+     * modifiers, and POS mapping never enter validated() output.
+     *
+     * Contract: contracts/tablet-api.contract.md (intent-only payload).
+     */
+    protected function prepareForValidation(): void
+    {
+        $items = collect($this->input('items', []))
+            ->filter(static fn ($item) => is_array($item))
+            ->map(static fn (array $item) => [
+                'menu_id' => $item['menu_id'] ?? null,
+                'quantity' => $item['quantity'] ?? null,
+            ])
+            ->values()
+            ->all();
+
+        $this->replace([
+            'guest_count' => $this->input('guest_count'),
+            'package_id' => $this->input('package_id'),
+            'items' => $items,
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -22,34 +46,11 @@ class StoreDeviceOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Intent-only fields (tablet staging contract)
-            'guest_count'  => ['required', 'integer', 'min:1', 'max:20'],
-            'package_id'   => ['required', 'integer', 'min:1'],
-
-            // Client-supplied totals are optional; server always recalculates them.
-            'subtotal'      => ['nullable', 'numeric', 'min:0'],
-            'tax'           => ['nullable', 'numeric', 'min:0'],
-            'discount'      => ['nullable', 'numeric', 'min:0'],
-            'total_amount'  => ['nullable', 'numeric', 'min:0'],
-
-            'session_id' => ['nullable', 'integer'],
-
-            // Items: only menu_id + quantity are required; name/price/subtotal are optional
-            // (server resolves them from POS menu catalog)
-            'items'                    => ['required', 'array', 'min:1'],
-            'items.*.menu_id'          => ['required', 'integer', 'min:1'],
-            'items.*.quantity'         => ['required', 'integer', 'min:1', 'max:50'],
-            'items.*.name'             => ['nullable', 'string'],
-            'items.*.price'            => ['nullable', 'numeric', 'min:0'],
-            'items.*.note'             => ['nullable', 'string'],
-            'items.*.subtotal'         => ['nullable', 'numeric', 'min:0'],
-            'items.*.ordered_menu_id'  => ['nullable', 'integer', 'min:1'],
-            'items.*.tax'              => ['nullable', 'numeric', 'min:0'],
-            'items.*.discount'         => ['nullable', 'numeric', 'min:0'],
-            'items.*.is_package'       => ['nullable', 'boolean'],
-            'items.*.modifiers'        => ['nullable', 'array'],
-            'items.*.modifiers.*.menu_id'  => ['required_with:items.*.modifiers', 'integer'],
-            'items.*.modifiers.*.quantity' => ['required_with:items.*.modifiers', 'integer', 'min:1'],
+            'guest_count' => ['required', 'integer', 'min:1', 'max:20'],
+            'package_id' => ['required', 'integer', 'min:1'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.menu_id' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:50'],
         ];
     }
 }

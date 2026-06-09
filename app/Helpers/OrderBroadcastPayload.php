@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Enums\OrderStatus;
 use App\Models\DeviceOrder;
 
 class OrderBroadcastPayload
@@ -22,6 +23,8 @@ class OrderBroadcastPayload
             'branch_id' => $order->branch_id,
             'session_id' => $order->session_id,
             'status' => $order->status,
+            'kds_state' => self::toKdsState($order->status),
+            'kds_type' => ($order->items?->isNotEmpty() && $order->items->every(fn ($it) => (bool) ($it->is_refill ?? false))) ? 'refill' : 'initial',
             'is_printed' => (bool) ($order->is_printed ?? false),
             'printed_at' => $order->printed_at?->toIso8601String(),
             'printed_by' => $order->printed_by,
@@ -52,5 +55,18 @@ class OrderBroadcastPayload
             ])->values()->all(),
             'serviceRequests' => $order->serviceRequests ?? [],
         ];
+    }
+
+    private static function toKdsState(OrderStatus $status): string
+    {
+        return match ($status) {
+            OrderStatus::PENDING,
+            OrderStatus::CONFIRMED => 'new',
+            OrderStatus::IN_PROGRESS => 'preparing',
+            OrderStatus::READY => 'ready',
+            OrderStatus::SERVED => 'served',
+            OrderStatus::VOIDED => 'voided',
+            default => 'new',
+        };
     }
 }

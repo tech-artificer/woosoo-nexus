@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Krypton\Menu as KryptonMenu;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Log;
-use App\Models\Krypton\Menu as KryptonMenu;
 
 /**
  * Validation for refill order requests.
- * 
+ *
  * Ensures:
  * - Only meats and sides categories are allowed
  * - Items exist in POS menu system
@@ -57,15 +57,14 @@ class RefillOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'items'             => ['required', 'array', 'min:1'],
-            'items.*.menu_id'   => ['required', 'integer', 'min:1'],
-            'items.*.quantity'  => ['required', 'integer', 'min:1', 'max:50'],
-            'items.*.name'      => ['nullable', 'string', 'max:255'],
-            'items.*.price'     => ['nullable', 'numeric', 'min:0'],
-            'items.*.index'     => ['nullable', 'integer', 'min:1', 'max:20'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.menu_id' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:50'],
+            'items.*.name' => ['nullable', 'string', 'max:255'],
+            'items.*.index' => ['nullable', 'integer', 'min:1', 'max:20'],
             'items.*.seat_number' => ['nullable', 'integer', 'min:1', 'max:20'],
-            'items.*.note'      => ['nullable', 'string', 'max:255'],
-            'session_id'        => ['nullable', 'string'],
+            'items.*.note' => ['nullable', 'string', 'max:255'],
+            'session_id' => ['nullable', 'string'],
         ];
     }
 
@@ -93,7 +92,7 @@ class RefillOrderRequest extends FormRequest
 
             foreach ($items as $index => $item) {
                 $menuId = (int) ($item['menu_id'] ?? 0);
-                $label  = $item['name'] ?? "menu_id:{$menuId}";
+                $label = $item['name'] ?? "menu_id:{$menuId}";
 
                 $menu = null;
                 try {
@@ -102,11 +101,12 @@ class RefillOrderRequest extends FormRequest
                     $menu = null;
                 }
 
-                if (!$menu) {
+                if (! $menu) {
                     $validator->errors()->add("items.{$index}.menu_id", "Menu item not found: {$label}");
+
                     continue;
                 }
-                
+
                 // Validate that item is in refillable groups (meats/sides only)
                 // Check menu_group, not menu_category
                 try {

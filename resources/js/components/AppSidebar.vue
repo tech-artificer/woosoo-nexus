@@ -15,6 +15,7 @@ import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     LayoutDashboard,
+    LayoutGrid,
     ListOrdered,
     UserCog,
     MonitorSmartphone,
@@ -42,81 +43,51 @@ const page = usePage()
 const user = computed(() => (page.props.auth as any)?.user)
 const isAdmin = computed(() => Boolean(user.value?.is_admin))
 
-const currentPath = computed(() => normalizePath(page.url))
-
-function normalizePath(value: string) {
-    try {
-        return new URL(value, 'http://localhost').pathname.replace(/\/+$/, '') || '/'
-    } catch {
-        return value.split('?')[0].replace(/\/+$/, '') || '/'
-    }
-}
-
-function isActiveRoute(href?: string) {
-    if (!href) {
-        return false
-    }
-
-    const targetPath = normalizePath(href)
-    return currentPath.value === targetPath || currentPath.value.startsWith(`${targetPath}/`)
-}
-
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: route('dashboard'),
         icon: LayoutDashboard,
-        isActive: isActiveRoute(route('dashboard')),
-        hasSubItems: false,
     },
     {
         title: 'Orders',
         href: route('orders.index'),
         icon: ListOrdered,
-        isActive: isActiveRoute(route('orders.index')),
-        hasSubItems: false,
     },
     {
         title: 'POS',
         href: route('pos.index'),
         icon: Monitor,
-        isActive: isActiveRoute(route('pos.index')),
-        hasSubItems: false,
     },
     {
         title: 'Menus',
         href: route('menus'),
         icon: UtensilsCrossed,
-        isActive: isActiveRoute(route('menus')),
-        hasSubItems: false,
     },
     {
         title: 'Packages',
-        href: route('packages.index'),
+        href: route('package-configs.index'),
         icon: Package,
-        isActive: isActiveRoute(route('packages.index')),
-        hasSubItems: false,
     },
     {
-        title: 'User Management',
-        href: route('users.index'),
-        icon: UserCog,
-        isActive: isActiveRoute(route('users.index')),
-        hasSubItems: false,
+        title: 'Tablet Categories',
+        href: route('tablet-categories.index'),
+        icon: LayoutGrid,
     },
     {
         title: 'Devices',
         href: route('devices.index'),
         icon: MonitorSmartphone,
-        isActive: isActiveRoute(route('devices.index')),
-        hasSubItems: false,
+    },
+    {
+        title: 'User Management',
+        href: route('users.index'),
+        icon: UserCog,
     },
     {
         title: 'Service Requests',
         href: route('service-requests.index'),
         icon: Bell,
-        isActive: isActiveRoute(route('service-requests.index')),
-        hasSubItems: false,
     },
 ];
 
@@ -126,7 +97,6 @@ const analyticsNavItems: NavItem[] = [
         title: 'Reports',
         href: route('reports.index'),
         icon: TrendingUp,
-        isActive: isActiveRoute(route('reports.index')),
         hasSubItems: true,
         items: [
             { title: 'Overview',       href: route('reports.index'),        icon: TrendingUp },
@@ -146,14 +116,11 @@ const configNavItems: NavItem[] = [
         title: 'Branches',
         href: route('branches.index'),
         icon: Building2,
-        isActive: isActiveRoute(route('branches.index')),
-        hasSubItems: false,
     },
     {
         title: 'Access Control',
         href: route('roles.index'),
         icon: ShieldCheck,
-        isActive: isActiveRoute(route('roles.index')),
         hasSubItems: true,
         items: [
             { title: 'Roles',        href: route('roles.index'),        icon: Lock },
@@ -164,29 +131,21 @@ const configNavItems: NavItem[] = [
         title: 'Accessibility',
         href: route('accessibility.index'),
         icon: Accessibility,
-        isActive: isActiveRoute(route('accessibility.index')),
-        hasSubItems: false,
     },
     {
         title: 'Event Logs',
         href: route('event-logs.index'),
         icon: FileText,
-        isActive: isActiveRoute(route('event-logs.index')),
-        hasSubItems: false,
     },
     {
         title: 'Reverb Service',
         href: route('reverb.index'),
         icon: Activity,
-        isActive: isActiveRoute(route('reverb.index')),
-        hasSubItems: false,
     },
     {
         title: 'Monitoring',
         href: route('monitoring.index'),
         icon: Monitor,
-        isActive: isActiveRoute(route('monitoring.index')),
-        hasSubItems: false,
     },
 ];
 </script>

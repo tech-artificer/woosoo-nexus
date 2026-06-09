@@ -4,8 +4,10 @@
             "command": "php",
             "args": [
                 "artisan",
-                "boost:mcp"
-            ]
+                "boost:mcp",
+                "--env=local"
+            ],
+            "cwd": "e:/Projects/woosoo-platform/woosoo-nexus"
         }
     }
 }

@@ -1,0 +1,179 @@
+import type { KdsFilter, KdsThresholds, KdsTicket, KdsTicketState, KdsTicketType, KdsUrgency } from './kdsTypes'
+
+export const ACTIVE_STATES: KdsTicketState[] = ['new', 'preparing', 'ready']
+export const TERMINAL_STATES: KdsTicketState[] = ['served', 'voided']
+export const STAGE_SORT: Record<KdsTicketState, number> = {
+  preparing: 0,
+  ready: 1,
+  new: 2,
+  served: 3,
+  voided: 4,
+}
+
+export const KDS_THRESHOLDS: KdsThresholds = {
+  initial: {
+    warn: 15 * 60,
+    over: 25 * 60,
+  },
+  refill: {
+    warn: 15 * 60,
+    over: 25 * 60,
+  },
+}
+
+export const RECALL_TARGET: KdsTicketState = 'preparing'
+
+export function isTerminal(state: KdsTicketState): boolean {
+  return TERMINAL_STATES.includes(state)
+}
+
+export function isActive(state: KdsTicketState): boolean {
+  return ACTIVE_STATES.includes(state)
+}
+
+export function elapsedFor(ticket: KdsTicket, now: number): number {
+  if (isTerminal(ticket.state)) {
+    return ticket.frozenElapsed ?? ticket.elapsed
+  }
+
+  return Math.max(0, Math.floor((now - ticket.issuedAt) / 1000))
+}
+
+export function formatElapsed(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+
+  return `${mins}:${String(secs).padStart(2, '0')}`
+}
+
+export function urgencyFor(ticket: KdsTicket, now: number, thresholds: KdsThresholds = KDS_THRESHOLDS): KdsUrgency {
+  if (isTerminal(ticket.state)) {
+    return 'ok'
+  }
+
+  const elapsed = elapsedFor(ticket, now)
+  const threshold = thresholds[ticket.type]
+
+  if (elapsed >= threshold.over) {
+    return 'over'
+  }
+
+  if (elapsed >= threshold.warn) {
+    return 'warn'
+  }
+
+  return 'ok'
+}
+
+export function filterTickets(tickets: KdsTicket[], filter: KdsFilter, now: number): KdsTicket[] {
+  return tickets.filter((ticket) => {
+    if (filter === 'active') {
+      return isActive(ticket.state)
+    }
+
+    if (filter === 'overdue') {
+      return urgencyFor(ticket, now) === 'over'
+    }
+
+    return ticket.state === filter
+  })
+}
+
+export function sortTickets(tickets: KdsTicket[], now: number): KdsTicket[] {
+  return [...tickets].sort((a, b) => {
+    const urgencyA = urgencyFor(a, now) === 'over' ? 0 : 1
+    const urgencyB = urgencyFor(b, now) === 'over' ? 0 : 1
+
+    if (urgencyA !== urgencyB) {
+      return urgencyA - urgencyB
+    }
+
+    const stageA = STAGE_SORT[a.state]
+    const stageB = STAGE_SORT[b.state]
+
+    if (stageA !== stageB) {
+      return stageA - stageB
+    }
+
+    return elapsedFor(b, now) - elapsedFor(a, now)
+  })
+}
+
+export function nextStateFor(state: KdsTicketState): KdsTicketState | null {
+  if (state === 'new') {
+    return 'preparing'
+  }
+
+  if (state === 'preparing') {
+    return 'ready'
+  }
+
+  if (state === 'ready') {
+    return 'served'
+  }
+
+  return null
+}
+
+export function stateLabel(state: KdsTicketState): string {
+  return {
+    new: 'New',
+    preparing: 'Preparing',
+    ready: 'Ready',
+    served: 'Served',
+    voided: 'Voided',
+  }[state]
+}
+
+export function canAdvanceTicket(ticket: KdsTicket): boolean {
+  if (ticket.state === 'preparing') {
+    return ticket.items.every((item) => item.done === true)
+  }
+
+  return nextStateFor(ticket.state) !== null
+}
+
+/** Primary action `:disabled` — Mark Ready gated until every checklist item is done. */
+export function isAdvanceBlocked(ticket: KdsTicket): boolean {
+  if (nextStateFor(ticket.state) === null) {
+    return false
+  }
+
+  return !canAdvanceTicket(ticket)
+}
+
+export function applyAdvance(ticket: KdsTicket, now: number): KdsTicket {
+  const next = nextStateFor(ticket.state)
+
+  if (!next || !canAdvanceTicket(ticket)) {
+    return ticket
+  }
+
+  if (next === 'served') {
+    return {
+      ...ticket,
+      state: next,
+      frozenElapsed: elapsedFor(ticket, now),
+    }
+  }
+
+  return {
+    ...ticket,
+    state: next,
+  }
+}
+
+export function applyRecall(ticket: KdsTicket, now: number, target: KdsTicketState = RECALL_TARGET): KdsTicket {
+  return {
+    ...ticket,
+    state: target,
+    recalled: (ticket.recalled ?? 0) + 1,
+    voidReason: undefined,
+    frozenElapsed: undefined,
+    issuedAt: now - elapsedFor(ticket, now) * 1000,
+  }
+}
+
+export function ticketTypeLabel(type: KdsTicketType): string {
+  return type === 'refill' ? 'Refill' : 'Initial Order'
+}

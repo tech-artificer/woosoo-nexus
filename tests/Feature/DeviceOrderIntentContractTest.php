@@ -25,12 +25,12 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_accepts_intent_only_initial_order_payload(): void
     {
-        $rules = (new StoreDeviceOrderRequest())->rules();
+        $rules = (new StoreDeviceOrderRequest)->rules();
 
         $payload = [
             'guest_count' => 3,
-            'package_id'  => 46,
-            'items'       => [
+            'package_id' => 46,
+            'items' => [
                 ['menu_id' => 10, 'quantity' => 2],
                 ['menu_id' => 13, 'quantity' => 2],
             ],
@@ -46,11 +46,11 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_initial_order_rejects_missing_package_id(): void
     {
-        $rules = (new StoreDeviceOrderRequest())->rules();
+        $rules = (new StoreDeviceOrderRequest)->rules();
 
         $payload = [
             'guest_count' => 3,
-            'items'       => [['menu_id' => 10, 'quantity' => 2]],
+            'items' => [['menu_id' => 10, 'quantity' => 2]],
         ];
 
         $validator = Validator::make($payload, $rules);
@@ -61,11 +61,11 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_initial_order_rejects_missing_items(): void
     {
-        $rules = (new StoreDeviceOrderRequest())->rules();
+        $rules = (new StoreDeviceOrderRequest)->rules();
 
         $payload = [
             'guest_count' => 3,
-            'package_id'  => 46,
+            'package_id' => 46,
         ];
 
         $validator = Validator::make($payload, $rules);
@@ -76,12 +76,12 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_initial_order_rejects_item_without_menu_id(): void
     {
-        $rules = (new StoreDeviceOrderRequest())->rules();
+        $rules = (new StoreDeviceOrderRequest)->rules();
 
         $payload = [
             'guest_count' => 3,
-            'package_id'  => 46,
-            'items'       => [['quantity' => 2]],
+            'package_id' => 46,
+            'items' => [['quantity' => 2]],
         ];
 
         $validator = Validator::make($payload, $rules);
@@ -92,12 +92,12 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_initial_order_does_not_require_client_totals(): void
     {
-        $rules = (new StoreDeviceOrderRequest())->rules();
+        $rules = (new StoreDeviceOrderRequest)->rules();
 
         $payload = [
             'guest_count' => 2,
-            'package_id'  => 47,
-            'items'       => [['menu_id' => 15, 'quantity' => 1]],
+            'package_id' => 47,
+            'items' => [['menu_id' => 15, 'quantity' => 1]],
             // subtotal / tax / discount / total_amount intentionally omitted
         ];
 
@@ -111,12 +111,12 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_initial_order_does_not_require_item_name_or_price(): void
     {
-        $rules = (new StoreDeviceOrderRequest())->rules();
+        $rules = (new StoreDeviceOrderRequest)->rules();
 
         $payload = [
             'guest_count' => 2,
-            'package_id'  => 47,
-            'items'       => [
+            'package_id' => 47,
+            'items' => [
                 ['menu_id' => 15, 'quantity' => 1],
                 // no 'name', no 'price', no 'subtotal'
             ],
@@ -130,11 +130,41 @@ class DeviceOrderIntentContractTest extends TestCase
         );
     }
 
+    public function test_initial_order_request_strips_non_intent_fields_before_validation(): void
+    {
+        $request = StoreDeviceOrderRequest::create('/api/devices/create-order', 'POST', [
+            'guest_count' => 2,
+            'package_id' => 47,
+            'total_amount' => 123.45,
+            'items' => [
+                [
+                    'menu_id' => 15,
+                    'quantity' => 1,
+                    'price' => 99.99,
+                    'name' => 'Ignored',
+                ],
+            ],
+        ]);
+
+        $request->setContainer($this->app)->validateResolved();
+
+        $this->assertSame(
+            [
+                'guest_count' => 2,
+                'package_id' => 47,
+                'items' => [
+                    ['menu_id' => 15, 'quantity' => 1],
+                ],
+            ],
+            $request->validated()
+        );
+    }
+
     // ─── Refill order ─────────────────────────────────────────────────────────
 
     public function test_accepts_intent_only_refill_payload(): void
     {
-        $rules = (new RefillOrderRequest())->rules();
+        $rules = (new RefillOrderRequest)->rules();
 
         $payload = [
             'items' => [
@@ -153,7 +183,7 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_refill_rejects_missing_menu_id(): void
     {
-        $rules = (new RefillOrderRequest())->rules();
+        $rules = (new RefillOrderRequest)->rules();
 
         $payload = [
             'items' => [
@@ -169,7 +199,7 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_refill_does_not_require_item_name(): void
     {
-        $rules = (new RefillOrderRequest())->rules();
+        $rules = (new RefillOrderRequest)->rules();
 
         $payload = [
             'items' => [
@@ -188,7 +218,7 @@ class DeviceOrderIntentContractTest extends TestCase
 
     public function test_refill_rejects_zero_quantity(): void
     {
-        $rules = (new RefillOrderRequest())->rules();
+        $rules = (new RefillOrderRequest)->rules();
 
         $payload = [
             'items' => [['menu_id' => 10, 'quantity' => 0]],
@@ -200,7 +230,28 @@ class DeviceOrderIntentContractTest extends TestCase
         $this->assertArrayHasKey('items.0.quantity', $validator->errors()->toArray());
     }
 
-    public function test_expandIntentPayload_shape(): void
+    public function test_refill_does_not_accept_client_price(): void
+    {
+        $rules = (new RefillOrderRequest)->rules();
+
+        $payload = [
+            'items' => [
+                ['menu_id' => 10, 'quantity' => 1, 'price' => 999.99],
+            ],
+        ];
+
+        $validator = Validator::make($payload, $rules);
+        $validator->passes(); // run validation so validated() is available
+        $validated = $validator->validated();
+
+        $this->assertArrayNotHasKey(
+            'price',
+            $validated['items'][0] ?? [],
+            'Refill request must not accept client-supplied price (backend owns pricing).'
+        );
+    }
+
+    public function test_expand_intent_payload_shape(): void
     {
         DB::table('packages')->insert([
             'id' => 46,
@@ -212,14 +263,14 @@ class DeviceOrderIntentContractTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $controller = new DeviceOrderApiController();
+        $controller = new DeviceOrderApiController;
         $expand = new \ReflectionMethod($controller, 'expandIntentPayload');
         $expand->setAccessible(true);
 
         $input = [
             'guest_count' => 3,
-            'package_id'  => 46,
-            'items'       => [
+            'package_id' => 46,
+            'items' => [
                 ['menu_id' => 10, 'quantity' => 2],
                 ['menu_id' => 13, 'quantity' => 1],
             ],
@@ -229,7 +280,7 @@ class DeviceOrderIntentContractTest extends TestCase
 
         $this->assertCount(1, $result['items']);
         $this->assertEquals(46, $result['items'][0]['menu_id']);
-        $this->assertEquals(3,  $result['items'][0]['quantity']);
+        $this->assertEquals(3, $result['items'][0]['quantity']);
         $this->assertTrue($result['items'][0]['is_package']);
         $this->assertCount(2, $result['items'][0]['modifiers']);
         $this->assertEquals(10, $result['items'][0]['modifiers'][0]['menu_id']);
@@ -237,9 +288,9 @@ class DeviceOrderIntentContractTest extends TestCase
         $this->assertGreaterThan(0, $result['items'][0]['menu_id']);
     }
 
-    public function test_expandIntentPayload_rejects_invalid_initial_payload(): void
+    public function test_expand_intent_payload_rejects_invalid_initial_payload(): void
     {
-        $controller = new \App\Http\Controllers\Api\V1\DeviceOrderApiController();
+        $controller = new DeviceOrderApiController;
         $expand = new \ReflectionMethod($controller, 'expandIntentPayload');
         $expand->setAccessible(true);
 

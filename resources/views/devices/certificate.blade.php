@@ -320,8 +320,8 @@
         <div class="unavail-title">Certificate Not Found</div>
         <div class="unavail-desc">
           The CA certificate file is not present on this server.
-          Contact your system administrator to place the certificate at
-          <code>docker/certs/fullchain.pem</code> or <code>storage/app/public/certificates/woosoo-ca.der</code>.
+          Contact your system administrator — the platform CA must be present at
+          <code>docker/certs/rootCA.crt</code> (mounted into the app container from the platform repo).
         </div>
       </div>
     </div>
