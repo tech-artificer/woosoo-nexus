@@ -102,6 +102,8 @@ function recallTicket(ticketId: string) {
 }
 
 onMounted(() => {
+  document.body.classList.add('kds-active')
+
   try {
     const storedDensity = window.localStorage.getItem('kds-density')
     if (storedDensity === 'comfortable' || storedDensity === 'compact') {
@@ -117,6 +119,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('kds-active')
+
   if (timer) {
     clearInterval(timer)
     timer = null
@@ -204,8 +208,7 @@ onBeforeUnmount(() => {
   --kds-weight-caption: 500;
 }
 
-html:has(.kds-viewport),
-body:has(.kds-viewport) {
+body.kds-active {
   overflow: hidden;
   margin: 0;
   width: 100%;
@@ -256,7 +259,7 @@ body:has(.kds-viewport) {
   gap: 16px;
   border-bottom: 1px solid rgb(255 255 255 / 0.08);
   background: #0f0e12;
-  padding: 8px 20px;
+  padding: 8px;
 }
 
 .kds-density-toggle {
@@ -281,7 +284,7 @@ body:has(.kds-viewport) {
   min-height: 0;
   overflow: auto;
   background: #030304;
-  padding: 14px 20px 18px;
+  padding: 14px 8px 18px;
 }
 
 .kds-grid {
@@ -300,7 +303,7 @@ body:has(.kds-viewport) {
   align-items: center;
   border-bottom: 1px solid rgb(255 255 255 / 0.08);
   background: var(--kds-bg1);
-  padding: 0 20px;
+  padding: 0 8px;
 }
 
 :deep(.kds-brand),
