@@ -155,6 +155,8 @@ stateful domains so IP changes stop rippling through other host-pinned values.
 
 ## Files Changed
 
+<!-- Script changes applied in PR #173 (chore/nexus/nex-014-deploy-script-sync-and-nex-011-case-update → dev).
+     The nexus repo had a stale copy of the deploy script; PR #173 syncs it with the platform version. -->
 - `scripts/deployment/apply-woosoo-config.sh` — added `WOOSOO_ENV` input variable (default `production`) with `case` block driving `_APP_ENV`/`_APP_DEBUG`/`_LOG_LEVEL`; added `_SESSION_SECURE_COOKIE` derived from `WOOSOO_SCHEME` (https→true, anything else→false); replaced hardcoded `APP_ENV="production"`, `APP_DEBUG="false"`, `LOG_LEVEL="error"`, `SESSION_SECURE_COOKIE="true"` with the profile-driven variables; invalid `WOOSOO_ENV` values print a clear error and exit 1; updated startup echo to show environment profile.
 - `docs/deployment/examples/woosoo.env.example` — added `WOOSOO_ENV="production"` with comment listing all three allowed values and explaining that `SESSION_SECURE_COOKIE` is derived from `WOOSOO_SCHEME` independently.
 - `docs/cases/nex-case-014-session-domain-login-419.md` — this case (run state updated to IMPLEMENTED, next_agent=verifier).
