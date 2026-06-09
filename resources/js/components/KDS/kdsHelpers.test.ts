@@ -20,7 +20,7 @@ function preparingTicket(itemsDone: boolean[]): KdsTicket {
   }
 }
 
-describe('Mark Ready gating', () => {
+describe('Mark as Served gating', () => {
   it('blocks advance when any preparing item is not done', () => {
     const ticket = preparingTicket([true, true, false])
 
@@ -46,11 +46,11 @@ describe('Mark Ready gating', () => {
     expect(isAdvanceBlocked(ticket)).toBe(false)
   })
 
-  it('advances preparing to ready when the gate passes', () => {
+  it('advances preparing to served when the gate passes', () => {
     const ticket = preparingTicket([true, true])
     const now = Date.now()
 
-    expect(applyAdvance(ticket, now).state).toBe('ready')
+    expect(applyAdvance(ticket, now).state).toBe('served')
   })
 
   it('leaves preparing unchanged when the gate fails', () => {

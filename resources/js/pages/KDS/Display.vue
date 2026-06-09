@@ -8,8 +8,11 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
+import { postKdsAdvance, postKdsToggleItem } from '@/components/KDS/kdsApi'
+import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
+import { useKdsBoard } from '@/components/KDS/useKdsBoard'
+import { useKdsEcho } from '@/components/KDS/useKdsEcho'
 
 const props = defineProps<{
   title: string
@@ -19,14 +22,20 @@ const props = defineProps<{
 function seedTickets(source: KdsTicket[]): KdsTicket[] {
   return source.map((ticket) => ({
     ...ticket,
+    state: ticket.state === 'ready' ? 'preparing' : ticket.state,
     items: ticket.items.map((item) => ({ ...item, done: item.done === true })),
   }))
 }
 
-const tickets = ref<KdsTicket[]>(seedTickets(props.initialTickets))
+const board = useKdsBoard(seedTickets(props.initialTickets))
+useKdsEcho(board)
+
+const tickets = board.tickets
 const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
+const pendingAdvance = ref<Set<string>>(new Set())
+const pendingToggle = ref<Set<string>>(new Set())
 let timer: ReturnType<typeof setInterval> | null = null
 
 const activeTickets = computed(() => tickets.value.filter((ticket) => ACTIVE_STATES.includes(ticket.state)))
@@ -44,30 +53,35 @@ const counts = computed<Record<KdsFilter, number>>(() => ({
   active: activeTickets.value.length,
   overdue: filterTickets(tickets.value, 'overdue', now.value).length,
   new: tickets.value.filter((ticket) => ticket.state === 'new').length,
-  preparing: tickets.value.filter((ticket) => ticket.state === 'preparing').length,
-  ready: tickets.value.filter((ticket) => ticket.state === 'ready').length,
+  preparing: tickets.value.filter((ticket) => ticket.state === 'preparing' || ticket.state === 'ready').length,
+  ready: 0,
   served: tickets.value.filter((ticket) => ticket.state === 'served').length,
   voided: tickets.value.filter((ticket) => ticket.state === 'voided').length,
 }))
 
-function updateTicket(ticketId: string, updater: (ticket: KdsTicket) => KdsTicket) {
-  tickets.value = tickets.value.map((ticket) => ticket.id === ticketId ? updater(ticket) : ticket)
+async function toggleItem(ticketId: string, itemId: string) {
+  const ticket = tickets.value.find((item) => item.id === ticketId)
+
+  if (!ticket || ticket.state === 'served' || ticket.state === 'voided') {
+    return
+  }
+
+  if (pendingToggle.value.has(itemId)) {
+    return
+  }
+
+  pendingToggle.value.add(itemId)
+
+  try {
+    await postKdsToggleItem(itemId)
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Unable to update item.')
+  } finally {
+    pendingToggle.value.delete(itemId)
+  }
 }
 
-function toggleItem(ticketId: string, itemId: string) {
-  updateTicket(ticketId, (ticket) => {
-    if (ticket.state === 'served' || ticket.state === 'voided') {
-      return ticket
-    }
-
-    return {
-      ...ticket,
-      items: ticket.items.map((item) => item.id === itemId ? { ...item, done: !item.done } : item),
-    }
-  })
-}
-
-function advanceTicket(ticketId: string) {
+async function advanceTicket(ticketId: string) {
   const ticket = tickets.value.find((item) => item.id === ticketId)
 
   if (!ticket) {
@@ -81,7 +95,19 @@ function advanceTicket(ticketId: string) {
     return
   }
 
-  updateTicket(ticketId, (current) => applyAdvance(current, now.value))
+  if (pendingAdvance.value.has(ticketId)) {
+    return
+  }
+
+  pendingAdvance.value.add(ticketId)
+
+  try {
+    await postKdsAdvance(ticketId)
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Unable to advance order.')
+  } finally {
+    pendingAdvance.value.delete(ticketId)
+  }
 }
 
 function toggleDensity() {
@@ -91,14 +117,6 @@ function toggleDensity() {
   } catch {
     // Storage is optional for kiosk browsers.
   }
-}
-
-function recallTicket(ticketId: string) {
-  updateTicket(ticketId, (ticket) => applyRecall(ticket, now.value))
-  selectedFilter.value = 'active'
-  toast.success('Ticket recalled to the line.', {
-    duration: 3000,
-  })
 }
 
 onMounted(() => {
@@ -137,7 +155,6 @@ onBeforeUnmount(() => {
           :active="counts.active"
           :new-count="counts.new"
           :preparing="counts.preparing"
-          :ready="counts.ready"
           :overdue="counts.overdue"
           :clock="clockLabel"
           :date-label="dateLabel"
@@ -164,7 +181,6 @@ onBeforeUnmount(() => {
               :now="now"
               :density="density"
               @advance="advanceTicket"
-              @recall="recallTicket"
               @toggle-item="toggleItem"
             />
           </div>
@@ -357,7 +373,7 @@ body.kds-active {
 
 :deep(.kds-metrics) {
   display: grid;
-  grid-template-columns: repeat(5, minmax(80px, 1fr));
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
   height: 100%;
 }
 

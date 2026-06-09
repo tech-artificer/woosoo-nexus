@@ -18,7 +18,6 @@ const groups: Array<Array<{ value: KdsFilter; label: string }>> = [
   [
     { value: 'new', label: 'New' },
     { value: 'preparing', label: 'Preparing' },
-    { value: 'ready', label: 'Ready' },
   ],
   [
     { value: 'served', label: 'Served' },

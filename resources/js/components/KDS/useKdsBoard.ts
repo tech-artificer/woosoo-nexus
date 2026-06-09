@@ -30,10 +30,18 @@ type ItemTogglePayload = {
 
 const HIDDEN_STATUSES = new Set(['completed', 'cancelled', 'archived'])
 
+function normalizeKdsState(state: string): KdsTicket['state'] {
+  if (state === 'ready') {
+    return 'preparing'
+  }
+
+  return state as KdsTicket['state']
+}
+
 function payloadToTicket(payload: OrderPayload): KdsTicket {
   const issuedAt = payload.created_at ? new Date(payload.created_at).getTime() : Date.now()
   const now = Date.now()
-  const state = (payload.kds_state ?? 'new') as KdsTicket['state']
+  const state = normalizeKdsState(payload.kds_state ?? 'new')
   const isTerminal = state === 'served' || state === 'voided'
   const elapsed = Math.max(0, Math.floor((now - issuedAt) / 1000))
   const frozenElapsed = isTerminal && payload.updated_at

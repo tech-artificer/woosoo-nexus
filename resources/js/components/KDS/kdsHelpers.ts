@@ -1,13 +1,13 @@
 import type { KdsFilter, KdsThresholds, KdsTicket, KdsTicketState, KdsTicketType, KdsUrgency } from './kdsTypes'
 
-export const ACTIVE_STATES: KdsTicketState[] = ['new', 'preparing', 'ready']
+export const ACTIVE_STATES: KdsTicketState[] = ['new', 'preparing']
 export const TERMINAL_STATES: KdsTicketState[] = ['served', 'voided']
 export const STAGE_SORT: Record<KdsTicketState, number> = {
   preparing: 0,
-  ready: 1,
-  new: 2,
-  served: 3,
-  voided: 4,
+  ready: 0,
+  new: 1,
+  served: 2,
+  voided: 3,
 }
 
 export const KDS_THRESHOLDS: KdsThresholds = {
@@ -20,8 +20,6 @@ export const KDS_THRESHOLDS: KdsThresholds = {
     over: 25 * 60,
   },
 }
-
-export const RECALL_TARGET: KdsTicketState = 'preparing'
 
 export function isTerminal(state: KdsTicketState): boolean {
   return TERMINAL_STATES.includes(state)
@@ -75,6 +73,10 @@ export function filterTickets(tickets: KdsTicket[], filter: KdsFilter, now: numb
       return urgencyFor(ticket, now) === 'over'
     }
 
+    if (filter === 'preparing') {
+      return ticket.state === 'preparing' || ticket.state === 'ready'
+    }
+
     return ticket.state === filter
   })
 }
@@ -104,11 +106,7 @@ export function nextStateFor(state: KdsTicketState): KdsTicketState | null {
     return 'preparing'
   }
 
-  if (state === 'preparing') {
-    return 'ready'
-  }
-
-  if (state === 'ready') {
+  if (state === 'preparing' || state === 'ready') {
     return 'served'
   }
 
@@ -119,21 +117,21 @@ export function stateLabel(state: KdsTicketState): string {
   return {
     new: 'New',
     preparing: 'Preparing',
-    ready: 'Ready',
+    ready: 'Preparing',
     served: 'Served',
     voided: 'Voided',
   }[state]
 }
 
 export function canAdvanceTicket(ticket: KdsTicket): boolean {
-  if (ticket.state === 'preparing') {
+  if (ticket.state === 'preparing' || ticket.state === 'ready') {
     return ticket.items.every((item) => item.done === true)
   }
 
   return nextStateFor(ticket.state) !== null
 }
 
-/** Primary action `:disabled` — Mark Ready gated until every checklist item is done. */
+/** Primary action `:disabled` — Mark as Served gated until every checklist item is done. */
 export function isAdvanceBlocked(ticket: KdsTicket): boolean {
   if (nextStateFor(ticket.state) === null) {
     return false
@@ -160,17 +158,6 @@ export function applyAdvance(ticket: KdsTicket, now: number): KdsTicket {
   return {
     ...ticket,
     state: next,
-  }
-}
-
-export function applyRecall(ticket: KdsTicket, now: number, target: KdsTicketState = RECALL_TARGET): KdsTicket {
-  return {
-    ...ticket,
-    state: target,
-    recalled: (ticket.recalled ?? 0) + 1,
-    voidReason: undefined,
-    frozenElapsed: undefined,
-    issuedAt: now - elapsedFor(ticket, now) * 1000,
   }
 }
 

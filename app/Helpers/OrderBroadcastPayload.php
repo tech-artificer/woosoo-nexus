@@ -63,7 +63,7 @@ class OrderBroadcastPayload
             OrderStatus::PENDING,
             OrderStatus::CONFIRMED => 'new',
             OrderStatus::IN_PROGRESS => 'preparing',
-            OrderStatus::READY => 'ready',
+            OrderStatus::READY => 'preparing',
             OrderStatus::SERVED => 'served',
             OrderStatus::VOIDED => 'voided',
             default => 'new',

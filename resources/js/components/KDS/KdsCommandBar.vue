@@ -5,7 +5,6 @@ defineProps<{
   active: number
   newCount: number
   preparing: number
-  ready: number
   overdue: number
   clock: string
   dateLabel: string
@@ -36,10 +35,6 @@ defineProps<{
       <div class="kds-metric">
         <strong class="is-preparing">{{ preparing }}</strong>
         <span>Preparing</span>
-      </div>
-      <div class="kds-metric">
-        <strong class="is-ready">{{ ready }}</strong>
-        <span>Ready</span>
       </div>
       <div class="kds-metric">
         <strong class="is-overdue">{{ overdue }}</strong>
