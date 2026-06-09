@@ -2,25 +2,27 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
-use Tests\TestCase;
+use App\Enums\OrderStatus;
+use App\Events\Order\OrderCancelled;
+use App\Events\Order\OrderCompleted;
+use App\Events\Order\OrderStatusUpdated;
+use App\Events\Order\OrderVoided;
+use App\Helpers\OrderBroadcastPayload;
 use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceOrder;
-use App\Enums\OrderStatus;
-use App\Events\Order\OrderStatusUpdated;
-use App\Events\Order\OrderCompleted;
-use App\Events\Order\OrderVoided;
-use App\Events\Order\OrderCancelled;
-use App\Helpers\OrderBroadcastPayload;
+use App\Models\DeviceOrderItems;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Tests\TestCase;
 
 class OrderRealtimeBroadcastTest extends TestCase
 {
     use RefreshDatabase;
 
     private Device $device;
+
     private int $sessionId;
 
     protected function setUp(): void
@@ -29,9 +31,9 @@ class OrderRealtimeBroadcastTest extends TestCase
 
         $branch = Branch::create(['name' => 'RT Branch', 'location' => 'RT']);
         $this->device = Device::create([
-            'name'       => 'rt-device',
+            'name' => 'rt-device',
             'ip_address' => '127.9.0.1',
-            'branch_id'  => $branch->id,
+            'branch_id' => $branch->id,
         ]);
         $this->sessionId = $this->createTestSession();
     }
@@ -39,20 +41,20 @@ class OrderRealtimeBroadcastTest extends TestCase
     private function makeOrder(array $attributes = []): DeviceOrder
     {
         return DeviceOrder::create(array_merge([
-            'device_id'          => $this->device->id,
-            'branch_id'          => $this->device->branch_id,
-            'table_id'           => 1,
-            'terminal_session_id'=> 1,
-            'session_id'         => $this->sessionId,
-            'order_id'           => rand(100000, 999999),
-            'order_number'       => 'ORD-RT-' . rand(1000, 9999),
-            'status'             => OrderStatus::CONFIRMED->value,
-            'subtotal'           => 100.00,
-            'tax'                => 10.00,
-            'discount'           => 0,
-            'total'              => 110.00,
-            'guest_count'        => 2,
-            'is_printed'         => false,
+            'device_id' => $this->device->id,
+            'branch_id' => $this->device->branch_id,
+            'table_id' => 1,
+            'terminal_session_id' => 1,
+            'session_id' => $this->sessionId,
+            'order_id' => rand(100000, 999999),
+            'order_number' => 'ORD-RT-'.rand(1000, 9999),
+            'status' => OrderStatus::CONFIRMED->value,
+            'subtotal' => 100.00,
+            'tax' => 10.00,
+            'discount' => 0,
+            'total' => 110.00,
+            'guest_count' => 2,
+            'is_printed' => false,
         ], $attributes));
     }
 
@@ -230,6 +232,20 @@ class OrderRealtimeBroadcastTest extends TestCase
         }
     }
 
+    public function test_broadcast_payload_items_expose_done_state_for_kds(): void
+    {
+        $order = $this->makeOrder();
+        DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
+
+        $payload = OrderBroadcastPayload::make($order);
+
+        $this->assertNotEmpty($payload['items'], 'Order should broadcast its items');
+        $item = $payload['items'][0];
+        $this->assertArrayHasKey('done', $item, 'Broadcast item must expose "done" so KDS can reconcile checkbox state');
+        $this->assertArrayHasKey('done_at', $item, 'Broadcast item must expose "done_at" for KDS reconcile');
+        $this->assertTrue($item['done']);
+    }
+
     public function test_all_terminal_event_payloads_contain_order_key(): void
     {
         $order = $this->makeOrder();
@@ -243,7 +259,7 @@ class OrderRealtimeBroadcastTest extends TestCase
 
         foreach ($events as $event) {
             $data = $event->broadcastWith();
-            $this->assertArrayHasKey('order', $data, get_class($event) . '::broadcastWith() must wrap payload in "order" key');
+            $this->assertArrayHasKey('order', $data, get_class($event).'::broadcastWith() must wrap payload in "order" key');
             $this->assertIsArray($data['order']);
         }
     }

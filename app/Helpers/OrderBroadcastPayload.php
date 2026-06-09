@@ -50,6 +50,8 @@ class OrderBroadcastPayload
                 'price' => $it->price,
                 'subtotal' => $it->subtotal,
                 'is_refill' => (bool) ($it->is_refill ?? false),
+                'done' => (bool) ($it->done ?? false),
+                'done_at' => $it->done_at?->toIso8601String(),
                 'notes' => $it->notes ?? null,
                 'type' => $it->type ?? null,
             ])->values()->all(),

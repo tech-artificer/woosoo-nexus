@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
+import axios from 'axios'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
@@ -9,6 +10,7 @@ import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
 import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
+import { useKdsBoard } from '@/components/KDS/useKdsBoard'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 
 const props = defineProps<{
@@ -23,7 +25,8 @@ function seedTickets(source: KdsTicket[]): KdsTicket[] {
   }))
 }
 
-const tickets = ref<KdsTicket[]>(seedTickets(props.initialTickets))
+const board = useKdsBoard(seedTickets(props.initialTickets))
+const tickets = board.tickets
 const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
@@ -54,20 +57,34 @@ function updateTicket(ticketId: string, updater: (ticket: KdsTicket) => KdsTicke
   tickets.value = tickets.value.map((ticket) => ticket.id === ticketId ? updater(ticket) : ticket)
 }
 
-function toggleItem(ticketId: string, itemId: string) {
-  updateTicket(ticketId, (ticket) => {
-    if (ticket.state === 'served' || ticket.state === 'voided') {
-      return ticket
-    }
+async function toggleItem(ticketId: string, itemId: string) {
+  const ticket = tickets.value.find((t) => t.id === ticketId)
 
-    return {
-      ...ticket,
-      items: ticket.items.map((item) => item.id === itemId ? { ...item, done: !item.done } : item),
-    }
-  })
+  if (!ticket || ticket.state === 'served' || ticket.state === 'voided') {
+    return
+  }
+
+  const prevDone = ticket.items.find((item) => item.id === itemId)?.done ?? false
+
+  // Optimistic flip; reconcile to the server's authoritative state on success.
+  updateTicket(ticketId, (current) => ({
+    ...current,
+    items: current.items.map((item) => item.id === itemId ? { ...item, done: !item.done } : item),
+  }))
+
+  try {
+    const { data } = await axios.post(route('kds.toggle-item', itemId))
+    board.applyItemToggle({ order_id: ticketId, item_id: itemId, done: data.done, done_at: data.done_at })
+  } catch (error) {
+    updateTicket(ticketId, (current) => ({
+      ...current,
+      items: current.items.map((item) => item.id === itemId ? { ...item, done: prevDone } : item),
+    }))
+    toast.error((error as any)?.response?.data?.message ?? 'Could not update item.', { duration: 3500 })
+  }
 }
 
-function advanceTicket(ticketId: string) {
+async function advanceTicket(ticketId: string) {
   const ticket = tickets.value.find((item) => item.id === ticketId)
 
   if (!ticket) {
@@ -81,7 +98,16 @@ function advanceTicket(ticketId: string) {
     return
   }
 
+  // Snapshot for rollback, then advance optimistically (client nextStateFor mirrors server nextStatus).
+  const snapshot = ticket
   updateTicket(ticketId, (current) => applyAdvance(current, now.value))
+
+  try {
+    await axios.post(route('kds.advance', ticketId))
+  } catch (error) {
+    updateTicket(ticketId, () => snapshot)
+    toast.error((error as any)?.response?.data?.message ?? 'Could not advance ticket.', { duration: 3500 })
+  }
 }
 
 function toggleDensity() {
@@ -94,6 +120,8 @@ function toggleDensity() {
 }
 
 function recallTicket(ticketId: string) {
+  // Wave 3: wire to POST /kds/orders/{order}/recall (route + enum edge + contract not yet built).
+  // Until then recall is local-only and does not persist.
   updateTicket(ticketId, (ticket) => applyRecall(ticket, now.value))
   selectedFilter.value = 'active'
   toast.success('Ticket recalled to the line.', {
