@@ -2,27 +2,28 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Tests\Traits\MocksKryptonSession;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Mockery;
+use App\Enums\OrderStatus;
 use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\PrintEvent;
 use App\Services\Krypton\KryptonContextService;
-use App\Enums\OrderStatus;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Mockery;
+use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 
 class OrderRefillTest extends TestCase
 {
-    use RefreshDatabase, MocksKryptonSession;
+    use MocksKryptonSession, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Mock active Krypton session for all tests
         $this->mockActiveKryptonSession();
 
@@ -50,7 +51,7 @@ class OrderRefillTest extends TestCase
         ]);
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         Mockery::close();
         parent::tearDown();
@@ -90,15 +91,13 @@ class OrderRefillTest extends TestCase
         $kctxMock->shouldReceive('getData')->andReturn(['employee_log_id' => 12]);
         $this->app->instance(KryptonContextService::class, $kctxMock);
 
-        // No Krypton Menu lookup required — controller accepts `menu_id` + `price` directly.
-
         // Mock POS connection to accept ordered_menus inserts
         $qb = Mockery::mock();
         $qb->shouldReceive('insertGetId')->andReturn(9001);
         $qb->shouldReceive('where')->andReturnSelf();
         $qb->shouldReceive('whereIn')->andReturnSelf();
         $qb->shouldReceive('delete')->andReturn(true);
-        $qb->shouldReceive('first')->andReturn((object)[
+        $qb->shouldReceive('first')->andReturn((object) [
             'id' => 9001,
             'order_id' => 1001,
             'menu_id' => 46,
@@ -136,18 +135,17 @@ class OrderRefillTest extends TestCase
                     'menu_id' => 46,
                     'name' => 'Classic Feast',
                     'quantity' => 2,
-                    'price' => 399.00,
                     'index' => 1,
                     'seat_number' => 1,
                     'note' => 'Refill',
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/order/1001/refill', $payload);
 
         $response->assertStatus(200)->assertJson(['success' => true]);
@@ -210,7 +208,7 @@ class OrderRefillTest extends TestCase
         $qb->shouldReceive('where')->andReturnSelf();
         $qb->shouldReceive('whereIn')->andReturnSelf();
         $qb->shouldReceive('delete')->andReturn(true);
-        $qb->shouldReceive('first')->andReturn((object)[
+        $qb->shouldReceive('first')->andReturn((object) [
             'id' => 9002,
             'order_id' => 1002,
             'menu_id' => 47,
@@ -249,7 +247,6 @@ class OrderRefillTest extends TestCase
                     'menu_id' => 47,
                     'name' => 'Marinated Beef',
                     'quantity' => 1,
-                    'price' => 88.00,
                     'index' => 1,
                     'seat_number' => 1,
                     'note' => 'Refill',
@@ -258,7 +255,6 @@ class OrderRefillTest extends TestCase
                     'menu_id' => 48,
                     'name' => 'Pickled Cucumber',
                     'quantity' => 1,
-                    'price' => 10.00,
                     'index' => 2,
                     'seat_number' => 1,
                     'note' => 'Refill',
@@ -316,7 +312,7 @@ class OrderRefillTest extends TestCase
         $qb->shouldReceive('where')->andReturnSelf();
         $qb->shouldReceive('whereIn')->andReturnSelf();
         $qb->shouldReceive('delete')->andReturn(true);
-        $qb->shouldReceive('first')->andReturn((object)[
+        $qb->shouldReceive('first')->andReturn((object) [
             'id' => 9003,
             'order_id' => 2002,
             'menu_id' => 46,
@@ -352,18 +348,17 @@ class OrderRefillTest extends TestCase
                     'menu_id' => 46,
                     'name' => 'Classic Feast',
                     'quantity' => 2,
-                    'price' => 399.00,
                     'index' => 1,
                     'seat_number' => 1,
                     'note' => 'Refill',
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/order/2002/refill', $payload);
 
         $response->assertStatus(200)->assertJson(['success' => true]);
