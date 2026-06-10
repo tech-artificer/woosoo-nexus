@@ -41,7 +41,7 @@ class KdsController extends Controller
     {
         $with = $this->posConnection->isReachable()
             ? ['device.table', 'table', 'items.menu']
-            : ['device', 'items.menu'];
+            : ['device', 'items'];
 
         $orders = DeviceOrder::with($with)
             ->whereNotIn('status', array_map(fn ($s) => $s->value, self::HIDDEN_STATUSES))
