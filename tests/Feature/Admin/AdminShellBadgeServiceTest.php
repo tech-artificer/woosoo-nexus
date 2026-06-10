@@ -12,8 +12,8 @@ test('counts returns expected keys with integer values', function () {
     $counts = app(AdminShellBadgeService::class)->counts();
 
     expect($counts)->toHaveKeys(['orders', 'devices']);
-    expect($counts['orders'])->toBeInt()->toBeGreaterThanOrEqualTo(0);
-    expect($counts['devices'])->toBeInt()->toBeGreaterThanOrEqualTo(0);
+    expect($counts['orders'])->toBeInt()->toBeGreaterThanOrEqual(0);
+    expect($counts['devices'])->toBeInt()->toBeGreaterThanOrEqual(0);
 });
 
 test('counts orders in pending confirmed and in_progress statuses', function () {
