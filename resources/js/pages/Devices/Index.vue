@@ -4,7 +4,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { toast } from 'vue-sonner'
 import {
     MonitorSmartphone, RotateCcw, Plus, Eye, Download, RefreshCw, ShieldCheck,
-    ShieldAlert,
+    ShieldAlert, AlertTriangle,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
@@ -106,7 +106,7 @@ function batteryBg(pct: number | null): string {
     return 'bg-woosoo-red'
 }
 
-function isSecurityExpired(device: Device): boolean {
+function isVersionMismatch(device: Device): boolean {
     if (!device.app_version) return false
     const modal = props.fleetStats?.modal_app_version
     if (!modal || !device.app_version) return false
@@ -130,9 +130,9 @@ function executeRestart() {
     router.post(route('devices.security-code.regenerate', device.id), {}, {
         preserveScroll: true,
         onSuccess: () => {
-            toast.success(`${device.name} restarted.`)
+            toast.success(`Security code regenerated for ${device.name}.`)
         },
-        onError: () => toast.error('Restart failed.'),
+        onError: () => toast.error('Regeneration failed.'),
         onFinish: () => { isRestarting.value = null },
     })
 }
@@ -198,8 +198,10 @@ function syncAll() {
                             </p>
                         </div>
                         <div class="rounded-[18px] border border-black/8 bg-white/72 px-4 py-3 dark:border-white/10 dark:bg-white/[0.06]">
-                            <p class="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Network</p>
-                            <p class="mt-1 font-mono text-xl font-semibold tabular-nums text-woosoo-green">LAN ✓</p>
+                            <p class="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Online</p>
+                            <p class="mt-1 font-mono text-xl font-semibold tabular-nums">
+                                {{ fleetStats?.online_count ?? 0 }}/{{ activeDevices.length }} online
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -222,6 +224,9 @@ function syncAll() {
                             Add Device
                         </Link>
                     </Button>
+                    <!-- TODO: trashed devices — DeviceController needs a trashed() method + Inertia page
+                         before this link can be wired up. Route 'devices.trashed' is registered but has no
+                         controller implementation. -->
                 </div>
             </section>
 
@@ -325,19 +330,19 @@ function syncAll() {
                                         :style="{ width: `${batteryLevel(device)}%` }"
                                     />
                                 </div>
-                                <p v-if="deviceStatus(device) === 'offline' && (batteryLevel(device) ?? 100) < 5" class="mt-1 text-[10px] font-medium text-woosoo-red">
-                                    ⚠ Battery depleted
+                                <p v-if="deviceStatus(device) === 'offline' && (batteryLevel(device) ?? 100) < 5" class="mt-1 flex items-center gap-1 text-[10px] font-medium text-woosoo-red">
+                                    <AlertTriangle class="inline h-3 w-3" /> Battery depleted
                                 </p>
                             </div>
 
-                            <!-- Footer: security + actions -->
+                            <!-- Footer: version check + actions -->
                             <div class="flex items-center justify-between">
                                 <span
                                     class="inline-flex items-center gap-1 text-[10px] font-medium"
-                                    :class="isSecurityExpired(device) ? 'text-woosoo-red' : 'text-woosoo-green'"
+                                    :class="isVersionMismatch(device) ? 'text-woosoo-red' : 'text-woosoo-green'"
                                 >
-                                    <component :is="isSecurityExpired(device) ? ShieldAlert : ShieldCheck" class="h-3 w-3" />
-                                    {{ isSecurityExpired(device) ? 'Expired' : 'Sec OK' }}
+                                    <component :is="isVersionMismatch(device) ? ShieldAlert : ShieldCheck" class="h-3 w-3" />
+                                    {{ isVersionMismatch(device) ? 'Ver Mismatch' : 'Ver OK' }}
                                 </span>
                                 <div class="flex gap-1">
                                     <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openDeviceDetail(device)">
@@ -352,7 +357,7 @@ function syncAll() {
                                         @click="confirmRestart(device)"
                                     >
                                         <RotateCcw class="mr-1 h-3 w-3" :class="{ 'animate-spin': isRestarting === device.id }" />
-                                        Restart
+                                        Regen Code
                                     </Button>
                                 </div>
                             </div>
@@ -364,18 +369,18 @@ function syncAll() {
 
         <DeviceDetailSheet v-model:open="isDeviceDetailOpen" :device="selectedDevice" />
 
-        <!-- Restart confirm -->
+        <!-- Regen code confirm -->
         <AlertDialog :open="!!restartTarget" @update:open="(v) => { if (!v) restartTarget = null }">
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Restart {{ restartTarget?.name }}?</AlertDialogTitle>
+                    <AlertDialogTitle>Regenerate security code for {{ restartTarget?.name }}?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This will send a restart signal to the device. The tablet will briefly go offline.
+                        A new security code will be generated. The tablet will need to re-pair using the new code.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction @click="executeRestart">Restart</AlertDialogAction>
+                    <AlertDialogAction @click="executeRestart">Regenerate</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

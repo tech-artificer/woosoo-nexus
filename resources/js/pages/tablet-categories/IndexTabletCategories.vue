@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { toast } from 'vue-sonner'
-import { Plus, Pencil, Trash2, GripVertical, Star, X, Search } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, GripVertical, Star, X, Search, RefreshCw } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import type { BreadcrumbItem } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -58,6 +58,7 @@ const selectedCategory = computed(() =>
 
 // ─── Category Drag Reorder ─────────────────────────────────────────────────
 const dragOverId = ref<number | null>(null)
+const isReordering = ref(false)
 let draggingId: number | null = null
 
 function onDragStart(id: number) { draggingId = id }
@@ -79,12 +80,14 @@ function onDrop(targetId: number) {
     const [moved] = ordered.splice(fromIdx, 1)
     ordered.splice(toIdx, 0, moved)
     dragOverId.value = null
+    isReordering.value = true
     router.put(route('tablet-categories.reorder'), {
         ids: ordered.map((c) => c.id),
     }, {
         preserveScroll: true,
         onSuccess: () => toast.success('Order saved.'),
         onError: () => toast.error('Failed to save order.'),
+        onFinish: () => { isReordering.value = false },
     })
 }
 
@@ -248,13 +251,14 @@ function submitAttach() {
 
             <!-- Two-pane layout -->
             <section class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
-                <div class="flex min-h-[480px] divide-x divide-black/8 dark:divide-white/10">
+                <div class="flex min-h-[480px] flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-black/8 dark:divide-white/10">
                     <!-- Left pane: category list -->
-                    <div class="w-72 shrink-0 flex flex-col">
+                    <div class="w-full lg:w-72 lg:shrink-0 flex flex-col">
                         <div class="border-b border-black/8 px-4 py-3 dark:border-white/10">
-                            <p class="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                            <p class="flex items-center text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                                 Categories
-                                <Badge variant="secondary" class="ml-1 text-[9px]">{{ categories.length }} active</Badge>
+                                <Badge variant="secondary" class="ml-1 text-[9px]">{{ categories.filter(c => c.is_active).length }} active</Badge>
+                                <RefreshCw v-if="isReordering" class="ml-1.5 h-3 w-3 animate-spin" />
                             </p>
                         </div>
                         <div class="flex-1 overflow-y-auto py-1">
