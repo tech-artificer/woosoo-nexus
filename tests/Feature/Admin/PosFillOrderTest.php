@@ -2,6 +2,7 @@
 
 use App\Enums\OrderStatus;
 use App\Events\Order\OrderCompleted;
+use App\Events\Order\OrderVoided;
 use App\Models\DeviceOrder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,9 +28,10 @@ test('pos fill-order returns 404 when the order is not found (P1-07)', function 
 });
 
 test('pos fill-order completes an order and dispatches OrderCompleted (P1-07)', function () {
-    // Fake all events so the order-status observer broadcast doesn't run during this
-    // fill-order happy-path assertion (the broadcast path is covered elsewhere).
-    Event::fake();
+    // Fake only the fill-order events so Eloquent model events (e.g. user_uuid /
+    // order_uuid generation) still fire. The status-update observer broadcast runs for
+    // real but no longer throws — OrderBroadcastPayload guards the POS relations.
+    Event::fake([OrderCompleted::class, OrderVoided::class]);
 
     $admin = User::factory()->admin()->create();
     $order = DeviceOrder::factory()->create([
