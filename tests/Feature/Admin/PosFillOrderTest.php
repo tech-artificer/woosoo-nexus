@@ -34,9 +34,11 @@ test('pos fill-order completes an order and dispatches OrderCompleted (P1-07)', 
     Event::fake([OrderCompleted::class, OrderVoided::class]);
 
     $admin = User::factory()->admin()->create();
+    // SERVED is the valid pre-completion state (SERVED → COMPLETED); the state machine
+    // rejects IN_PROGRESS → COMPLETED.
     $order = DeviceOrder::factory()->create([
         'order_id' => 8001,
-        'status' => OrderStatus::IN_PROGRESS,
+        'status' => OrderStatus::SERVED,
     ]);
 
     $this->actingAs($admin)
