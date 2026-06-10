@@ -21,8 +21,7 @@ enum OrderStatus: string
             self::CONFIRMED => in_array($newStatus, [self::IN_PROGRESS, self::COMPLETED, self::VOIDED]),
             self::IN_PROGRESS => in_array($newStatus, [self::READY, self::VOIDED]),
             self::READY => in_array($newStatus, [self::SERVED, self::VOIDED]),
-            // SERVED is non-terminal: kitchen staff may recall an order to in_progress.
-            // This edge is KDS-driven only — it must not be used by payment/POS paths.
+            // KDS-driven recall edge only — payment/POS paths must not use this transition.
             self::SERVED => in_array($newStatus, [self::IN_PROGRESS, self::COMPLETED, self::VOIDED]),
             self::COMPLETED,
             self::CANCELLED,

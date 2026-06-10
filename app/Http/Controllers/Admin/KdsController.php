@@ -181,18 +181,16 @@ class KdsController extends Controller
 
     public function recall(DeviceOrder $order): JsonResponse
     {
-        // B5.1a: VOIDED is terminal — recall must create a new ticket, never un-void.
+        // Voided orders require a new ticket — give a specific message rather than the generic one below.
         if ($order->status === OrderStatus::VOIDED) {
             return response()->json(['message' => 'Cannot recall voided order.'], 422);
         }
 
-        // Recall is semantically a served→in_progress action only.
-        // Other states that can technically reach in_progress use the advance() endpoint.
+        // Recall is served→in_progress only; other paths to in_progress go through advance().
         if ($order->status !== OrderStatus::SERVED) {
             return response()->json(['message' => 'Order cannot be recalled from its current state.'], 422);
         }
 
-        $current = $order->status;
         $gateMessage = null;
 
         DB::transaction(function () use ($order, &$gateMessage) {
@@ -214,7 +212,7 @@ class KdsController extends Controller
             return response()->json(['message' => $gateMessage], 422);
         }
 
-        Log::info('[KDS] recall', ['order_id' => $order->id, 'from' => $current->value, 'admin_id' => auth()->id()]);
+        Log::info('[KDS] recall', ['order_id' => $order->id, 'from' => OrderStatus::SERVED->value, 'admin_id' => auth()->id()]);
 
         $order->refresh();
         $order->loadMissing(['items', 'device', 'serviceRequests']);
@@ -232,8 +230,7 @@ class KdsController extends Controller
         $createdAt = $order->created_at;
         $issuedAtMs = $createdAt ? $createdAt->timestamp * 1000 : $now->timestamp * 1000;
         $elapsed = $createdAt ? (int) $createdAt->diffInSeconds($now) : 0;
-        // SERVED is non-terminal (recall is permitted), so this flag covers only the
-        // "freeze elapsed timer" cases — orders that will not change state further from KDS.
+        // SERVED is recallable, so freeze the elapsed timer for SERVED and VOIDED only.
         $isFullyTerminal = in_array($order->status, [OrderStatus::SERVED, OrderStatus::VOIDED]);
         $frozenElapsed = ($isFullyTerminal && $order->updated_at && $createdAt)
             ? (int) $createdAt->diffInSeconds($order->updated_at)
