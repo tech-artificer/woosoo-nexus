@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import axios from 'axios'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
@@ -9,9 +8,11 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { ACTIVE_STATES, applyAdvance, applyRecall, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
-import { useKdsBoard } from '@/components/KDS/useKdsBoard'
+import { postKdsAdvance, postKdsToggleItem } from '@/components/KDS/kdsApi'
+import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
+import { useKdsBoard } from '@/components/KDS/useKdsBoard'
+import { useKdsEcho } from '@/components/KDS/useKdsEcho'
 
 const props = defineProps<{
   title: string
@@ -21,15 +22,20 @@ const props = defineProps<{
 function seedTickets(source: KdsTicket[]): KdsTicket[] {
   return source.map((ticket) => ({
     ...ticket,
+    state: ticket.state === 'ready' ? 'preparing' : ticket.state,
     items: ticket.items.map((item) => ({ ...item, done: item.done === true })),
   }))
 }
 
 const board = useKdsBoard(seedTickets(props.initialTickets))
+useKdsEcho(board)
+
 const tickets = board.tickets
 const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
+const pendingAdvance = ref<Set<string>>(new Set())
+const pendingToggle = ref<Set<string>>(new Set())
 let timer: ReturnType<typeof setInterval> | null = null
 
 const activeTickets = computed(() => tickets.value.filter((ticket) => ACTIVE_STATES.includes(ticket.state)))
@@ -47,40 +53,31 @@ const counts = computed<Record<KdsFilter, number>>(() => ({
   active: activeTickets.value.length,
   overdue: filterTickets(tickets.value, 'overdue', now.value).length,
   new: tickets.value.filter((ticket) => ticket.state === 'new').length,
-  preparing: tickets.value.filter((ticket) => ticket.state === 'preparing').length,
-  ready: tickets.value.filter((ticket) => ticket.state === 'ready').length,
+  preparing: tickets.value.filter((ticket) => ticket.state === 'preparing' || ticket.state === 'ready').length,
+  ready: 0,
   served: tickets.value.filter((ticket) => ticket.state === 'served').length,
   voided: tickets.value.filter((ticket) => ticket.state === 'voided').length,
 }))
 
-function updateTicket(ticketId: string, updater: (ticket: KdsTicket) => KdsTicket) {
-  tickets.value = tickets.value.map((ticket) => ticket.id === ticketId ? updater(ticket) : ticket)
-}
-
 async function toggleItem(ticketId: string, itemId: string) {
-  const ticket = tickets.value.find((t) => t.id === ticketId)
+  const ticket = tickets.value.find((item) => item.id === ticketId)
 
   if (!ticket || ticket.state === 'served' || ticket.state === 'voided') {
     return
   }
 
-  const prevDone = ticket.items.find((item) => item.id === itemId)?.done ?? false
+  if (pendingToggle.value.has(itemId)) {
+    return
+  }
 
-  // Optimistic flip; reconcile to the server's authoritative state on success.
-  updateTicket(ticketId, (current) => ({
-    ...current,
-    items: current.items.map((item) => item.id === itemId ? { ...item, done: !item.done } : item),
-  }))
+  pendingToggle.value.add(itemId)
 
   try {
-    const { data } = await axios.post(route('kds.toggle-item', itemId))
-    board.applyItemToggle({ order_id: ticketId, item_id: itemId, done: data.done, done_at: data.done_at })
+    await postKdsToggleItem(itemId)
   } catch (error) {
-    updateTicket(ticketId, (current) => ({
-      ...current,
-      items: current.items.map((item) => item.id === itemId ? { ...item, done: prevDone } : item),
-    }))
-    toast.error((error as any)?.response?.data?.message ?? 'Could not update item.', { duration: 3500 })
+    toast.error(error instanceof Error ? error.message : 'Unable to update item.')
+  } finally {
+    pendingToggle.value.delete(itemId)
   }
 }
 
@@ -98,15 +95,18 @@ async function advanceTicket(ticketId: string) {
     return
   }
 
-  // Snapshot for rollback, then advance optimistically (client nextStateFor mirrors server nextStatus).
-  const snapshot = ticket
-  updateTicket(ticketId, (current) => applyAdvance(current, now.value))
+  if (pendingAdvance.value.has(ticketId)) {
+    return
+  }
+
+  pendingAdvance.value.add(ticketId)
 
   try {
-    await axios.post(route('kds.advance', ticketId))
+    await postKdsAdvance(ticketId)
   } catch (error) {
-    updateTicket(ticketId, () => snapshot)
-    toast.error((error as any)?.response?.data?.message ?? 'Could not advance ticket.', { duration: 3500 })
+    toast.error(error instanceof Error ? error.message : 'Unable to advance order.')
+  } finally {
+    pendingAdvance.value.delete(ticketId)
   }
 }
 
@@ -117,16 +117,6 @@ function toggleDensity() {
   } catch {
     // Storage is optional for kiosk browsers.
   }
-}
-
-function recallTicket(ticketId: string) {
-  // Wave 3: wire to POST /kds/orders/{order}/recall (route + enum edge + contract not yet built).
-  // Until then recall is local-only and does not persist.
-  updateTicket(ticketId, (ticket) => applyRecall(ticket, now.value))
-  selectedFilter.value = 'active'
-  toast.success('Ticket recalled to the line.', {
-    duration: 3000,
-  })
 }
 
 onMounted(() => {
@@ -165,7 +155,6 @@ onBeforeUnmount(() => {
           :active="counts.active"
           :new-count="counts.new"
           :preparing="counts.preparing"
-          :ready="counts.ready"
           :overdue="counts.overdue"
           :clock="clockLabel"
           :date-label="dateLabel"
@@ -192,7 +181,6 @@ onBeforeUnmount(() => {
               :now="now"
               :density="density"
               @advance="advanceTicket"
-              @recall="recallTicket"
               @toggle-item="toggleItem"
             />
           </div>
@@ -385,7 +373,7 @@ body.kds-active {
 
 :deep(.kds-metrics) {
   display: grid;
-  grid-template-columns: repeat(5, minmax(80px, 1fr));
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
   height: 100%;
 }
 

@@ -16,7 +16,7 @@ import {
     AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-    Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 
 interface AllowedMenu {
@@ -41,7 +41,7 @@ interface PackageConfigVm {
 const props = defineProps<{ packages: PackageConfigVm[] }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Packages', href: route('package-configs.index') },
+    { title: 'Dining Tiers', href: route('package-configs.index') },
 ]
 
 const orderedPackages = computed(() =>
@@ -59,8 +59,23 @@ function menusByType(pkg: PackageConfigVm, type: string) {
     return pkg.menus.filter((m) => (m.menu_type ?? 'meat') === type && m.is_active)
 }
 
-function isBestSeller(index: number): boolean {
-    return index === Math.floor(orderedPackages.value.length / 2)
+function formatPrice(value: string): string {
+    const n = parseFloat(String(value))
+    if (!Number.isFinite(n)) return value
+    return n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// ─── Manage Menus ──────────────────────────────────────────────────────────
+const manageMenusPkg = ref<PackageConfigVm | null>(null)
+
+function openManageMenus(pkg: PackageConfigVm) {
+    manageMenusPkg.value = pkg
+}
+
+function switchToEdit() {
+    const pkg = manageMenusPkg.value
+    manageMenusPkg.value = null
+    if (pkg) openEdit(pkg)
 }
 
 // ─── Create ────────────────────────────────────────────────────────────────
@@ -115,7 +130,7 @@ function confirmDelete() {
 </script>
 
 <template>
-    <Head title="Packages" />
+    <Head title="Dining Tiers" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-5">
@@ -132,7 +147,7 @@ function confirmDelete() {
                         </h2>
                         <p class="text-sm text-muted-foreground">
                             {{ activeCount }} active package{{ activeCount !== 1 ? 's' : '' }} ·
-                            {{ allPublished ? 'All published' : 'Some inactive' }}
+                            {{ packages.length === 0 ? '' : allPublished ? 'All published' : 'Some inactive' }}
                         </p>
                     </div>
                     <div class="flex gap-2">
@@ -159,18 +174,8 @@ function confirmDelete() {
                         <div
                             v-for="(pkg, index) in orderedPackages"
                             :key="pkg.id"
-                            class="relative flex flex-col gap-4 rounded-[18px] border bg-white/60 p-5 transition-all duration-150 dark:bg-white/[0.04]"
-                            :class="isBestSeller(index)
-                                ? 'border-[#f6b56d]/60 shadow-md shadow-[#f6b56d]/10 dark:border-[#f6b56d]/40'
-                                : 'border-black/8 dark:border-white/10'"
+                            class="relative flex flex-col gap-4 rounded-[18px] border border-black/8 bg-white/60 p-5 transition-all duration-150 dark:border-white/10 dark:bg-white/[0.04]"
                         >
-                            <!-- Best seller ribbon -->
-                            <div v-if="isBestSeller(index)" class="absolute right-0 top-0 overflow-hidden rounded-tr-[18px]">
-                                <div class="translate-x-2 -translate-y-px rotate-45 origin-bottom-left bg-[#f6b56d] px-6 py-0.5 text-[9px] font-bold tracking-widest text-black uppercase">
-                                    BEST SELLER
-                                </div>
-                            </div>
-
                             <!-- Tier label + name -->
                             <div>
                                 <p class="text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
@@ -182,7 +187,7 @@ function confirmDelete() {
 
                             <!-- Price -->
                             <div class="flex items-baseline gap-1">
-                                <span class="font-mono text-3xl font-bold text-[#f6b56d]">₱{{ pkg.base_price }}</span>
+                                <span class="font-mono text-3xl font-bold text-[#f6b56d]">₱{{ formatPrice(pkg.base_price) }}</span>
                                 <span class="text-sm text-muted-foreground">/ pax</span>
                             </div>
 
@@ -218,6 +223,21 @@ function confirmDelete() {
                                 </ul>
                             </div>
 
+                            <!-- Beverages section -->
+                            <div v-if="menusByType(pkg, 'beverage').length > 0">
+                                <p class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Beverages</p>
+                                <ul class="space-y-1">
+                                    <li
+                                        v-for="m in menusByType(pkg, 'beverage')"
+                                        :key="m.id"
+                                        class="flex items-center gap-2 text-sm text-foreground"
+                                    >
+                                        <Check class="h-3.5 w-3.5 shrink-0 text-woosoo-green" />
+                                        {{ m.name }}
+                                    </li>
+                                </ul>
+                            </div>
+
                             <!-- All items fallback (if no menu_type separation) -->
                             <div v-if="menusByType(pkg, 'meat').length === 0 && pkg.menus.length > 0">
                                 <p class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
@@ -243,12 +263,15 @@ function confirmDelete() {
                                 No menu items configured
                             </div>
 
-                            <!-- Status badge -->
+                            <!-- Status badge + actions -->
                             <div class="flex items-center justify-between border-t border-black/5 pt-3 dark:border-white/8">
                                 <Badge :variant="pkg.is_active ? 'default' : 'secondary'" class="text-[10px]">
                                     {{ pkg.is_active ? 'Published' : 'Inactive' }}
                                 </Badge>
                                 <div class="flex gap-1">
+                                    <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openManageMenus(pkg)">
+                                        Manage Menus
+                                    </Button>
                                     <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openEdit(pkg)">
                                         <Pencil class="mr-1 h-3 w-3" /> Edit
                                     </Button>
@@ -262,6 +285,58 @@ function confirmDelete() {
                 </div>
             </section>
         </div>
+
+        <!-- Manage Menus dialog -->
+        <Dialog :open="manageMenusPkg !== null" @update:open="(val) => { if (!val) manageMenusPkg = null }">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Menus — {{ manageMenusPkg?.name }}</DialogTitle>
+                    <DialogDescription>
+                        Menu items are synced from the POS configuration. To add or remove items, update the package in the POS system, then sync.
+                    </DialogDescription>
+                </DialogHeader>
+                <div v-if="manageMenusPkg" class="max-h-72 space-y-3 overflow-y-auto py-1">
+                    <div v-if="manageMenusPkg.menus.length === 0" class="py-4 text-center text-sm text-muted-foreground">
+                        No menu items attached to this package.
+                    </div>
+                    <template v-else>
+                        <div v-if="menusByType(manageMenusPkg, 'meat').length > 0">
+                            <p class="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Meats</p>
+                            <ul class="space-y-1">
+                                <li v-for="m in menusByType(manageMenusPkg, 'meat')" :key="m.id" class="flex items-center gap-2 text-sm">
+                                    <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b56d]" />
+                                    {{ m.name }}
+                                    <Badge variant="secondary" class="ml-auto text-[9px]">{{ m.menu_type ?? 'meat' }}</Badge>
+                                </li>
+                            </ul>
+                        </div>
+                        <div v-if="menusByType(manageMenusPkg, 'side').length > 0 || menusByType(manageMenusPkg, 'dessert').length > 0">
+                            <p class="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Add-ons</p>
+                            <ul class="space-y-1">
+                                <li v-for="m in [...menusByType(manageMenusPkg, 'side'), ...menusByType(manageMenusPkg, 'dessert')]" :key="m.id" class="flex items-center gap-2 text-sm">
+                                    <Check class="h-3 w-3 shrink-0 text-woosoo-green" />
+                                    {{ m.name }}
+                                    <Badge variant="secondary" class="ml-auto text-[9px]">{{ m.menu_type }}</Badge>
+                                </li>
+                            </ul>
+                        </div>
+                        <div v-if="menusByType(manageMenusPkg, 'beverage').length > 0">
+                            <p class="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Beverages</p>
+                            <ul class="space-y-1">
+                                <li v-for="m in menusByType(manageMenusPkg, 'beverage')" :key="m.id" class="flex items-center gap-2 text-sm">
+                                    <Check class="h-3 w-3 shrink-0 text-woosoo-green" />
+                                    {{ m.name }}
+                                </li>
+                            </ul>
+                        </div>
+                    </template>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="manageMenusPkg = null">Close</Button>
+                    <Button variant="ghost" @click="switchToEdit">Edit Tier Details</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <!-- Create dialog -->
         <Dialog :open="showCreate" @update:open="showCreate = $event">

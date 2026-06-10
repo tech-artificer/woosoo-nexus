@@ -104,6 +104,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/package-configs/{packageConfig}/menus', [PackageConfigController::class, 'syncAllowedMenus'])->name('package-configs.sync-menus');
         // Tablet Categories
         Route::get('/tablet-categories', [TabletCategoryController::class, 'index'])->name('tablet-categories.index');
+        Route::put('/tablet-categories/reorder', [TabletCategoryController::class, 'reorder'])->name('tablet-categories.reorder');
         Route::post('/tablet-categories', [TabletCategoryController::class, 'store'])->name('tablet-categories.store');
         Route::put('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'update'])->name('tablet-categories.update');
         Route::delete('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'destroy'])->name('tablet-categories.destroy');
@@ -202,7 +203,6 @@ Route::middleware(['auth'])->group(function () {
             ->where('channel', 'release|debug')
             ->name('devices.download-apk');
 
-        Route::resource('/devices', DeviceController::class);
         Route::prefix('devices')->name('devices.')->group(function () {
             Route::get('trashed', [DeviceController::class, 'trashed'])->name('trashed');
             Route::patch('{id}/restore', [DeviceController::class, 'restore'])->name('restore');
@@ -210,6 +210,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{device}/token', [DeviceController::class, 'createToken'])->name('create.token');
             Route::post('/{device}/security-code', [DeviceController::class, 'regenerateSecurityCode'])->name('security-code.regenerate');
         });
+        Route::resource('/devices', DeviceController::class);
 
         Route::get('/accessibility', [AccessibilityController::class, 'index'])->name('accessibility.index');
         Route::get('/accessibility/{role}/permissions', [AccessibilityController::class, 'updatePermissions'])->name('accessibility.update');
