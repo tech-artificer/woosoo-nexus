@@ -319,6 +319,8 @@ class TabletApiController extends Controller
                     'id' => $cat->id,
                     'name' => $cat->name,
                     'slug' => $cat->slug,
+                    'icon' => $cat->icon,
+                    'color' => $cat->color,
                 ])->values();
 
                 return ApiResponse::success($payload, 'Categories retrieved successfully');

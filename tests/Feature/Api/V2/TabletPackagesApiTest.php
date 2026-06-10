@@ -510,6 +510,7 @@ class TabletPackagesApiTest extends TestCase
     {
         $this->getJson('/api/v2/tablet/packages')->assertUnauthorized();
         $this->getJson('/api/v2/tablet/packages/46')->assertUnauthorized();
+        $this->getJson('/api/v2/tablet/package-configs')->assertUnauthorized();
         $this->getJson('/api/v2/tablet/meat-categories')->assertUnauthorized();
         $this->getJson('/api/v2/tablet/categories/sides/menus')->assertUnauthorized();
     }
