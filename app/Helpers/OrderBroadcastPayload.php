@@ -9,8 +9,22 @@ class OrderBroadcastPayload
 {
     public static function make(DeviceOrder $order): array
     {
-        // Ensure related data is available for downstream consumers
-        $order->loadMissing(['device.table', 'table', 'items.menu', 'serviceRequests']);
+        // App-DB relations are always safe to load.
+        $order->loadMissing(['items', 'device', 'serviceRequests']);
+
+        // Table and menu live on the Krypton (POS) connection. Degrade gracefully if POS
+        // is unreachable so an order broadcast never 500s the caller (e.g. KDS advance):
+        // table falls back to null and item names fall back to the stored item name.
+        try {
+            $order->loadMissing(['device.table', 'table', 'items.menu']);
+        } catch (\Throwable $e) {
+            // POS down — resolve POS-backed relations to null so the access below does not
+            // re-trigger a lazy load (which would throw again). Table → null; item names
+            // fall back to the stored item name.
+            $order->setRelation('table', null);
+            $order->device?->setRelation('table', null);
+            $order->items?->each(fn ($item) => $item->setRelation('menu', null));
+        }
 
         $table = $order->device?->table ?? $order->table;
 

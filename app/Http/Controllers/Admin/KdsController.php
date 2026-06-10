@@ -120,7 +120,9 @@ class KdsController extends Controller
         Log::info('[KDS] advance', ['order_id' => $order->id, 'to' => $next->value, 'admin_id' => auth()->id()]);
 
         $order->refresh();
-        $order->load(['device.table', 'table', 'items.menu', 'serviceRequests']);
+        // Preload app-DB relations only. Table/menu (POS connection) are loaded — and
+        // guarded — inside OrderBroadcastPayload so a POS outage can't 500 this action.
+        $order->loadMissing(['items', 'device', 'serviceRequests']);
         app(OrderBroadcaster::class)->statusChanged($order);
 
         return response()->json(['status' => $next->value]);
