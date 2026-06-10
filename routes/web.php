@@ -272,7 +272,16 @@ Route::middleware(['auth'])->group(function () {
 
                 return response()->json(['success' => false, 'message' => 'Device order not found'], 404);
             } catch (Throwable $e) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+                // Log the real cause for ops; never leak the raw exception to the client.
+                \Illuminate\Support\Facades\Log::error('[pos.fill-order] update failed', [
+                    'order_id' => $orderId,
+                    'exception' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Could not update the order. Please try again.',
+                ], 500);
             }
         })->name('pos.fill-order');
 
