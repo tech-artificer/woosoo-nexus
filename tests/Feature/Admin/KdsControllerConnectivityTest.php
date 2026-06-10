@@ -40,6 +40,21 @@ test('kds index returns 200 with empty tickets when pos connection fails', funct
         );
 });
 
+test('kds index returns 200 with tickets when pos unreachable and active orders exist', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    \App\Models\DeviceOrder::factory()->confirmed()->create(['table_id' => null]);
+
+    actingAs($admin);
+
+    get(route('kds.display'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('KDS/Display')
+            ->has('initialTickets', 1)
+            ->where('initialTickets.0.table', '—')
+        );
+});
+
 test('kds index returns 200 with empty tickets when pos password is not configured', function () {
     Config::set('database.connections.pos', [
         'driver' => 'mysql',
