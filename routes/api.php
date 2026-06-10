@@ -99,8 +99,15 @@ Route::middleware([
     'auth:device',
     UpdateDeviceLastSeen::class,
 ])->get('/order/{orderId}/dispatch', function (Request $request, int $orderId) {
-    $order = DeviceOrder::where(['order_id' => $orderId])->first();
+    $order = DeviceOrder::where('order_id', $orderId)->first();
+
+    if (! $order) {
+        return response()->json(['message' => 'Order not found.'], 404);
+    }
+
     PrintOrder::dispatch($order);
+
+    return response()->json(['status' => 'dispatched']);
 });
 
 // Device-only refill/printed endpoints moved under auth:device group below

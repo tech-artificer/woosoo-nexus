@@ -9,6 +9,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
+use App\Services\PosConnectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,10 @@ use Inertia\Response;
 
 class KdsController extends Controller
 {
+    public function __construct(
+        private readonly PosConnectionService $posConnection,
+    ) {}
+
     private const HIDDEN_STATUSES = [
         OrderStatus::COMPLETED,
         OrderStatus::CANCELLED,
@@ -34,7 +39,11 @@ class KdsController extends Controller
 
     public function index(Request $request): Response
     {
-        $orders = DeviceOrder::with(['device.table', 'table', 'items.menu'])
+        $with = $this->posConnection->isReachable()
+            ? ['device.table', 'table', 'items.menu']
+            : ['device', 'items'];
+
+        $orders = DeviceOrder::with($with)
             ->whereNotIn('status', array_map(fn ($s) => $s->value, self::HIDDEN_STATUSES))
             ->orderBy('created_at')
             ->get();
@@ -60,15 +69,10 @@ class KdsController extends Controller
             $current = OrderStatus::CONFIRMED;
         }
 
-        $next = $this->nextStatus($current);
-
-        if ($next === null) {
-            return response()->json(['message' => 'No advance available from current state.'], 422);
-        }
-
         $gateMessage = null;
+        $next = null;
 
-        DB::transaction(function () use ($order, $current, $next, &$gateMessage) {
+        DB::transaction(function () use ($order, $current, &$gateMessage, &$next) {
             // Re-read with lock so we both serialise concurrent writers and write to the current DB row.
             $locked = DeviceOrder::lockForUpdate()->findOrFail($order->id);
 
@@ -79,7 +83,6 @@ class KdsController extends Controller
                 return;
             }
 
-            // Mark Ready gate: re-check items under lock to eliminate TOCTOU with toggleItem().
             if ($current === OrderStatus::IN_PROGRESS) {
                 $hasUndone = DeviceOrderItems::where('order_id', $order->id)
                     ->where('done', false)
@@ -87,24 +90,48 @@ class KdsController extends Controller
                     ->exists();
 
                 if ($hasUndone) {
-                    $gateMessage = 'All items must be marked done before advancing to Ready.';
+                    $gateMessage = 'All items must be marked done before marking as served.';
 
                     return;
                 }
+
+                // Kitchen-facing single action: contract-safe two-hop in_progress -> ready -> served.
+                $locked->status = OrderStatus::READY;
+                $locked->save();
+                $locked->status = OrderStatus::SERVED;
+                $locked->save();
+                $next = OrderStatus::SERVED;
+
+                return;
             }
 
-            $locked->status = $next;
+            $nextStatus = $this->nextStatus($current);
+
+            if ($nextStatus === null) {
+                $gateMessage = 'No advance available from current state.';
+
+                return;
+            }
+
+            $locked->status = $nextStatus;
             $locked->save();
+            $next = $nextStatus;
         });
 
         if ($gateMessage !== null) {
             return response()->json(['message' => $gateMessage], 422);
         }
 
+        if ($next === null) {
+            return response()->json(['message' => 'No advance available from current state.'], 422);
+        }
+
         Log::info('[KDS] advance', ['order_id' => $order->id, 'to' => $next->value, 'admin_id' => auth()->id()]);
 
         $order->refresh();
-        $order->load(['device.table', 'table', 'items.menu', 'serviceRequests']);
+        // Preload app-DB relations only. Table/menu (POS connection) are loaded — and
+        // guarded — inside OrderBroadcastPayload so a POS outage can't 500 this action.
+        $order->loadMissing(['items', 'device', 'serviceRequests']);
         app(OrderBroadcaster::class)->statusChanged($order);
 
         return response()->json(['status' => $next->value]);
@@ -147,7 +174,6 @@ class KdsController extends Controller
     {
         return match ($status) {
             OrderStatus::CONFIRMED => OrderStatus::IN_PROGRESS,
-            OrderStatus::IN_PROGRESS => OrderStatus::READY,
             OrderStatus::READY => OrderStatus::SERVED,
             default => null,
         };
@@ -193,7 +219,7 @@ class KdsController extends Controller
             OrderStatus::PENDING,
             OrderStatus::CONFIRMED => 'new',
             OrderStatus::IN_PROGRESS => 'preparing',
-            OrderStatus::READY => 'ready',
+            OrderStatus::READY => 'preparing',
             OrderStatus::SERVED => 'served',
             OrderStatus::VOIDED => 'voided',
             default => 'new',

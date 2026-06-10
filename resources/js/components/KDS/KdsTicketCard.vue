@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Check, RotateCcw } from 'lucide-vue-next'
+import { ArrowRight, Check } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   advance: [ticketId: string]
-  recall: [ticketId: string]
   toggleItem: [ticketId: string, itemId: string]
 }>()
 
@@ -28,8 +27,7 @@ const nextState = computed(() => nextStateFor(props.ticket.state))
 const advanceBlocked = computed(() => isAdvanceBlocked(props.ticket))
 const actionLabel = computed(() => {
   if (props.ticket.state === 'new') return 'Start Preparing'
-  if (props.ticket.state === 'preparing') return 'Mark Ready'
-  if (props.ticket.state === 'ready') return 'Mark Served'
+  if (props.ticket.state === 'preparing' || props.ticket.state === 'ready') return 'Mark as Served'
   return ''
 })
 
@@ -131,18 +129,7 @@ function splitSafetyName(name: string) {
       </div>
 
       <Button
-        v-if="terminal"
-        type="button"
-        variant="outline"
-        class="kds-card-action is-recall"
-        @click="emit('recall', ticket.id)"
-      >
-        <RotateCcw data-icon="inline-start" aria-hidden="true" />
-        Recall to Line
-      </Button>
-
-      <Button
-        v-else-if="nextState"
+        v-if="nextState"
         type="button"
         variant="brand"
         class="kds-card-action"

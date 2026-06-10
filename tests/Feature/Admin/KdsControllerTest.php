@@ -25,7 +25,7 @@ test('mark ready is gated when items are not all done', function () {
     $this->actingAs($admin)
         ->postJson("/kds/orders/{$order->id}/advance")
         ->assertUnprocessable()
-        ->assertJsonFragment(['message' => 'All items must be marked done before advancing to Ready.']);
+        ->assertJsonFragment(['message' => 'All items must be marked done before marking as served.']);
 });
 
 test('mark ready advances when all items are done', function () {
@@ -36,9 +36,9 @@ test('mark ready advances when all items are done', function () {
     $this->actingAs($admin)
         ->postJson("/kds/orders/{$order->id}/advance")
         ->assertOk()
-        ->assertJson(['status' => 'ready']);
+        ->assertJson(['status' => 'served']);
 
-    expect($order->fresh()->status)->toBe(OrderStatus::READY);
+    expect($order->fresh()->status)->toBe(OrderStatus::SERVED);
 });
 
 test('admins can toggle an item done flag', function () {
@@ -121,5 +121,5 @@ test('mark ready gate re-checks items inside the transaction', function () {
     $this->actingAs($admin)
         ->postJson("/kds/orders/{$order->id}/advance")
         ->assertUnprocessable()
-        ->assertJsonFragment(['message' => 'All items must be marked done before advancing to Ready.']);
+        ->assertJsonFragment(['message' => 'All items must be marked done before marking as served.']);
 });

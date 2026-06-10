@@ -1,8 +1,5 @@
 <?php
 
-use App\Enums\OrderStatus;
-use App\Events\Order\OrderCompleted;
-use App\Events\Order\OrderVoided;
 use App\Http\Controllers\Admin\AccessibilityController;
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -25,7 +22,6 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\TabletCategoryController;
 use App\Http\Controllers\Admin\UserController;
-use App\Models\DeviceOrder;
 use App\Services\LocalBranchResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -104,6 +100,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/package-configs/{packageConfig}/menus', [PackageConfigController::class, 'syncAllowedMenus'])->name('package-configs.sync-menus');
         // Tablet Categories
         Route::get('/tablet-categories', [TabletCategoryController::class, 'index'])->name('tablet-categories.index');
+        Route::put('/tablet-categories/reorder', [TabletCategoryController::class, 'reorder'])->name('tablet-categories.reorder');
         Route::post('/tablet-categories', [TabletCategoryController::class, 'store'])->name('tablet-categories.store');
         Route::put('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'update'])->name('tablet-categories.update');
         Route::delete('/tablet-categories/{tabletCategory}', [TabletCategoryController::class, 'destroy'])->name('tablet-categories.destroy');
@@ -202,7 +199,6 @@ Route::middleware(['auth'])->group(function () {
             ->where('channel', 'release|debug')
             ->name('devices.download-apk');
 
-        Route::resource('/devices', DeviceController::class);
         Route::prefix('devices')->name('devices.')->group(function () {
             Route::get('trashed', [DeviceController::class, 'trashed'])->name('trashed');
             Route::patch('{id}/restore', [DeviceController::class, 'restore'])->name('restore');
@@ -210,6 +206,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{device}/token', [DeviceController::class, 'createToken'])->name('create.token');
             Route::post('/{device}/security-code', [DeviceController::class, 'regenerateSecurityCode'])->name('security-code.regenerate');
         });
+        Route::resource('/devices', DeviceController::class);
 
         Route::get('/accessibility', [AccessibilityController::class, 'index'])->name('accessibility.index');
         Route::get('/accessibility/{role}/permissions', [AccessibilityController::class, 'updatePermissions'])->name('accessibility.update');
@@ -233,48 +230,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/restart', [ReverbController::class, 'restart'])->name('restart');
         });
 
-        // Update device_orders directly (admin only)
-        Route::post('/pos/fill-order', function (Request $request) {
-            $user = $request->user();
-            if (! $user || ! ($user->is_admin ?? false)) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $data = $request->validate([
-                'order_id' => ['required'],
-                'date_time_closed' => ['nullable', 'date'],
-                'is_open' => ['nullable', 'in:0,1'],
-                'is_voided' => ['nullable', 'in:0,1'],
-                'session_id' => ['nullable', 'integer'],
-            ]);
-
-            $orderId = $data['order_id'];
-            $isVoided = ($data['is_voided'] ?? 0) == 1;
-
-            try {
-                // Update local device_orders table directly
-                $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
-                if ($deviceOrder) {
-                    $newStatus = $isVoided
-                        ? OrderStatus::VOIDED
-                        : OrderStatus::COMPLETED;
-                    $deviceOrder->update(['status' => $newStatus]);
-
-                    // Dispatch appropriate event
-                    if ($isVoided) {
-                        OrderVoided::dispatch($deviceOrder);
-                    } else {
-                        OrderCompleted::dispatch($deviceOrder);
-                    }
-
-                    return response()->json(['success' => true, 'order' => $deviceOrder]);
-                }
-
-                return response()->json(['success' => false, 'message' => 'Device order not found'], 404);
-            } catch (Throwable $e) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
-            }
-        })->name('pos.fill-order');
+        Route::post('/pos/fill-order', [PosController::class, 'fillOrder'])->name('pos.fill-order');
 
         // Reports
         Route::prefix('reports')->name('reports.')->group(function () {
