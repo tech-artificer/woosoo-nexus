@@ -49,3 +49,21 @@ test('pos fill-order completes an order and dispatches OrderCompleted (P1-07)', 
     expect($order->fresh()->status)->toBe(OrderStatus::COMPLETED);
     Event::assertDispatched(OrderCompleted::class);
 });
+
+test('pos fill-order voids an order and dispatches OrderVoided (P1-07)', function () {
+    Event::fake([OrderCompleted::class, OrderVoided::class]);
+
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create([
+        'order_id' => 8002,
+        'status' => OrderStatus::SERVED,
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson('/pos/fill-order', ['order_id' => 8002, 'is_voided' => 1])
+        ->assertOk()
+        ->assertJson(['success' => true]);
+
+    expect($order->fresh()->status)->toBe(OrderStatus::VOIDED);
+    Event::assertDispatched(OrderVoided::class);
+});
