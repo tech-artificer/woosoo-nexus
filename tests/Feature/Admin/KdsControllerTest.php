@@ -123,3 +123,70 @@ test('mark ready gate re-checks items inside the transaction', function () {
         ->assertUnprocessable()
         ->assertJsonFragment(['message' => 'All items must be marked done before marking as served.']);
 });
+
+// --- P2 Recall ---
+
+test('admin can recall a served order to in_progress', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 0]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertOk()
+        ->assertJson(['status' => 'in_progress']);
+
+    $fresh = $order->fresh();
+    expect($fresh->status)->toBe(OrderStatus::IN_PROGRESS);
+    expect($fresh->recalled)->toBe(1);
+});
+
+test('recall increments the recalled counter each time', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 2]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertOk();
+
+    expect($order->fresh()->recalled)->toBe(3);
+});
+
+test('recall returns 422 for a voided order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::VOIDED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Cannot recall voided order.']);
+
+    expect($order->fresh()->status)->toBe(OrderStatus::VOIDED);
+});
+
+test('recall returns 422 for a confirmed order (wrong state)', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::CONFIRMED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Order cannot be recalled from its current state.']);
+});
+
+test('recall returns 422 for a completed order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::COMPLETED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertUnprocessable();
+});
+
+test('non-admin cannot access recall endpoint', function () {
+    $user = User::factory()->create(['is_admin' => false]);
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED]);
+
+    $this->actingAs($user)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertForbidden();
+});

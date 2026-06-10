@@ -69,6 +69,7 @@ class OrderBroadcastPayload
                 'notes' => $it->notes ?? null,
                 'type' => $it->type ?? null,
             ])->values()->all(),
+            'recalled' => $order->recalled ?? 0,
             'serviceRequests' => $order->serviceRequests ?? [],
         ];
     }
