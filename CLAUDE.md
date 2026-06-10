@@ -1,3 +1,33 @@
+# Woosoo Nexus — Project Conventions (authoritative)
+
+> Project-owned. **Overrides** the Laravel Boost "Test Enforcement" rule below when they conflict.
+
+## Testing policy — test what matters, not everything
+
+Do **not** write a test for every change. Tests are required only where behavior is
+contractual or has previously been a source of bugs. Default to the simplest coverage that
+proves the change, and **prefer updating an existing test over adding a new one**.
+
+**Require a test for:**
+- Order/KDS state machines and status transitions (`KdsController`, `DeviceOrder`, etc.)
+- AuthN/AuthZ and ability gates
+- Money, totals, tax, discounts, and data-integrity invariants
+- API contracts consumed by the tablet/PWA or print bridge
+- Any route/controller that previously shipped a bug (regression guard)
+
+**Do NOT require a test for:**
+- Presentational Vue/CSS, layout, copy, icons, styling
+- Trivial redirects, stubs, getters, config, or route renames
+- One-off scripts and verification harnesses
+
+**Hygiene:**
+- A test must be **committed in the same change** as the code it covers and must run in CI
+  on `dev` (`.github/workflows/ci.yml`). An uncommitted or never-run test does not count.
+- A test that cannot fail — or that never executes — is worse than no test. Delete it.
+- When behavior changes on purpose, **update the assertion**; a red test is the system working.
+
+---
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
