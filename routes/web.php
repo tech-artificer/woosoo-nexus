@@ -1,8 +1,5 @@
 <?php
 
-use App\Enums\OrderStatus;
-use App\Events\Order\OrderCompleted;
-use App\Events\Order\OrderVoided;
 use App\Http\Controllers\Admin\AccessibilityController;
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -25,7 +22,6 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\TabletCategoryController;
 use App\Http\Controllers\Admin\UserController;
-use App\Models\DeviceOrder;
 use App\Services\LocalBranchResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -234,57 +230,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/restart', [ReverbController::class, 'restart'])->name('restart');
         });
 
-        // Update device_orders directly (admin only)
-        Route::post('/pos/fill-order', function (Request $request) {
-            $user = $request->user();
-            if (! $user || ! ($user->is_admin ?? false)) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-            }
-
-            $data = $request->validate([
-                'order_id' => ['required'],
-                'date_time_closed' => ['nullable', 'date'],
-                'is_open' => ['nullable', 'in:0,1'],
-                'is_voided' => ['nullable', 'in:0,1'],
-                'session_id' => ['nullable', 'integer'],
-            ]);
-
-            $orderId = $data['order_id'];
-            $isVoided = ($data['is_voided'] ?? 0) == 1;
-
-            try {
-                // Update local device_orders table directly
-                $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
-                if ($deviceOrder) {
-                    $newStatus = $isVoided
-                        ? OrderStatus::VOIDED
-                        : OrderStatus::COMPLETED;
-                    $deviceOrder->update(['status' => $newStatus]);
-
-                    // Dispatch appropriate event
-                    if ($isVoided) {
-                        OrderVoided::dispatch($deviceOrder);
-                    } else {
-                        OrderCompleted::dispatch($deviceOrder);
-                    }
-
-                    return response()->json(['success' => true, 'order' => $deviceOrder]);
-                }
-
-                return response()->json(['success' => false, 'message' => 'Device order not found'], 404);
-            } catch (Throwable $e) {
-                // Log the real cause for ops; never leak the raw exception to the client.
-                \Illuminate\Support\Facades\Log::error('[pos.fill-order] update failed', [
-                    'order_id' => $orderId,
-                    'exception' => $e->getMessage(),
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Could not update the order. Please try again.',
-                ], 500);
-            }
-        })->name('pos.fill-order');
+        Route::post('/pos/fill-order', [PosController::class, 'fillOrder'])->name('pos.fill-order');
 
         // Reports
         Route::prefix('reports')->name('reports.')->group(function () {

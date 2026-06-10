@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Events\Order\OrderCompleted;
+use App\Events\Order\OrderVoided;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Services\AuditLogService;
@@ -330,6 +332,48 @@ class PosController extends Controller
             return response()->json(['success' => true, 'message' => 'Order voided in Krypton.']);
         } catch (\Throwable $e) {
             return $this->posConnectionError(__FUNCTION__, $e);
+        }
+    }
+
+    public function fillOrder(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'order_id' => ['required'],
+            'date_time_closed' => ['nullable', 'date'],
+            'is_open' => ['nullable', 'in:0,1'],
+            'is_voided' => ['nullable', 'in:0,1'],
+            'session_id' => ['nullable', 'integer'],
+        ]);
+
+        $orderId = $data['order_id'];
+        $isVoided = ($data['is_voided'] ?? 0) == 1;
+
+        try {
+            $deviceOrder = DeviceOrder::where('order_id', $orderId)->first();
+            if (! $deviceOrder) {
+                return response()->json(['success' => false, 'message' => 'Device order not found'], 404);
+            }
+
+            $newStatus = $isVoided ? OrderStatus::VOIDED : OrderStatus::COMPLETED;
+            $deviceOrder->update(['status' => $newStatus]);
+
+            if ($isVoided) {
+                OrderVoided::dispatch($deviceOrder);
+            } else {
+                OrderCompleted::dispatch($deviceOrder);
+            }
+
+            return response()->json(['success' => true, 'order' => $deviceOrder]);
+        } catch (\Throwable $e) {
+            Log::error('[pos.fill-order] update failed', [
+                'order_id' => $orderId,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not update the order. Please try again.',
+            ], 500);
         }
     }
 
