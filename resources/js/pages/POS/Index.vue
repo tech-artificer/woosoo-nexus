@@ -12,7 +12,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { MonitorSmartphone, Circle, ReceiptText } from 'lucide-vue-next'
+import { MonitorSmartphone, Circle, ReceiptText, RefreshCw } from 'lucide-vue-next'
 import EditOrderDialog from '@/components/pos/EditOrderDialog.vue'
 import PaymentDialog from '@/components/pos/PaymentDialog.vue'
 import PosTableCard from '@/components/pos/PosTableCard.vue'
@@ -31,8 +31,6 @@ import {
     Skeleton,
 } from '@/components/ui/skeleton'
 
-// Interfaces imported from @/types/pos
-
 const props = defineProps<{
     title: string
     description: string
@@ -43,6 +41,9 @@ const props = defineProps<{
         date_time_opened: string
         date_time_closed: string | null
     } | null
+    posConnected?: boolean
+    posStatus?: 'connected' | 'not_configured' | 'auth_failed' | 'unreachable'
+    posMessage?: string
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -53,19 +54,34 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 const pageTitle = computed(() => props.title || 'POS')
+
+const posBannerTitle = computed(() => {
+    switch (props.posStatus) {
+        case 'not_configured':
+            return 'POS password not configured'
+        case 'auth_failed':
+            return 'POS credentials rejected'
+        case 'unreachable':
+            return 'POS not reachable'
+        default:
+            return 'POS not connected'
+    }
+})
 const terminals = computed<PosTerminal[]>(() => (Array.isArray(props.terminals) ? props.terminals : []))
-const currentSession = computed(() => props.currentSession ?? null)
 
 const selectedTerminalId = ref<string | null>(terminals.value[0]?.id ?? null)
-const tables = ref<PosTable[]>(Array.isArray(props.tables) ? props.tables : [])
+const terminalTables = ref<PosTable[]>(Array.isArray(props.tables) ? props.tables : [])
 const tablesLoading = ref(false)
 const tablesError = ref<string | null>(null)
+const loadingTerminalId = ref<string | null>(null)
+let tablesLoadSeq = 0
 
 const showOrdersModal = ref(false)
 const selectedTable = ref<PosTable | null>(null)
 const selectedOrders = ref<PosOrder[]>([])
 const ordersLoading = ref(false)
 const ordersError = ref<string | null>(null)
+const addOrderError = ref<string | null>(null)
 const actionLoading = ref(false)
 
 const form = useForm({
@@ -91,14 +107,14 @@ const selectedTerminal = computed(() =>
     terminals.value.find((terminal) => String(terminal.id) === String(selectedTerminalId.value)) ?? null
 )
 
-const occupiedTables = computed(() => tables.value.filter((table) => Boolean(Number(table.is_occupied))).length)
+const occupiedTables = computed(() => terminalTables.value.filter((table) => Boolean(Number(table.is_occupied))).length)
 
 const currentSessionStatus = computed(() => {
-    if (!currentSession.value) {
+    if (!props.currentSession) {
         return 'No Session'
     }
 
-    return currentSession.value.date_time_closed ? 'Closed' : 'Open'
+    return props.currentSession.date_time_closed ? 'Closed' : 'Open'
 })
 
 const readJsonPayload = async (response: Response): Promise<any> => {
@@ -172,7 +188,9 @@ const fetchWithCsrf = async (url: string, options: RequestInit): Promise<Respons
 }
 
 const loadTablesForTerminal = async (terminalId: string) => {
+    const seq = ++tablesLoadSeq
     selectedTerminalId.value = terminalId
+    loadingTerminalId.value = terminalId
     tablesLoading.value = true
     tablesError.value = null
 
@@ -184,17 +202,24 @@ const loadTablesForTerminal = async (terminalId: string) => {
             },
         })
 
+        if (seq !== tablesLoadSeq) return
+
         const payload = await readJsonPayload(response)
 
         if (!response.ok || !payload?.success) {
             throw new Error(payload?.message || 'Failed to load tables for selected terminal.')
         }
 
-        tables.value = Array.isArray(payload.tables) ? payload.tables : []
+        terminalTables.value = Array.isArray(payload.tables) ? payload.tables : []
     } catch (error: any) {
-        tablesError.value = error?.message || 'Unable to load tables from Krypton.'
+        if (seq === tablesLoadSeq) {
+            tablesError.value = error?.message || 'Unable to load tables from Krypton.'
+        }
     } finally {
-        tablesLoading.value = false
+        if (seq === tablesLoadSeq) {
+            tablesLoading.value = false
+            loadingTerminalId.value = null
+        }
     }
 }
 
@@ -206,6 +231,7 @@ const openTableOrders = async (table: PosTable) => {
     selectedTable.value = table
     selectedOrders.value = []
     ordersError.value = null
+    addOrderError.value = null
     ordersLoading.value = true
     showOrdersModal.value = true
 
@@ -251,7 +277,7 @@ const addOrderForTable = () => {
             loadTablesForTerminal(selectedTerminalId.value!)
         },
         onError: (errors) => {
-            ordersError.value = errors.message || 'Unable to add order from POS.'
+            addOrderError.value = errors.message || 'Unable to add order from POS.'
         },
     })
 }
@@ -375,6 +401,12 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-5">
+            <div v-if="posConnected === false" class="rounded-[18px] border border-destructive/40 bg-destructive/10 px-5 py-4 text-sm text-destructive">
+                <p class="font-semibold">{{ posBannerTitle }}</p>
+                <p class="mt-1">{{ posMessage }}</p>
+                <a :href="route('pos-connection.index')" class="mt-2 inline-block underline underline-offset-2 hover:opacity-80">Go to Configuration → POS Connection</a>
+            </div>
+
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div class="max-w-3xl space-y-3">
@@ -411,8 +443,8 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                 </div>
                 <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
                     <p class="text-xs uppercase tracking-wide text-muted-foreground">Current Session</p>
-                    <p class="mt-1 text-lg font-semibold">#{{ currentSession?.id || '—' }} • {{ currentSessionStatus }}</p>
-                    <p class="text-xs text-muted-foreground">Opened: {{ formatDateTime(currentSession?.date_time_opened) }}</p>
+                    <p class="mt-1 text-lg font-semibold">#{{ props.currentSession?.id || '—' }} • {{ currentSessionStatus }}</p>
+                    <p class="text-xs text-muted-foreground">Opened: {{ formatDateTime(props.currentSession?.date_time_opened) }}</p>
                 </div>
             </section>
 
@@ -427,8 +459,9 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             v-for="terminal in terminals"
                             :key="terminal.id"
                             type="button"
-                            class="group rounded-[22px] border border-black/8 bg-gradient-to-b from-slate-900/95 to-slate-950 p-4 text-left shadow-lg transition-all hover:-translate-y-0.5 hover:border-woosoo-accent/70 hover:shadow-woosoo-accent/20 dark:border-white/10"
+                            class="group rounded-[22px] border border-black/8 bg-gradient-to-b from-slate-900/95 to-slate-950 p-4 text-left shadow-lg transition-all hover:-translate-y-0.5 hover:border-woosoo-accent/70 hover:shadow-woosoo-accent/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10"
                             :class="String(selectedTerminalId) === String(terminal.id) ? 'ring-2 ring-woosoo-accent/70' : ''"
+                            :disabled="tablesLoading && loadingTerminalId === String(terminal.id)"
                             @click="loadTablesForTerminal(String(terminal.id))"
                         >
                             <div class="mb-3 flex items-center justify-between">
@@ -441,9 +474,15 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
 
                             <div class="mx-auto mb-4 flex h-44 w-full max-w-[220px] items-center justify-center rounded-[1.7rem] border-[10px] border-slate-700 bg-slate-800 shadow-inner">
                                 <div class="flex h-full w-full flex-col items-center justify-center rounded-[1.2rem] bg-slate-900 text-center text-white/90">
-                                    <MonitorSmartphone class="mb-2 h-10 w-10 text-woosoo-accent" />
-                                    <p class="px-2 text-sm font-semibold leading-tight">{{ terminal.name }}</p>
-                                    <p class="mt-1 text-[11px] text-white/50">{{ terminal.type }}</p>
+                                    <template v-if="tablesLoading && loadingTerminalId === String(terminal.id)">
+                                        <RefreshCw class="mb-2 h-10 w-10 animate-spin text-woosoo-accent" />
+                                        <p class="px-2 text-[11px] text-white/50">Loading tables…</p>
+                                    </template>
+                                    <template v-else>
+                                        <MonitorSmartphone class="mb-2 h-10 w-10 text-woosoo-accent" />
+                                        <p class="px-2 text-sm font-semibold leading-tight">{{ terminal.name }}</p>
+                                        <p class="mt-1 text-[11px] text-white/50">{{ terminal.type }}</p>
+                                    </template>
                                 </div>
                             </div>
 
@@ -469,7 +508,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             </p>
                         </div>
                         <div class="text-right text-xs text-muted-foreground">
-                            <p>Registered Tables: <span class="font-semibold text-foreground">{{ tables.length }}</span></p>
+                            <p>Registered Tables: <span class="font-semibold text-foreground">{{ terminalTables.length }}</span></p>
                             <p>Occupied Tables: <span class="font-semibold text-destructive">{{ occupiedTables }}</span></p>
                         </div>
                     </div>
@@ -488,9 +527,13 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                         {{ tablesError }}
                     </div>
 
+                    <div v-else-if="terminalTables.length === 0" class="rounded-xl border border-black/8 bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground dark:border-white/10">
+                        No tables found for this terminal.
+                    </div>
+
                     <div v-else class="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
                         <PosTableCard
-                            v-for="table in tables"
+                            v-for="table in terminalTables"
                             :key="table.id"
                             :table="table"
                             :selected="selectedTable?.id === table.id"
@@ -515,29 +558,37 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                 <div class="max-h-[62vh] overflow-auto px-6 py-4">
                     <div class="mb-4 rounded-xl border border-black/8 bg-muted/30 p-4 dark:border-white/10">
                         <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add Order by Table</p>
-                        <div class="flex flex-wrap items-end gap-3">
-                            <div>
-                                <label class="mb-1 block text-xs text-muted-foreground">Guest Count</label>
-                                <input
-                                    v-model.number="form.guest_count"
-                                    type="number"
-                                    min="1"
-                                    class="w-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                >
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs text-muted-foreground">Reference</label>
-                                <input
-                                    v-model="form.reference"
-                                    type="text"
-                                    class="w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    placeholder="Optional"
-                                >
-                            </div>
-                            <Button :disabled="form.processing" @click="addOrderForTable">
-                                Add Order
-                            </Button>
+                        <div v-if="props.currentSession?.date_time_closed" class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                            Session closed — orders cannot be added.
                         </div>
+                        <template v-else>
+                            <div class="flex flex-wrap items-end gap-3">
+                                <div>
+                                    <label class="mb-1 block text-xs text-muted-foreground">Guest Count</label>
+                                    <input
+                                        v-model.number="form.guest_count"
+                                        type="number"
+                                        min="1"
+                                        class="w-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    >
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-xs text-muted-foreground">Reference</label>
+                                    <input
+                                        v-model="form.reference"
+                                        type="text"
+                                        class="w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        placeholder="Optional"
+                                    >
+                                </div>
+                                <Button :disabled="form.processing" @click="addOrderForTable">
+                                    Add Order
+                                </Button>
+                            </div>
+                            <div v-if="addOrderError" class="mt-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                                {{ addOrderError }}
+                            </div>
+                        </template>
                     </div>
 
                     <div v-if="ordersLoading" class="space-y-3 py-4">
@@ -573,7 +624,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                                 <th class="px-2 py-3 text-right">Guests</th>
                                 <th class="px-2 py-3 text-right">Total</th>
                                 <th class="px-2 py-3 text-right">Paid</th>
-                                <th class="px-2 py-3 text-right">Resetable Txn#</th>
+                                <th class="px-2 py-3 text-right">Resettable Txn#</th>
                                 <th class="px-2 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -599,37 +650,37 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                         </tbody>
                     </table>
                 </div>
-
-                <EditOrderDialog
-                    :open="editDialogOpen"
-                    :order="selectedOrderForEdit"
-                    @update:open="editDialogOpen = $event"
-                    @save="handleEditSave"
-                />
-
-                <PaymentDialog
-                    :open="paymentDialogOpen"
-                    :order="selectedOrderForPay"
-                    @update:open="paymentDialogOpen = $event"
-                    @pay="handlePay"
-                />
-
-                <AlertDialog :open="voidDialogOpen" @update:open="voidDialogOpen = $event">
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Void Order #{{ selectedOrderForVoid?.id }}</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Are you sure you want to void this order? This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel @click="voidDialogOpen = false">Cancel</AlertDialogCancel>
-                            <AlertDialogAction @click="handleVoidConfirm">Void Order</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
             </DialogContent>
         </Dialog>
         </div>
+
+        <EditOrderDialog
+            :open="editDialogOpen"
+            :order="selectedOrderForEdit"
+            @update:open="editDialogOpen = $event"
+            @save="handleEditSave"
+        />
+
+        <PaymentDialog
+            :open="paymentDialogOpen"
+            :order="selectedOrderForPay"
+            @update:open="paymentDialogOpen = $event"
+            @pay="handlePay"
+        />
+
+        <AlertDialog :open="voidDialogOpen" @update:open="voidDialogOpen = $event">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Void Order #{{ selectedOrderForVoid?.id }}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to void this order? This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel @click="voidDialogOpen = false">Cancel</AlertDialogCancel>
+                    <AlertDialogAction @click="handleVoidConfirm">Void Order</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </AppLayout>
 </template>

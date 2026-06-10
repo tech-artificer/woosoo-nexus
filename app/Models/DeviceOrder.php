@@ -3,30 +3,30 @@
 namespace App\Models;
 
 use App\Casts\UtcDateTimeCast;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Services\LocalBranchResolver;
-use App\Models\Branch;
-use App\Models\Krypton\Table;
-use App\Models\Krypton\Order;
 use App\Enums\OrderStatus;
-use Illuminate\Support\Str; 
+use App\Models\Krypton\Order;
+use App\Models\Krypton\Table;
+use App\Services\LocalBranchResolver;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\ServiceRequest;
-use App\Models\DeviceOrderItems;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class DeviceOrder extends Model
 {
     use HasFactory, SoftDeletes;
+
     protected $table = 'device_orders';
+
     // Prevent accidental mass-assignment of legacy JSON columns
     // The `items` and `meta` JSON columns have been migrated out
     // to `device_order_items` and a computed accessor respectively.
     protected $guarded = ['items', 'meta'];
+
     protected $primaryKey = 'id';
 
     // protected $fillable = [
@@ -43,7 +43,7 @@ class DeviceOrder extends Model
     // ];
 
     protected $hidden = [
-        'updated_at'
+        'updated_at',
     ];
 
     protected $casts = [
@@ -58,12 +58,13 @@ class DeviceOrder extends Model
         'is_printed' => 'boolean',
         'printed_at' => UtcDateTimeCast::class,
         'printed_by' => 'string',
+        'recalled' => 'integer',
     ];
 
     /**
      * Return related device order items (local canonical source).
      */
-    public function items() : HasMany
+    public function items(): HasMany
     {
         return $this->hasMany(DeviceOrderItems::class, 'order_id')->orderBy('index');
     }
@@ -76,7 +77,8 @@ class DeviceOrder extends Model
     {
         try {
             $orderCheck = $this->order?->orderCheck ?? null;
-            return [ 'order_check' => $orderCheck ];
+
+            return ['order_check' => $orderCheck];
         } catch (\Throwable $_e) {
             return [];
         }
@@ -92,13 +94,14 @@ class DeviceOrder extends Model
             $newStatus = OrderStatus::from($newStatus);
         }
 
-        if (!$newStatus instanceof OrderStatus) {
+        if (! $newStatus instanceof OrderStatus) {
             $newStatus = OrderStatus::PENDING;
         }
 
         // If this is a new model (creating), skip transition validation
-        if (!$this->exists) {
+        if (! $this->exists) {
             $this->attributes['status'] = $newStatus->value;
+
             return;
         }
 
@@ -107,7 +110,7 @@ class DeviceOrder extends Model
             $currentStatus = OrderStatus::from($currentStatus);
         }
 
-        if (!$currentStatus->canTransitionTo($newStatus)) {
+        if (! $currentStatus->canTransitionTo($newStatus)) {
             throw new \InvalidArgumentException(
                 "Invalid status transition: {$currentStatus->value} → {$newStatus->value}"
             );
@@ -121,21 +124,22 @@ class DeviceOrder extends Model
     // See RANPO_PRODUCTION_AUDIT_2026-04-07.md §P0 Race Condition.
 
     protected static function boot()
-    {   
+    {
         parent::boot();
 
         static::creating(function ($model) {
-            if (!empty($model->branch_id)) {
+            if (! empty($model->branch_id)) {
                 return;
             }
 
-            if (!empty($model->device_id)) {
+            if (! empty($model->device_id)) {
                 $deviceBranchId = Device::query()
                     ->whereKey($model->device_id)
                     ->value('branch_id');
 
-                if (!empty($deviceBranchId)) {
+                if (! empty($deviceBranchId)) {
                     $model->branch_id = (int) $deviceBranchId;
+
                     return;
                 }
             }
@@ -155,9 +159,9 @@ class DeviceOrder extends Model
             }
 
             $model->order_number = 'ORD-'
-                . now()->format('Ymd')
-                . '-'
-                . strtoupper(substr((string) $model->order_uuid, -6));
+                .now()->format('Ymd')
+                .'-'
+                .strtoupper(substr((string) $model->order_uuid, -6));
         });
     }
 
@@ -186,7 +190,7 @@ class DeviceOrder extends Model
      */
     public function printEvents(): HasMany
     {
-        return $this->hasMany(\App\Models\PrintEvent::class, 'device_order_id', 'id');
+        return $this->hasMany(PrintEvent::class, 'device_order_id', 'id');
     }
 
     /**
@@ -195,11 +199,12 @@ class DeviceOrder extends Model
      */
     public function printEvent(): HasOne
     {
-        return $this->hasOne(\App\Models\PrintEvent::class, 'device_order_id', 'id')
+        return $this->hasOne(PrintEvent::class, 'device_order_id', 'id')
             ->latestOfMany();
     }
 
-    public function scopeActiveOrder(Builder $query) {
+    public function scopeActiveOrder(Builder $query)
+    {
         return $query->whereIn('status', [
             OrderStatus::PENDING,
             OrderStatus::CONFIRMED,

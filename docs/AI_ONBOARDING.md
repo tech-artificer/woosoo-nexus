@@ -1,6 +1,6 @@
 ---
 status: canonical
-last_reviewed: 2026-05-31
+last_reviewed: 2026-06-07
 scope: woosoo-nexus
 ---
 
@@ -10,9 +10,9 @@ Detailed onboarding for AI coding agents (Claude Code) working in `woosoo-nexus`
 demand, not part of the always-on boot layer — the agent operating system is the root
 `../AGENTS.md`, and per-app hard rules are in `.agents.md`. Indexed from `docs/INDEX.md`.
 
-## Integrated Restaurant POS + Admin Panel + Relay Printer App
+## Integrated Restaurant POS + Admin Panel + Print Bridge
 
-**Purpose:** Help AI agents become productive in woosoo-nexus monorepo. Focus on discoverable patterns, runnable commands, and concrete examples across three integrated products.
+**Purpose:** Help AI agents become productive in woosoo-nexus. Focus on discoverable patterns, runnable commands, and concrete examples across the backend and its sibling apps (tablet PWA, print bridge).
 
 ---
 
@@ -135,12 +135,12 @@ Do not hardcode LAN IPs in source code. Use `PUBLIC_HOST` and Compose/runtime en
 - **State:** Pinia stores with persist plugin (e.g., `menu-store`, `device`)
 - **Offline:** PWA service worker caches menus and order history; workbox rules in `nuxt.config.ts`
 
-### 3. **Relay Printer App** (`relay-device/` — Flutter)
+### 3. **Print Bridge** (`woosoo-print-bridge/` — Flutter)
 - **What:** Native mobile/tablet app that listens for print events (WebSocket + fallback polling) and prints to Bluetooth thermal printers
 - **Tech:** Flutter 3.9.2+, Dart, Riverpod state management, Sembast local DB
 - **Platforms:** Android, iOS, Windows, Linux, web (see `pubspec.yaml`)
 - **Key features:** WebSocket listener, ESC/POS printer control, durable offline queue, device registration
-- **Run:** `flutter pub get; flutter run -d <device>` from `relay-device/`
+- **Run:** `flutter pub get; flutter run -d <device>` from `woosoo-print-bridge/`
 
 **Database Architecture:**
 - `mysql` connection (default): App data (users, devices, menus, orders, branches, roles) — Laravel migrations in `database/migrations/*`
@@ -186,13 +186,13 @@ Do not hardcode LAN IPs in source code. Use `PUBLIC_HOST` and Compose/runtime en
 **Process Boundaries:**
 - PHP process: HTTP requests, domain logic, queues, scheduled tasks, WebSocket server (Reverb)
 - Node process: `print-service/index.js` (Express, port 9100) — independent print job handler
-- Flutter process: Relay device — autonomous listener/printer, syncs with backend via API + WebSocket
+- Flutter process: Print Bridge — autonomous listener/printer, syncs with backend via API + WebSocket
 
 **Real-time Communication:**
 - Reverb (port 6001): WebSocket server for broadcasting events (admin, device channels)
 - Channels: `device.{deviceId}`, `admin.orders`, `admin.print`, `admin.service-requests`, etc.
 - Frontend listeners: Laravel Echo in Vue (`resources/js/app.ts`) and Nuxt PWA (`tablet-ordering-pwa/plugins/echo.client.ts`)
-- Mobile: Relay device listens via Dart HTTP client (WebSocket library)
+- Mobile: Print Bridge listens via Reverb WebSocket + polling fallback (`lib/services/reverb_service.dart`)
 
 ---
 
@@ -238,14 +238,14 @@ Do not hardcode LAN IPs in source code. Use `PUBLIC_HOST` and Compose/runtime en
 - `tablet-ordering-pwa/pages/*` — Nuxt pages (kiosk mode, landing, menu browsing)
 - `tablet-ordering-pwa/public/manifest.json` — PWA manifest for offline support
 
-**Relay Printer App (Flutter)**
-- `relay-device/pubspec.yaml` — dependencies (flutter_riverpod, blue_thermal_printer, web_socket_channel, sembast)
-- `relay-device/lib/main.dart` — app entry, Riverpod setup, theme
-- `relay-device/lib/providers/*.dart` — Riverpod state providers (app_state, printer_connection, print_queue, device_config)
-- `relay-device/lib/services/*.dart` — business logic (WebSocket listener, printer control, device API client, queue persistence)
-- `relay-device/lib/models/*.dart` — data structures (PrintJob, DeviceConfig, ConnectionState)
-- `relay-device/lib/screens/*` — UI pages (home, settings, connection status)
-- `relay-device/android/`, `ios/`, `windows/`, `linux/` — platform-specific configurations
+**Print Bridge (Flutter)** — sibling repo `woosoo-print-bridge/`
+- `woosoo-print-bridge/pubspec.yaml` — dependencies (flutter_riverpod, go_router, blue_thermal_printer, web_socket_channel, sembast)
+- `woosoo-print-bridge/lib/main.dart` — app entry, Riverpod setup, theme
+- `woosoo-print-bridge/lib/state/*.dart` — app controller and state (`app_controller.dart`, `app_state.dart`)
+- `woosoo-print-bridge/lib/services/*.dart` — Reverb listener, heartbeat, polling, printer control, queue persistence
+- `woosoo-print-bridge/lib/models/*.dart` — `PrintJob`, `DeviceConfig`
+- `woosoo-print-bridge/lib/ui/screens/*` — status, settings, queue, logs, operational tools
+- `woosoo-print-bridge/android/` — platform-specific configurations (Pi tablet target)
 
 **Testing**
 - `tests/Feature/*` — Feature tests using Pest (integration-like, RefreshDatabase)
@@ -253,10 +253,9 @@ Do not hardcode LAN IPs in source code. Use `PUBLIC_HOST` and Compose/runtime en
 - `database/factories/*` — test data factories
 - `database/seeders/*` — seed scripts for seeding test/demo data
 
-**Print Service (Node.js)**
-- `print-service/index.js` — Express server (port 9100) that receives print jobs and executes OS print commands
-- Receives POST `/print` requests with ESC/POS data
-- Configurable for Linux `lp` command or Windows print handling
+**Legacy print-service (Node.js, local dev only)**
+- `print-service/index.js` — optional Express helper (port 9100); **not** the production Pi print path
+- Production restaurant printing uses `woosoo-print-bridge` (Flutter relay) via Nexus print dispatch
 
 
 ## Developer Workflows
@@ -282,8 +281,8 @@ cd tablet-ordering-pwa
 npm install
 npm run dev
 
-# Relay device (Flutter)
-cd relay-device
+# Print Bridge (Flutter)
+cd woosoo-print-bridge
 flutter pub get
 flutter run -d <device>  # e.g., -d Windows, -d android-physical
 ```
@@ -342,9 +341,9 @@ npm run build            # Production build
 npm run preview          # Preview built version
 ```
 
-**Relay Device Development**
+**Print Bridge Development**
 ```powershell
-cd relay-device
+cd woosoo-print-bridge
 
 # Windows Desktop
 flutter run -d windows
@@ -375,8 +374,8 @@ composer test              # config:clear + artisan test
 ./vendor/bin/pest          # Direct Pest invocation
 ./vendor/bin/pest --filter=OrderServiceTest
 
-# Relay device (Flutter)
-cd relay-device
+# Print Bridge (Flutter)
+cd woosoo-print-bridge
 flutter test               # Runs unit tests under test/
 flutter test --coverage    # Generate coverage report
 ```
@@ -440,14 +439,13 @@ flutter test --coverage    # Generate coverage report
 - Test environment auto-configured in `phpunit.xml` (SQLite, sync queue, no Pulse/Telescope)
 - Example: `tests/Feature/DeviceTableTest.php`, `tests/Unit/OrderServiceTest.php`
 
-**Flutter/Dart Patterns** (Relay Device)
-- State management: Riverpod providers in `lib/providers/*.dart`
-- Service layer: Business logic in `lib/services/*.dart` (WebSocket listener, printer control, device API)
-- Models: Data structures in `lib/models/*.dart`
-- Persistence: Sembast for durable queue, SharedPreferences for simple config
-- Testing: Unit tests in `test/` (run with `flutter test`)
-- Hot reload: Supported in debug mode for rapid iteration
-- Platform channels: Android/iOS permissions handled via `permission_handler` package
+**Flutter/Dart Patterns** (Print Bridge — `woosoo-print-bridge/`)
+- State management: Riverpod in `lib/state/*.dart` (`app_controller.dart`, `app_state.dart`)
+- Service layer: `lib/services/*.dart` (Reverb, heartbeat, polling, printer, queue store)
+- Models: `lib/models/*.dart` (`PrintJob`, `DeviceConfig`)
+- UI: `lib/ui/screens/*`, routing via `lib/ui/router.dart`
+- Persistence: Sembast queue store, SharedPreferences for device config
+- Testing: `flutter test` under `test/`
 
 ---
 
@@ -563,14 +561,16 @@ export const useMenuStore = defineStore('menu', () => {
 - `axios` — HTTP client
 - `laravel-echo` — WebSocket client for real-time updates
 
-**Flutter/Dart Packages (Relay Device)**
+**Flutter/Dart Packages (Print Bridge)**
 - `flutter_riverpod` — state management & dependency injection
-- `blue_thermal_printer` — Bluetooth thermal printer control (ESC/POS)
-- `web_socket_channel` — WebSocket client
-- `esc_pos_utils` — ESC/POS formatting utilities
+- `go_router` — screen routing
+- `blue_thermal_printer` — Bluetooth thermal printer control (local path package)
+- `web_socket_channel` — Reverb WebSocket client
+- `http` — Nexus API client (heartbeat, print ack)
 - `sembast` — embedded NoSQL DB for durable queue persistence
-- `shared_preferences` — simple key-value storage
-- `permission_handler` — Bluetooth & location permissions (Android/iOS)
+- `shared_preferences` — device config storage
+- `permission_handler` — Bluetooth & location permissions (Android)
+- `connectivity_plus` — network reachability
 - `wakelock_plus` — prevent device sleep during printing
 
 **Database Connections**
@@ -596,7 +596,7 @@ export const useMenuStore = defineStore('menu', () => {
   If you see errors related to `esbuild` native binaries (common on CI runners), run `npm run rebuild:esbuild --if-present` during CI `postinstall` or manually locally to rebuild the native binary.
 - **Flutter build issues**: Run `flutter clean` and `flutter pub get` before rebuilding; check platform-specific requirements (Android SDK, Xcode, etc.)
 - **Bluetooth permissions (Android)**: Ensure manifest permissions declared; runtime requests shown via `permission_handler` package
-- **WebSocket connection in relay device**: Check device network connectivity; fallback polling should activate if WebSocket fails
+- **WebSocket connection in Print Bridge**: Check device network connectivity; fallback polling (`polling_service.dart`) should activate if Reverb fails
 
 **Debugging**
 ```powershell
@@ -657,8 +657,8 @@ flutter analyze                        # Code analysis (Dart)
 - Keep tests fast (in-memory DB, sync queue)
 
 **Git Workflow**
-- Branch: `main` (production), `staging` (pre-production), feature branches
-- Current branch: `staging` (from repo context)
+- Branch: `dev` (active integration), `staging` (pre-production), `main` (production)
+- Feature work branches off `dev` (e.g. `agent/<case-slug>`, `fix/nexus/<slug>`)
 - Commit messages: conventional commits (feat:, fix:, docs:, etc.)
 
 ## Reference Files
@@ -675,6 +675,7 @@ flutter analyze                        # Code analysis (Dart)
 - Test: `tests/Feature/DeviceTableTest.php` (Pest feature test)
 
 **Documentation**
+- `docs/LARAVEL_BOOST_GUIDE.md` — Laravel Boost MCP tools, Tinker guardrails, Cursor setup
 - `docs/API_MAP.md` — API endpoint reference (request/response shapes)
 - `docs/BRANCH_CRUD_IMPLEMENTATION.md` — example CRUD implementation
 - `docs/ROLES_IMPLEMENTATION_COMPLETE.md` — roles/permissions guide

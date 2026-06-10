@@ -15,11 +15,11 @@ use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
 use App\Models\Krypton\Menu;
 use App\Models\Krypton\Menu as KryptonMenu;
+use App\Models\Krypton\OrderedMenu;
+use App\Services\DurableRefillGuard;
 use App\Services\Krypton\KryptonContextService;
 use App\Services\PrintTicketService;
-use App\Services\DurableRefillGuard;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -177,7 +177,7 @@ class OrderApiController extends Controller
      * Persist refill items and dispatch print event.
      *
      * Validates that items are refillable (meats/sides only).
-     * 
+     *
      * State Machine: NEW → PROCESSING → POS_CREATED → MIRRORED → PRINT_EVENT_CREATED → COMPLETED
      * Durable idempotency via RefillSubmission model prevents duplicate POS inserts on retry.
      */
@@ -195,7 +195,7 @@ class OrderApiController extends Controller
 
         // Validate authenticated device
         $device = $request->user();
-        if (!$device || !isset($device->id)) {
+        if (! $device || ! isset($device->id)) {
             return response()->json(['success' => false, 'message' => 'Device authentication required'], 401);
         }
 
@@ -225,14 +225,14 @@ class OrderApiController extends Controller
         if (in_array($deviceOrder->status, $terminalStatuses, true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Refill not allowed: order is ' . $deviceOrder->status->value,
-                'error'   => ['code' => 'ORDER_NOT_ACTIVE', 'status' => $deviceOrder->status->value],
+                'message' => 'Refill not allowed: order is '.$deviceOrder->status->value,
+                'error' => ['code' => 'ORDER_NOT_ACTIVE', 'status' => $deviceOrder->status->value],
             ], 409);
         }
 
         // Generate a server-side submission id if the tablet did not provide one,
         // so the durable idempotency guard always runs.
-        if (!$clientSubmissionId) {
+        if (! $clientSubmissionId) {
             $clientSubmissionId = (string) Str::uuid();
             Log::info('[REFILL] Generated server-side client_submission_id', [
                 'device_id' => $device->id,
@@ -246,17 +246,18 @@ class OrderApiController extends Controller
         $guardResult = $refillGuard->guard($device, $deviceOrder, $clientSubmissionId);
 
         // Already completed - return cached response
-        if (!$guardResult['proceed'] && $guardResult['response']) {
+        if (! $guardResult['proceed'] && $guardResult['response']) {
             Log::info('[REFILL] Returning cached completed response', [
                 'device_id' => $device->id,
                 'order_id' => $orderId,
                 'client_submission_id' => $clientSubmissionId,
             ]);
+
             return $guardResult['response'];
         }
 
         // Currently processing - return 409
-        if (!$guardResult['proceed'] && !$guardResult['response']) {
+        if (! $guardResult['proceed'] && ! $guardResult['response']) {
             return response()->json([
                 'success' => false,
                 'message' => 'Duplicate refill request already processing',
@@ -278,13 +279,9 @@ class OrderApiController extends Controller
             $name = trim(strval($it['name'] ?? ''));
             $quantity = intval($it['quantity'] ?? 1);
 
-            // Optimization: If both menu_id and price provided, skip DB lookup (testing + API contracts)
             $menu = null;
-            if (! empty($it['menu_id']) && isset($it['price'])) {
-                $menu = (object) ['id' => $it['menu_id'], 'price' => $it['price']];
-            }
-            // Priority 1: Use menu_id to lookup from POS if price not provided
-            elseif (! empty($it['menu_id'])) {
+            // Priority 1: Use menu_id to lookup from POS
+            if (! empty($it['menu_id'])) {
                 try {
                     $menu = KryptonMenu::find($it['menu_id']);
                 } catch (\Throwable $_e) {
@@ -305,6 +302,7 @@ class OrderApiController extends Controller
             if (! $menu) {
                 $menuRef = $it['menu_id'] ?? $name ?? 'unknown';
                 $refillGuard->markFailed($submission, "Menu item not found: {$menuRef}");
+
                 return response()->json(['success' => false, 'message' => "Menu item not found: {$menuRef}"], 422);
             }
 
@@ -343,7 +341,7 @@ class OrderApiController extends Controller
         } else {
             // Run POS-side inserts
             $attrs['mirror_local'] = false;
-            
+
             try {
                 $created = CreateOrderedMenu::run($attrs);
             } catch (\Throwable $e) {
@@ -353,6 +351,7 @@ class OrderApiController extends Controller
                     'order_id' => $orderId,
                     'error' => $e->getMessage(),
                 ]);
+
                 return response()->json(['success' => false, 'message' => 'POS insert failed', 'error' => $e->getMessage()], 500);
             }
 
@@ -369,14 +368,15 @@ class OrderApiController extends Controller
                 $refillGuard->markPosCreated($submission, $posOrderedMenuIds);
             } catch (\Throwable $e) {
                 Log::critical('[REFILL] CRITICAL: POS insert succeeded but state mark failed — manual reconciliation may be required', [
-                    'submission_id'     => $submission->id,
+                    'submission_id' => $submission->id,
                     'pos_ordered_menu_ids' => $posOrderedMenuIds,
-                    'error'             => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
+
                 return response()->json([
-                    'success'       => false,
-                    'message'       => 'POS insert succeeded but state could not be recorded — please retry',
-                    'pos_created'   => true,
+                    'success' => false,
+                    'message' => 'POS insert succeeded but state could not be recorded — please retry',
+                    'pos_created' => true,
                     'submission_id' => $submission->id,
                 ], 500);
             }
@@ -384,7 +384,7 @@ class OrderApiController extends Controller
 
         // Normalize created items for downstream processing
         // For retries, we need to fetch the POS items again
-        if (!isset($created)) {
+        if (! isset($created)) {
             // Retry scenario: fetch existing POS ordered_menu records
             $created = $this->fetchPosOrderedMenus($posOrderedMenuIds);
         }
@@ -393,12 +393,14 @@ class OrderApiController extends Controller
             if (is_array($it)) {
                 return (object) $it;
             }
+
             return $it;
         })->values()->all();
 
         // Guard: if no items created in POS, nothing to mirror locally
         if (empty($posItems)) {
             $refillGuard->markCompleted($submission, ['success' => true, 'created' => []]);
+
             return response()->json(['success' => true, 'created' => []]);
         }
 
@@ -412,6 +414,7 @@ class OrderApiController extends Controller
             $metaItems = collect($posItems)->map(function ($item) use ($menuNames) {
                 $menuId = $item->menu_id;
                 $menuName = $menuNames->get($menuId) ?? $item->name ?? $item->receipt_name;
+
                 return [
                     'menu_id' => $menuId,
                     'quantity' => $item->quantity ?? 1,
@@ -465,7 +468,7 @@ class OrderApiController extends Controller
 
                 for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                     try {
-                        DB::transaction(function () use ($deviceOrder, $localPayloads) {
+                        DB::transaction(function () use ($localPayloads) {
                             if (! empty($localPayloads)) {
                                 DeviceOrderItems::query()->insert($localPayloads);
                             }
@@ -500,6 +503,7 @@ class OrderApiController extends Controller
                 if ($lastError) {
                     // Mark as failed so client can retry
                     $refillGuard->markFailed($submission, "Local mirror failed: {$lastError}");
+
                     return response()->json([
                         'success' => false,
                         'message' => 'Failed to persist refill locally',
@@ -514,7 +518,7 @@ class OrderApiController extends Controller
             $printEvent = null;
             if ($submission->status !== 'PRINT_EVENT_CREATED' && $submission->status !== 'COMPLETED') {
                 try {
-                    DB::transaction(function () use ($deviceOrder, $posItems, $clientSubmissionId, $refillEventMeta, &$printEvent) {
+                    DB::transaction(function () use ($deviceOrder, $posItems, $clientSubmissionId, &$printEvent) {
                         $printTicketService = app(PrintTicketService::class);
                         $printEvent = $printTicketService->createRefillPrintEvent(
                             $deviceOrder,
@@ -568,10 +572,10 @@ class OrderApiController extends Controller
         } catch (\Throwable $th) {
             report($th);
             $refillGuard->markFailed($submission, $th->getMessage());
+
             return response()->json(['success' => false, 'message' => 'Failed to persist refill', 'error' => $th->getMessage()], 500);
         }
     }
-
 
     /**
      * Fetch POS ordered_menu records by IDs (for retry scenarios)
@@ -583,12 +587,13 @@ class OrderApiController extends Controller
         }
 
         try {
-            return \App\Models\Krypton\OrderedMenu::whereIn('id', $orderedMenuIds)->get()->all();
+            return OrderedMenu::whereIn('id', $orderedMenuIds)->get()->all();
         } catch (\Throwable $e) {
             Log::warning('[REFILL] Failed to fetch POS ordered_menus for retry', [
                 'ordered_menu_ids' => $orderedMenuIds,
                 'error' => $e->getMessage(),
             ]);
+
             return [];
         }
     }

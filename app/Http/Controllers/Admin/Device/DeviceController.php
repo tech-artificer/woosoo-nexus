@@ -12,6 +12,7 @@ use App\Models\Krypton\Table;
 use App\Services\CertificatePathResolver;
 use App\Support\DeviceSecurityCode;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,11 +61,32 @@ class DeviceController extends Controller
         // Include soft-deleted rows so admins can reactivate previously deactivated
         // devices directly from the Devices page.
         $devices = Device::withTrashed()
-            ->with('table', 'branch')
+            ->with(['table', 'branch', 'latestHeartbeat'])
             ->when($branchId !== null, fn ($q) => $q->where('branch_id', $branchId))
             ->get()
             ->each(fn (Device $device) => $device->makeVisible('deleted_at'));
         $securityReadyCount = $devices->whereNotNull('security_code_generated_at')->count();
+
+        $activeDevices = $devices->whereNull('deleted_at');
+        $batteryValues = $activeDevices
+            ->map(fn (Device $d) => $d->latestHeartbeat?->battery_level)
+            ->filter()
+            ->values();
+        $avgBattery = $batteryValues->isNotEmpty()
+            ? (int) round($batteryValues->average())
+            : null;
+
+        $onlineCount = $activeDevices->where('status', 'online')->count();
+        $warningCount = $activeDevices->where('status', 'warning')->count();
+        $offlineCount = $activeDevices->where('status', 'offline')->count();
+
+        $modalAppVersion = $activeDevices
+            ->map(fn (Device $d) => $d->app_version)
+            ->filter()
+            ->countBy()
+            ->sortDesc()
+            ->keys()
+            ->first();
 
         inertia()->share('unassignedTables', $unassignedTables);
 
@@ -96,6 +118,13 @@ class DeviceController extends Controller
             'description' => 'List of Registered Devices',
             'devices' => $devices,
             'stats' => $stats,
+            'fleetStats' => [
+                'online_count' => $onlineCount,
+                'warning_count' => $warningCount,
+                'offline_count' => $offlineCount,
+                'avg_battery' => $avgBattery,
+                'modal_app_version' => $modalAppVersion,
+            ],
         ]);
     }
 
@@ -447,6 +476,11 @@ class DeviceController extends Controller
             ->with('success', 'Device trashed.');
     }
 
+    public function trashed(Request $request): RedirectResponse
+    {
+        return redirect()->route('devices.index', ['view' => 'trashed']);
+    }
+
     public function restore(Request $request, int $id)
     {
 
@@ -482,12 +516,12 @@ class DeviceController extends Controller
      * Landing page for certificate distribution — no authentication required.
      * Displays install instructions and a download link for the CA cert.
      */
-    public function certificatePage(): \Illuminate\Contracts\View\View
+    public function certificatePage(): View
     {
         return view('devices.certificate', [
-            'available'   => $this->certificatePathResolver->resolveCertificatePath() !== null,
+            'available' => $this->certificatePathResolver->resolveCertificatePath() !== null,
             'downloadUrl' => route('devices.download-certificate'),
-            'serverHost'  => config('app.url'),
+            'serverHost' => config('app.url'),
         ]);
     }
 

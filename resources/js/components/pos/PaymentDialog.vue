@@ -50,8 +50,8 @@ const paymentTypes = [
     { id: '1', label: 'Cash' },
     { id: '2', label: 'Credit' },
     { id: '3', label: 'Debit' },
-    { id: '4', label: 'GCASH' },
-    { id: '5', label: 'PAYMAYA' },
+    { id: '4', label: 'GCash' },
+    { id: '5', label: 'PayMaya' },
 ]
 
 const handlePay = () => {
@@ -99,7 +99,7 @@ const handleOpenChange = (value: boolean) => {
                                 :key="pt.id"
                                 :value="pt.id"
                             >
-                                {{ pt.label }} ({{ pt.id }})
+                                {{ pt.label }}
                             </SelectItem>
                         </SelectContent>
                     </Select>

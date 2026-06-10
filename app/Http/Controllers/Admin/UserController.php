@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\User;
-use App\Models\Branch;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\Branch;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
 
 // use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
@@ -31,11 +33,11 @@ class UserController extends Controller
         $users = User::with('roles')->withTrashed()->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
         // Compute simple stats for the UI (last 7 days sparkline and delta)
-        $today = \Carbon\Carbon::today();
+        $today = Carbon::today();
         $start = $today->copy()->subDays(6)->startOfDay();
 
         $daily = User::where('created_at', '>=', $start)
-            ->selectRaw("DATE(created_at) as date, COUNT(*) as cnt")
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as cnt')
             ->groupBy('date')
             ->orderBy('date')
             ->pluck('cnt', 'date')
@@ -116,10 +118,10 @@ class UserController extends Controller
             'password' => Hash::make($data['password']),
         ]);
 
-        if (!empty($data['branches'])) {
+        if (! empty($data['branches'])) {
             $user->branches()->sync($data['branches']);
         }
-        if (!empty($data['roles'])) {
+        if (! empty($data['roles'])) {
             $user->syncRoles($data['roles']);
         }
 
@@ -129,9 +131,11 @@ class UserController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(User $user): RedirectResponse
     {
-        //
+        $this->authorize('admin');
+
+        return redirect()->route('users.edit', $user);
     }
 
     /**
@@ -167,7 +171,7 @@ class UserController extends Controller
             'email' => $data['email'],
         ]);
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $user->password = Hash::make($data['password']);
             $user->save();
         }
@@ -179,17 +183,18 @@ class UserController extends Controller
             $user->syncRoles($data['roles']);
         }
 
-       return redirect()->route('users.index')->with('success', 'User updated successfully.');
+        return redirect()->route('users.index')->with('success', 'User updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(User $user)
-    {  
+    {
         $this->authorize('admin');
 
         $user->delete();
+
         return redirect()->route('users.index')->with('success', 'User deleted successfully.');
     }
 

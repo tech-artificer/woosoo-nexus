@@ -53,22 +53,35 @@ export interface TableOrder {
     order?: Order;
 }
 
+export interface DeviceHeartbeat {
+    device_id: number;
+    battery_level: number | null;
+    recorded_at: string;
+    app_version: string | null;
+    wifi_signal_dbm: number | null;
+    ping_ms: number | null;
+}
+
 export interface Device {
-  id: number;
+    id: number;
     name: string;
-        table_id: number | null;
-        branch_id: number;
+    table_id: number | null;
+    branch_id: number;
     is_active: boolean;
-        device_uuid?: string;
+    status?: string;
+    device_uuid?: string;
     ip_address?: string;
-        last_ip_address?: string;
-        last_seen_at?: string;
-        type?: string;
-        security_code_generated_at?: string;
+    last_ip_address?: string;
+    last_seen_at?: string;
+    last_heartbeat_at?: string;
+    app_version?: string;
+    type?: string;
+    security_code_generated_at?: string;
     deleted_at?: string;
     port?: number;
     branch?: Branch;
     table?: Table;
+    latest_heartbeat?: DeviceHeartbeat | null;
 }
 
 export interface DeviceOrder {

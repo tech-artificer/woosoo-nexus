@@ -9,6 +9,7 @@ class CertificatePathResolver
         $candidatePaths = [
             base_path('docker/certs/fullchain.pem'),
             base_path('docker/certs/fullchain.crt'),
+            base_path('docker/certs/rootCA.crt'),
             storage_path('app/public/certificates/woosoo-ca.der'),
             storage_path('app/public/certificates/CAROOT.pem'),
             base_path('certs/ca.crt'),
