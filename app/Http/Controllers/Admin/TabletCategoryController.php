@@ -7,6 +7,7 @@ use App\Models\TabletCategory;
 use App\Models\TabletCategoryMenu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class TabletCategoryController extends Controller
@@ -33,6 +34,8 @@ class TabletCategoryController extends Controller
                     'id' => $cat->id,
                     'name' => $cat->name,
                     'slug' => $cat->slug,
+                    'icon' => $cat->icon,
+                    'color' => $cat->color,
                     'sort_order' => $cat->sort_order,
                     'is_active' => $cat->is_active,
                     'menu_count' => $cat->menuPivots->count(),
@@ -67,7 +70,8 @@ class TabletCategoryController extends Controller
                     'id' => $m->id,
                     'name' => $m->name ?: $m->receipt_name ?: "Menu #{$m->id}",
                 ]);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::warning('tablet-categories: could not load unattached menus from POS', ['error' => $e->getMessage()]);
         }
 
         return Inertia::render('tablet-categories/IndexTabletCategories', [
@@ -81,6 +85,8 @@ class TabletCategoryController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'slug' => ['nullable', 'string', 'max:120', 'unique:tablet_categories,slug'],
+            'icon' => ['nullable', 'string', 'max:100'],
+            'color' => ['nullable', 'string', 'max:20'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
         ]);
@@ -95,6 +101,8 @@ class TabletCategoryController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'slug' => ['nullable', 'string', 'max:120', 'unique:tablet_categories,slug,'.$tabletCategory->id],
+            'icon' => ['nullable', 'string', 'max:100'],
+            'color' => ['nullable', 'string', 'max:20'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
         ]);
@@ -123,14 +131,16 @@ class TabletCategoryController extends Controller
             'menu_ids.*' => ['integer', 'min:1'],
         ]);
 
-        $tabletCategory->menuPivots()->delete();
+        DB::transaction(function () use ($tabletCategory, $validated): void {
+            $tabletCategory->menuPivots()->delete();
 
-        foreach ($validated['menu_ids'] as $index => $menuId) {
-            $tabletCategory->menuPivots()->create([
-                'krypton_menu_id' => $menuId,
-                'sort_order' => $index,
-            ]);
-        }
+            foreach ($validated['menu_ids'] as $index => $menuId) {
+                $tabletCategory->menuPivots()->create([
+                    'krypton_menu_id' => $menuId,
+                    'sort_order' => $index,
+                ]);
+            }
+        });
 
         return redirect()->back()->with('success', 'Category menus synced.');
     }
@@ -212,7 +222,7 @@ class TabletCategoryController extends Controller
     {
         $validated = $request->validate([
             'ids' => ['required', 'array'],
-            'ids.*' => ['integer', 'min:1'],
+            'ids.*' => ['integer', 'min:1', 'exists:tablet_categories,id'],
         ]);
 
         foreach ($validated['ids'] as $index => $id) {

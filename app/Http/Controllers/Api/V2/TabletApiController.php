@@ -3,26 +3,28 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Repositories\Krypton\MenuRepository;
 use App\Http\Resources\MenuModifierResource;
 use App\Http\Resources\MenuResource;
+use App\Http\Responses\ApiResponse;
 use App\Models\Krypton\Menu;
 use App\Models\ModifierDescription;
 use App\Models\Package;
 use App\Models\TabletCategory;
-use App\Http\Responses\ApiResponse;
+use App\Models\TabletPackageAllowedMenu;
+use App\Models\TabletPackageConfig;
+use App\Repositories\Krypton\MenuRepository;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
  * Tablet API Controller (V2)
- * 
+ *
  * Provides tablet-specific endpoints for the tablet-ordering-pwa.
  * These endpoints are designed for the legacy tablet ordering system.
- * 
- * @package App\Http\Controllers\Api\V2
  */
 class TabletApiController extends Controller
 {
@@ -31,8 +33,11 @@ class TabletApiController extends Controller
      * These are determined by Krypton POS configuration and must not change.
      */
     private const MEATS_GROUP_ID = 34;    // POS group "Meat Order"
+
     private const SIDES_GROUP_ID = 29;    // POS group for sides
+
     private const DRINKS_GROUP_ID = 30;   // POS group for beverages
+
     private const DESSERT_COURSE = 'dessert';
 
     protected $menuRepository;
@@ -44,14 +49,17 @@ class TabletApiController extends Controller
 
     /**
      * GET /api/v2/tablet/packages
-     * 
+     *
      * Returns all package menus (Set Meal A, B, C - IDs 46, 47, 48)
      * with their associated modifiers.
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
     /** Cache key for the resolved packages payload. Busted on admin save/update/delete. */
     public const PACKAGES_CACHE_KEY = 'tablet.packages.v2';
+
+    /** Cache key for the TabletPackageConfig payload. Busted on admin save/update/delete. */
+    public const PACKAGE_CONFIGS_CACHE_KEY = 'tablet.package_configs.v1';
 
     /** TTL in seconds — 5 minutes. Short enough to pick up changes if cache flush is missed. */
     private const PACKAGES_CACHE_TTL = 300;
@@ -158,18 +166,100 @@ class TabletApiController extends Controller
 
             return ApiResponse::success($resolved, 'Packages retrieved successfully');
         } catch (\Exception $e) {
-            Log::error('V2 Tablet API - packages error: ' . $e->getMessage());
+            Log::error('V2 Tablet API - packages error: '.$e->getMessage());
+
             return ApiResponse::error('Failed to retrieve packages', null, 500);
         }
     }
 
     /**
+     * GET /api/v2/tablet/package-configs
+     *
+     * Returns active TabletPackageConfig records with their allowed menus,
+     * enriched with Krypton menu names. Cache key busted by PackageConfigController.
+     */
+    public function packageConfigs(Request $request)
+    {
+        try {
+            $resolved = Cache::remember(self::PACKAGE_CONFIGS_CACHE_KEY, self::PACKAGES_CACHE_TTL, function () {
+                $configs = TabletPackageConfig::with('activeAllowedMenus')
+                    ->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('name')
+                    ->get();
+
+                if ($configs->isEmpty()) {
+                    return [];
+                }
+
+                $menuIds = $configs
+                    ->flatMap(fn ($c) => $c->activeAllowedMenus->pluck('krypton_menu_id'))
+                    ->unique()->values()->all();
+
+                $kryptonMenus = collect([]);
+                try {
+                    $kryptonMenus = DB::connection('pos')
+                        ->table('menus')
+                        ->whereIn('id', $menuIds)
+                        ->select('id', 'name', 'receipt_name')
+                        ->get()
+                        ->keyBy('id');
+                } catch (\Throwable) {
+                }
+
+                return $configs->map(function (TabletPackageConfig $config) use ($kryptonMenus): array {
+                    return [
+                        'id' => $config->id,
+                        'name' => $config->name,
+                        'description' => $config->description,
+                        'base_price' => $config->base_price,
+                        'min_meat' => $config->min_meat,
+                        'max_meat' => $config->max_meat,
+                        'min_side' => $config->min_side,
+                        'max_side' => $config->max_side,
+                        'min_dessert' => $config->min_dessert,
+                        'max_dessert' => $config->max_dessert,
+                        'min_beverage' => $config->min_beverage,
+                        'max_beverage' => $config->max_beverage,
+                        'allowed_menus' => $config->activeAllowedMenus
+                            ->sortBy('sort_order')
+                            ->map(function (TabletPackageAllowedMenu $m) use ($kryptonMenus): array {
+                                $kMenu = $kryptonMenus->get($m->krypton_menu_id);
+
+                                return [
+                                    'id' => $m->id,
+                                    'krypton_menu_id' => $m->krypton_menu_id,
+                                    'name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$m->krypton_menu_id}",
+                                    'menu_type' => $m->menu_type,
+                                    'meat_category_code' => $m->meat_category_code,
+                                    'extra_price' => $m->extra_price,
+                                    'quantity_limit' => $m->quantity_limit,
+                                    'is_required' => $m->is_required,
+                                    'is_default' => $m->is_default,
+                                    'sort_order' => $m->sort_order,
+                                ];
+                            })
+                            ->values()
+                            ->all(),
+                    ];
+                })->all();
+            });
+
+            return ApiResponse::success($resolved, 'Package configs retrieved successfully');
+        } catch (\Exception $e) {
+            Log::error('V2 Tablet API - package_configs error: '.$e->getMessage());
+
+            return ApiResponse::error('Failed to retrieve package configs', null, 500);
+        }
+    }
+
+    /**
      * GET /api/v2/tablet/meat-categories
-     * 
+     *
      * Returns meat modifier groups (PORK, BEEF, CHICKEN).
      * Extracts categories from modifier receipt_name prefixes.
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
     public function meatCategories(Request $request)
     {
@@ -180,19 +270,19 @@ class TabletApiController extends Controller
                     'id' => 1,
                     'name' => 'PORK',
                     'slug' => 'pork',
-                    'prefix' => 'P'
+                    'prefix' => 'P',
                 ],
                 [
                     'id' => 2,
                     'name' => 'BEEF',
                     'slug' => 'beef',
-                    'prefix' => 'B'
+                    'prefix' => 'B',
                 ],
                 [
                     'id' => 3,
                     'name' => 'CHICKEN',
                     'slug' => 'chicken',
-                    'prefix' => 'C'
+                    'prefix' => 'C',
                 ],
             ];
 
@@ -201,7 +291,8 @@ class TabletApiController extends Controller
                 'Meat categories retrieved successfully'
             );
         } catch (\Exception $e) {
-            Log::error('V2 Tablet API - meat categories error: ' . $e->getMessage());
+            Log::error('V2 Tablet API - meat categories error: '.$e->getMessage());
+
             return ApiResponse::error('Failed to retrieve meat categories', null, 500);
         }
     }
@@ -213,7 +304,7 @@ class TabletApiController extends Controller
      * first (admin-managed). If none are active, falls back to the original
      * hardcoded list so the PWA always has data.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function categories(Request $request)
     {
@@ -225,7 +316,7 @@ class TabletApiController extends Controller
 
             if ($dbCategories->isNotEmpty()) {
                 $payload = $dbCategories->map(fn ($cat) => [
-                    'id'   => $cat->id,
+                    'id' => $cat->id,
                     'name' => $cat->name,
                     'slug' => $cat->slug,
                 ])->values();
@@ -243,20 +334,20 @@ class TabletApiController extends Controller
 
             return ApiResponse::success($categories, 'Categories retrieved successfully');
         } catch (\Exception $e) {
-            Log::error('V2 Tablet API - categories error: ' . $e->getMessage());
+            Log::error('V2 Tablet API - categories error: '.$e->getMessage());
+
             return ApiResponse::error('Failed to retrieve categories', null, 500);
         }
     }
 
     /**
      * GET /api/v2/tablet/packages/{id}
-     * 
+     *
      * Returns package details by Krypton menu ID.
      * Only returns if the package is configured and active. No legacy fallback.
-     * 
-     * @param Request $request
-     * @param int $id Krypton menu ID (not local package config ID)
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @param  int  $id  Krypton menu ID (not local package config ID)
+     * @return JsonResponse
      */
     public function packageDetails(Request $request, int $id)
     {
@@ -294,8 +385,10 @@ class TabletApiController extends Controller
                     $kryptonMenu = $kryptonMenus->get($pm->krypton_menu_id);
                     if (! $kryptonMenu) {
                         Log::warning("Invalid PackageModifier: id={$pm->id}, krypton_menu_id={$pm->krypton_menu_id} not found in POS");
+
                         return null;
                     }
+
                     return $kryptonMenu;
                 })
                 ->filter()
@@ -308,7 +401,7 @@ class TabletApiController extends Controller
             $packageArr = (new MenuResource($package))->resolve();
 
             // Map modifiers into allowed_menus.meat using MenuModifierResource
-            $allowedMeats = \App\Http\Resources\MenuModifierResource::collection($modifiers)->resolve();
+            $allowedMeats = MenuModifierResource::collection($modifiers)->resolve();
 
             $response = [
                 'package' => [
@@ -338,7 +431,8 @@ class TabletApiController extends Controller
                 'Package details retrieved successfully'
             );
         } catch (\Exception $e) {
-            Log::error("V2 Tablet API - package details error (ID: $id): " . $e->getMessage());
+            Log::error("V2 Tablet API - package details error (ID: $id): ".$e->getMessage());
+
             return ApiResponse::error('Failed to retrieve package details', null, 500);
         }
     }
@@ -346,13 +440,12 @@ class TabletApiController extends Controller
     /**
      * Build legacy package menu models with their corresponding legacy modifiers.
      * GET /api/v2/tablet/categories/{slug}/menus
-     * 
+     *
      * Returns menus for a specific category using fixed POS group ID mapping.
      * Strict contract: only resolves meats|sides|drinks|desserts; otherwise 422.
-     * 
-     * @param Request $request
-     * @param string $slug Category slug (meats, sides, drinks, desserts)
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @param  string  $slug  Category slug (meats, sides, drinks, desserts)
+     * @return JsonResponse
      */
     public function categoryMenus(Request $request, string $slug)
     {
@@ -367,9 +460,9 @@ class TabletApiController extends Controller
                 'desserts' => fn () => $this->menuRepository->getMenusByCourse(self::DESSERT_COURSE),
             ];
 
-            if (!array_key_exists($normalizedSlug, $categoryMap)) {
+            if (! array_key_exists($normalizedSlug, $categoryMap)) {
                 return ApiResponse::error(
-                    'Invalid category slug. Must be one of: ' . implode(', ', array_keys($categoryMap)),
+                    'Invalid category slug. Must be one of: '.implode(', ', array_keys($categoryMap)),
                     null,
                     422
                 );
@@ -377,7 +470,7 @@ class TabletApiController extends Controller
 
             // Fetch menus using the mapped method
             $menus = ($categoryMap[$normalizedSlug])();
-            
+
             // Cross-connection patch — $menus->load(['image']) silently fails because
             // MenuImage lives on a different DB connection. Use the bulk helper instead.
             if ($menus->isNotEmpty()) {
@@ -389,9 +482,9 @@ class TabletApiController extends Controller
                 "Category '$normalizedSlug' menus retrieved successfully"
             );
         } catch (\Exception $e) {
-            Log::error("V2 Tablet API - category menus error (slug: $slug): " . $e->getMessage());
+            Log::error("V2 Tablet API - category menus error (slug: $slug): ".$e->getMessage());
+
             return ApiResponse::error('Failed to retrieve category menus', null, 500);
         }
     }
-
 }

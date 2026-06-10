@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Events\Menu\PackageUpdated;
+use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageConfigRequest;
 use App\Models\Device;
 use App\Models\TabletPackageAllowedMenu;
 use App\Models\TabletPackageConfig;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -63,7 +65,9 @@ class PackageConfigController extends Controller
 
     public function store(StorePackageConfigRequest $request)
     {
-        TabletPackageConfig::create($request->validated());
+        $packageConfig = TabletPackageConfig::create($request->validated());
+
+        $this->broadcastPackageUpdated($packageConfig->id);
 
         return redirect()->back()->with('success', 'Package created.');
     }
@@ -79,7 +83,8 @@ class PackageConfigController extends Controller
 
     public function destroy(TabletPackageConfig $packageConfig)
     {
-        $packageConfig->allowedMenus()->delete();
+        $this->broadcastPackageUpdated($packageConfig->id);
+
         $packageConfig->delete();
 
         return redirect()->back()->with('success', 'Package deleted.');
@@ -129,10 +134,12 @@ class PackageConfigController extends Controller
     }
 
     /**
-     * Dispatch PackageUpdated to all active devices so tablets invalidate their package cache.
+     * Dispatch PackageUpdated to all active devices and bust the package-configs API cache.
      */
     private function broadcastPackageUpdated(?int $packageId = null): void
     {
+        Cache::forget(TabletApiController::PACKAGE_CONFIGS_CACHE_KEY);
+
         Device::where('is_active', true)->each(function (Device $device) use ($packageId) {
             PackageUpdated::dispatch($device->id, $packageId);
         });

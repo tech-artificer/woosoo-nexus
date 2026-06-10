@@ -14,16 +14,16 @@ class TabletCategory extends Model
     protected bool $slugExplicitlySet = false;
 
     protected $fillable = [
-        'name', 'slug', 'sort_order', 'is_active',
+        'name', 'slug', 'icon', 'color', 'sort_order', 'is_active',
     ];
 
     protected $attributes = [
-        'is_active'  => true,
+        'is_active' => true,
         'sort_order' => 0,
     ];
 
     protected $casts = [
-        'is_active'  => 'boolean',
+        'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
 
@@ -31,21 +31,42 @@ class TabletCategory extends Model
     {
         static::creating(function (self $category): void {
             if (empty($category->slug)) {
-                $category->slug = Str::slug($category->name);
+                $category->slug = static::uniqueSlug(Str::slug($category->name));
             }
         });
 
         static::updating(function (self $category): void {
-            // Only auto-generate slug from name when the caller did not
-            // explicitly set slug in this update operation.
             if ($category->isDirty('name') && ! $category->slugExplicitlySet) {
-                $category->slug = Str::slug($category->name);
+                $category->slug = static::uniqueSlug(Str::slug($category->name), $category->id);
             }
         });
 
         static::saved(function (self $category): void {
             $category->slugExplicitlySet = false;
         });
+    }
+
+    private static function uniqueSlug(string $base, ?int $excludeId = null): string
+    {
+        if ($base === '') {
+            $base = 'category';
+        }
+
+        $exists = fn (string $s) => static::where('slug', $s)
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->exists();
+
+        if (! $exists($base)) {
+            return $base;
+        }
+
+        $count = 2;
+        do {
+            $candidate = "{$base}-{$count}";
+            $count++;
+        } while ($exists($candidate));
+
+        return $candidate;
     }
 
     public function setSlugAttribute(?string $value): void
