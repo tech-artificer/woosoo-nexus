@@ -476,6 +476,11 @@ class DeviceController extends Controller
             ->with('success', 'Device trashed.');
     }
 
+    public function trashed(Request $request): RedirectResponse
+    {
+        return redirect()->route('devices.index', ['view' => 'trashed']);
+    }
+
     public function restore(Request $request, int $id)
     {
 
