@@ -2,9 +2,9 @@ name: CI - tests, lint, security
 
 on:
   push:
-    branches: [ main, develop, staging ]
+    branches: [ main, staging, dev ]
   pull_request:
-    branches: [ main, develop, staging ]
+    branches: [ main, staging, dev ]
 
 jobs:
   build-and-test:
