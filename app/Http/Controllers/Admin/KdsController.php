@@ -9,6 +9,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
+use App\Services\PosConnectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,10 @@ use Inertia\Response;
 
 class KdsController extends Controller
 {
+    public function __construct(
+        private readonly PosConnectionService $posConnection,
+    ) {}
+
     private const HIDDEN_STATUSES = [
         OrderStatus::COMPLETED,
         OrderStatus::CANCELLED,
@@ -34,7 +39,11 @@ class KdsController extends Controller
 
     public function index(Request $request): Response
     {
-        $orders = DeviceOrder::with(['device.table', 'table', 'items.menu'])
+        $with = $this->posConnection->isReachable()
+            ? ['device.table', 'table', 'items.menu']
+            : ['device', 'items.menu'];
+
+        $orders = DeviceOrder::with($with)
             ->whereNotIn('status', array_map(fn ($s) => $s->value, self::HIDDEN_STATUSES))
             ->orderBy('created_at')
             ->get();
