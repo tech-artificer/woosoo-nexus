@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Step 3 — Component Theming · Woosoo Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=Kanit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="series.css">
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="doc-eyebrow">Woosoo Nexus · Design Alignment</div>
+  <div class="doc-title">Step 3 — Component Theming</div>
+  <div class="doc-sub">Five shared shadcn/ui primitives brought into brand alignment — Badge, Button, Card, and Tabs. Theme them once and every page inherits the fix. All edits are CVA variant strings or template markup; no logic, no API.</div>
+  <div class="doc-nav">
+    <a href="Design Alignment - Roadmap.html">Roadmap</a>
+    <a href="Step 1 - Look & Feel.html">Step 1 · Look &amp; Feel</a>
+    <a href="Step 2 - Layout & Navigation.html">Step 2 · Layout</a>
+    <a href="Step 3 - Component Theming.html" class="cur">Step 3 · Components</a>
+    <a href="Step 4 - Page by Page.html">Step 4 · Pages</a>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="section">
+  <div class="section-title">What changes, and where</div>
+  <div class="section-desc"><strong>CVA / template only.</strong> <strong>Prerequisite:</strong> Steps 1 and 2 must be applied first. The <code>.vue</code> component shells stay put — only variant definitions and two tab templates change.</div>
+
+  <table class="ov-table">
+    <thead>
+      <tr><th>#</th><th>Primitive</th><th>File</th><th>Impact</th></tr>
+    </thead>
+    <tbody>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">01</td><td class="label-cell">Badge — warning variant + dark-mode fixes</td><td class="file-cell">ui/badge/index.ts</td><td><span class="badge-impact badge-high">High</span></td></tr>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">02</td><td class="label-cell">Button — radius to brand scale</td><td class="file-cell">ui/button/index.ts</td><td><span class="badge-impact badge-medium">Medium</span></td></tr>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">03</td><td class="label-cell">Card — visible border, lighter blur, softer shadow</td><td class="file-cell">ui/card/Card.vue</td><td><span class="badge-impact badge-high">High</span></td></tr>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">04</td><td class="label-cell">TabsList — warm bordered container</td><td class="file-cell">ui/tabs/TabsList.vue</td><td><span class="badge-impact badge-medium">Medium</span></td></tr>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">05</td><td class="label-cell">TabsTrigger — white-card active state</td><td class="file-cell">ui/tabs/TabsTrigger.vue</td><td><span class="badge-impact badge-medium">Medium</span></td></tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:16px;" class="notice">
+    <span class="notice-icon">✓</span>
+    <div><strong>Rename on copy:</strong> <code>badge-index.ts</code> and <code>button-index.ts</code> are prefixed in the handoff folder only — drop them in as <code>index.ts</code> at their destinations.</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 01 — BADGE -->
+<div class="section">
+  <div class="section-num">Change 01 / 05</div>
+  <div class="section-title">Badge — warning variant &amp; dark-mode</div>
+  <span class="impact high">● High impact</span>
+  <div class="section-desc">
+    There's no <strong>amber warning</strong> badge, and <code>success</code> / <code>active</code> were near-invisible in dark mode (they used solid <code>-100</code> Tailwind tints with no dark counterpart). Add the variant and give the status badges real dark styles.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — light only</div>
+      <div class="compare-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="fake-badge-v" style="background:rgba(22,163,74,0.12);color:#16A34A;">Success</span>
+        <span class="fake-badge-v" style="background:rgba(37,99,235,0.12);color:#2563EB;">Accent</span>
+        <span class="fake-badge-v" style="background:var(--bg3);color:var(--fg3);border:1px dashed var(--bdr3);">warning · missing</span>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — full set, dark-ready</div>
+      <div class="compare-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="fake-badge-v" style="background:rgba(110,168,104,0.18);color:var(--green);border:1px solid rgba(110,168,104,0.3);">Success</span>
+        <span class="fake-badge-v" style="background:rgba(101,148,219,0.18);color:#8fb0e8;border:1px solid rgba(101,148,219,0.3);">Accent</span>
+        <span class="fake-badge-v" style="background:rgba(246,181,109,0.18);color:var(--accent);border:1px solid rgba(246,181,109,0.3);">Warning</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/ui/badge/index.ts</div>
+<pre><span class="cm">// In badgeVariants cva({ variants: { variant: { … } } })</span>
+
+<span class="cm">// NEW — warning</span>
+<span class="add">+ warning:</span>
+<span class="add">+   'bg-woosoo-accent/12 text-woosoo-primary-dark border-woosoo-accent/30 ' +</span>
+<span class="add">+   'dark:bg-woosoo-accent/18 dark:text-woosoo-accent dark:border-woosoo-accent/30',</span>
+
+<span class="cm">// FIX — success &amp; active (were bg-woosoo-green-100 text-woosoo-green)</span>
+<span class="del">- success: 'bg-woosoo-green-100 text-woosoo-green',</span>
+<span class="add">+ success:</span>
+<span class="add">+   'bg-woosoo-green/12 text-woosoo-green border-woosoo-green/25 ' +</span>
+<span class="add">+   'dark:bg-woosoo-green/18 dark:text-woosoo-green dark:border-woosoo-green/30',</span>
+
+<span class="cm">// FIX — accent (blue): add dark counterpart</span>
+<span class="add">+ dark:bg-woosoo-blue/18 dark:text-woosoo-blue dark:border-woosoo-blue/30</span>
+
+<span class="cm">// Unchanged: default, secondary, destructive, outline</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 02 — BUTTON -->
+<div class="section">
+  <div class="section-num">Change 02 / 05</div>
+  <div class="section-title">Button — radius</div>
+  <span class="impact medium">● Medium impact</span>
+  <div class="section-desc">
+    The button base is <code>rounded-xl</code> (0.75rem) while the brand <code>--radius</code> token is <strong>0.5rem</strong> — buttons read rounder than the inputs, sidebar items, and tabs sitting right next to them. One token, one fix.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — rounded-xl</div>
+      <div class="compare-body"><div class="dark-fake-btn-primary" style="border-radius:14px;">New Order</div></div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — rounded-lg</div>
+      <div class="compare-body"><div class="dark-fake-btn-primary" style="border-radius:8px;">New Order</div></div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/ui/button/index.ts</div>
+<pre><span class="cm">// buttonVariants cva(base) — base class string</span>
+<span class="del">- '… inline-flex items-center … rounded-xl …'</span>
+<span class="add">+ '… inline-flex items-center … rounded-lg …'</span>
+
+<span class="cm">// All variant styles and sizes unchanged.</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 03 — CARD -->
+<div class="section">
+  <div class="section-num">Change 03 / 05</div>
+  <div class="section-title">Card — border, blur &amp; shadow</div>
+  <span class="impact high">● High impact</span>
+  <div class="section-desc">
+    The card border was <code>border-white/65</code> — invisible against light backgrounds. Switch to the system card border, lighten the blur to match Step 2, and bring the shadow into proportion (plus a dark-mode shadow).
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/ui/card/Card.vue</div>
+<pre><span class="cm">// Root card class</span>
+<span class="del">- border-white/65</span>
+<span class="add">+ border-black/8                                  </span><span class="cm">// visible in light mode</span>
+<span class="del">- backdrop-blur-xl</span>
+<span class="add">+ backdrop-blur-sm</span>
+<span class="del">- shadow-[0_28px_60px_-38px_rgba(37,37,37,0.38)]</span>
+<span class="add">+ shadow-[0_24px_55px_-36px_rgba(37,37,37,0.32)]</span>
+<span class="add">+ dark:shadow-[0_24px_55px_-36px_rgba(0,0,0,0.38)]</span></pre>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-title">Before → after <span class="tag">border</span></div>
+      <div class="ba"><span class="ba-from">border-white/65</span><span class="ba-arr">→</span><span class="ba-to">border-black/8</span></div>
+      <div class="ba"><span class="ba-from">backdrop-blur-xl</span><span class="ba-arr">→</span><span class="ba-to">backdrop-blur-sm</span></div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">Why <span class="tag">system-wide</span></div>
+      <p><code>border-black/8</code> is the same stroke used on the Dashboard and Devices cards in Step 4 — theming <code>Card.vue</code> here means those pages line up automatically.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 04 + 05 — TABS -->
+<div class="section">
+  <div class="section-num">Change 04–05 / 05</div>
+  <div class="section-title">Tabs — list &amp; trigger</div>
+  <span class="impact medium">● Medium impact</span>
+  <div class="section-desc">
+    The tab list had no border and a flat <code>bg-muted</code>; the active trigger was a bare <code>bg-background</code>. Give the list a warm bordered container and the active tab the white-card-with-shadow treatment used elsewhere in the system.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — flat muted</div>
+      <div class="compare-body">
+        <div class="fake-tablist" style="background:#ededed;border-color:transparent;">
+          <div class="fake-tab on" style="background:#f6f6f6;border-color:transparent;box-shadow:none;">Live Orders</div>
+          <div class="fake-tab">Order History</div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — bordered + white card</div>
+      <div class="compare-body">
+        <div class="fake-tablist">
+          <div class="fake-tab on">Live Orders</div>
+          <div class="fake-tab">Order History</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/ui/tabs/TabsList.vue</div>
+<pre><span class="del">- bg-muted h-9</span>
+<span class="add">+ bg-black/[0.04] h-10 border border-black/8</span>
+<span class="add">+ dark:bg-white/[0.05] dark:border-white/10</span></pre>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/ui/tabs/TabsTrigger.vue</div>
+<pre><span class="cm">// Active state</span>
+<span class="del">- data-[state=active]:bg-background</span>
+<span class="add">+ data-[state=active]:bg-white</span>
+<span class="add">+ data-[state=active]:border-black/8</span>
+<span class="add">+ data-[state=active]:shadow-sm</span>
+<span class="add">+ dark:data-[state=active]:bg-white/[0.08]</span>
+<span class="add">+ dark:data-[state=active]:border-white/12</span>
+
+<span class="cm">// Inactive text + focus ring</span>
+<span class="del">- text-foreground   focus-visible:ring-ring/50   max-w-55</span>
+<span class="add">+ text-foreground/65   focus-visible:ring-[#f6b56d]/40</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- WHAT STAYS THE SAME -->
+<div class="section">
+  <div class="section-title">What stays the same ✓</div>
+  <ul class="changes">
+    <li><span class="dot keep" style="background:var(--green);"></span><div><code>Badge.vue</code> / <code>Button.vue</code> shells — only the <code>index.ts</code> variant maps change.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div><code>CardHeader/Content/Footer.vue</code> — only the outer <code>Card.vue</code> wrapper is in scope.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div><code>Tabs.vue</code> / <code>TabsContent.vue</code> — untouched.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div>Anything in <code>resources/js/pages/</code> — handled in Step 4.</div></li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<!-- CHECKLIST -->
+<div class="section">
+  <div class="section-title">Implementation checklist</div>
+  <ul class="checklist" style="margin-top:8px;">
+    <li><div class="check-box"></div><div><div>Add <code>warning</code>; fix <code>success</code>/<code>active</code>/<code>accent</code> dark styles</div><div class="check-file" style="margin-top:3px;">ui/badge/index.ts</div></div></li>
+    <li><div class="check-box"></div><div><div>Base radius <code>rounded-xl</code> → <code>rounded-lg</code></div><div class="check-file" style="margin-top:3px;">ui/button/index.ts</div></div></li>
+    <li><div class="check-box"></div><div><div>Card border, blur, shadow + dark shadow</div><div class="check-file" style="margin-top:3px;">ui/card/Card.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>TabsList warm bordered container, <code>h-10</code></div><div class="check-file" style="margin-top:3px;">ui/tabs/TabsList.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>TabsTrigger white-card active state + amber focus ring</div><div class="check-file" style="margin-top:3px;">ui/tabs/TabsTrigger.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>QA — Dashboard cards, Orders tabs, badges in both modes</div><div class="check-file" style="margin-top:3px;">Browser — all screens</div></div></li>
+  </ul>
+</div>
+
+<div class="doc-footer">
+  <div class="doc-footer-left">Woosoo Nexus · Design Alignment Series · May 2026</div>
+  <div class="doc-footer-step">Step 3 of 4 — Component Theming</div>
+</div>
+
+</body>
+</html>

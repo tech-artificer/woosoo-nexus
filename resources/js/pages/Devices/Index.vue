@@ -95,14 +95,14 @@ function batteryLevel(device: Device): number | null {
 function batteryColor(pct: number | null): string {
     if (pct == null) return 'text-muted-foreground'
     if (pct >= 60) return 'text-woosoo-green'
-    if (pct >= 15) return 'text-[#f6b56d]'
+    if (pct >= 15) return 'text-woosoo-accent'
     return 'text-woosoo-red'
 }
 
 function batteryBg(pct: number | null): string {
     if (pct == null) return 'bg-muted'
     if (pct >= 60) return 'bg-woosoo-green'
-    if (pct >= 15) return 'bg-[#f6b56d]'
+    if (pct >= 15) return 'bg-woosoo-accent'
     return 'bg-woosoo-red'
 }
 
@@ -153,7 +153,7 @@ function syncAll() {
         <div class="space-y-5">
             <!-- Hero header -->
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#f6b56d]/10 via-transparent to-transparent dark:from-[#f6b56d]/6" />
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
                 <div class="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div class="space-y-2">
                         <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
@@ -168,8 +168,8 @@ function syncAll() {
                                 <span class="h-1.5 w-1.5 rounded-full bg-woosoo-green" />
                                 {{ fleetStats?.online_count ?? 0 }} online
                             </span>
-                            <span v-if="(fleetStats?.warning_count ?? 0) > 0" class="inline-flex items-center gap-1.5 rounded-full border border-[#f6b56d]/30 bg-[#f6b56d]/10 px-2.5 py-1 text-xs font-medium text-[#f6b56d]">
-                                <span class="h-1.5 w-1.5 rounded-full bg-[#f6b56d]" />
+                            <span v-if="(fleetStats?.warning_count ?? 0) > 0" class="inline-flex items-center gap-1.5 rounded-full border border-woosoo-accent/30 bg-woosoo-accent/10 px-2.5 py-1 text-xs font-medium text-woosoo-accent">
+                                <span class="h-1.5 w-1.5 rounded-full bg-woosoo-accent" />
                                 {{ fleetStats?.warning_count }} warning
                             </span>
                             <span v-if="(fleetStats?.offline_count ?? 0) > 0" class="inline-flex items-center gap-1.5 rounded-full border border-woosoo-red/30 bg-woosoo-red/10 px-2.5 py-1 text-xs font-medium text-woosoo-red">
@@ -245,7 +245,7 @@ function syncAll() {
                             class="group relative flex flex-col gap-3 rounded-[18px] border border-black/8 bg-white/60 p-4 transition-all duration-150 hover:border-white/20 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
                             :class="{
                                 'border-woosoo-red/30 dark:border-woosoo-red/20': deviceStatus(device) === 'offline',
-                                'border-[#f6b56d]/30 dark:border-[#f6b56d]/20': deviceStatus(device) === 'warning',
+                                'border-woosoo-accent/30 dark:border-woosoo-accent/20': deviceStatus(device) === 'warning',
                             }"
                         >
                             <!-- Card header: icon + name + status -->
@@ -254,7 +254,7 @@ function syncAll() {
                                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                                     :class="{
                                         'bg-woosoo-green/10': deviceStatus(device) === 'online',
-                                        'bg-[#f6b56d]/10': deviceStatus(device) === 'warning',
+                                        'bg-woosoo-accent/10': deviceStatus(device) === 'warning',
                                         'bg-woosoo-red/10': deviceStatus(device) === 'offline',
                                     }"
                                 >
@@ -262,7 +262,7 @@ function syncAll() {
                                         class="h-4 w-4"
                                         :class="{
                                             'text-woosoo-green': deviceStatus(device) === 'online',
-                                            'text-[#f6b56d]': deviceStatus(device) === 'warning',
+                                            'text-woosoo-accent': deviceStatus(device) === 'warning',
                                             'text-woosoo-red': deviceStatus(device) === 'offline',
                                         }"
                                     />
@@ -279,14 +279,14 @@ function syncAll() {
                                     class="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
                                     :class="{
                                         'bg-woosoo-green/10 text-woosoo-green': deviceStatus(device) === 'online',
-                                        'bg-[#f6b56d]/10 text-[#f6b56d]': deviceStatus(device) === 'warning',
+                                        'bg-woosoo-accent/10 text-woosoo-accent': deviceStatus(device) === 'warning',
                                         'bg-woosoo-red/10 text-woosoo-red': deviceStatus(device) === 'offline',
                                     }"
                                 >
                                     <span class="h-1 w-1 rounded-full"
                                         :class="{
                                             'bg-woosoo-green': deviceStatus(device) === 'online',
-                                            'bg-[#f6b56d]': deviceStatus(device) === 'warning',
+                                            'bg-woosoo-accent': deviceStatus(device) === 'warning',
                                             'bg-woosoo-red': deviceStatus(device) === 'offline',
                                         }"
                                     />
