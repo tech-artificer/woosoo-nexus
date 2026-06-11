@@ -8,7 +8,7 @@ import Pusher from 'pusher-js';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
-import { initializeTheme } from './composables/useAppearance';
+import { initializeNexusTheme } from './composables/useNexusTheme';
 
 declare global {
     interface Window {
@@ -59,5 +59,5 @@ createInertiaApp({
     },
 });
 
-// This will set light / dark mode on page load...
-initializeTheme();
+// Sync data-theme + .dark from nexus-theme (blade inline script handles first paint)
+initializeNexusTheme();

@@ -1,6 +1,9 @@
 # Woosoo Nexus — Design Alignment Handoff
 ## Master Index
 
+> [!warning] Steps 1–2 superseded (2026-06-10)
+> Do **not** run the quick-apply script for Steps 1–2. The admin shell is implemented by [[nex-case-025-admin-shell-migration]] (`AdminShell`, `AdminSidebar`, `AdminTopbar`). Steps 3–4 and `IMPLEMENTATION_HANDOVER.md` remain valid for page alignment.
+
 > **Four-step visual alignment of the admin panel to brand spec.**
 > Each step is self-contained. Apply them in order. No business logic changes in any step.
 

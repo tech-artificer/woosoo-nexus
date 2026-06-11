@@ -231,7 +231,7 @@ function submitAttach() {
         <div class="space-y-5">
             <!-- Hero header -->
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#f6b56d]/10 via-transparent to-transparent dark:from-[#f6b56d]/6" />
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
                 <div class="relative flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div class="space-y-2">
                         <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
@@ -267,9 +267,9 @@ function submitAttach() {
                                 :key="cat.id"
                                 class="flex cursor-pointer items-center gap-2 px-3 py-2.5 transition-colors"
                                 :class="{
-                                    'bg-[#2a1e0c] text-[#F6B56D]': selectedId === cat.id,
+                                    'bg-woosoo-accent/12 text-woosoo-accent border border-woosoo-accent/30': selectedId === cat.id,
                                     'hover:bg-black/4 dark:hover:bg-white/4': selectedId !== cat.id,
-                                    'border-t-2 border-[#f6b56d]/60': dragOverId === cat.id,
+                                    'border-t-2 border-woosoo-accent/60': dragOverId === cat.id,
                                 }"
                                 draggable="true"
                                 @click="selectedId = cat.id"
@@ -358,7 +358,7 @@ function submitAttach() {
                                         <button
                                             class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase transition-colors"
                                             :class="menu.is_featured
-                                                ? 'bg-[#f6b56d]/20 text-[#f6b56d] hover:bg-[#f6b56d]/30'
+                                                ? 'bg-woosoo-accent/20 text-woosoo-accent hover:bg-woosoo-accent/30'
                                                 : 'bg-muted text-muted-foreground hover:bg-muted/80'"
                                             @click="toggleFeatured(selectedCategory, menu)"
                                         >
@@ -467,11 +467,11 @@ function submitAttach() {
                             v-for="m in filteredUnattached"
                             :key="m.id"
                             class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50"
-                            :class="{ 'bg-[#f6b56d]/10': selectedAttachIds.includes(m.id) }"
+                            :class="{ 'bg-woosoo-accent/10': selectedAttachIds.includes(m.id) }"
                             @click="toggleAttachSelection(m.id)"
                         >
                             <div class="h-3.5 w-3.5 shrink-0 rounded border"
-                                :class="selectedAttachIds.includes(m.id) ? 'border-[#f6b56d] bg-[#f6b56d]' : 'border-border'"
+                                :class="selectedAttachIds.includes(m.id) ? 'border-woosoo-accent bg-woosoo-accent' : 'border-border'"
                             />
                             <span class="text-sm">{{ m.name }}</span>
                         </div>

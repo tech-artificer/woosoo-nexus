@@ -136,7 +136,7 @@ function confirmDelete() {
         <div class="space-y-5">
             <!-- Hero header -->
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#f6b56d]/10 via-transparent to-transparent dark:from-[#f6b56d]/6" />
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
                 <div class="relative flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div class="space-y-2">
                         <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
@@ -187,7 +187,7 @@ function confirmDelete() {
 
                             <!-- Price -->
                             <div class="flex items-baseline gap-1">
-                                <span class="font-mono text-3xl font-bold text-[#f6b56d]">₱{{ formatPrice(pkg.base_price) }}</span>
+                                <span class="font-mono text-3xl font-semibold text-woosoo-accent">₱{{ formatPrice(pkg.base_price) }}</span>
                                 <span class="text-sm text-muted-foreground">/ pax</span>
                             </div>
 
@@ -202,7 +202,7 @@ function confirmDelete() {
                                         :key="m.id"
                                         class="flex items-center gap-2 text-sm text-foreground"
                                     >
-                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b56d]" />
+                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-woosoo-accent" />
                                         {{ m.name }}
                                     </li>
                                 </ul>
@@ -249,7 +249,7 @@ function confirmDelete() {
                                         :key="m.id"
                                         class="flex items-center gap-2 text-sm text-foreground"
                                     >
-                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b56d]" />
+                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-woosoo-accent" />
                                         {{ m.name }}
                                     </li>
                                     <li v-if="pkg.menus.length > 8" class="text-xs text-muted-foreground">
@@ -304,7 +304,7 @@ function confirmDelete() {
                             <p class="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Meats</p>
                             <ul class="space-y-1">
                                 <li v-for="m in menusByType(manageMenusPkg, 'meat')" :key="m.id" class="flex items-center gap-2 text-sm">
-                                    <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f6b56d]" />
+                                    <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-woosoo-accent" />
                                     {{ m.name }}
                                     <Badge variant="secondary" class="ml-auto text-[9px]">{{ m.menu_type ?? 'meat' }}</Badge>
                                 </li>
