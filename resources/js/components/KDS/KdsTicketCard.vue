@@ -89,7 +89,15 @@ function splitSafetyName(name: string) {
     <section class="kds-items" :aria-label="`Items for order ${ticket.id}`">
       <div class="kds-items-head">
         <span>Items</span>
-        <span>{{ doneCount }} / {{ totalCount }} checked</span>
+        <span
+          class="kds-items-progress"
+          :class="{
+            'has-progress': doneCount > 0,
+            'is-complete': totalCount > 0 && doneCount === totalCount,
+          }"
+        >
+          {{ doneCount }} / {{ totalCount }} checked
+        </span>
       </div>
 
       <button
@@ -109,7 +117,7 @@ function splitSafetyName(name: string) {
           tabindex="-1"
         />
         <span class="kds-item-qty">{{ item.qty }}x</span>
-        <span class="kds-item-name">
+        <span class="kds-item-name" :class="{ 'is-done': item.done }">
           <template v-if="item.safety">
             <span>{{ splitSafetyName(item.name).base }}</span>
             <span class="kds-safety"> - {{ splitSafetyName(item.name).modifier }}</span>
