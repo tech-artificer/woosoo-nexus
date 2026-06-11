@@ -7,8 +7,9 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { columns } from '@/components/Orders/columns';
 import DataTable from '@/components/Orders/DataTable.vue'
 import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue'
-import StatsCards from '@/components/Stats/StatsCards.vue'
+import OrderStatusBadge from '@/components/Orders/OrderStatusBadge.vue'
 import type { DeviceOrder, User} from '@/types/models';
+import { formatCurrency } from '@/lib/utils';
 import { toast } from 'vue-sonner';
 import {
     Tabs,
@@ -100,21 +101,65 @@ watch(echoStatus, (newStatus, oldStatus) => {
 // Track which order IDs have active print animations to prevent duplicate animations
 const animatedOrderIds = new Set<number>()
 
-// Reactive stats always derived from live local arrays — never stale server snapshot
-const liveStats = computed(() => [
-  {
-    title: 'Live Orders',
-    value: localOrders.value.length,
-    subtitle: 'Pending and in-progress',
-    variant: 'primary' as const,
-  },
-  {
-    title: 'Order History',
-    value: localOrderHistory.value.length,
-    subtitle: 'Completed / voided',
-    variant: 'default' as const,
-  },
-])
+const KANBAN_COLUMNS = [
+  { key: 'confirmed', label: 'CONFIRMED', statuses: ['confirmed', 'pending', 'in_progress', 'ready', 'served'] },
+  { key: 'completed', label: 'COMPLETED', statuses: ['completed'] },
+  { key: 'voided', label: 'VOIDED', statuses: ['voided'] },
+  { key: 'cancelled', label: 'CANCELLED', statuses: ['cancelled'] },
+] as const
+
+function orderStatusKey(order: DeviceOrder): string {
+  return String(order.status ?? '').toLowerCase()
+}
+
+function ordersInColumn(statuses: readonly string[]): DeviceOrder[] {
+  return localOrders.value.filter((o) => statuses.includes(orderStatusKey(o)))
+}
+
+const kanbanColumns = computed(() =>
+  KANBAN_COLUMNS.map((col) => ({
+    ...col,
+    orders: ordersInColumn(col.statuses),
+    count: ordersInColumn(col.statuses).length,
+  })),
+)
+
+const dispatchSummary = computed(() => {
+  const confirmed = ordersInColumn(KANBAN_COLUMNS[0].statuses).length
+  const completed = ordersInColumn(KANBAN_COLUMNS[1].statuses).length
+  const voidedCancelled =
+    ordersInColumn(KANBAN_COLUMNS[2].statuses).length +
+    ordersInColumn(KANBAN_COLUMNS[3].statuses).length
+  return { confirmed, completed, voidedCancelled }
+})
+
+function formatElapsed(createdAt?: string | null): string {
+  if (!createdAt) return '—'
+  const diffMs = Date.now() - new Date(createdAt).getTime()
+  if (!Number.isFinite(diffMs) || diffMs < 0) return '—'
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  const rem = mins % 60
+  return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`
+}
+
+function orderTotal(order: DeviceOrder): number {
+  const raw = order.total ?? (order as any).total_amount ?? (order.meta as any)?.order_check?.total_amount
+  return typeof raw === 'number' ? raw : Number(raw || 0)
+}
+
+function orderItemsPreview(order: DeviceOrder): { name: string; quantity: number }[] {
+  const items = Array.isArray(order.items) ? order.items : []
+  return items.slice(0, 2).map((it: any) => ({
+    name: it.name || it.menu?.name || 'Item',
+    quantity: it.quantity ?? it.qty ?? 1,
+  }))
+}
+
+function packageLabel(order: DeviceOrder): string {
+  return order.name || (order.meta as any)?.package?.name || '—'
+}
 
 // Play a short audio ping for new orders (no external dependency)
 function playNewOrderPing() {
@@ -476,13 +521,13 @@ onUnmounted(() => {
           <div class="relative flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div class="space-y-2">
               <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Live Operations
+                Kitchen Dispatch
               </span>
               <h2 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                 Orders
               </h2>
               <p class="text-sm text-muted-foreground">
-                Live kitchen queue and order history — updates in real time when connected.
+                Live kitchen queue by status — updates in real time when connected.
               </p>
             </div>
           </div>
@@ -539,20 +584,85 @@ onUnmounted(() => {
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="live_orders" class="space-y-4 pt-3">
-                  <!-- Filters have been moved into the Orders DataTable toolbar -->
-                  <div class="flex flex-wrap items-center justify-between gap-3">
-                    <!-- Always reactive — derived from localOrders/localOrderHistory, never from static server prop -->
-                    <StatsCards :cards="liveStats" />
+                  <!-- Summary chip row -->
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-full border border-woosoo-accent/30 bg-woosoo-accent/10 px-3 py-1.5 text-xs font-medium text-foreground">
+                      {{ dispatchSummary.confirmed }} confirmed
+                      <span class="mx-1.5 text-muted-foreground">·</span>
+                      {{ dispatchSummary.completed }} completed
+                      <span class="mx-1.5 text-muted-foreground">·</span>
+                      {{ dispatchSummary.voidedCancelled }} voided/cancelled
+                    </span>
                   </div>
 
-                  <div class="w-full overflow-x-auto">
-                    <DataTable
-                      :data="localOrders"
-                      :columns="columns"
-                      :devices="devices"
-                      :tables="tables"
-                      @row-click="openOrderDetail"
-                    />
+                  <!-- Kanban columns -->
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div
+                      v-for="column in kanbanColumns"
+                      :key="column.key"
+                      class="flex min-h-[320px] flex-col rounded-[18px] border border-black/8 bg-white/50 dark:border-white/10 dark:bg-white/[0.03]"
+                    >
+                      <div class="flex items-center justify-between border-b border-black/8 px-4 py-3 dark:border-white/10">
+                        <h3 class="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+                          {{ column.label }}
+                        </h3>
+                        <Badge
+                          variant="secondary"
+                          class="h-5 min-w-5 rounded-full px-1.5 text-xs tabular-nums"
+                        >
+                          {{ column.count }}
+                        </Badge>
+                      </div>
+
+                      <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
+                        <button
+                          v-for="order in column.orders"
+                          :key="order.id ?? order.order_id ?? order.order_number"
+                          type="button"
+                          :data-order-id="order.id ?? order.order_id"
+                          class="group w-full rounded-[14px] border border-black/8 bg-card p-3 text-left transition-all hover:border-woosoo-accent/40 hover:shadow-sm dark:border-white/10"
+                          :class="{ 'ring-1 ring-woosoo-accent/30': order.__is_refill }"
+                          @click="openOrderDetail(order)"
+                        >
+                          <div class="flex items-start justify-between gap-2">
+                            <span class="text-sm font-bold text-foreground">ORD-{{ order.order_number }}</span>
+                            <OrderStatusBadge :status="orderStatusKey(order)" class="shrink-0 text-[10px]" />
+                          </div>
+                          <p class="mt-1.5 truncate text-xs text-muted-foreground">
+                            {{ order.device?.name ?? '—' }}
+                            <span v-if="order.table?.name"> · {{ order.table.name }}</span>
+                          </p>
+                          <p class="mt-1 truncate text-xs text-foreground/80">
+                            {{ packageLabel(order) }}
+                            <span class="text-muted-foreground"> · {{ order.guest_count ?? '—' }} pax</span>
+                          </p>
+                          <p v-if="orderItemsPreview(order).length" class="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+                            <span
+                              v-for="(item, idx) in orderItemsPreview(order)"
+                              :key="idx"
+                              class="block truncate"
+                            >
+                              {{ item.name }} ×{{ item.quantity }}
+                            </span>
+                          </p>
+                          <div class="mt-2 flex items-center justify-between gap-2 border-t border-black/5 pt-2 dark:border-white/8">
+                            <span class="text-sm font-semibold tabular-nums text-woosoo-accent">
+                              {{ formatCurrency(orderTotal(order)) }}
+                            </span>
+                            <span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              {{ formatElapsed(order.created_at) }}
+                            </span>
+                          </div>
+                        </button>
+
+                        <p
+                          v-if="column.orders.length === 0"
+                          class="flex flex-1 items-center justify-center py-8 text-center text-xs text-muted-foreground"
+                        >
+                          No {{ column.label.toLowerCase() }} orders
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
                 <TabsContent value="order_history" class="space-y-4 pt-3">
