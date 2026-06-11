@@ -33,6 +33,24 @@ export async function postKdsAdvance(orderId: string): Promise<{ status: string 
   return response.json()
 }
 
+export async function postKdsRecall(orderId: string): Promise<{ status: string }> {
+  const response = await fetch(route('kds.orders.recall', orderId), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': csrfToken(),
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(await parseError(response))
+  }
+
+  return response.json()
+}
+
 export async function postKdsToggleItem(itemId: string): Promise<{ done: boolean; done_at: string | null }> {
   const response = await fetch(route('kds.toggle-item', itemId), {
     method: 'POST',

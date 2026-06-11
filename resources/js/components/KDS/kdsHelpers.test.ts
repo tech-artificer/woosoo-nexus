@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyAdvance, canAdvanceTicket, filterTickets, isAdvanceBlocked, KDS_THRESHOLDS } from './kdsHelpers'
+import { applyAdvance, canAdvanceTicket, canRecallTicket, filterTickets, isAdvanceBlocked, KDS_THRESHOLDS } from './kdsHelpers'
 import type { KdsTicket, KdsTicketState } from './kdsTypes'
 
 function preparingTicket(itemsDone: boolean[]): KdsTicket {
@@ -75,6 +75,16 @@ describe('Mark as Served gating', () => {
     const ticket = preparingTicket([true, false])
 
     expect(applyAdvance(ticket, now).state).toBe('preparing')
+  })
+})
+
+describe('Recall gating', () => {
+  it('allows recall on served tickets only', () => {
+    expect(canRecallTicket(makeTicket('served'))).toBe(true)
+  })
+
+  it.each<KdsTicketState>(['new', 'preparing', 'ready', 'voided'])('rejects recall from %s', (state) => {
+    expect(canRecallTicket(makeTicket(state))).toBe(false)
   })
 })
 
