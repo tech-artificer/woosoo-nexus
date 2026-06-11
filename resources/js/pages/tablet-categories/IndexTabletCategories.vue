@@ -278,8 +278,10 @@ function submitAttach() {
                                 @dragover="onDragOver($event, cat.id)"
                                 @drop="onDrop(cat.id)"
                             >
-                                <GripVertical class="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40" />
-                                <span class="w-4 shrink-0 font-mono text-[10px] text-muted-foreground">#{{ index + 1 }}</span>
+                                <GripVertical class="h-4 w-4 shrink-0 cursor-grab rounded p-0.5 text-muted-foreground/50 hover:bg-black/5 dark:hover:bg-white/5" />
+                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-black/5 font-mono text-[10px] font-semibold text-muted-foreground dark:bg-white/8">
+                                    {{ index + 1 }}
+                                </span>
                                 <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ cat.name }}</span>
                                 <span class="font-mono text-[10px] text-muted-foreground">{{ cat.menu_count }}</span>
                                 <button
