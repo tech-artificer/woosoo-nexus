@@ -3,8 +3,8 @@ import { computed, ref } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { toast } from 'vue-sonner'
 import {
-    MonitorSmartphone, RotateCcw, Plus, Eye, Download, RefreshCw, ShieldCheck,
-    ShieldAlert, AlertTriangle,
+    MonitorSmartphone, RotateCcw, Plus, Eye, Download, RefreshCw,
+    AlertTriangle,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
@@ -62,6 +62,14 @@ const isSyncingAll = ref(false)
 
 const activeDevices = computed(() => props.devices.filter((d) => !d.deleted_at))
 
+const ordersTodayStat = computed(() => {
+    if (!props.stats || !Array.isArray(props.stats) || props.stats.length === 0) return null
+    const match = props.stats.find((s: any) =>
+        String(s?.title ?? '').toLowerCase().includes('order'),
+    )
+    return match ?? null
+})
+
 function deviceStatus(device: Device): 'online' | 'warning' | 'offline' {
     if (device.deleted_at) return 'offline'
     const s = (device.status ?? '').toLowerCase()
@@ -104,13 +112,6 @@ function batteryBg(pct: number | null): string {
     if (pct >= 60) return 'bg-woosoo-green'
     if (pct >= 15) return 'bg-woosoo-accent'
     return 'bg-woosoo-red'
-}
-
-function isVersionMismatch(device: Device): boolean {
-    if (!device.app_version) return false
-    const modal = props.fleetStats?.modal_app_version
-    if (!modal || !device.app_version) return false
-    return device.app_version !== modal && deviceStatus(device) !== 'online'
 }
 
 function openDeviceDetail(device: Device) {
@@ -335,31 +336,35 @@ function syncAll() {
                                 </p>
                             </div>
 
-                            <!-- Footer: version check + actions -->
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="inline-flex items-center gap-1 text-[10px] font-medium"
-                                    :class="isVersionMismatch(device) ? 'text-woosoo-red' : 'text-woosoo-green'"
+                            <!-- Optional orders-today from stats -->
+                            <div
+                                v-if="ordersTodayStat"
+                                class="rounded-lg border border-woosoo-accent/20 bg-woosoo-accent/5 px-3 py-2"
+                            >
+                                <p class="text-[9px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                                    {{ ordersTodayStat.title }}
+                                </p>
+                                <p class="mt-0.5 font-mono text-sm font-semibold tabular-nums">
+                                    {{ ordersTodayStat.value }}
+                                </p>
+                            </div>
+
+                            <!-- Footer actions -->
+                            <div class="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openDeviceDetail(device)">
+                                    <Eye class="mr-1 h-3 w-3" />
+                                    View
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-2 text-xs"
+                                    :disabled="isRestarting === device.id"
+                                    @click="confirmRestart(device)"
                                 >
-                                    <component :is="isVersionMismatch(device) ? ShieldAlert : ShieldCheck" class="h-3 w-3" />
-                                    {{ isVersionMismatch(device) ? 'Ver Mismatch' : 'Ver OK' }}
-                                </span>
-                                <div class="flex gap-1">
-                                    <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openDeviceDetail(device)">
-                                        <Eye class="mr-1 h-3 w-3" />
-                                        View
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        class="h-7 px-2 text-xs"
-                                        :disabled="isRestarting === device.id"
-                                        @click="confirmRestart(device)"
-                                    >
-                                        <RotateCcw class="mr-1 h-3 w-3" :class="{ 'animate-spin': isRestarting === device.id }" />
-                                        Regen Code
-                                    </Button>
-                                </div>
+                                    <RotateCcw class="mr-1 h-3 w-3" :class="{ 'animate-spin': isRestarting === device.id }" />
+                                    Restart
+                                </Button>
                             </div>
                         </div>
                     </div>
