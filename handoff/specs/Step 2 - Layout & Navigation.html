@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Step 2 — Layout &amp; Navigation · Woosoo Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=Kanit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="series.css">
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="doc-eyebrow">Woosoo Nexus · Design Alignment</div>
+  <div class="doc-title">Step 2 — Layout &amp; Navigation</div>
+  <div class="doc-sub">Two layout-level files. Adds a persistent dark-mode toggle to the topbar, and refines the content wrapper to match the brand radius and lighten GPU load. Visual-only — no logic changes.</div>
+  <div class="doc-nav">
+    <a href="Design Alignment - Roadmap.html">Roadmap</a>
+    <a href="Step 1 - Look & Feel.html">Step 1 · Look &amp; Feel</a>
+    <a href="Step 2 - Layout & Navigation.html" class="cur">Step 2 · Layout</a>
+    <a href="Step 3 - Component Theming.html">Step 3 · Components</a>
+    <a href="Step 4 - Page by Page.html">Step 4 · Pages</a>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="section">
+  <div class="section-title">What changes, and where</div>
+  <div class="section-desc">Both changes are <strong>template &amp; class-string only</strong>. <strong>Prerequisite:</strong> Step 1 must be applied first.</div>
+
+  <table class="ov-table">
+    <thead>
+      <tr><th>#</th><th>What changes</th><th>File</th><th>Impact</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">01</td>
+        <td class="label-cell">Dark-mode toggle in topbar (persists)</td>
+        <td class="file-cell">components/AppSidebarHeader.vue</td>
+        <td><span class="badge-impact badge-high">High</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">02</td>
+        <td class="label-cell">Content wrapper — radius, blur, shadow, spacing</td>
+        <td class="file-cell">layouts/AppContentLayout.vue</td>
+        <td><span class="badge-impact badge-medium">Medium</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:16px;" class="notice">
+    <span class="notice-icon">✓</span>
+    <div><strong>Consistent with app.css:</strong> the toggle writes the <code>appearance</code> key to <code>localStorage</code> and toggles <code>.dark</code> on <code>&lt;html&gt;</code> — exactly how the existing <code>@custom-variant dark (&amp;:is(.dark *))</code> expects it.</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 01 — DARK MODE TOGGLE -->
+<div class="section">
+  <div class="section-num">Change 01 / 02</div>
+  <div class="section-title">Dark-mode toggle</div>
+  <span class="impact high">● High impact</span>
+  <div class="section-desc">
+    The topbar right side currently shows only the <strong>“Secure workspace”</strong> status. Step 2 adds a <strong>sun / moon button</strong> sized to match the sidebar trigger (<code>size-8 rounded-md</code>), persisting the preference across reloads.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — status only</div>
+      <div class="compare-body">
+        <div class="fake-header-flat">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="fake-trigger-sq"></div>
+            <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--fg0);">Dashboard</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-family:var(--font-m);font-size:11px;color:var(--fg3);">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);"></span>
+            Secure workspace
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — toggle + status</div>
+      <div class="compare-body">
+        <div class="fake-header-flat">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="fake-trigger-sq"></div>
+            <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--fg0);">Dashboard</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="fake-toggle">☾</div>
+            <div style="display:flex;align-items:center;gap:5px;font-family:var(--font-m);font-size:11px;color:var(--fg3);">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);"></span>
+              Secure workspace
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/AppSidebarHeader.vue</div>
+<pre><span class="cm">// &lt;script setup&gt; — add imports + state</span>
+<span class="add">+ import { Sun, Moon } from 'lucide-vue-next'</span>
+<span class="add">+ import { ref, onMounted } from 'vue'</span>
+
+<span class="add">+ const isDark = ref(false)</span>
+<span class="add">+ onMounted(() =&gt; {</span>
+<span class="add">+   isDark.value = document.documentElement.classList.contains('dark')</span>
+<span class="add">+ })</span>
+<span class="add">+ function toggleDark() {</span>
+<span class="add">+   isDark.value = !isDark.value</span>
+<span class="add">+   document.documentElement.classList.toggle('dark', isDark.value)</span>
+<span class="add">+   localStorage.setItem('appearance', isDark.value ? 'dark' : 'light')</span>
+<span class="add">+ }</span>
+
+<span class="cm">// Topbar right section — wrap toggle + status</span>
+  &lt;div class="hidden items-center gap-1.5 md:flex"&gt;
+<span class="add">+   &lt;button type="button" @click="toggleDark"</span>
+<span class="add">+           class="size-8 rounded-md hover:bg-muted</span>
+<span class="add">+                  inline-flex items-center justify-center"&gt;</span>
+<span class="add">+     &lt;Sun v-if="isDark" class="size-4" /&gt;</span>
+<span class="add">+     &lt;Moon v-else class="size-4" /&gt;</span>
+<span class="add">+   &lt;/button&gt;</span>
+      &lt;div class="flex items-center gap-2 text-xs font-medium text-muted-foreground"&gt;
+          &lt;span class="inline-flex h-2 w-2 rounded-full bg-emerald-500"&gt;&lt;/span&gt;
+          Secure workspace
+      &lt;/div&gt;
+  &lt;/div&gt;</pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 02 — CONTENT WRAPPER -->
+<div class="section">
+  <div class="section-num">Change 02 / 02</div>
+  <div class="section-title">Content wrapper</div>
+  <span class="impact medium">● Medium impact</span>
+  <div class="section-desc">
+    <code>AppContentLayout.vue</code> wraps every page in a card that's slightly oversized (<code>rounded-[30px]</code>) with a heavy <code>backdrop-blur-xl</code>. Bring it to the brand radius and a lighter blur — matching the cards from Step 3 and reducing GPU cost.
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/layouts/AppContentLayout.vue</div>
+<pre><span class="cm">// The page content card wrapper</span>
+  &lt;div class="relative overflow-hidden
+<span class="del">-            rounded-[30px] backdrop-blur-xl</span>
+<span class="add">+            rounded-[26px] backdrop-blur-sm</span>
+<span class="del">-            shadow-[0_30px_85px_-52px_rgba(37,37,37,0.4)]</span>
+<span class="add">+            shadow-[0_24px_60px_-44px_rgba(37,37,37,0.32)]</span>
+<span class="del">-            dark:bg-white/[0.05]</span>
+<span class="add">+            dark:bg-white/[0.04]</span>
+<span class="del">-            mt-5 pb-5 md:pb-6"&gt;</span>
+<span class="add">+            mt-4 pb-6 md:mt-5 md:pb-8"&gt;</span>
+
+<span class="cm">// Amber gradient top strip — subtler</span>
+  &lt;div class="pointer-events-none absolute inset-x-0 top-0
+<span class="del">-            h-24 bg-gradient-to-b from-[#f6b56d]/14 to-transparent"&gt;&lt;/div&gt;</span>
+<span class="add">+            h-20 bg-gradient-to-b from-[#f6b56d]/10 to-transparent"&gt;&lt;/div&gt;</span></pre>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-title">Why <span class="tag">radius</span></div>
+      <p><code>rounded-[26px]</code> matches the brand <code>--radius</code> scale used on cards in Step 3, so the page card and its contents share one corner language instead of nesting two different radii.</p>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">Why <span class="tag">blur</span></div>
+      <p><code>backdrop-blur-sm</code> over <code>xl</code> drops a full-viewport GPU compositing pass on every page — meaningful on the tablet POS hardware — with no visible loss at this opacity.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- WHAT STAYS THE SAME -->
+<div class="section">
+  <div class="section-title">What stays the same ✓</div>
+  <div class="section-desc">Out of scope for Step 2 — don't touch.</div>
+  <ul class="changes">
+    <li><span class="dot keep" style="background:var(--green);"></span><div>Slot behaviour, <code>PageHeader</code>, and <code>hasHeader</code> logic in <code>AppContentLayout.vue</code> — <span class="keep">unchanged</span>.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div>Existing props, breadcrumbs, and the sidebar trigger in <code>AppSidebarHeader.vue</code> — <span class="keep">unchanged</span>.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div><code>AppSidebar.vue</code>, <code>NavMain.vue</code>, sidebar <code>index.ts</code> — already handled in Step 1.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div><code>app.css</code> — no additions needed for Step 2.</div></li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<!-- CHECKLIST -->
+<div class="section">
+  <div class="section-title">Implementation checklist</div>
+  <div class="section-desc">Two files, one rebuild.</div>
+  <ul class="checklist" style="margin-top:8px;">
+    <li><div class="check-box"></div><div><div>Add Sun / Moon imports, <code>isDark</code> ref, and <code>toggleDark()</code></div><div class="check-file" style="margin-top:3px;">components/AppSidebarHeader.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>Insert the <code>size-8</code> toggle button in the topbar-right flex group</div><div class="check-file" style="margin-top:3px;">components/AppSidebarHeader.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>Wrapper: <code>rounded-[26px]</code>, <code>backdrop-blur-sm</code>, softened shadow + spacing</div><div class="check-file" style="margin-top:3px;">layouts/AppContentLayout.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>Gradient strip: <code>from-[#f6b56d]/10</code>, height <code>h-20</code></div><div class="check-file" style="margin-top:3px;">layouts/AppContentLayout.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>QA — toggle persists across refresh; both modes; mobile tap target ≥44px</div><div class="check-file" style="margin-top:3px;">Browser — all screens</div></div></li>
+  </ul>
+</div>
+
+<div class="doc-footer">
+  <div class="doc-footer-left">Woosoo Nexus · Design Alignment Series · May 2026</div>
+  <div class="doc-footer-step">Step 2 of 4 — Layout &amp; Navigation</div>
+</div>
+
+</body>
+</html>

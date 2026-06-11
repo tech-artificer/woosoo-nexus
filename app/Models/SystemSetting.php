@@ -53,7 +53,7 @@ class SystemSetting extends Model
         ])->get()->keyBy('key');
 
         $decrypt = fn (string $k) => isset($rows[$k])
-            ? Crypt::decryptString($rows[$k]->value)
+            ? rescue(fn () => Crypt::decryptString($rows[$k]->value))
             : null;
 
         $plain = fn (string $k) => $rows[$k]->value ?? null;

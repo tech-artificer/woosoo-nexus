@@ -1,25 +1,14 @@
 <script setup lang="ts">
-import AppContent from '@/components/AppContent.vue';
-import AppShell from '@/components/AppShell.vue';
-import AppSidebar from '@/components/AppSidebar.vue';
-import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import AdminShell from '@/components/shell/AdminShell.vue';
 import type { BreadcrumbItemType } from '@/types';
 
-interface Props {
-    breadcrumbs?: BreadcrumbItemType[];
-}
-
-withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<{ breadcrumbs?: BreadcrumbItemType[] }>(), {
     breadcrumbs: () => [],
 });
 </script>
 
 <template>
-    <AppShell variant="sidebar">
-        <AppSidebar />
-        <AppContent variant="sidebar">
-            <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <slot />
-        </AppContent>
-    </AppShell>
+    <AdminShell :breadcrumbs="breadcrumbs">
+        <slot />
+    </AdminShell>
 </template>

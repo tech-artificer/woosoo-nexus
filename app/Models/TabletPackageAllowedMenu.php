@@ -13,16 +13,21 @@ class TabletPackageAllowedMenu extends Model
         'package_config_id',
         'krypton_menu_id',
         'menu_type',
-        'min_qty',
-        'max_qty',
+        'meat_category_code',
+        'extra_price',
+        'quantity_limit',
+        'is_required',
+        'is_default',
         'is_active',
         'sort_order',
     ];
 
     protected $casts = [
-        'min_qty'    => 'integer',
-        'max_qty'    => 'integer',
-        'is_active'  => 'boolean',
+        'extra_price' => 'decimal:2',
+        'quantity_limit' => 'integer',
+        'is_required' => 'boolean',
+        'is_default' => 'boolean',
+        'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
 

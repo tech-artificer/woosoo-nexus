@@ -14,12 +14,26 @@ class TabletPackageConfig extends Model
 
     protected $fillable = [
         'name', 'description', 'base_price',
+        'min_meat', 'max_meat',
+        'min_side', 'max_side',
+        'min_dessert', 'max_dessert',
+        'min_beverage', 'max_beverage',
+        'banner_media_id',
         'is_active', 'sort_order',
     ];
 
     protected $casts = [
         'base_price' => 'decimal:2',
-        'is_active'  => 'boolean',
+        'min_meat' => 'integer',
+        'max_meat' => 'integer',
+        'min_side' => 'integer',
+        'max_side' => 'integer',
+        'min_dessert' => 'integer',
+        'max_dessert' => 'integer',
+        'min_beverage' => 'integer',
+        'max_beverage' => 'integer',
+        'banner_media_id' => 'integer',
+        'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
 

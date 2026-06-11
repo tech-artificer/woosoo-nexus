@@ -451,8 +451,8 @@ onUnmounted(() => {
 <style scoped>
 @keyframes print-highlight {
   0% {
-    border-left: 4px solid rgb(34, 197, 94);
-    background-color: rgba(34, 197, 94, 0.05);
+    border-left: 4px solid var(--color-woosoo-green);
+    background-color: color-mix(in srgb, var(--color-woosoo-green) 5%, transparent);
   }
   100% {
     border-left: 4px solid transparent;
@@ -469,7 +469,25 @@ onUnmounted(() => {
     <Head :title="title" :description="description" />
    
     <AppLayout :breadcrumbs="breadcrumbs">
-      <div class="space-y-4">
+      <div class="space-y-5">
+        <!-- Hero header -->
+        <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
+          <div class="relative flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div class="space-y-2">
+              <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                Live Operations
+              </span>
+              <h2 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                Orders
+              </h2>
+              <p class="text-sm text-muted-foreground">
+                Live kitchen queue and order history — updates in real time when connected.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <!-- WebSocket connection status pill -->
         <div class="flex items-center justify-end">
           <span

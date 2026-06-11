@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Admin\AdminShellBadgeService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -54,6 +55,9 @@ class HandleInertiaRequests extends Middleware
                 'location' => url()->current(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'navBadges' => fn () => $request->user()?->can('admin')
+                ? app(AdminShellBadgeService::class)->counts()
+                : ['orders' => 0, 'devices' => 0],
             'flash' => [
                 'warning' => fn () => $request->session()->get('warning'),
                 'success' => fn () => $request->session()->get('success'),

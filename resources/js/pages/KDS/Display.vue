@@ -201,7 +201,7 @@ onBeforeUnmount(() => {
   --kds-fg0: #f4efe7;
   --kds-fg1: #ddd4c7;
   --kds-fg2: #a89d8e;
-  --kds-fg3: #70675e;
+  --kds-fg3: #7a7168;
   --kds-accent: #f6b56d;
   --kds-new: #85a9d8;
   --kds-preparing: #de8a48;
@@ -306,7 +306,7 @@ body.kds-active {
 .kds-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .kds-grid.density-compact {
@@ -567,10 +567,29 @@ body.kds-active {
   opacity: 0.72;
 }
 
+@keyframes kds-overdue-pulse {
+  0%,
+  100% {
+    border-color: rgb(214 85 64 / 0.42);
+    box-shadow:
+      0 0 0 1px rgb(214 85 64 / 0.14),
+      0 24px 56px rgb(214 85 64 / 0.12);
+  }
+
+  50% {
+    border-color: rgb(214 85 64 / 0.72);
+    box-shadow:
+      0 0 0 2px rgb(214 85 64 / 0.32),
+      0 24px 56px rgb(214 85 64 / 0.24);
+  }
+}
+
 :deep(.kds-ticket.urgency-over:not(.is-terminal)) {
+  border-left-width: 6px;
   border-color: rgb(214 85 64 / 0.45);
   border-left-color: var(--kds-overdue);
   box-shadow: 0 0 0 1px rgb(214 85 64 / 0.16), 0 24px 56px rgb(214 85 64 / 0.13);
+  animation: kds-overdue-pulse 1.4s ease-in-out infinite;
 }
 
 :deep(.kds-ticket-header) {
@@ -625,8 +644,9 @@ body.kds-active {
   color: var(--kds-warning);
 }
 
-:deep(.urgency-over .kds-timer) {
+:deep(.urgency-over:not(.is-terminal) .kds-timer) {
   color: var(--kds-overdue);
+  font-size: 36px;
 }
 
 :deep(.is-struck) {
@@ -685,6 +705,22 @@ body.kds-active {
   padding: 0 16px 8px;
 }
 
+:deep(.kds-items-progress) {
+  color: var(--kds-fg2);
+  font-family: var(--kds-font-m);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--kds-weight-data);
+  letter-spacing: 0.08em;
+}
+
+:deep(.kds-items-progress.has-progress) {
+  color: var(--kds-warning);
+}
+
+:deep(.kds-items-progress.is-complete) {
+  color: var(--kds-ready);
+}
+
 :deep(.kds-item-row) {
   width: 100%;
   min-height: 44px;
@@ -694,7 +730,7 @@ body.kds-active {
   background: transparent;
   color: var(--kds-fg0);
   font-family: var(--kds-font-s);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: var(--kds-weight-body);
   padding: 0 16px;
   text-align: left;
@@ -715,7 +751,23 @@ body.kds-active {
 }
 
 :deep(.kds-item-row.is-done) {
-  color: rgb(244 239 231 / 0.62);
+  color: rgb(244 239 231 / 0.58);
+}
+
+:deep(.kds-item-row.is-done .kds-item-name.is-done) {
+  text-decoration: line-through;
+  text-decoration-color: rgb(244 239 231 / 0.42);
+  text-decoration-thickness: 2px;
+}
+
+:deep(.kds-item-row.is-done .kds-item-check[data-state="checked"]) {
+  border-color: rgb(111 199 120 / 0.65);
+  background: rgb(111 199 120 / 0.22);
+  color: var(--kds-ready);
+}
+
+:deep(.kds-item-row.is-done .kds-item-qty) {
+  color: rgb(246 181 109 / 0.52);
 }
 
 :deep(.kds-item-row.is-disabled) {
@@ -742,7 +794,9 @@ body.kds-active {
 }
 
 :deep(.kds-safety) {
-  color: var(--kds-warning);
+  color: #e8b85a;
+  font-size: 15px;
+  font-weight: var(--kds-weight-label);
 }
 
 :deep(.kds-ticket-footer) {
@@ -803,12 +857,6 @@ body.kds-active {
 :deep(.kds-card-action:disabled),
 :deep(.kds-card-action[aria-disabled="true"]) {
   opacity: 0.45;
-}
-
-:deep(.kds-card-action.is-recall) {
-  border-color: rgb(246 181 109 / 0.28);
-  background: rgb(246 181 109 / 0.08);
-  color: var(--kds-accent);
 }
 
 :deep(.kds-card-action:focus-visible) {

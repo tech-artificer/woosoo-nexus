@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldCheck, Monitor, FileText, Wrench, DatabaseZap } from 'lucide-vue-next';
+import { Accessibility, Image, Monitor, FileText, Package, ShieldCheck, Tv, Wrench, DatabaseZap } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -52,6 +52,41 @@ const configModules = [
         href: route('pos-connection.index'),
         icon: DatabaseZap,
         action: 'Configure POS connection',
+    },
+    {
+        title: 'Accessibility',
+        description: 'Role-based visibility matrix for admin interface features.',
+        href: route('accessibility.index'),
+        icon: Accessibility,
+        action: 'Open accessibility',
+    },
+    {
+        title: 'Event Logs',
+        description: 'Inspect system and audit events across the platform.',
+        href: route('event-logs.index'),
+        icon: FileText,
+        action: 'Open event logs',
+    },
+    {
+        title: 'Kitchen Display',
+        description: 'Open the KDS fullscreen display for kitchen order management.',
+        href: route('kds.display'),
+        icon: Tv,
+        action: 'Open kitchen display',
+    },
+    {
+        title: 'Media Library',
+        description: 'Manage menu item images and other media assets.',
+        href: route('media.index'),
+        icon: Image,
+        action: 'Open media library',
+    },
+    {
+        title: 'Legacy Packages',
+        description: 'Legacy package definitions (pre-TabletPackageConfig).',
+        href: route('packages.index'),
+        icon: Package,
+        action: 'Open legacy packages',
     },
 ]
 

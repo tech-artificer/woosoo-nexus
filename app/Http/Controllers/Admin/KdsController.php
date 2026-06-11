@@ -179,6 +179,48 @@ class KdsController extends Controller
         };
     }
 
+    public function recall(DeviceOrder $order): JsonResponse
+    {
+        // Voided orders require a new ticket — give a specific message rather than the generic one below.
+        if ($order->status === OrderStatus::VOIDED) {
+            return response()->json(['message' => 'Cannot recall voided order.'], 422);
+        }
+
+        // Recall is served→in_progress only; other paths to in_progress go through advance().
+        if ($order->status !== OrderStatus::SERVED) {
+            return response()->json(['message' => 'Order cannot be recalled from its current state.'], 422);
+        }
+
+        $gateMessage = null;
+
+        DB::transaction(function () use ($order, &$gateMessage) {
+            $fresh = DeviceOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Stale-state re-check: concurrent request already moved this order.
+            if (! $fresh->status->canTransitionTo(OrderStatus::IN_PROGRESS)) {
+                $gateMessage = 'Order state changed concurrently; please retry.';
+
+                return;
+            }
+
+            $fresh->status = OrderStatus::IN_PROGRESS;
+            $fresh->recalled = ($fresh->recalled ?? 0) + 1;
+            $fresh->save();
+        });
+
+        if ($gateMessage !== null) {
+            return response()->json(['message' => $gateMessage], 422);
+        }
+
+        Log::info('[KDS] recall', ['order_id' => $order->id, 'from' => OrderStatus::SERVED->value, 'admin_id' => auth()->id()]);
+
+        $order->refresh();
+        $order->loadMissing(['items', 'device', 'serviceRequests']);
+        app(OrderBroadcaster::class)->statusChanged($order);
+
+        return response()->json(['status' => OrderStatus::IN_PROGRESS->value]);
+    }
+
     private function toTicket(DeviceOrder $order): array
     {
         $table = $order->device?->table ?? $order->table;
@@ -188,8 +230,9 @@ class KdsController extends Controller
         $createdAt = $order->created_at;
         $issuedAtMs = $createdAt ? $createdAt->timestamp * 1000 : $now->timestamp * 1000;
         $elapsed = $createdAt ? (int) $createdAt->diffInSeconds($now) : 0;
-        $isTerminal = in_array($order->status, [OrderStatus::SERVED, OrderStatus::VOIDED]);
-        $frozenElapsed = ($isTerminal && $order->updated_at && $createdAt)
+        // SERVED is recallable, so freeze the elapsed timer for SERVED and VOIDED only.
+        $isFullyTerminal = in_array($order->status, [OrderStatus::SERVED, OrderStatus::VOIDED]);
+        $frozenElapsed = ($isFullyTerminal && $order->updated_at && $createdAt)
             ? (int) $createdAt->diffInSeconds($order->updated_at)
             : null;
 

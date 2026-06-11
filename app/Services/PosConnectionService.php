@@ -39,7 +39,9 @@ class PosConnectionService
                 'port' => $creds['port'],
                 'database' => $creds['database'],
                 'username' => $creds['username'],
-                'password' => $creds['password'] ?? '',
+                // Only override password when DB has a real value; otherwise
+                // the .env fallback (DB_POS_PASSWORD) is used.
+                'password' => filled($creds['password'] ?? null) ? $creds['password'] : null,
             ], fn ($v) => $v !== null);
 
             // Only purge and reconfigure if credentials actually differ from

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Events\Menu\PackageUpdated;
+use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageConfigRequest;
 use App\Models\Device;
 use App\Models\TabletPackageAllowedMenu;
 use App\Models\TabletPackageConfig;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -40,6 +42,11 @@ class PackageConfigController extends Controller
                         'krypton_menu_id' => $m->krypton_menu_id,
                         'name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$m->krypton_menu_id}",
                         'menu_type' => $m->menu_type,
+                        'meat_category_code' => $m->meat_category_code,
+                        'extra_price' => $m->extra_price,
+                        'quantity_limit' => $m->quantity_limit,
+                        'is_required' => $m->is_required,
+                        'is_default' => $m->is_default,
                         'sort_order' => $m->sort_order,
                         'is_active' => $m->is_active,
                     ];
@@ -50,6 +57,14 @@ class PackageConfigController extends Controller
                     'name' => $pkg->name,
                     'description' => $pkg->description,
                     'base_price' => $pkg->base_price,
+                    'min_meat' => $pkg->min_meat,
+                    'max_meat' => $pkg->max_meat,
+                    'min_side' => $pkg->min_side,
+                    'max_side' => $pkg->max_side,
+                    'min_dessert' => $pkg->min_dessert,
+                    'max_dessert' => $pkg->max_dessert,
+                    'min_beverage' => $pkg->min_beverage,
+                    'max_beverage' => $pkg->max_beverage,
                     'is_active' => $pkg->is_active,
                     'sort_order' => $pkg->sort_order,
                     'menus' => $menus,
@@ -63,7 +78,9 @@ class PackageConfigController extends Controller
 
     public function store(StorePackageConfigRequest $request)
     {
-        TabletPackageConfig::create($request->validated());
+        $packageConfig = TabletPackageConfig::create($request->validated());
+
+        $this->broadcastPackageUpdated($packageConfig->id);
 
         return redirect()->back()->with('success', 'Package created.');
     }
@@ -79,7 +96,8 @@ class PackageConfigController extends Controller
 
     public function destroy(TabletPackageConfig $packageConfig)
     {
-        $packageConfig->allowedMenus()->delete();
+        $this->broadcastPackageUpdated($packageConfig->id);
+
         $packageConfig->delete();
 
         return redirect()->back()->with('success', 'Package deleted.');
@@ -87,7 +105,7 @@ class PackageConfigController extends Controller
 
     /**
      * Replace the allowed-menu list for a package.
-     * Expects: { menus: { krypton_menu_id, menu_type, min_qty, max_qty }[] }
+     * Expects: { menus: { krypton_menu_id, menu_type, meat_category_code, extra_price, quantity_limit, is_required, is_default, is_active, sort_order }[] }
      */
     public function syncAllowedMenus(Request $request, TabletPackageConfig $packageConfig)
     {
@@ -129,10 +147,12 @@ class PackageConfigController extends Controller
     }
 
     /**
-     * Dispatch PackageUpdated to all active devices so tablets invalidate their package cache.
+     * Dispatch PackageUpdated to all active devices and bust the package-configs API cache.
      */
     private function broadcastPackageUpdated(?int $packageId = null): void
     {
+        Cache::forget(TabletApiController::PACKAGE_CONFIGS_CACHE_KEY);
+
         Device::where('is_active', true)->each(function (Device $device) use ($packageId) {
             PackageUpdated::dispatch($device->id, $packageId);
         });
