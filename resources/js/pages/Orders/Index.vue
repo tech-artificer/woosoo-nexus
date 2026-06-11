@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
 import { columns } from '@/components/Orders/columns';
-import DataTable from '@/components/Orders/DataTable.vue'
-import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue'
-import OrderStatusBadge from '@/components/Orders/OrderStatusBadge.vue'
+import DataTable from '@/components/Orders/DataTable.vue';
+import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue';
+import OrderStatusBadge from '@/components/Orders/OrderStatusBadge.vue';
 import type { DeviceOrder, User} from '@/types/models';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'vue-sonner';
@@ -61,40 +60,32 @@ const echoStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting'
 // during the gap. When disconnected for too long, poll as a fallback.
 let disconnectPollTimer: ReturnType<typeof setTimeout> | null = null
 
+function refreshLocalOrdersFromPage() {
+  const updatedOrders = (page.props as any).orders ?? []
+  const updatedHistory = (page.props as any).orderHistory ?? []
+  localOrders.value = Array.isArray(updatedOrders) ? [...updatedOrders] : []
+  localOrderHistory.value = Array.isArray(updatedHistory) ? [...updatedHistory] : []
+}
+
+function reloadOrdersFromServer() {
+  router.reload({
+    only: ['orders', 'orderHistory'],
+    onSuccess: refreshLocalOrdersFromPage,
+  })
+}
+
 watch(echoStatus, (newStatus, oldStatus) => {
   if (newStatus === 'connected' && oldStatus === 'disconnected') {
     // Only reload when recovering from a real disconnection, not on initial connect.
-    // Using oldStatus === 'disconnected' prevents a spurious reload on first mount.
-    router.reload({
-      only: ['orders', 'orderHistory'],
-      onSuccess: () => {
-        // Refresh UI state from updated props after reload completes
-        const updatedOrders = (page.props as any).orders ?? []
-        const updatedHistory = (page.props as any).orderHistory ?? []
-        localOrders.value = Array.isArray(updatedOrders) ? [...updatedOrders] : []
-        localOrderHistory.value = Array.isArray(updatedHistory) ? [...updatedHistory] : []
-      },
-    })
+    reloadOrdersFromServer()
     if (disconnectPollTimer !== null) {
       clearTimeout(disconnectPollTimer)
       disconnectPollTimer = null
     }
   } else if (newStatus === 'disconnected') {
-    // Fallback: if still disconnected after 30 s, do a data reload so the admin
-    // at least sees the current state even without a live WebSocket.
+    // Fallback: if still disconnected after 30 s, reload so the admin sees current state.
     if (disconnectPollTimer !== null) clearTimeout(disconnectPollTimer)
-    disconnectPollTimer = setTimeout(() => {
-      router.reload({
-        only: ['orders', 'orderHistory'],
-        onSuccess: () => {
-          // Refresh UI state from updated props after reload completes
-          const updatedOrders = (page.props as any).orders ?? []
-          const updatedHistory = (page.props as any).orderHistory ?? []
-          localOrders.value = Array.isArray(updatedOrders) ? [...updatedOrders] : []
-          localOrderHistory.value = Array.isArray(updatedHistory) ? [...updatedHistory] : []
-        },
-      })
-    }, 30_000)
+    disconnectPollTimer = setTimeout(reloadOrdersFromServer, 30_000)
   }
 })
 
@@ -117,11 +108,10 @@ function ordersInColumn(statuses: readonly string[]): DeviceOrder[] {
 }
 
 const kanbanColumns = computed(() =>
-  KANBAN_COLUMNS.map((col) => ({
-    ...col,
-    orders: ordersInColumn(col.statuses),
-    count: ordersInColumn(col.statuses).length,
-  })),
+  KANBAN_COLUMNS.map((col) => {
+    const orders = ordersInColumn(col.statuses)
+    return { ...col, orders, count: orders.length }
+  }),
 )
 
 const dispatchSummary = computed(() => {
@@ -247,9 +237,6 @@ const handleDetailComplete = () => {
     },
   })
 }
-
-// DataTable handles all client-side column filtering
-
 
 const handleOrderEvent = (event: DeviceOrder) => {
   const incoming = (event as any)?.order ? (event as any).order : event

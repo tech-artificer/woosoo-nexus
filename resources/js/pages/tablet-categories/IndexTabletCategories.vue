@@ -56,6 +56,10 @@ const selectedCategory = computed(() =>
     props.categories.find((c) => c.id === selectedId.value) ?? null,
 )
 
+const sortedCategories = computed(() =>
+    [...props.categories].sort((a, b) => a.sort_order - b.sort_order),
+)
+
 // ─── Category Drag Reorder ─────────────────────────────────────────────────
 const dragOverId = ref<number | null>(null)
 const isReordering = ref(false)
@@ -73,7 +77,7 @@ function onDragOver(e: DragEvent, id: number) {
 
 function onDrop(targetId: number) {
     if (!draggingId || draggingId === targetId) return
-    const ordered = [...props.categories].sort((a, b) => a.sort_order - b.sort_order)
+    const ordered = [...sortedCategories.value]
     const fromIdx = ordered.findIndex((c) => c.id === draggingId)
     const toIdx   = ordered.findIndex((c) => c.id === targetId)
     if (fromIdx === -1 || toIdx === -1) return
@@ -263,7 +267,7 @@ function submitAttach() {
                         </div>
                         <div class="flex-1 overflow-y-auto py-1">
                             <div
-                                v-for="(cat, index) in [...categories].sort((a, b) => a.sort_order - b.sort_order)"
+                                v-for="(cat, index) in sortedCategories"
                                 :key="cat.id"
                                 class="flex cursor-pointer items-center gap-2 px-3 py-2.5 transition-colors"
                                 :class="{

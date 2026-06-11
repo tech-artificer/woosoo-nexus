@@ -104,9 +104,9 @@ const selectedTerminal = computed(() =>
     terminals.value.find((terminal) => String(terminal.id) === String(selectedTerminalId.value)) ?? null
 )
 
-const occupiedTables = computed(() => terminalTables.value.filter((table) => Boolean(Number(table.is_occupied))).length)
-
-const openTablesCount = computed(() => occupiedTables.value)
+const occupiedTables = computed(() =>
+    terminalTables.value.filter((table) => Boolean(Number(table.is_occupied))).length,
+)
 
 const guestsDiningCount = computed(() =>
     terminalTables.value.reduce((sum, table) => {
@@ -281,7 +281,7 @@ const addOrderForTable = () => {
     })
 }
 
-const editOrder = async (order: PosOrder) => {
+const editOrder = (order: PosOrder) => {
     selectedOrderForEdit.value = order
     editDialogOpen.value = true
 }
@@ -353,7 +353,7 @@ const handleVoidConfirm = async () => {
     }
 }
 
-const payOrder = async (order: PosOrder) => {
+const payOrder = (order: PosOrder) => {
     selectedOrderForPay.value = order
     paymentDialogOpen.value = true
 }
@@ -431,7 +431,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
             <section class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center rounded-full border border-woosoo-green/30 bg-woosoo-green/10 px-3 py-1.5 text-xs font-semibold text-woosoo-green">
-                        Open Tables ({{ openTablesCount }})
+                        Open Tables ({{ occupiedTables }})
                     </span>
                     <span class="inline-flex items-center rounded-full border border-woosoo-accent/30 bg-woosoo-accent/10 px-3 py-1.5 text-xs font-semibold text-foreground">
                         Guests Dining ({{ guestsDiningCount }})

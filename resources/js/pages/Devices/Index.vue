@@ -70,7 +70,39 @@ const ordersTodayStat = computed(() => {
     return match ?? null
 })
 
-function deviceStatus(device: Device): 'online' | 'warning' | 'offline' {
+type DeviceConnectionStatus = 'online' | 'warning' | 'offline'
+
+const DEVICE_STATUS_TONE: Record<DeviceConnectionStatus, {
+    cardBorder: string
+    iconBg: string
+    iconText: string
+    pill: string
+    dot: string
+}> = {
+    online: {
+        cardBorder: '',
+        iconBg: 'bg-woosoo-green/10',
+        iconText: 'text-woosoo-green',
+        pill: 'bg-woosoo-green/10 text-woosoo-green',
+        dot: 'bg-woosoo-green',
+    },
+    warning: {
+        cardBorder: 'border-woosoo-accent/30 dark:border-woosoo-accent/20',
+        iconBg: 'bg-woosoo-accent/10',
+        iconText: 'text-woosoo-accent',
+        pill: 'bg-woosoo-accent/10 text-woosoo-accent',
+        dot: 'bg-woosoo-accent',
+    },
+    offline: {
+        cardBorder: 'border-woosoo-red/30 dark:border-woosoo-red/20',
+        iconBg: 'bg-woosoo-red/10',
+        iconText: 'text-woosoo-red',
+        pill: 'bg-woosoo-red/10 text-woosoo-red',
+        dot: 'bg-woosoo-red',
+    },
+}
+
+function deviceStatus(device: Device): DeviceConnectionStatus {
     if (device.deleted_at) return 'offline'
     const s = (device.status ?? '').toLowerCase()
     if (s === 'online') return 'online'
@@ -83,6 +115,10 @@ function deviceStatus(device: Device): 'online' | 'warning' | 'offline' {
     if (diffMin > 30) return 'offline'
     if (diffMin > 5) return 'warning'
     return 'online'
+}
+
+function deviceStatusTone(device: Device) {
+    return DEVICE_STATUS_TONE[deviceStatus(device)]
 }
 
 function lastPingLabel(device: Device): string {
@@ -244,28 +280,17 @@ function syncAll() {
                             v-for="device in activeDevices"
                             :key="device.id"
                             class="group relative flex flex-col gap-3 rounded-[18px] border border-black/8 bg-white/60 p-4 transition-all duration-150 hover:border-white/20 hover:shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
-                            :class="{
-                                'border-woosoo-red/30 dark:border-woosoo-red/20': deviceStatus(device) === 'offline',
-                                'border-woosoo-accent/30 dark:border-woosoo-accent/20': deviceStatus(device) === 'warning',
-                            }"
+                            :class="deviceStatusTone(device).cardBorder"
                         >
                             <!-- Card header: icon + name + status -->
                             <div class="flex items-start gap-3">
                                 <div
                                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                                    :class="{
-                                        'bg-woosoo-green/10': deviceStatus(device) === 'online',
-                                        'bg-woosoo-accent/10': deviceStatus(device) === 'warning',
-                                        'bg-woosoo-red/10': deviceStatus(device) === 'offline',
-                                    }"
+                                    :class="deviceStatusTone(device).iconBg"
                                 >
                                     <MonitorSmartphone
                                         class="h-4 w-4"
-                                        :class="{
-                                            'text-woosoo-green': deviceStatus(device) === 'online',
-                                            'text-woosoo-accent': deviceStatus(device) === 'warning',
-                                            'text-woosoo-red': deviceStatus(device) === 'offline',
-                                        }"
+                                        :class="deviceStatusTone(device).iconText"
                                     />
                                 </div>
                                 <div class="min-w-0 flex-1">
@@ -278,19 +303,9 @@ function syncAll() {
                                 <!-- Status pill -->
                                 <span
                                     class="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
-                                    :class="{
-                                        'bg-woosoo-green/10 text-woosoo-green': deviceStatus(device) === 'online',
-                                        'bg-woosoo-accent/10 text-woosoo-accent': deviceStatus(device) === 'warning',
-                                        'bg-woosoo-red/10 text-woosoo-red': deviceStatus(device) === 'offline',
-                                    }"
+                                    :class="deviceStatusTone(device).pill"
                                 >
-                                    <span class="h-1 w-1 rounded-full"
-                                        :class="{
-                                            'bg-woosoo-green': deviceStatus(device) === 'online',
-                                            'bg-woosoo-accent': deviceStatus(device) === 'warning',
-                                            'bg-woosoo-red': deviceStatus(device) === 'offline',
-                                        }"
-                                    />
+                                    <span class="h-1 w-1 rounded-full" :class="deviceStatusTone(device).dot" />
                                     {{ deviceStatus(device) }}
                                 </span>
                             </div>

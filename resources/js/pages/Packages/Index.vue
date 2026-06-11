@@ -92,8 +92,12 @@ function modifierLabelList(modifiers: PackageModifierVm[]): string[] {
         .map((m) => byId.get(m.krypton_menu_id) ?? `#${m.krypton_menu_id}`)
 }
 
-const packageMenuOptions = computed(() => {
-    return props.menuOptions ?? []
+const modifierLabelsByPackageId = computed(() => {
+    const labels = new Map<number, string[]>()
+    for (const item of orderedPackages.value) {
+        labels.set(item.id, modifierLabelList(item.modifiers ?? []))
+    }
+    return labels
 })
 
 const filteredModifierOptions = computed(() => {
@@ -285,7 +289,7 @@ function executeDelete() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectLabel>Available Menus</SelectLabel>
-                                    <SelectItem v-for="menu in packageMenuOptions" :key="menu.id" :value="menu.id">
+                                    <SelectItem v-for="menu in (menuOptions ?? [])" :key="menu.id" :value="menu.id">
                                         {{ menu.name }} (ID: {{ menu.id }})
                                     </SelectItem>
                                 </SelectContent>
@@ -404,13 +408,13 @@ function executeDelete() {
                                 Linked Menu · {{ menuNameForId(item.krypton_menu_id) }}
                             </span>
 
-                            <div v-if="modifierLabelList(item.modifiers ?? []).length > 0">
+                            <div v-if="(modifierLabelsByPackageId.get(item.id) ?? []).length > 0">
                                 <p class="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                                    Meats · {{ modifierLabelList(item.modifiers ?? []).length }} cuts
+                                    Meats · {{ (modifierLabelsByPackageId.get(item.id) ?? []).length }} cuts
                                 </p>
                                 <ul class="space-y-0.5">
                                     <li
-                                        v-for="(name, idx) in modifierLabelList(item.modifiers ?? [])"
+                                        v-for="(name, idx) in (modifierLabelsByPackageId.get(item.id) ?? [])"
                                         :key="`${item.id}-mod-${idx}`"
                                         class="truncate text-sm text-foreground/90"
                                     >

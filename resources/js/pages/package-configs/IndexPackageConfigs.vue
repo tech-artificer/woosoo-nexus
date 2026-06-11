@@ -59,6 +59,10 @@ function menusByType(pkg: PackageConfigVm, type: string) {
     return pkg.menus.filter((m) => (m.menu_type ?? 'meat') === type && m.is_active)
 }
 
+function addOnMenus(pkg: PackageConfigVm) {
+    return [...menusByType(pkg, 'side'), ...menusByType(pkg, 'dessert')]
+}
+
 function formatPrice(value: string): string {
     const n = parseFloat(String(value))
     if (!Number.isFinite(n)) return value
@@ -219,11 +223,11 @@ function confirmDelete() {
                             </div>
 
                             <!-- Add-ons/sides section -->
-                            <div v-if="menusByType(pkg, 'side').length > 0 || menusByType(pkg, 'dessert').length > 0">
+                            <div v-if="addOnMenus(pkg).length > 0">
                                 <p class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Add-ons Included</p>
                                 <ul class="space-y-1">
                                     <li
-                                        v-for="m in [...menusByType(pkg, 'side'), ...menusByType(pkg, 'dessert')]"
+                                        v-for="m in addOnMenus(pkg)"
                                         :key="m.id"
                                         class="flex items-center gap-2 text-sm text-foreground"
                                     >
@@ -320,10 +324,10 @@ function confirmDelete() {
                                 </li>
                             </ul>
                         </div>
-                        <div v-if="menusByType(manageMenusPkg, 'side').length > 0 || menusByType(manageMenusPkg, 'dessert').length > 0">
+                        <div v-if="addOnMenus(manageMenusPkg).length > 0">
                             <p class="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Add-ons</p>
                             <ul class="space-y-1">
-                                <li v-for="m in [...menusByType(manageMenusPkg, 'side'), ...menusByType(manageMenusPkg, 'dessert')]" :key="m.id" class="flex items-center gap-2 text-sm">
+                                <li v-for="m in addOnMenus(manageMenusPkg)" :key="m.id" class="flex items-center gap-2 text-sm">
                                     <Check class="h-3 w-3 shrink-0 text-woosoo-green" />
                                     {{ m.name }}
                                     <Badge variant="secondary" class="ml-auto text-[9px]">{{ m.menu_type }}</Badge>

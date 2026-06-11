@@ -6,6 +6,17 @@ import { Button } from '@/components/ui/button'
 
 const DINING_TARGET_MINUTES = 90
 
+function elapsedFromOpened(opened: string | null | undefined): { label: string; minutes: number } {
+    if (!opened) return { label: '—', minutes: 0 }
+    const diffMs = Date.now() - new Date(opened).getTime()
+    if (!Number.isFinite(diffMs) || diffMs < 0) return { label: '—', minutes: 0 }
+    const mins = Math.floor(diffMs / 60000)
+    if (mins < 60) return { label: `${mins}m`, minutes: mins }
+    const hrs = Math.floor(mins / 60)
+    const rem = mins % 60
+    return { label: rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`, minutes: mins }
+}
+
 interface Props {
     table: PosTable
     selected?: boolean
@@ -36,25 +47,11 @@ const guestCount = computed(() => {
     return Number(raw) || 0
 })
 
-const elapsedLabel = computed(() => {
-    const opened = props.table.order_created_in
-    if (!opened) return '—'
-    const diffMs = Date.now() - new Date(opened).getTime()
-    if (!Number.isFinite(diffMs) || diffMs < 0) return '—'
-    const mins = Math.floor(diffMs / 60000)
-    if (mins < 60) return `${mins}m`
-    const hrs = Math.floor(mins / 60)
-    const rem = mins % 60
-    return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`
-})
+const elapsed = computed(() => elapsedFromOpened(props.table.order_created_in))
 
-const elapsedMinutes = computed(() => {
-    const opened = props.table.order_created_in
-    if (!opened) return 0
-    const diffMs = Date.now() - new Date(opened).getTime()
-    if (!Number.isFinite(diffMs) || diffMs < 0) return 0
-    return Math.floor(diffMs / 60000)
-})
+const elapsedLabel = computed(() => elapsed.value.label)
+
+const elapsedMinutes = computed(() => elapsed.value.minutes)
 
 const progressPct = computed(() =>
     Math.min(100, Math.round((elapsedMinutes.value / DINING_TARGET_MINUTES) * 100)),
