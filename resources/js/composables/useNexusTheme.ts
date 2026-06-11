@@ -54,6 +54,10 @@ export function useNexusTheme() {
         localStorage.setItem(STORAGE_KEY, value);
         // Keep legacy key in sync so existing useAppearance callers stay consistent
         localStorage.setItem(LEGACY_KEY, value);
+        // Keep the `appearance` cookie in sync so the server-side first paint
+        // (HandleAppearance middleware) matches the client theme instead of
+        // going stale after a toggle.
+        document.cookie = `${LEGACY_KEY}=${value};path=/;max-age=31536000;SameSite=Lax`;
         applyTheme(value);
     }
 

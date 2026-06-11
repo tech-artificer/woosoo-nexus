@@ -10,7 +10,7 @@ import { NAV_SECTIONS } from '@/config/admin-shell';
 import { type User } from '@/types/models';
 import { ChevronsUpDown } from 'lucide-vue-next';
 
-defineProps<{
+const props = defineProps<{
     isActive: (routeName: string) => boolean;
     navBadges: Record<string, number>;
     user: User;
@@ -18,8 +18,25 @@ defineProps<{
 
 const emit = defineEmits<{ nav: [] }>();
 
-const mainSections = computed(() => NAV_SECTIONS.filter((s) => !s.footer));
-const footerSections = computed(() => NAV_SECTIONS.filter((s) => s.footer));
+const isAdmin = computed(() => Boolean(props.user?.is_admin));
+
+// Mirror the pre-migration AppSidebar role gating: non-admins see only the
+// Dashboard entry of the Main section — no other Main items, no Analytics, and
+// no Configuration footer. The server still enforces authorization on every
+// route; this only hides links that would otherwise 403.
+const mainSections = computed(() => {
+    const sections = NAV_SECTIONS.filter((s) => !s.footer);
+    if (isAdmin.value) {
+        return sections;
+    }
+    return sections
+        .filter((s) => s.key === 'main')
+        .map((s) => ({ ...s, items: s.items.filter((i) => i.key === 'dashboard') }));
+});
+
+const footerSections = computed(() =>
+    isAdmin.value ? NAV_SECTIONS.filter((s) => s.footer) : [],
+);
 </script>
 
 <template>

@@ -8,9 +8,7 @@ import { type User } from '@/types/models';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user as User);
-const navBadges = computed(
-    () => (page.props.navBadges ?? { orders: 0, devices: 0 }) as Record<string, number>,
-);
+const navBadges = computed(() => page.props.navBadges ?? { orders: 0, devices: 0 });
 const currentUrl = computed(() => page.url);
 
 const mobileOpen = inject<Ref<boolean>>('shellMobileOpen');
