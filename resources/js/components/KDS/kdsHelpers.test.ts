@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { applyAdvance, canAdvanceTicket, isAdvanceBlocked } from './kdsHelpers'
-import type { KdsTicket } from './kdsTypes'
+import { applyAdvance, canAdvanceTicket, filterTickets, isAdvanceBlocked, KDS_THRESHOLDS } from './kdsHelpers'
+import type { KdsTicket, KdsTicketState } from './kdsTypes'
 
 function preparingTicket(itemsDone: boolean[]): KdsTicket {
   return {
@@ -20,7 +20,26 @@ function preparingTicket(itemsDone: boolean[]): KdsTicket {
   }
 }
 
+function makeTicket(state: KdsTicketState, overrideIssuedAt?: number): KdsTicket {
+  return {
+    id: `K-${state}`,
+    table: 'T-1',
+    type: 'initial',
+    issued: '7:00 PM',
+    issuedAt: overrideIssuedAt ?? Date.now(),
+    elapsed: 60,
+    state,
+    items: [],
+  }
+}
+
+function ticketsWithStates(...states: KdsTicketState[]): KdsTicket[] {
+  return states.map((state) => makeTicket(state))
+}
+
 describe('Mark as Served gating', () => {
+  const now = Date.now()
+
   it('blocks advance when any preparing item is not done', () => {
     const ticket = preparingTicket([true, true, false])
 
@@ -48,15 +67,61 @@ describe('Mark as Served gating', () => {
 
   it('advances preparing to served when the gate passes', () => {
     const ticket = preparingTicket([true, true])
-    const now = Date.now()
 
     expect(applyAdvance(ticket, now).state).toBe('served')
   })
 
   it('leaves preparing unchanged when the gate fails', () => {
     const ticket = preparingTicket([true, false])
-    const now = Date.now()
 
     expect(applyAdvance(ticket, now).state).toBe('preparing')
+  })
+})
+
+describe('filterTickets', () => {
+  const now = Date.now()
+
+  it('active filter returns new and preparing tickets only', () => {
+    const tickets = ticketsWithStates('new', 'preparing', 'served', 'voided')
+
+    expect(filterTickets(tickets, 'active', now).map((t) => t.id)).toEqual(['K-new', 'K-preparing'])
+  })
+
+  it('active filter returns empty array when all tickets are served or voided', () => {
+    const tickets = ticketsWithStates('served', 'voided')
+
+    expect(filterTickets(tickets, 'active', now)).toEqual([])
+  })
+
+  it('overdue filter returns only tickets past the over threshold', () => {
+    const overdueNow = 2_000_000
+    const overdueTicket = makeTicket('new', overdueNow - (KDS_THRESHOLDS.initial.over + 1) * 1000)
+    const freshTicket = makeTicket('new', overdueNow - 60 * 1000)
+
+    expect(filterTickets([overdueTicket, freshTicket], 'overdue', overdueNow)).toEqual([overdueTicket])
+  })
+
+  it('new filter returns only tickets with state new', () => {
+    const tickets = ticketsWithStates('new', 'preparing', 'served', 'voided')
+
+    expect(filterTickets(tickets, 'new', now)).toEqual([tickets[0]])
+  })
+
+  it('preparing filter returns tickets with state preparing or ready', () => {
+    const tickets = ticketsWithStates('preparing', 'ready', 'new', 'served')
+
+    expect(filterTickets(tickets, 'preparing', now).map((t) => t.id)).toEqual(['K-preparing', 'K-ready'])
+  })
+
+  it('served filter returns only served tickets', () => {
+    const tickets = ticketsWithStates('served', 'new', 'preparing', 'voided')
+
+    expect(filterTickets(tickets, 'served', now)).toEqual([tickets[0]])
+  })
+
+  it('voided filter returns only voided tickets', () => {
+    const tickets = ticketsWithStates('voided', 'new', 'served', 'preparing')
+
+    expect(filterTickets(tickets, 'voided', now)).toEqual([tickets[0]])
   })
 })

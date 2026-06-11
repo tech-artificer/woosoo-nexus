@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { useKdsBoard } from './useKdsBoard'
-import type { KdsTicket } from './kdsTypes'
+import type { KdsTicket, KdsTicketState } from './kdsTypes'
 
 function ticketWithItems(itemsDone: boolean[]): KdsTicket {
   return {
@@ -20,11 +20,32 @@ function ticketWithItems(itemsDone: boolean[]): KdsTicket {
   }
 }
 
+function makeOrderPayload(id: string, status: string, kdsState?: string) {
+  return {
+    id,
+    status,
+    kds_state: kdsState ?? 'new',
+    table: { name: 'T-1' },
+    items: [{ id: 'item-0', quantity: 1, name: 'Bulgogi' }],
+  }
+}
+
+function boardWithTicket(state: KdsTicketState = 'preparing') {
+  const board = useKdsBoard([ticketWithItems([false])])
+  board.tickets.value[0].state = state
+  return board
+}
+
 describe('useKdsBoard.applyItemToggle', () => {
   it('reconciles a matching item to done=true', () => {
     const board = useKdsBoard([ticketWithItems([false, false])])
 
-    board.applyItemToggle({ order_id: 'K-1', item_id: 'item-0', done: true, done_at: '2026-06-09T12:00:00+00:00' })
+    board.applyItemToggle({
+      order_id: 'K-1',
+      item_id: 'item-0',
+      done: true,
+      done_at: '2026-06-09T12:00:00+00:00',
+    })
 
     expect(board.tickets.value[0].items[0].done).toBe(true)
     expect(board.tickets.value[0].items[1].done).toBe(false)
@@ -33,7 +54,12 @@ describe('useKdsBoard.applyItemToggle', () => {
   it('reconciles a matching item to done=false', () => {
     const board = useKdsBoard([ticketWithItems([true, true])])
 
-    board.applyItemToggle({ order_id: 'K-1', item_id: 'item-1', done: false, done_at: null })
+    board.applyItemToggle({
+      order_id: 'K-1',
+      item_id: 'item-1',
+      done: false,
+      done_at: null,
+    })
 
     expect(board.tickets.value[0].items[1].done).toBe(false)
     expect(board.tickets.value[0].items[0].done).toBe(true)
@@ -42,8 +68,49 @@ describe('useKdsBoard.applyItemToggle', () => {
   it('is a no-op for an unknown order id', () => {
     const board = useKdsBoard([ticketWithItems([false])])
 
-    board.applyItemToggle({ order_id: 'K-999', item_id: 'item-0', done: true, done_at: null })
+    board.applyItemToggle({
+      order_id: 'K-999',
+      item_id: 'item-0',
+      done: true,
+      done_at: null,
+    })
 
     expect(board.tickets.value[0].items[0].done).toBe(false)
+  })
+})
+
+describe('useKdsBoard.applyOrderUpdate', () => {
+  it('adds a new ticket when the order id is not on the board', () => {
+    const board = useKdsBoard([])
+
+    board.applyOrderUpdate(makeOrderPayload('K-2', 'confirmed'))
+
+    expect(board.tickets.value).toHaveLength(1)
+    expect(board.tickets.value[0].id).toBe('K-2')
+  })
+
+  it('replaces an existing ticket when the order id is already on the board', () => {
+    const board = boardWithTicket('new')
+
+    board.applyOrderUpdate(makeOrderPayload('K-1', 'confirmed', 'preparing'))
+
+    expect(board.tickets.value).toHaveLength(1)
+    expect(board.tickets.value[0].state).toBe('preparing')
+  })
+
+  it('removes a ticket when the status is in the hidden set (completed | cancelled | archived)', () => {
+    const board = boardWithTicket()
+
+    board.applyOrderUpdate(makeOrderPayload('K-1', 'completed'))
+
+    expect(board.tickets.value).toHaveLength(0)
+  })
+
+  it('board tickets array is empty after the last ticket is removed via hidden status', () => {
+    const board = boardWithTicket()
+
+    board.applyOrderUpdate(makeOrderPayload('K-1', 'cancelled'))
+
+    expect(board.tickets.value).toEqual([])
   })
 })
