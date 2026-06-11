@@ -134,6 +134,19 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-5">
+            <!-- Two-tab pill nav -->
+            <nav class="inline-flex rounded-full border border-black/8 bg-muted/40 p-1 dark:border-white/10">
+                <span class="rounded-full bg-woosoo-accent/15 px-4 py-2 text-sm font-semibold text-foreground shadow-sm">
+                    Dining Tiers
+                </span>
+                <a
+                    :href="route('packages.index')"
+                    class="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                    Krypton Modifiers
+                </a>
+            </nav>
+
             <!-- Hero header -->
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
                 <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
@@ -151,9 +164,6 @@ function confirmDelete() {
                         </p>
                     </div>
                     <div class="flex gap-2">
-                        <Button variant="outline" size="sm" as-child>
-                            <a :href="route('packages.index')">Krypton Modifiers</a>
-                        </Button>
                         <Button size="sm" @click="showCreate = true">
                             <Plus class="mr-1.5 h-3.5 w-3.5" />
                             New Package
@@ -174,7 +184,7 @@ function confirmDelete() {
                         <div
                             v-for="(pkg, index) in orderedPackages"
                             :key="pkg.id"
-                            class="relative flex flex-col gap-4 rounded-[18px] border border-black/8 bg-white/60 p-5 transition-all duration-150 dark:border-white/10 dark:bg-white/[0.04]"
+                            class="relative flex flex-col gap-4 rounded-[18px] border border-black/8 bg-white/72 p-5 shadow-sm transition-all duration-150 hover:border-woosoo-accent/25 dark:border-white/10 dark:bg-white/[0.05]"
                         >
                             <!-- Tier label + name -->
                             <div>
