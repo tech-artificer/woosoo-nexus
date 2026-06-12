@@ -15,7 +15,19 @@ async function parseError(response: Response): Promise<string> {
   return 'Something went wrong. Please try again.'
 }
 
-export async function postKdsAdvance(orderId: string): Promise<{ status: string }> {
+export type KdsActionResponse = {
+  status: string
+  order: Record<string, unknown>
+}
+
+export type KdsToggleResponse = {
+  item_id: string | number
+  order_id: string | number
+  done: boolean
+  done_at: string | null
+}
+
+export async function postKdsAdvance(orderId: string): Promise<KdsActionResponse> {
   const response = await fetch(route('kds.advance', orderId), {
     method: 'POST',
     headers: {
@@ -33,7 +45,7 @@ export async function postKdsAdvance(orderId: string): Promise<{ status: string 
   return response.json()
 }
 
-export async function postKdsRecall(orderId: string): Promise<{ status: string }> {
+export async function postKdsRecall(orderId: string): Promise<KdsActionResponse> {
   const response = await fetch(route('kds.orders.recall', orderId), {
     method: 'POST',
     headers: {
@@ -51,7 +63,7 @@ export async function postKdsRecall(orderId: string): Promise<{ status: string }
   return response.json()
 }
 
-export async function postKdsToggleItem(itemId: string): Promise<{ done: boolean; done_at: string | null }> {
+export async function postKdsToggleItem(itemId: string): Promise<KdsToggleResponse> {
   const response = await fetch(route('kds.toggle-item', itemId), {
     method: 'POST',
     headers: {

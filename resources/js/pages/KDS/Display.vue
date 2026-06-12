@@ -74,7 +74,15 @@ async function toggleItem(ticketId: string, itemId: string) {
   pendingToggle.value.add(itemId)
 
   try {
-    await postKdsToggleItem(itemId)
+    const response = await postKdsToggleItem(itemId)
+    // Optimistic apply — same shape as the Echo `item.toggled` payload, so the live broadcast
+    // landing milliseconds later is idempotent (applies the same state, no flicker).
+    board.applyItemToggle({
+      item_id: response.item_id,
+      order_id: response.order_id,
+      done: response.done,
+      done_at: response.done_at,
+    })
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to update item.')
   } finally {
@@ -103,7 +111,10 @@ async function advanceTicket(ticketId: string) {
   pendingAdvance.value.add(ticketId)
 
   try {
-    await postKdsAdvance(ticketId)
+    const response = await postKdsAdvance(ticketId)
+    // Optimistic apply — full payload matches Echo `order.updated` shape, so the live broadcast
+    // landing milliseconds later applies the same state idempotently (no flicker, no double-render).
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to advance order.')
   } finally {
@@ -125,7 +136,9 @@ async function recallTicket(ticketId: string) {
   pendingRecall.value.add(ticketId)
 
   try {
-    await postKdsRecall(ticketId)
+    const response = await postKdsRecall(ticketId)
+    // Optimistic apply — see advanceTicket() for rationale.
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to recall order.')
   } finally {
