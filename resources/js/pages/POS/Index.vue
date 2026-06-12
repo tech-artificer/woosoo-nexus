@@ -12,7 +12,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { MonitorSmartphone, Circle, ReceiptText, RefreshCw } from 'lucide-vue-next'
+import { Circle, ReceiptText, RefreshCw } from 'lucide-vue-next'
 import EditOrderDialog from '@/components/pos/EditOrderDialog.vue'
 import PaymentDialog from '@/components/pos/PaymentDialog.vue'
 import PosTableCard from '@/components/pos/PosTableCard.vue'
@@ -99,15 +99,33 @@ const selectedOrderForVoid = ref<PosOrder | null>(null)
 
 const totalTerminals = computed(() => terminals.value.length)
 const activeTerminals = computed(() => terminals.value.filter((terminal) => Boolean(Number(terminal.is_active))).length)
-const totalOpenOrders = computed(() =>
-    terminals.value.reduce((total, terminal) => total + Number(terminal.open_orders_count || 0), 0)
-)
 
 const selectedTerminal = computed(() =>
     terminals.value.find((terminal) => String(terminal.id) === String(selectedTerminalId.value)) ?? null
 )
 
-const occupiedTables = computed(() => terminalTables.value.filter((table) => Boolean(Number(table.is_occupied))).length)
+const occupiedTables = computed(() =>
+    terminalTables.value.filter((table) => Boolean(Number(table.is_occupied))).length,
+)
+
+const guestsDiningCount = computed(() =>
+    terminalTables.value.reduce((sum, table) => {
+        if (!Number(table.is_occupied)) return sum
+        const t = table as PosTable & { guest_count?: number | string }
+        const guests = Number(t.guest_count ?? table.open_orders_count ?? 0)
+        return sum + (Number.isFinite(guests) ? guests : 0)
+    }, 0),
+)
+
+const syncPosTables = async () => {
+    if (!selectedTerminalId.value) return
+    await loadTablesForTerminal(String(selectedTerminalId.value))
+}
+
+const startNewOrderForTable = (table: PosTable) => {
+    selectedTable.value = table
+    addOrderForTable()
+}
 
 const currentSessionStatus = computed(() => {
     if (!props.currentSession) {
@@ -138,25 +156,6 @@ const formatMoney = (value: number | string): string => {
         currency: 'PHP',
         minimumFractionDigits: 2,
     }).format(Number.isFinite(numeric) ? numeric : 0)
-}
-
-const formatDateTime = (value: string | null | undefined): string => {
-    if (!value) {
-        return '—'
-    }
-
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) {
-        return value
-    }
-
-    return date.toLocaleString('en-PH', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-    })
 }
 
 /**
@@ -282,7 +281,7 @@ const addOrderForTable = () => {
     })
 }
 
-const editOrder = async (order: PosOrder) => {
+const editOrder = (order: PosOrder) => {
     selectedOrderForEdit.value = order
     editDialogOpen.value = true
 }
@@ -354,7 +353,7 @@ const handleVoidConfirm = async () => {
     }
 }
 
-const payOrder = async (order: PosOrder) => {
+const payOrder = (order: PosOrder) => {
     selectedOrderForPay.value = order
     paymentDialogOpen.value = true
 }
@@ -411,7 +410,7 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div class="max-w-3xl space-y-3">
                         <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                            Live table view
+                            Live Table View
                         </span>
                         <h2 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                             POS
@@ -428,72 +427,62 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                 </div>
             </section>
 
-            <section class="grid gap-4 sm:grid-cols-4">
-                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
-                    <p class="text-xs uppercase tracking-wide text-muted-foreground">Terminals</p>
-                    <p class="mt-1 text-2xl font-semibold">{{ totalTerminals }}</p>
+            <!-- Summary chips + session -->
+            <section class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-full border border-woosoo-green/30 bg-woosoo-green/10 px-3 py-1.5 text-xs font-semibold text-woosoo-green">
+                        Open Tables ({{ occupiedTables }})
+                    </span>
+                    <span class="inline-flex items-center rounded-full border border-woosoo-accent/30 bg-woosoo-accent/10 px-3 py-1.5 text-xs font-semibold text-foreground">
+                        Guests Dining ({{ guestsDiningCount }})
+                    </span>
                 </div>
-                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
-                    <p class="text-xs uppercase tracking-wide text-muted-foreground">Active Terminals</p>
-                    <p class="mt-1 text-2xl font-semibold">{{ activeTerminals }}</p>
-                </div>
-                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
-                    <p class="text-xs uppercase tracking-wide text-muted-foreground">Open Orders</p>
-                    <p class="mt-1 text-2xl font-semibold">{{ totalOpenOrders }}</p>
-                </div>
-                <div class="rounded-[18px] border border-black/8 bg-white/72 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
-                    <p class="text-xs uppercase tracking-wide text-muted-foreground">Current Session</p>
-                    <p class="mt-1 text-lg font-semibold">#{{ props.currentSession?.id || '—' }} • {{ currentSessionStatus }}</p>
-                    <p class="text-xs text-muted-foreground">Opened: {{ formatDateTime(props.currentSession?.date_time_opened) }}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-muted-foreground">
+                        Session #{{ props.currentSession?.id || '—' }} · {{ currentSessionStatus }}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="!selectedTerminalId || tablesLoading"
+                        @click="syncPosTables"
+                    >
+                        <RefreshCw class="mr-1.5 h-3.5 w-3.5" :class="{ 'animate-spin': tablesLoading }" />
+                        Sync POS
+                    </Button>
                 </div>
             </section>
 
-            <section class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 p-4 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 sm:p-5 lg:p-6">
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">POS &gt; Terminal</h3>
-                    <p class="text-xs text-muted-foreground">Pick a terminal, then click a table to manage orders.</p>
+            <!-- Terminal pill tabs -->
+            <section class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 p-4 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 sm:p-5">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h3 class="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">Terminals</h3>
+                    <p class="text-xs text-muted-foreground">{{ totalTerminals }} registered · {{ activeTerminals }} active</p>
                 </div>
-                <div class="p-4 sm:p-5 lg:p-6">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                        <button
-                            v-for="terminal in terminals"
-                            :key="terminal.id"
-                            type="button"
-                            class="group rounded-[22px] border border-black/8 bg-gradient-to-b from-slate-900/95 to-slate-950 p-4 text-left shadow-lg transition-all hover:-translate-y-0.5 hover:border-woosoo-accent/70 hover:shadow-woosoo-accent/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10"
-                            :class="String(selectedTerminalId) === String(terminal.id) ? 'ring-2 ring-woosoo-accent/70' : ''"
-                            :disabled="tablesLoading && loadingTerminalId === String(terminal.id)"
-                            @click="loadTablesForTerminal(String(terminal.id))"
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="terminal in terminals"
+                        :key="terminal.id"
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all"
+                        :class="String(selectedTerminalId) === String(terminal.id)
+                            ? 'border-woosoo-accent bg-woosoo-accent/15 text-foreground shadow-sm'
+                            : 'border-black/10 bg-white/60 text-muted-foreground hover:border-woosoo-accent/40 dark:border-white/10 dark:bg-white/[0.04]'"
+                        :disabled="tablesLoading && loadingTerminalId === String(terminal.id)"
+                        @click="loadTablesForTerminal(String(terminal.id))"
+                    >
+                        <Circle
+                            :size="8"
+                            :class="Number(terminal.is_active) ? 'fill-woosoo-green text-woosoo-green' : 'fill-muted-foreground text-muted-foreground'"
+                        />
+                        {{ terminal.name }}
+                        <span
+                            v-if="tablesLoading && loadingTerminalId === String(terminal.id)"
+                            class="text-[10px] text-muted-foreground"
                         >
-                            <div class="mb-3 flex items-center justify-between">
-                                <span class="inline-flex items-center gap-1 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/80">
-                                    <Circle :size="8" :class="Number(terminal.is_active) ? 'fill-woosoo-green text-woosoo-green' : 'fill-destructive text-destructive'" />
-                                    {{ Number(terminal.is_active) ? 'Active' : 'Inactive' }}
-                                </span>
-                                <span class="text-[10px] font-semibold uppercase tracking-wider text-white/60">ID {{ terminal.id }}</span>
-                            </div>
-
-                            <div class="mx-auto mb-4 flex h-44 w-full max-w-[220px] items-center justify-center rounded-[1.7rem] border-[10px] border-slate-700 bg-slate-800 shadow-inner">
-                                <div class="flex h-full w-full flex-col items-center justify-center rounded-[1.2rem] bg-slate-900 text-center text-white/90">
-                                    <template v-if="tablesLoading && loadingTerminalId === String(terminal.id)">
-                                        <RefreshCw class="mb-2 h-10 w-10 animate-spin text-woosoo-accent" />
-                                        <p class="px-2 text-[11px] text-white/50">Loading tables…</p>
-                                    </template>
-                                    <template v-else>
-                                        <MonitorSmartphone class="mb-2 h-10 w-10 text-woosoo-accent" />
-                                        <p class="px-2 text-sm font-semibold leading-tight">{{ terminal.name }}</p>
-                                        <p class="mt-1 text-[11px] text-white/50">{{ terminal.type }}</p>
-                                    </template>
-                                </div>
-                            </div>
-
-                            <div class="space-y-1 text-xs text-white/70">
-                                <p><span class="text-white/45">IP:</span> {{ terminal.ip_address || '—' }}</p>
-                                <p><span class="text-white/45">Port:</span> {{ terminal.port ?? '—' }}</p>
-                                <p><span class="text-white/45">Session:</span> #{{ terminal.session_id || '—' }} • {{ terminal.session_closed_at ? 'Closed' : 'Open' }}</p>
-                                <p><span class="text-white/45">Open Orders:</span> <span class="font-semibold text-woosoo-accent">{{ Number(terminal.open_orders_count) }}</span></p>
-                            </div>
-                        </button>
-                    </div>
+                            …
+                        </span>
+                    </button>
                 </div>
             </section>
 
@@ -537,7 +526,8 @@ const handlePay = async (amount: number, paymentTypeId: number, tip?: number) =>
                             :key="table.id"
                             :table="table"
                             :selected="selectedTable?.id === table.id"
-                            @select="openTableOrders(table)"
+                            @select="openTableOrders"
+                            @new-order="startNewOrderForTable"
                         />
                     </div>
                 </div>

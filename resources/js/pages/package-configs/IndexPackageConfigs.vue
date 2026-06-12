@@ -59,6 +59,10 @@ function menusByType(pkg: PackageConfigVm, type: string) {
     return pkg.menus.filter((m) => (m.menu_type ?? 'meat') === type && m.is_active)
 }
 
+function addOnMenus(pkg: PackageConfigVm) {
+    return [...menusByType(pkg, 'side'), ...menusByType(pkg, 'dessert')]
+}
+
 function formatPrice(value: string): string {
     const n = parseFloat(String(value))
     if (!Number.isFinite(n)) return value
@@ -134,6 +138,19 @@ function confirmDelete() {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-5">
+            <!-- Two-tab pill nav -->
+            <nav class="inline-flex rounded-full border border-black/8 bg-muted/40 p-1 dark:border-white/10">
+                <span class="rounded-full bg-woosoo-accent/15 px-4 py-2 text-sm font-semibold text-foreground shadow-sm">
+                    Dining Tiers
+                </span>
+                <a
+                    :href="route('packages.index')"
+                    class="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                    Krypton Modifiers
+                </a>
+            </nav>
+
             <!-- Hero header -->
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
                 <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
@@ -151,9 +168,6 @@ function confirmDelete() {
                         </p>
                     </div>
                     <div class="flex gap-2">
-                        <Button variant="outline" size="sm" as-child>
-                            <a :href="route('packages.index')">Krypton Modifiers</a>
-                        </Button>
                         <Button size="sm" @click="showCreate = true">
                             <Plus class="mr-1.5 h-3.5 w-3.5" />
                             New Package
@@ -174,7 +188,7 @@ function confirmDelete() {
                         <div
                             v-for="(pkg, index) in orderedPackages"
                             :key="pkg.id"
-                            class="relative flex flex-col gap-4 rounded-[18px] border border-black/8 bg-white/60 p-5 transition-all duration-150 dark:border-white/10 dark:bg-white/[0.04]"
+                            class="relative flex flex-col gap-4 rounded-[18px] border border-black/8 bg-white/72 p-5 shadow-sm transition-all duration-150 hover:border-woosoo-accent/25 dark:border-white/10 dark:bg-white/[0.05]"
                         >
                             <!-- Tier label + name -->
                             <div>
@@ -209,11 +223,11 @@ function confirmDelete() {
                             </div>
 
                             <!-- Add-ons/sides section -->
-                            <div v-if="menusByType(pkg, 'side').length > 0 || menusByType(pkg, 'dessert').length > 0">
+                            <div v-if="addOnMenus(pkg).length > 0">
                                 <p class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Add-ons Included</p>
                                 <ul class="space-y-1">
                                     <li
-                                        v-for="m in [...menusByType(pkg, 'side'), ...menusByType(pkg, 'dessert')]"
+                                        v-for="m in addOnMenus(pkg)"
                                         :key="m.id"
                                         class="flex items-center gap-2 text-sm text-foreground"
                                     >
@@ -310,10 +324,10 @@ function confirmDelete() {
                                 </li>
                             </ul>
                         </div>
-                        <div v-if="menusByType(manageMenusPkg, 'side').length > 0 || menusByType(manageMenusPkg, 'dessert').length > 0">
+                        <div v-if="addOnMenus(manageMenusPkg).length > 0">
                             <p class="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">Add-ons</p>
                             <ul class="space-y-1">
-                                <li v-for="m in [...menusByType(manageMenusPkg, 'side'), ...menusByType(manageMenusPkg, 'dessert')]" :key="m.id" class="flex items-center gap-2 text-sm">
+                                <li v-for="m in addOnMenus(manageMenusPkg)" :key="m.id" class="flex items-center gap-2 text-sm">
                                     <Check class="h-3 w-3 shrink-0 text-woosoo-green" />
                                     {{ m.name }}
                                     <Badge variant="secondary" class="ml-auto text-[9px]">{{ m.menu_type }}</Badge>
