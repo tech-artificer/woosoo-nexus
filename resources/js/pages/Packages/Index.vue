@@ -14,14 +14,6 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -88,18 +80,24 @@ const orderedPackages = computed(() => {
     return [...(props.packages ?? [])].sort((a, b) => a.sort_order - b.sort_order)
 })
 
-function modifierNames(modifiers: PackageModifierVm[]): string {
-    const byId = new Map((props.menuOptions ?? []).map((m) => [m.id, m.name]))
-    const names = [...modifiers]
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map((m) => byId.get(m.krypton_menu_id) ?? `#${m.krypton_menu_id}`)
-    if (names.length === 0) return '—'
-    const joined = names.join(', ')
-    return joined.length > 60 ? joined.slice(0, 57) + '…' : joined
+function menuNameForId(menuId: number): string {
+    const menu = (props.menuOptions ?? []).find((m) => m.id === menuId)
+    return menu?.name ?? `#${menuId}`
 }
 
-const packageMenuOptions = computed(() => {
-    return props.menuOptions ?? []
+function modifierLabelList(modifiers: PackageModifierVm[]): string[] {
+    const byId = new Map((props.menuOptions ?? []).map((m) => [m.id, m.name]))
+    return [...modifiers]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((m) => byId.get(m.krypton_menu_id) ?? `#${m.krypton_menu_id}`)
+}
+
+const modifierLabelsByPackageId = computed(() => {
+    const labels = new Map<number, string[]>()
+    for (const item of orderedPackages.value) {
+        labels.set(item.id, modifierLabelList(item.modifiers ?? []))
+    }
+    return labels
 })
 
 const filteredModifierOptions = computed(() => {
@@ -231,15 +229,25 @@ function executeDelete() {
         <Head :title="title" />
 
         <div class="space-y-5">
+            <!-- Two-tab pill nav -->
+            <nav class="inline-flex rounded-full border border-black/8 bg-muted/40 p-1 dark:border-white/10">
+                <a
+                    :href="route('package-configs.index')"
+                    class="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                    Dining Tiers
+                </a>
+                <span class="rounded-full bg-woosoo-accent/15 px-4 py-2 text-sm font-semibold text-foreground shadow-sm">
+                    Krypton Modifiers
+                </span>
+            </nav>
+
             <!-- Create / Edit form section -->
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
                 <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#f6b56d]/10 via-transparent to-transparent dark:from-[#f6b56d]/6" />
                 <div class="relative space-y-5">
                     <!-- Section header -->
                     <div>
-                        <a :href="route('package-configs.index')" class="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
-                            ← Dining Tiers
-                        </a>
                         <div class="mt-1">
                             <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
                                 Krypton Modifiers
@@ -281,7 +289,7 @@ function executeDelete() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectLabel>Available Menus</SelectLabel>
-                                    <SelectItem v-for="menu in packageMenuOptions" :key="menu.id" :value="menu.id">
+                                    <SelectItem v-for="menu in (menuOptions ?? [])" :key="menu.id" :value="menu.id">
                                         {{ menu.name }} (ID: {{ menu.id }})
                                     </SelectItem>
                                 </SelectContent>
@@ -370,58 +378,66 @@ function executeDelete() {
                 </div>
             </section>
 
-            <!-- Package list section -->
+            <!-- Package card grid -->
             <section class="overflow-hidden rounded-[26px] border border-black/8 bg-card/92 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10">
                 <div class="flex items-center gap-2 border-b border-black/8 px-5 py-4 dark:border-white/10">
                     <Package class="h-4 w-4 text-muted-foreground" />
                     <div>
-                        <p class="text-sm font-semibold text-foreground">Configured Packages</p>
+                        <p class="text-sm font-semibold text-foreground">Krypton Modifier Packages</p>
                         <p class="text-xs text-muted-foreground">{{ orderedPackages.length }} package{{ orderedPackages.length === 1 ? '' : 's' }} configured.</p>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Menu ID</TableHead>
-                                <TableHead>Modifiers</TableHead>
-                                <TableHead>Order</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead class="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow v-for="item in orderedPackages" :key="item.id">
-                                <TableCell class="font-medium">{{ item.name }}</TableCell>
-                                <TableCell class="font-mono text-sm">{{ item.krypton_menu_id }}</TableCell>
-                                <TableCell class="text-sm text-muted-foreground">{{ modifierNames(item.modifiers ?? []) }}</TableCell>
-                                <TableCell>{{ item.sort_order }}</TableCell>
-                                <TableCell>
-                                    <Badge :variant="item.is_active ? 'default' : 'secondary'">
-                                        {{ item.is_active ? 'Active' : 'Inactive' }}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell class="text-right">
-                                    <div class="flex justify-end gap-2">
-                                        <Button size="sm" variant="outline" @click="editPackage(item)">
-                                            <Pencil class="mr-1 h-3 w-3" />
-                                            Edit
-                                        </Button>
-                                        <Button size="sm" variant="destructive" @click="confirmDelete(item)">
-                                            <Trash2 class="mr-1 h-3 w-3" />
-                                            Delete
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                            <TableRow v-if="orderedPackages.length === 0">
-                                <TableCell colspan="6" class="py-12 text-center text-sm text-muted-foreground">
-                                    No packages configured yet. Use the form above to add the first one.
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
+                <div class="p-4 sm:p-6">
+                    <div v-if="orderedPackages.length === 0" class="py-16 text-center text-sm text-muted-foreground">
+                        No packages configured yet. Use the form above to add the first one.
+                    </div>
+                    <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div
+                            v-for="item in orderedPackages"
+                            :key="item.id"
+                            class="flex flex-col gap-3 rounded-[18px] border border-black/8 bg-white/60 p-5 dark:border-white/10 dark:bg-white/[0.04]"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <h3 class="text-lg font-bold text-foreground">{{ item.name }}</h3>
+                                <Badge :variant="item.is_active ? 'default' : 'secondary'" class="shrink-0 text-[10px]">
+                                    {{ item.is_active ? 'Active' : 'Inactive' }}
+                                </Badge>
+                            </div>
+
+                            <span class="inline-flex w-fit rounded-full border border-woosoo-accent/30 bg-woosoo-accent/10 px-2.5 py-1 text-[10px] font-semibold text-foreground">
+                                Linked Menu · {{ menuNameForId(item.krypton_menu_id) }}
+                            </span>
+
+                            <div v-if="(modifierLabelsByPackageId.get(item.id) ?? []).length > 0">
+                                <p class="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                                    Meats · {{ (modifierLabelsByPackageId.get(item.id) ?? []).length }} cuts
+                                </p>
+                                <ul class="space-y-0.5">
+                                    <li
+                                        v-for="(name, idx) in (modifierLabelsByPackageId.get(item.id) ?? [])"
+                                        :key="`${item.id}-mod-${idx}`"
+                                        class="truncate text-sm text-foreground/90"
+                                    >
+                                        {{ name }}
+                                    </li>
+                                </ul>
+                            </div>
+                            <p v-else class="text-xs text-muted-foreground">No modifiers linked</p>
+
+                            <div class="mt-auto flex items-center justify-between border-t border-black/5 pt-3 dark:border-white/8">
+                                <div class="flex gap-1">
+                                    <Button size="sm" variant="outline" @click="editPackage(item)">
+                                        <Pencil class="mr-1 h-3 w-3" />
+                                        Edit
+                                    </Button>
+                                    <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive" @click="confirmDelete(item)">
+                                        <Trash2 class="h-3 w-3" />
+                                    </Button>
+                                </div>
+                                <span class="font-mono text-xs text-muted-foreground">Order #{{ item.sort_order }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
