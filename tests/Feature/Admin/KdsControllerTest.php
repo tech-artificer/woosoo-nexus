@@ -190,3 +190,45 @@ test('non-admin cannot access recall endpoint', function () {
         ->postJson("/kds/orders/{$order->id}/recall")
         ->assertForbidden();
 });
+
+test('advance response carries the full broadcast payload', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::CONFIRMED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk()
+        ->assertJsonStructure([
+            'status',
+            'order' => ['id', 'status', 'kds_state', 'kds_type', 'items', 'recalled', 'created_at', 'updated_at'],
+        ]);
+});
+
+test('recall response carries the full broadcast payload', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 0]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertOk()
+        ->assertJsonStructure([
+            'status',
+            'order' => ['id', 'status', 'kds_state', 'kds_type', 'items', 'recalled'],
+        ])
+        ->assertJsonPath('order.recalled', 1)
+        ->assertJsonPath('order.kds_state', 'preparing');
+});
+
+test('toggle response carries item_id and order_id for optimistic apply', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertOk()
+        ->assertJsonStructure(['item_id', 'order_id', 'done', 'done_at'])
+        ->assertJsonPath('item_id', $item->id)
+        ->assertJsonPath('order_id', $order->id)
+        ->assertJsonPath('done', true);
+});
