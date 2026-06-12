@@ -173,7 +173,18 @@ const openRequestDetail = (request: any) => {
 <template>
     <Head :title="props.title" :description="props.description" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="space-y-6 px-1 sm:px-2">
+        <div class="space-y-5">
+            <!-- Hero -->
+            <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-5 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div class="space-y-1.5">
+                        <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">Operations</span>
+                        <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Service Requests</h1>
+                        <p class="max-w-xl text-sm leading-6 text-muted-foreground">Guest-initiated assistance requests from tablet devices. Pending items require attention from floor staff.</p>
+                    </div>
+                </div>
+            </div>
+
             <DataTableToolbar
                 v-model:search="search"
                 v-model:status="statusFilter"

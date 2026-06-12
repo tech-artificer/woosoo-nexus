@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Broadcasting\OrderBroadcaster;
 use App\Enums\OrderStatus;
+use App\Helpers\OrderBroadcastPayload;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
@@ -134,7 +135,12 @@ class KdsController extends Controller
         $order->loadMissing(['items', 'device', 'serviceRequests']);
         app(OrderBroadcaster::class)->statusChanged($order);
 
-        return response()->json(['status' => $next->value]);
+        // Return the full board payload so the client can apply optimistically and not
+        // wait for the Echo broadcast (broadcast-down resilience + faster perceived UI).
+        return response()->json([
+            'status' => $next->value,
+            'order' => OrderBroadcastPayload::make($order),
+        ]);
     }
 
     public function toggleItem(DeviceOrderItems $item): JsonResponse
@@ -164,7 +170,11 @@ class KdsController extends Controller
 
         app(OrderBroadcaster::class)->itemToggled($item);
 
+        // Echo the broadcast shape so the client can dispatch the same applyItemToggle path
+        // it uses for live events — keeps optimistic and Echo paths idempotent.
         return response()->json([
+            'item_id' => $item->id,
+            'order_id' => $item->order_id,
             'done' => (bool) $item->done,
             'done_at' => $item->done_at?->toIso8601String(),
         ]);
@@ -218,7 +228,11 @@ class KdsController extends Controller
         $order->loadMissing(['items', 'device', 'serviceRequests']);
         app(OrderBroadcaster::class)->statusChanged($order);
 
-        return response()->json(['status' => OrderStatus::IN_PROGRESS->value]);
+        // See advance(): full board payload for optimistic client apply.
+        return response()->json([
+            'status' => OrderStatus::IN_PROGRESS->value,
+            'order' => OrderBroadcastPayload::make($order),
+        ]);
     }
 
     private function toTicket(DeviceOrder $order): array

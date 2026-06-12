@@ -8,7 +8,7 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { postKdsAdvance, postKdsToggleItem } from '@/components/KDS/kdsApi'
+import { postKdsAdvance, postKdsRecall, postKdsToggleItem } from '@/components/KDS/kdsApi'
 import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
@@ -35,6 +35,7 @@ const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
 const pendingAdvance = ref<Set<string>>(new Set())
+const pendingRecall = ref<Set<string>>(new Set())
 const pendingToggle = ref<Set<string>>(new Set())
 let timer: ReturnType<typeof setInterval> | null = null
 
@@ -73,7 +74,15 @@ async function toggleItem(ticketId: string, itemId: string) {
   pendingToggle.value.add(itemId)
 
   try {
-    await postKdsToggleItem(itemId)
+    const response = await postKdsToggleItem(itemId)
+    // Optimistic apply — same shape as the Echo `item.toggled` payload, so the live broadcast
+    // landing milliseconds later is idempotent (applies the same state, no flicker).
+    board.applyItemToggle({
+      item_id: response.item_id,
+      order_id: response.order_id,
+      done: response.done,
+      done_at: response.done_at,
+    })
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to update item.')
   } finally {
@@ -102,11 +111,38 @@ async function advanceTicket(ticketId: string) {
   pendingAdvance.value.add(ticketId)
 
   try {
-    await postKdsAdvance(ticketId)
+    const response = await postKdsAdvance(ticketId)
+    // Optimistic apply — full payload matches Echo `order.updated` shape, so the live broadcast
+    // landing milliseconds later applies the same state idempotently (no flicker, no double-render).
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to advance order.')
   } finally {
     pendingAdvance.value.delete(ticketId)
+  }
+}
+
+async function recallTicket(ticketId: string) {
+  const ticket = tickets.value.find((item) => item.id === ticketId)
+
+  if (!ticket || ticket.state !== 'served') {
+    return
+  }
+
+  if (pendingRecall.value.has(ticketId)) {
+    return
+  }
+
+  pendingRecall.value.add(ticketId)
+
+  try {
+    const response = await postKdsRecall(ticketId)
+    // Optimistic apply — see advanceTicket() for rationale.
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Unable to recall order.')
+  } finally {
+    pendingRecall.value.delete(ticketId)
   }
 }
 
@@ -181,6 +217,7 @@ onBeforeUnmount(() => {
               :now="now"
               :density="density"
               @advance="advanceTicket"
+              @recall="recallTicket"
               @toggle-item="toggleItem"
             />
           </div>
@@ -862,6 +899,17 @@ body.kds-active {
 :deep(.kds-card-action:focus-visible) {
   outline: 3px solid rgb(246 181 109 / 0.45);
   outline-offset: 2px;
+}
+
+:deep(.kds-recall-action) {
+  border-color: rgb(246 181 109 / 0.35);
+  background: rgb(246 181 109 / 0.08);
+  color: var(--kds-accent);
+}
+
+:deep(.kds-recall-action:hover) {
+  background: rgb(246 181 109 / 0.16);
+  color: var(--kds-accent);
 }
 
 :deep(.kds-empty) {

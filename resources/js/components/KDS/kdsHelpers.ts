@@ -131,6 +131,11 @@ export function canAdvanceTicket(ticket: KdsTicket): boolean {
   return nextStateFor(ticket.state) !== null
 }
 
+/** Recall is the served→in_progress edge only; voided orders need a new ticket (see order-state.contract.md). */
+export function canRecallTicket(ticket: KdsTicket): boolean {
+  return ticket.state === 'served'
+}
+
 /** Primary action `:disabled` — Mark as Served gated until every checklist item is done. */
 export function isAdvanceBlocked(ticket: KdsTicket): boolean {
   if (nextStateFor(ticket.state) === null) {
