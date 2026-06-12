@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ArrowRight, Check } from 'lucide-vue-next'
+import { ArrowRight, Check, RotateCcw } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { elapsedFor, formatElapsed, isAdvanceBlocked, isTerminal, nextStateFor, stateLabel, ticketTypeLabel, urgencyFor } from './kdsHelpers'
+import { canRecallTicket, elapsedFor, formatElapsed, isAdvanceBlocked, isTerminal, nextStateFor, stateLabel, ticketTypeLabel, urgencyFor } from './kdsHelpers'
 import type { KdsDensity, KdsTicket } from './kdsTypes'
 
 const props = defineProps<{
@@ -15,6 +15,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   advance: [ticketId: string]
+  recall: [ticketId: string]
   toggleItem: [ticketId: string, itemId: string]
 }>()
 
@@ -25,6 +26,7 @@ const elapsed = computed(() => elapsedFor(props.ticket, props.now))
 const urgency = computed(() => urgencyFor(props.ticket, props.now))
 const nextState = computed(() => nextStateFor(props.ticket.state))
 const advanceBlocked = computed(() => isAdvanceBlocked(props.ticket))
+const recallable = computed(() => canRecallTicket(props.ticket))
 const actionLabel = computed(() => {
   if (props.ticket.state === 'new') return 'Start Preparing'
   if (props.ticket.state === 'preparing' || props.ticket.state === 'ready') return 'Mark as Served'
@@ -146,6 +148,17 @@ function splitSafetyName(name: string) {
       >
         {{ actionLabel }}
         <ArrowRight data-icon="inline-end" aria-hidden="true" />
+      </Button>
+
+      <Button
+        v-else-if="recallable"
+        type="button"
+        variant="outline"
+        class="kds-card-action kds-recall-action"
+        @click="emit('recall', ticket.id)"
+      >
+        <RotateCcw data-icon="inline-start" aria-hidden="true" />
+        Recall
       </Button>
     </footer>
   </article>
