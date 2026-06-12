@@ -61,13 +61,24 @@ const currencyFormatter = (value: unknown) => {
 
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="p-6 space-y-6">
-            <!-- Header -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold">{{ props.title }}</h1>
-                    <p class="text-sm text-muted-foreground mt-1">Track discount usage and tax collection</p>
+        <div class="space-y-5">
+            <!-- Hero -->
+            <div class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+                <div class="relative space-y-3">
+                    <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">Analytics · Discount & Tax</span>
+                    <div>
+                        <h1 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{{ props.title }}</h1>
+                        <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Track discount usage and tax collection across all orders.</p>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Date range -->
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date range:</span>
+                <span class="text-sm font-medium">{{ props.startDate ?? '—' }}</span>
+                <span class="text-muted-foreground">→</span>
+                <span class="text-sm font-medium">{{ props.endDate ?? 'today' }}</span>
             </div>
 
             <!-- Summary Cards -->
@@ -138,18 +149,18 @@ const currencyFormatter = (value: unknown) => {
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
-                                <tr class="border-b">
-                                    <th class="text-left py-3 px-4 font-semibold">Date</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Orders</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Sales</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Discount</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Discount %</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Tax</th>
-                                    <th class="text-right py-3 px-4 font-semibold">Tax %</th>
+                                <tr class="border-b border-black/8 dark:border-white/10">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Date</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Orders</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Sales</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Discount</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Discount %</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Tax</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">Tax %</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="row in props.data" :key="row.date" class="border-b hover:bg-muted/50">
+                                <tr v-for="row in props.data" :key="row.date" class="border-b border-black/6 transition-colors hover:bg-black/[0.025] dark:border-white/8 dark:hover:bg-white/[0.03]">
                                     <td class="py-3 px-4 font-medium">{{ row.date }}</td>
                                     <td class="text-right py-3 px-4">{{ row.order_count }}</td>
                                     <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_sales) }}</td>
@@ -171,31 +182,31 @@ const currencyFormatter = (value: unknown) => {
                 </CardHeader>
                 <CardContent>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground">Total Orders</div>
-                            <div class="text-2xl font-bold">{{ totalOrders }}</div>
+                        <div class="rounded-[18px] border border-black/8 bg-white/60 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+                            <div class="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Total Orders</div>
+                            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ totalOrders }}</div>
                         </div>
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground">Total Sales</div>
-                            <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalSales) }}</div>
+                        <div class="rounded-[18px] border border-black/8 bg-white/60 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+                            <div class="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Total Sales</div>
+                            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalSales) }}</div>
                         </div>
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground">Discount Expense</div>
-                            <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalDiscount) }}</div>
+                        <div class="rounded-[18px] border border-black/8 bg-white/60 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+                            <div class="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Discount Expense</div>
+                            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalDiscount) }}</div>
                         </div>
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground">Tax Collected</div>
-                            <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalTax) }}</div>
+                        <div class="rounded-[18px] border border-black/8 bg-white/60 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+                            <div class="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Tax Collected</div>
+                            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalTax) }}</div>
                         </div>
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground">Avg Discount %</div>
-                            <div class="text-2xl font-bold">{{ (props.data.length > 0
+                        <div class="rounded-[18px] border border-black/8 bg-white/60 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+                            <div class="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Avg Discount %</div>
+                            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ (props.data.length > 0
                                 ? (props.data.reduce((sum, r) => sum + r.discount_percentage, 0) / props.data.length)
                                 : 0).toFixed(2) }}%</div>
                         </div>
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground">Avg Tax %</div>
-                            <div class="text-2xl font-bold">{{ (props.data.length > 0
+                        <div class="rounded-[18px] border border-black/8 bg-white/60 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+                            <div class="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Avg Tax %</div>
+                            <div class="mt-1 text-2xl font-semibold tabular-nums">{{ (props.data.length > 0
                                 ? (props.data.reduce((sum, r) => sum + r.tax_percentage, 0) / props.data.length)
                                 : 0).toFixed(2) }}%</div>
                         </div>
