@@ -17,6 +17,7 @@ import { useKdsEcho } from '@/components/KDS/useKdsEcho'
 const props = defineProps<{
   title: string
   initialTickets: KdsTicket[]
+  serverNow: number
 }>()
 
 function seedTickets(source: KdsTicket[]): KdsTicket[] {
@@ -31,6 +32,7 @@ const board = useKdsBoard(seedTickets(props.initialTickets))
 useKdsEcho(board)
 
 const tickets = board.tickets
+const { clockOffset, setClockOffset } = board
 const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
@@ -39,8 +41,9 @@ const pendingRecall = ref<Set<string>>(new Set())
 const pendingToggle = ref<Set<string>>(new Set())
 let timer: ReturnType<typeof setInterval> | null = null
 
+const correctedNow = computed(() => now.value + clockOffset.value)
 const activeTickets = computed(() => tickets.value.filter((ticket) => ACTIVE_STATES.includes(ticket.state)))
-const visibleTickets = computed(() => sortTickets(filterTickets(tickets.value, selectedFilter.value, now.value), now.value))
+const visibleTickets = computed(() => sortTickets(filterTickets(tickets.value, selectedFilter.value, correctedNow.value), correctedNow.value))
 const clockLabel = computed(() => new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
   minute: '2-digit',
@@ -52,7 +55,7 @@ const dateLabel = computed(() => new Intl.DateTimeFormat('en-US', {
 }).format(now.value))
 const counts = computed<Record<KdsFilter, number>>(() => ({
   active: activeTickets.value.length,
-  overdue: filterTickets(tickets.value, 'overdue', now.value).length,
+  overdue: filterTickets(tickets.value, 'overdue', correctedNow.value).length,
   new: tickets.value.filter((ticket) => ticket.state === 'new').length,
   preparing: tickets.value.filter((ticket) => ticket.state === 'preparing' || ticket.state === 'ready').length,
   ready: 0,
@@ -75,6 +78,9 @@ async function toggleItem(ticketId: string, itemId: string) {
 
   try {
     const response = await postKdsToggleItem(itemId)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
     // Optimistic apply — same shape as the Echo `item.toggled` payload, so the live broadcast
     // landing milliseconds later is idempotent (applies the same state, no flicker).
     board.applyItemToggle({
@@ -112,6 +118,9 @@ async function advanceTicket(ticketId: string) {
 
   try {
     const response = await postKdsAdvance(ticketId)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
     // Optimistic apply — full payload matches Echo `order.updated` shape, so the live broadcast
     // landing milliseconds later applies the same state idempotently (no flicker, no double-render).
     board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
@@ -137,6 +146,9 @@ async function recallTicket(ticketId: string) {
 
   try {
     const response = await postKdsRecall(ticketId)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
     // Optimistic apply — see advanceTicket() for rationale.
     board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
   } catch (error) {
@@ -157,6 +169,7 @@ function toggleDensity() {
 
 onMounted(() => {
   document.body.classList.add('kds-active')
+  setClockOffset(props.serverNow)
 
   try {
     const storedDensity = window.localStorage.getItem('kds-density')
@@ -215,6 +228,7 @@ onBeforeUnmount(() => {
               :key="ticket.id"
               :ticket="ticket"
               :now="now"
+              :clock-offset="clockOffset"
               :density="density"
               @advance="advanceTicket"
               @recall="recallTicket"

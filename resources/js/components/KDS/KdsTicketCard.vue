@@ -10,6 +10,7 @@ import type { KdsDensity, KdsTicket } from './kdsTypes'
 const props = defineProps<{
   ticket: KdsTicket
   now: number
+  clockOffset: number
   density: KdsDensity
 }>()
 
@@ -22,8 +23,8 @@ const emit = defineEmits<{
 const doneCount = computed(() => props.ticket.items.filter((item) => item.done).length)
 const totalCount = computed(() => props.ticket.items.length)
 const terminal = computed(() => isTerminal(props.ticket.state))
-const elapsed = computed(() => elapsedFor(props.ticket, props.now))
-const urgency = computed(() => urgencyFor(props.ticket, props.now))
+const elapsed = computed(() => elapsedFor(props.ticket, props.now, props.clockOffset))
+const urgency = computed(() => urgencyFor(props.ticket, props.now, props.clockOffset))
 const nextState = computed(() => nextStateFor(props.ticket.state))
 const advanceBlocked = computed(() => isAdvanceBlocked(props.ticket))
 const recallable = computed(() => canRecallTicket(props.ticket))

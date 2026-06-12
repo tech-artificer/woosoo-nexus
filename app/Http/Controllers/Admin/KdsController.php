@@ -52,6 +52,7 @@ class KdsController extends Controller
         return Inertia::render('KDS/Display', [
             'title' => 'Kitchen Display',
             'initialTickets' => $orders->map(fn ($order) => $this->toTicket($order))->values(),
+            'serverNow' => (int) (microtime(true) * 1000),
         ]);
     }
 
@@ -140,6 +141,7 @@ class KdsController extends Controller
         return response()->json([
             'status' => $next->value,
             'order' => OrderBroadcastPayload::make($order),
+            'server_now' => (int) (microtime(true) * 1000),
         ]);
     }
 
@@ -177,6 +179,7 @@ class KdsController extends Controller
             'order_id' => $item->order_id,
             'done' => (bool) $item->done,
             'done_at' => $item->done_at?->toIso8601String(),
+            'server_now' => (int) (microtime(true) * 1000),
         ]);
     }
 
@@ -232,6 +235,7 @@ class KdsController extends Controller
         return response()->json([
             'status' => OrderStatus::IN_PROGRESS->value,
             'order' => OrderBroadcastPayload::make($order),
+            'server_now' => (int) (microtime(true) * 1000),
         ]);
     }
 

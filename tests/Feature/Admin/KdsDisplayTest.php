@@ -27,3 +27,18 @@ test('admins can open the KDS display with a tickets prop', function () {
             ->has('initialTickets')
         );
 });
+
+test('kds index response includes serverNow as an integer millisecond epoch', function () {
+    $admin = User::factory()->admin()->create();
+
+    $before = (int) (microtime(true) * 1000);
+
+    $this->actingAs($admin)
+        ->get('/kds')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('KDS/Display')
+            ->has('serverNow')
+            ->where('serverNow', fn ($value) => is_int($value) && $value >= $before)
+        );
+});

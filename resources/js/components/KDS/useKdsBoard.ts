@@ -72,6 +72,11 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
 
 export function useKdsBoard(initialTickets: KdsTicket[]) {
   const tickets = ref<KdsTicket[]>(initialTickets.map((t) => ({ ...t, items: t.items.map((i) => ({ ...i })) })))
+  const clockOffset = ref(0)
+
+  function setClockOffset(serverNow: number): void {
+    clockOffset.value = serverNow - Date.now()
+  }
 
   function applyOrderUpdate(payload: OrderPayload): void {
     const id = String(payload.id)
@@ -109,5 +114,5 @@ export function useKdsBoard(initialTickets: KdsTicket[]) {
     })
   }
 
-  return { tickets, applyOrderUpdate, applyItemToggle }
+  return { tickets, applyOrderUpdate, applyItemToggle, clockOffset, setClockOffset }
 }

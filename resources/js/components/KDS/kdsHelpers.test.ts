@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyAdvance, canAdvanceTicket, canRecallTicket, filterTickets, isAdvanceBlocked, KDS_THRESHOLDS } from './kdsHelpers'
+import { applyAdvance, canAdvanceTicket, canRecallTicket, elapsedFor, filterTickets, isAdvanceBlocked, KDS_THRESHOLDS } from './kdsHelpers'
 import type { KdsTicket, KdsTicketState } from './kdsTypes'
 
 function preparingTicket(itemsDone: boolean[]): KdsTicket {
@@ -133,5 +133,39 @@ describe('filterTickets', () => {
     const tickets = ticketsWithStates('voided', 'new', 'served', 'preparing')
 
     expect(filterTickets(tickets, 'voided', now)).toEqual([tickets[0]])
+  })
+})
+
+describe('elapsedFor with clockOffset', () => {
+  it('adds positive offset to live ticket elapsed', () => {
+    const baseNow = 2_000_000_000_000
+    const ticket = makeTicket('new', baseNow - 60_000)
+
+    expect(elapsedFor(ticket, baseNow, 30_000)).toBe(90)
+  })
+
+  it('subtracts negative offset from live ticket elapsed, floored at 0', () => {
+    const baseNow = 2_000_000_000_000
+    const ticket = makeTicket('new', baseNow - 60_000)
+
+    expect(elapsedFor(ticket, baseNow, -30_000)).toBe(30)
+  })
+
+  it('clockOffset = 0 matches no-offset behavior', () => {
+    const baseNow = 2_000_000_000_000
+    const ticket = makeTicket('new', baseNow - 60_000)
+
+    expect(elapsedFor(ticket, baseNow, 0)).toBe(elapsedFor(ticket, baseNow))
+  })
+
+  it('terminal tickets ignore clockOffset', () => {
+    const ticket: KdsTicket = {
+      ...makeTicket('served'),
+      frozenElapsed: 45,
+    }
+    const baseNow = 2_000_000_000_000
+
+    expect(elapsedFor(ticket, baseNow, 99_999)).toBe(45)
+    expect(elapsedFor(ticket, baseNow, -99_999)).toBe(45)
   })
 })
