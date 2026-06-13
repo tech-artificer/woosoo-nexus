@@ -7,19 +7,25 @@ export function useKdsEcho(board: Board) {
   let channel: ReturnType<typeof window.Echo.channel> | null = null
 
   function handleOrderEvent(e: unknown): void {
-    const payload = (e as any)?.order ?? e
-    if (!payload?.id) {
+    if (!e || typeof e !== 'object') {
       return
     }
-    board.applyOrderUpdate(payload)
+    const payload = (e as Record<string, unknown>).order ?? e
+    if (!payload || typeof payload !== 'object' || !(payload as Record<string, unknown>).id) {
+      return
+    }
+    board.applyOrderUpdate(payload as Parameters<typeof board.applyOrderUpdate>[0])
   }
 
   function handleItemToggle(e: unknown): void {
-    const payload = e as any
-    if (!payload?.item_id) {
+    if (!e || typeof e !== 'object') {
       return
     }
-    board.applyItemToggle(payload)
+    const payload = e as Record<string, unknown>
+    if (!payload.item_id) {
+      return
+    }
+    board.applyItemToggle(payload as Parameters<typeof board.applyItemToggle>[0])
   }
 
   onMounted(() => {
@@ -35,6 +41,7 @@ export function useKdsEcho(board: Board) {
       .listen('.order.voided', handleOrderEvent)
       .listen('.order.completed', handleOrderEvent)
       .listen('.order.cancelled', handleOrderEvent)
+      .listen('.order.archived', handleOrderEvent)
       .listen('.item.toggled', handleItemToggle)
   })
 

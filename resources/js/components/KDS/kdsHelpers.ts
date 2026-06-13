@@ -12,12 +12,12 @@ export const STAGE_SORT: Record<KdsTicketState, number> = {
 
 export const KDS_THRESHOLDS: KdsThresholds = {
   initial: {
-    warn: 15 * 60,
-    over: 25 * 60,
+    warn: 10 * 60,
+    over: 14 * 60,
   },
   refill: {
-    warn: 15 * 60,
-    over: 25 * 60,
+    warn: 10 * 60,
+    over: 14 * 60,
   },
 }
 

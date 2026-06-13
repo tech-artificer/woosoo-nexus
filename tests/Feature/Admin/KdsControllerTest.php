@@ -183,6 +183,18 @@ test('recall returns 422 for a completed order', function () {
         ->assertUnprocessable();
 });
 
+test('recall returns 422 when max recalls reached', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 5]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Maximum recalls reached for this order.']);
+
+    expect($order->fresh()->recalled)->toBe(5);
+});
+
 test('non-admin cannot access recall endpoint', function () {
     $user = User::factory()->create(['is_admin' => false]);
     $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED]);
