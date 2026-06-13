@@ -239,7 +239,6 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
     Route::prefix('v2')->middleware([RequestId::class, 'auth:device', UpdateDeviceLastSeen::class])->group(function () {
         Route::get('/tablet/packages', [TabletApiController::class, 'packages'])->name('api.v2.tablet.packages');
         Route::get('/tablet/packages/{id}', [TabletApiController::class, 'packageDetails'])->name('api.v2.tablet.package.details');
-        Route::get('/tablet/package-configs', [TabletApiController::class, 'packageConfigs'])->name('api.v2.tablet.package-configs');
         Route::get('/tablet/meat-categories', [TabletApiController::class, 'meatCategories'])->name('api.v2.tablet.meat-categories');
         Route::get('/tablet/categories', [TabletApiController::class, 'categories'])->name('api.v2.tablet.categories');
         Route::get('/tablet/categories/{slug}/menus', [TabletApiController::class, 'categoryMenus'])->name('api.v2.tablet.category.menus');

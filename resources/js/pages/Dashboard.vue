@@ -4,10 +4,41 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { type LucideIcon, ArrowUp10, ChartPie, ChartSpline, Contact } from 'lucide-vue-next';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import DonutChart from '@/components/charts/DonutChart.vue';
 import LineChart from '@/components/charts/LineChart.vue';
+import { Button } from '@/components/ui/button';
+
+type StatsRange = 'today' | 'week' | 'month';
+
+const statsRange = ref<StatsRange>('today');
+const liveStats = ref<Record<string, any> | null>(null);
+const statsLoading = ref(false);
+
+const rangeLabels: Record<StatsRange, string> = {
+    today: 'Today',
+    week: 'This week',
+    month: 'This month',
+};
+
+async function fetchLiveStats() {
+    statsLoading.value = true;
+    try {
+        const res = await fetch(`${route('dashboard.stats')}?range=${statsRange.value}`);
+        if (res.ok) {
+            liveStats.value = await res.json();
+        }
+    } catch {
+        // Keep server-rendered props as fallback
+    } finally {
+        statsLoading.value = false;
+    }
+}
+
+watch(statsRange, () => {
+    fetchLiveStats();
+});
 
 interface DashCards {
     title?: string;
@@ -42,41 +73,54 @@ function parseCurrency(value: string | number | undefined | null): number {
     return Number(String(value).replace(/,/g, '')) || 0;
 }
 
-const dashCards = computed<DashCards[]>(() => [
-    {
-        title: 'Total Sales Today',
-        value: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(parseCurrency(props.totalSales)),
-        icon: ChartSpline,
-        helpText: `${props.totalOrders ?? 0} Transactions`,
-    },
-    {
-        title: `Today's Orders`,
-        value: props.totalOrders ?? 0,
-        icon: ArrowUp10,
-        helpText: 'Completed orders today',
-    },
-    {
-        title: `Total Guests`,
-        value: props.guestCount ?? 0,
-        icon: Contact,
-        helpText: 'Guests served today',
-    },
-    {
-        title: `Monthly Sales`,
-        value: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(parseCurrency(props.monthlySales)),
-        icon: ChartPie,
-        helpText: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
-    },
-]);
+const dashCards = computed<DashCards[]>(() => {
+    const rangeLabel = rangeLabels[statsRange.value];
+    const sales = liveStats.value?.total_sales ?? props.totalSales;
+    const orders = liveStats.value?.total_orders ?? props.totalOrders;
+    const guests = liveStats.value?.guest_count ?? props.guestCount;
+    const monthly = liveStats.value?.today_revenue ?? props.monthlySales;
 
-onMounted(() => {});
+    return [
+    {
+        title: `Total Sales (${rangeLabel})`,
+        value: typeof sales === 'string'
+            ? sales
+            : new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(parseCurrency(sales)),
+        icon: ChartSpline,
+        helpText: `${orders ?? 0} Transactions`,
+    },
+    {
+        title: `Orders (${rangeLabel})`,
+        value: orders ?? 0,
+        icon: ArrowUp10,
+        helpText: 'Completed orders in range',
+    },
+    {
+        title: `Guests (${rangeLabel})`,
+        value: guests ?? 0,
+        icon: Contact,
+        helpText: 'Guests served in range',
+    },
+    {
+        title: `Revenue (${rangeLabel})`,
+        value: typeof monthly === 'string'
+            ? monthly
+            : new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(parseCurrency(monthly)),
+        icon: ChartPie,
+        helpText: rangeLabel,
+    },
+];
+});
+
+onMounted(() => {
+    fetchLiveStats();
+});
 </script>
 
 <template>
     <Head :title="props.title" :description="props.description" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <!-- WOOSOO STEP 4: icon containers rounded-2xl → rounded-xl; inner stat cards border-black/8 unified -->
         <div class="space-y-6">
             <div class="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.8fr)]">
                 <div
@@ -112,6 +156,22 @@ onMounted(() => {});
                         <p v-if="props.openOrders?.length" class="mt-1 text-sm text-muted-foreground">Tables with active ordering activity</p>
                         <p v-else class="mt-1 text-sm text-muted-foreground">No open orders detected</p>
                     </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <span class="text-sm text-muted-foreground">Reporting window</span>
+                <div class="flex gap-2">
+                    <Button
+                        v-for="(label, key) in rangeLabels"
+                        :key="key"
+                        size="sm"
+                        :variant="statsRange === key ? 'default' : 'outline'"
+                        :disabled="statsLoading"
+                        @click="statsRange = key as StatsRange"
+                    >
+                        {{ label }}
+                    </Button>
                 </div>
             </div>
 

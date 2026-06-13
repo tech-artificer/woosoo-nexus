@@ -38,6 +38,8 @@ const emit = defineEmits<{
   (e: 'update:open', value: boolean): void
   (e: 'print'): void
   (e: 'complete'): void
+  (e: 'void'): void
+  (e: 'cancel-order'): void
 }>()
 
 const openState = computed({
@@ -134,10 +136,18 @@ const itemStatusLabel = (item: OrderItem) => {
   return orderStatus || 'pending'
 }
 
-const isOrderCompleted = computed(() => {
-  const status = String(order.value?.status || '').toLowerCase()
-  return ['completed', 'voided', 'cancelled', 'archived'].includes(status)
+const orderStatus = computed(() => String(order.value?.status || '').toLowerCase())
+
+const isOrderTerminal = computed(() => {
+  return ['completed', 'voided', 'cancelled', 'archived'].includes(orderStatus.value)
 })
+
+const canVoidOrder = computed(() => {
+  if (isOrderTerminal.value) return false
+  return ['pending', 'confirmed', 'in_progress', 'ready', 'served'].includes(orderStatus.value)
+})
+
+const canCancelOrder = computed(() => orderStatus.value === 'pending')
 </script>
 
 <template>
@@ -163,10 +173,10 @@ const isOrderCompleted = computed(() => {
             </Button>
             <AlertDialog>
               <AlertDialogTrigger as-child>
-                <Button 
-                  size="sm" 
-                  :disabled="isOrderCompleted"
-                  :class="{ 'opacity-50 cursor-not-allowed': isOrderCompleted }"
+                <Button
+                  size="sm"
+                  :disabled="isOrderTerminal"
+                  :class="{ 'opacity-50 cursor-not-allowed': isOrderTerminal }"
                 >
                   Complete Transaction
                 </Button>
@@ -181,6 +191,58 @@ const isOrderCompleted = computed(() => {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction @click="emit('complete')">Complete Transaction</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  :disabled="!canVoidOrder"
+                  :class="{ 'opacity-50 cursor-not-allowed': !canVoidOrder }"
+                >
+                  Void Order
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Void this order?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will mark the order as voided and remove it from the live board. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction class="bg-red-600 hover:bg-red-700" @click="emit('void')">
+                    Void Order
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  :disabled="!canCancelOrder"
+                  :class="{ 'opacity-50 cursor-not-allowed': !canCancelOrder }"
+                >
+                  Cancel Order
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will cancel the pending order before it enters the kitchen. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep Order</AlertDialogCancel>
+                  <AlertDialogAction class="bg-red-600 hover:bg-red-700" @click="emit('cancel-order')">
+                    Cancel Order
+                  </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

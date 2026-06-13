@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-vue-next';
@@ -30,6 +30,7 @@ interface MonitoringMetrics {
         items: Array<{
             id: number;
             device_order_id: number;
+            order_id: number | null;
             order_number: string;
             device_name: string;
             table_name: string;
@@ -184,6 +185,31 @@ const purgePrintEvents = async () => {
     }
 };
 
+const retryPrint = async (orderId: number | null) => {
+    if (!orderId || loading.value) return;
+
+    loading.value = true;
+    try {
+        await new Promise<void>((resolve, reject) => {
+            router.post(route('orders.print'), { order_id: orderId }, {
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    toastSuccess('Print job re-queued')
+                    resolve()
+                },
+                onError: () => reject(new Error('Print retry failed')),
+            })
+        })
+        await refreshMetrics();
+    } catch (error) {
+        toastError('Failed to retry print job')
+        console.error('Print retry failed:', error);
+    } finally {
+        loading.value = false;
+    }
+};
+
 // Action feedback uses the global vue-sonner toast (useToast composable)
 // so it floats over the page instead of being rendered inline per-session.
 // Replaces the previous setTimeout-managed inline banner that leaked the
@@ -303,6 +329,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
+                        <Button variant="outline" size="sm" as-child>
+                            <Link :href="route('reports.print-audit')">Print Audit</Link>
+                        </Button>
                         <Button variant="outline" size="sm" @click="toggleAutoRefresh"
                             :class="{ 'bg-woosoo-accent/10 text-woosoo-primary-dark': autoRefresh }">
                             <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': autoRefresh }" />
@@ -455,6 +484,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     <th class="text-left p-2">Type</th>
                                     <th class="text-left p-2">Attempts</th>
                                     <th class="text-left p-2">Last Error</th>
+                                    <th class="text-left p-2">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -471,6 +501,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </td>
                                     <td class="p-2 text-xs text-muted-foreground truncate max-w-xs">
                                         {{ evt.last_error || 'N/A' }}
+                                    </td>
+                                    <td class="p-2">
+                                        <Button
+                                            v-if="evt.order_id"
+                                            variant="outline"
+                                            size="sm"
+                                            :disabled="loading"
+                                            @click="retryPrint(evt.order_id)"
+                                        >
+                                            Retry
+                                        </Button>
+                                        <span v-else class="text-xs text-muted-foreground">—</span>
                                     </td>
                                 </tr>
                             </tbody>

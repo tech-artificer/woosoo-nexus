@@ -4,6 +4,17 @@ import { Head } from '@inertiajs/vue3'
 import { ref, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
 import { type BreadcrumbItem } from '@/types'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -86,6 +97,41 @@ async function saveSettings() {
     toast.success('Settings saved')
   } catch (e: any) {
     toast.error(e?.message ?? 'Failed to save settings')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function resetSettings() {
+  saving.value = true
+  try {
+    const res = await fetch(route('admin.settings.reset'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-XSRF-TOKEN': decodeURIComponent(
+          document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+        ),
+      },
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body?.message ?? `Server responded ${res.status}`)
+    }
+    const data = await res.json()
+    settings.value = {
+      theme: data.theme ?? 'light',
+      itemsPerPage: data.itemsPerPage ?? 25,
+      emailNotifications: data.emailNotifications ?? true,
+      orderAlerts: data.orderAlerts ?? true,
+      soundAlerts: data.soundAlerts ?? false,
+      posSystem: data.posSystem ?? '',
+      apiBaseUrl: data.apiBaseUrl ?? '',
+      websocketUrl: data.websocketUrl ?? '',
+    }
+    toast.success('Settings reset to defaults')
+  } catch (e: any) {
+    toast.error(e?.message ?? 'Failed to reset settings')
   } finally {
     saving.value = false
   }
@@ -196,7 +242,26 @@ onMounted(fetchSettings)
           </CardContent>
         </Card>
 
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger as-child>
+              <Button variant="outline" :disabled="saving">Reset to defaults</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset all settings?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This restores branch settings to their default values and saves immediately.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction class="bg-red-600 hover:bg-red-700" @click="resetSettings">
+                  Reset to defaults
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button @click="saveSettings" :disabled="saving">
             {{ saving ? 'Saving…' : 'Save settings' }}
           </Button>

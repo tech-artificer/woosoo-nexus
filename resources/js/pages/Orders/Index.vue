@@ -15,8 +15,10 @@ import {
     TabsContent,
     TabsList,
     TabsTrigger,
-} from "@/components/ui/tabs"
+} from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { RefreshCw } from 'lucide-vue-next'
 
 interface OrdersPageProps {
   title: string
@@ -104,7 +106,64 @@ function orderStatusKey(order: DeviceOrder): string {
 }
 
 function ordersInColumn(statuses: readonly string[]): DeviceOrder[] {
-  return localOrders.value.filter((o) => statuses.includes(orderStatusKey(o)))
+  return filteredLocalOrders.value.filter((o) => statuses.includes(orderStatusKey(o)))
+}
+
+const kanbanStatusFilter = ref<string[]>([])
+const kanbanTableFilter = ref<string>('all')
+const kanbanTimeRange = ref<'all' | 'today' | 'hour'>('all')
+
+const kanbanTableOptions = computed(() => {
+  const names = new Set<string>()
+  localOrders.value.forEach((o) => {
+    const name = o.table?.name
+    if (name) names.add(name)
+  })
+  return Array.from(names).sort()
+})
+
+const filteredLocalOrders = computed(() => {
+  let list = localOrders.value
+
+  if (kanbanStatusFilter.value.length > 0) {
+    list = list.filter((o) => kanbanStatusFilter.value.includes(orderStatusKey(o)))
+  }
+
+  if (kanbanTableFilter.value !== 'all') {
+    list = list.filter((o) => o.table?.name === kanbanTableFilter.value)
+  }
+
+  if (kanbanTimeRange.value === 'today') {
+    const today = new Date().toDateString()
+    list = list.filter((o) => o.created_at && new Date(o.created_at).toDateString() === today)
+  } else if (kanbanTimeRange.value === 'hour') {
+    const cutoff = Date.now() - 3_600_000
+    list = list.filter((o) => o.created_at && new Date(o.created_at).getTime() >= cutoff)
+  }
+
+  return list
+})
+
+const kanbanStatusOptions = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Confirmed', value: 'confirmed' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Ready', value: 'ready' },
+  { label: 'Served', value: 'served' },
+]
+
+function toggleKanbanStatus(value: string) {
+  const idx = kanbanStatusFilter.value.indexOf(value)
+  if (idx === -1) {
+    kanbanStatusFilter.value = [...kanbanStatusFilter.value, value]
+  } else {
+    kanbanStatusFilter.value = kanbanStatusFilter.value.filter((s) => s !== value)
+  }
+}
+
+function handleKanbanRefresh() {
+  reloadOrdersFromServer()
+  toast.success('Orders refreshed')
 }
 
 const kanbanColumns = computed(() =>
@@ -216,24 +275,54 @@ const openOrderDetail = (order: DeviceOrder) => {
 const handleDetailPrint = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  router.post('/orders/print', { order_id: orderId }, {
+  router.post(route('orders.print'), { order_id: orderId }, {
     preserveState: true,
     preserveScroll: true,
+    onSuccess: () => toast.success('Order Sent to Printer'),
+    onError: () => toast.error('Failed to send order to printer.'),
   })
 }
 
 const handleDetailComplete = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  // Close sheet immediately — broadcast will move the row to history
   isDetailOpen.value = false
-  router.post('/orders/complete', { order_id: orderId }, {
+  router.post(route('orders.complete'), { order_id: orderId }, {
     preserveState: true,
     preserveScroll: true,
     onError: () => {
-      // Re-open on failure so admin can retry
       isDetailOpen.value = true
       toast.error('Failed to complete order. Please try again.')
+    },
+  })
+}
+
+const handleDetailVoid = () => {
+  const id = selectedOrder.value?.id
+  if (!id) return
+  isDetailOpen.value = false
+  router.delete(route('orders.destroy', { id }), {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => toast.success('Order voided'),
+    onError: () => {
+      isDetailOpen.value = true
+      toast.error('Failed to void order. Please try again.')
+    },
+  })
+}
+
+const handleDetailCancel = () => {
+  const id = selectedOrder.value?.id
+  if (!id) return
+  isDetailOpen.value = false
+  router.post(route('orders.update-status', { id }), { status: 'cancelled' }, {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => toast.success('Order cancelled'),
+    onError: () => {
+      isDetailOpen.value = true
+      toast.error('Failed to cancel order. Please try again.')
     },
   })
 }
@@ -571,6 +660,43 @@ onUnmounted(() => {
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="live_orders" class="space-y-4 pt-3">
+                  <!-- Kanban toolbar: filters + refresh -->
+                  <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <span class="text-xs font-medium text-muted-foreground mr-1">Status:</span>
+                      <Button
+                        v-for="opt in kanbanStatusOptions"
+                        :key="opt.value"
+                        variant="outline"
+                        size="sm"
+                        class="h-7 text-xs"
+                        :class="kanbanStatusFilter.includes(opt.value) ? 'border-woosoo-accent bg-woosoo-accent/10' : ''"
+                        @click="toggleKanbanStatus(opt.value)"
+                      >
+                        {{ opt.label }}
+                      </Button>
+                    </div>
+                    <select
+                      v-model="kanbanTableFilter"
+                      class="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      aria-label="Filter by table"
+                    >
+                      <option value="all">All tables</option>
+                      <option v-for="name in kanbanTableOptions" :key="name" :value="name">{{ name }}</option>
+                    </select>
+                    <select
+                      v-model="kanbanTimeRange"
+                      class="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      aria-label="Filter by time"
+                    >
+                      <option value="all">All time</option>
+                      <option value="today">Today</option>
+                      <option value="hour">Last hour</option>
+                    </select>
+                    <Button variant="outline" size="sm" class="h-8" aria-label="Refresh orders" @click="handleKanbanRefresh">
+                      <RefreshCw class="h-4 w-4" />
+                    </Button>
+                  </div>
                   <!-- Summary chip row -->
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="inline-flex items-center rounded-full border border-woosoo-accent/30 bg-woosoo-accent/10 px-3 py-1.5 text-xs font-medium text-foreground">
@@ -670,6 +796,8 @@ onUnmounted(() => {
               :order="selectedOrder"
               @print="handleDetailPrint"
               @complete="handleDetailComplete"
+              @void="handleDetailVoid"
+              @cancel-order="handleDetailCancel"
             />
         </div>
     </AppLayout>

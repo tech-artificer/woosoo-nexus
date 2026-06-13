@@ -14,14 +14,8 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
-// use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-
-/**
- * UserController handles user management functionalities.
- */
 class UserController extends Controller
 {
-    // use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -29,8 +23,19 @@ class UserController extends Controller
     {
         $this->authorize('admin');
 
+        $search = request()->string('search')->trim()->toString();
         $perPage = 15;
-        $users = User::with('roles')->withTrashed()->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
+
+        $query = User::with('roles')->withTrashed()->orderBy('created_at', 'desc');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->paginate($perPage)->withQueryString();
 
         // Compute simple stats for the UI (last 7 days sparkline and delta)
         $today = Carbon::today();
@@ -82,6 +87,9 @@ class UserController extends Controller
             'description' => 'Manage users of the application.',
             'users' => $users,
             'stats' => $stats,
+            'filters' => [
+                'search' => $search,
+            ],
         ]);
     }
 
