@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageRequest;
 use App\Http\Requests\Admin\UpdatePackageRequest;
 use App\Http\Resources\PackageResource;
-use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Models\Krypton\Menu;
 use App\Models\ModifierDescription;
 use App\Models\Package;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -25,26 +26,27 @@ class PackageController extends Controller
 
         try {
             $menuOptions = Menu::query()
-                ->select('id', 'name', 'receipt_name', 'is_modifier_only', 'is_available')
+                ->select('id', 'name', 'receipt_name', 'is_modifier_only', 'is_available', 'price')
                 ->orderBy('name')
                 ->limit(3000)
                 ->get()
                 ->map(static function (Menu $menu): array {
                     return [
                         'id' => (int) $menu->id,
-                        'name' => $menu->name ?: $menu->receipt_name ?: ('Menu #' . $menu->id),
+                        'name' => $menu->name ?: $menu->receipt_name ?: ('Menu #'.$menu->id),
                         'receipt_name' => $menu->receipt_name,
                         'is_modifier_only' => (bool) $menu->is_modifier_only,
+                        'price' => $menu->price !== null ? (float) $menu->price : null,
                     ];
                 })
                 ->values();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $menuOptions = collect([]);
         }
 
         return Inertia::render('Packages/Index', [
             'title' => 'Packages',
-            'description' => 'Manage package definitions and their allowed Krypton modifier menus.',
+            'description' => 'Manage guest-facing packages linked to POS menus and their modifier cuts.',
             'packages' => PackageResource::collection($packages)->resolve(),
             'menuOptions' => $menuOptions,
             'modifierDescriptions' => ModifierDescription::query()
@@ -111,7 +113,7 @@ class PackageController extends Controller
     /**
      * Rebuild modifier rows using the submitted order to keep sort_order deterministic.
      *
-     * @param array<int, array{krypton_menu_id:int, sort_order?:int}> $modifiers
+     * @param  array<int, array{krypton_menu_id:int, sort_order?:int}>  $modifiers
      */
     private function syncModifiers(Package $package, array $modifiers): void
     {
@@ -120,7 +122,7 @@ class PackageController extends Controller
         foreach (array_values($modifiers) as $index => $modifier) {
             $package->modifiers()->create([
                 'krypton_menu_id' => (int) $modifier['krypton_menu_id'],
-                'sort_order' => isset($modifier['sort_order']) ? (int) $modifier['sort_order'] : $index,
+                'sort_order' => (int) ($modifier['sort_order'] ?? $index),
             ]);
         }
     }
@@ -131,7 +133,7 @@ class PackageController extends Controller
      * same modifier, so rows are never deleted here — only created/updated when
      * a description value is supplied.
      *
-     * @param array<int, array{krypton_menu_id:int, description?:?string}> $modifiers
+     * @param  array<int, array{krypton_menu_id:int, description?:?string}>  $modifiers
      */
     private function syncModifierDescriptions(array $modifiers): void
     {

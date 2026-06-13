@@ -115,6 +115,7 @@ async function advanceTicket(ticketId: string) {
     // Optimistic apply — full payload matches Echo `order.updated` shape, so the live broadcast
     // landing milliseconds later applies the same state idempotently (no flicker, no double-render).
     board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
+    toast.success(response.status === 'served' ? 'Order marked as served.' : 'Order started.')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to advance order.')
   } finally {
@@ -139,6 +140,7 @@ async function recallTicket(ticketId: string) {
     const response = await postKdsRecall(ticketId)
     // Optimistic apply — see advanceTicket() for rationale.
     board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
+    toast.success('Order recalled — now preparing.')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to recall order.')
   } finally {

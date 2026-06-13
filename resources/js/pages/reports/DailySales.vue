@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LineChart } from '@/components/ui/chart-line'
+import ReportDateRangeToolbar from '@/components/reports/ReportDateRangeToolbar.vue'
 import { ref } from 'vue'
 import type { BreadcrumbItem } from '@/types'
 
@@ -67,12 +68,11 @@ const currencyFormatter = (value: unknown) => {
             </div>
 
             <!-- Date range -->
-            <div class="flex flex-wrap items-center gap-3">
-                <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date range:</span>
-                <span class="text-sm font-medium">{{ props.startDate ?? '—' }}</span>
-                <span class="text-muted-foreground">→</span>
-                <span class="text-sm font-medium">{{ props.endDate ?? 'today' }}</span>
-            </div>
+            <ReportDateRangeToolbar
+              :start-date="props.startDate"
+              :end-date="props.endDate"
+              :export-route="route('reports.daily-sales.export')"
+            />
 
             <!-- Summary Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -81,7 +81,7 @@ const currencyFormatter = (value: unknown) => {
                         <CardTitle class="text-sm font-medium">Total Sales</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(totalSales) }}</div>
+                        <div class="text-2xl font-bold">{{ currencyFormatter(totalSales) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">{{ props.data.length }} days</p>
                     </CardContent>
                 </Card>
@@ -101,7 +101,7 @@ const currencyFormatter = (value: unknown) => {
                         <CardTitle class="text-sm font-medium">Avg Order Value</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(avgOrderValue) }}</div>
+                        <div class="text-2xl font-bold">{{ currencyFormatter(avgOrderValue) }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Per transaction</p>
                     </CardContent>
                 </Card>
@@ -152,8 +152,8 @@ const currencyFormatter = (value: unknown) => {
                                 <tr v-for="row in props.data" :key="row.date" class="border-b border-black/6 transition-colors hover:bg-black/[0.025] dark:border-white/8 dark:hover:bg-white/[0.03]">
                                     <td class="py-3 px-4">{{ row.date }}</td>
                                     <td class="text-right py-3 px-4">{{ row.transaction_count }}</td>
-                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total_sales) }}</td>
-                                    <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.avg_order_value) }}</td>
+                                    <td class="text-right py-3 px-4">{{ currencyFormatter(row.total_sales) }}</td>
+                                    <td class="text-right py-3 px-4">{{ currencyFormatter(row.avg_order_value) }}</td>
                                     <td class="text-right py-3 px-4">{{ row.total_guests }}</td>
                                 </tr>
                             </tbody>

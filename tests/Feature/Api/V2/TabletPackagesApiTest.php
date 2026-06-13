@@ -3,6 +3,8 @@
 namespace Tests\Feature\Api\V2;
 
 use App\Models\Device;
+use App\Models\Package;
+use App\Models\PackageModifier;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -241,7 +243,7 @@ class TabletPackagesApiTest extends TestCase
         $device = $this->authenticatedDevice();
 
         // Create active package
-        $activePackage = \App\Models\Package::create([
+        $activePackage = Package::create([
             'name' => 'Set Meal A',
             'description' => 'Classic Feast package copy.',
             'krypton_menu_id' => 46,
@@ -250,7 +252,7 @@ class TabletPackagesApiTest extends TestCase
         ]);
 
         // Create inactive package (should not appear)
-        \App\Models\Package::create([
+        Package::create([
             'name' => 'Set Meal B',
             'krypton_menu_id' => 47,
             'is_active' => false,
@@ -276,7 +278,7 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        \App\Models\Package::create([
+        Package::create([
             'name' => 'Broken Package',
             'description' => 'This package points at a missing POS menu.',
             'krypton_menu_id' => 9999,
@@ -296,14 +298,14 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        $package = \App\Models\Package::create([
+        $package = Package::create([
             'name' => 'Set Meal A',
             'krypton_menu_id' => 46,
             'is_active' => true,
             'sort_order' => 0,
         ]);
 
-        \App\Models\PackageModifier::create([
+        PackageModifier::create([
             'package_id' => $package->id,
             'krypton_menu_id' => 101,
             'sort_order' => 0,
@@ -325,7 +327,7 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        $package = \App\Models\Package::create([
+        $package = Package::create([
             'name' => 'Set Meal A',
             'krypton_menu_id' => 46,
             'is_active' => true,
@@ -333,14 +335,14 @@ class TabletPackagesApiTest extends TestCase
         ]);
 
         // Valid modifier
-        \App\Models\PackageModifier::create([
+        PackageModifier::create([
             'package_id' => $package->id,
             'krypton_menu_id' => 101,
             'sort_order' => 0,
         ]);
 
         // Invalid modifier (points to non-existent menu)
-        \App\Models\PackageModifier::create([
+        PackageModifier::create([
             'package_id' => $package->id,
             'krypton_menu_id' => 9999,
             'sort_order' => 1,
@@ -359,14 +361,14 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        $package = \App\Models\Package::create([
+        $package = Package::create([
             'name' => 'Set Meal A',
             'krypton_menu_id' => 46,
             'is_active' => true,
             'sort_order' => 0,
         ]);
 
-        \App\Models\PackageModifier::create([
+        PackageModifier::create([
             'package_id' => $package->id,
             'krypton_menu_id' => 101,
             'sort_order' => 0,
@@ -386,7 +388,7 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        \App\Models\Package::create([
+        Package::create([
             'name' => 'Set Meal A',
             'krypton_menu_id' => 46,
             'is_active' => false,
@@ -510,7 +512,6 @@ class TabletPackagesApiTest extends TestCase
     {
         $this->getJson('/api/v2/tablet/packages')->assertUnauthorized();
         $this->getJson('/api/v2/tablet/packages/46')->assertUnauthorized();
-        $this->getJson('/api/v2/tablet/package-configs')->assertUnauthorized();
         $this->getJson('/api/v2/tablet/meat-categories')->assertUnauthorized();
         $this->getJson('/api/v2/tablet/categories/sides/menus')->assertUnauthorized();
     }

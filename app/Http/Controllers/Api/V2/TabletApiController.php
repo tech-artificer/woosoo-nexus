@@ -10,8 +10,6 @@ use App\Models\Krypton\Menu;
 use App\Models\ModifierDescription;
 use App\Models\Package;
 use App\Models\TabletCategory;
-use App\Models\TabletPackageAllowedMenu;
-use App\Models\TabletPackageConfig;
 use App\Repositories\Krypton\MenuRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,9 +55,6 @@ class TabletApiController extends Controller
      */
     /** Cache key for the resolved packages payload. Busted on admin save/update/delete. */
     public const PACKAGES_CACHE_KEY = 'tablet.packages.v2';
-
-    /** Cache key for the TabletPackageConfig payload. Busted on admin save/update/delete. */
-    public const PACKAGE_CONFIGS_CACHE_KEY = 'tablet.package_configs.v1';
 
     /** TTL in seconds — 5 minutes. Short enough to pick up changes if cache flush is missed. */
     private const PACKAGES_CACHE_TTL = 300;
@@ -169,87 +164,6 @@ class TabletApiController extends Controller
             Log::error('V2 Tablet API - packages error: '.$e->getMessage());
 
             return ApiResponse::error('Failed to retrieve packages', null, 500);
-        }
-    }
-
-    /**
-     * GET /api/v2/tablet/package-configs
-     *
-     * Returns active TabletPackageConfig records with their allowed menus,
-     * enriched with Krypton menu names. Cache key busted by PackageConfigController.
-     */
-    public function packageConfigs(Request $request)
-    {
-        try {
-            $resolved = Cache::remember(self::PACKAGE_CONFIGS_CACHE_KEY, self::PACKAGES_CACHE_TTL, function () {
-                $configs = TabletPackageConfig::with('activeAllowedMenus')
-                    ->where('is_active', true)
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->get();
-
-                if ($configs->isEmpty()) {
-                    return [];
-                }
-
-                $menuIds = $configs
-                    ->flatMap(fn ($c) => $c->activeAllowedMenus->pluck('krypton_menu_id'))
-                    ->unique()->values()->all();
-
-                $kryptonMenus = collect([]);
-                try {
-                    $kryptonMenus = DB::connection('pos')
-                        ->table('menus')
-                        ->whereIn('id', $menuIds)
-                        ->select('id', 'name', 'receipt_name')
-                        ->get()
-                        ->keyBy('id');
-                } catch (\Throwable) {
-                }
-
-                return $configs->map(function (TabletPackageConfig $config) use ($kryptonMenus): array {
-                    return [
-                        'id' => $config->id,
-                        'name' => $config->name,
-                        'description' => $config->description,
-                        'base_price' => $config->base_price,
-                        'min_meat' => $config->min_meat,
-                        'max_meat' => $config->max_meat,
-                        'min_side' => $config->min_side,
-                        'max_side' => $config->max_side,
-                        'min_dessert' => $config->min_dessert,
-                        'max_dessert' => $config->max_dessert,
-                        'min_beverage' => $config->min_beverage,
-                        'max_beverage' => $config->max_beverage,
-                        'allowed_menus' => $config->activeAllowedMenus
-                            ->sortBy('sort_order')
-                            ->map(function (TabletPackageAllowedMenu $m) use ($kryptonMenus): array {
-                                $kMenu = $kryptonMenus->get($m->krypton_menu_id);
-
-                                return [
-                                    'id' => $m->id,
-                                    'krypton_menu_id' => $m->krypton_menu_id,
-                                    'name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$m->krypton_menu_id}",
-                                    'menu_type' => $m->menu_type,
-                                    'meat_category_code' => $m->meat_category_code,
-                                    'extra_price' => $m->extra_price,
-                                    'quantity_limit' => $m->quantity_limit,
-                                    'is_required' => $m->is_required,
-                                    'is_default' => $m->is_default,
-                                    'sort_order' => $m->sort_order,
-                                ];
-                            })
-                            ->values()
-                            ->all(),
-                    ];
-                })->all();
-            });
-
-            return ApiResponse::success($resolved, 'Package configs retrieved successfully');
-        } catch (\Exception $e) {
-            Log::error('V2 Tablet API - package_configs error: '.$e->getMessage());
-
-            return ApiResponse::error('Failed to retrieve package configs', null, 500);
         }
     }
 

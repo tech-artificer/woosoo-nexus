@@ -13,6 +13,7 @@ use App\Models\DeviceOrder;
 use App\Models\Krypton\Session as KryptonSession;
 use App\Models\PrintEvent;
 use App\Services\AuditLogService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -29,7 +30,7 @@ class MonitoringController extends Controller
     public function index(): Response
     {
         $metrics = $this->getMetrics();
-        
+
         return Inertia::render('Monitoring/Index', [
             'metrics' => $metrics,
         ]);
@@ -83,6 +84,7 @@ class MonitoringController extends Controller
                 return [
                     'id' => $evt->id,
                     'device_order_id' => $evt->device_order_id,
+                    'order_id' => $evt->deviceOrder?->order_id,
                     'order_number' => $evt->deviceOrder?->order_number,
                     'device_name' => $evt->deviceOrder?->device?->name,
                     'table_name' => $evt->deviceOrder?->table?->name,
@@ -170,9 +172,13 @@ class MonitoringController extends Controller
             $total = $rows->count();
             $deltas = [];
             foreach ($rows as $r) {
-                if ($r->acknowledged_at === null || $r->created_at === null) continue;
-                $diff = \Carbon\Carbon::parse($r->acknowledged_at)->diffInSeconds(\Carbon\Carbon::parse($r->created_at));
-                if ($diff >= 0) $deltas[] = $diff;
+                if ($r->acknowledged_at === null || $r->created_at === null) {
+                    continue;
+                }
+                $diff = Carbon::parse($r->acknowledged_at)->diffInSeconds(Carbon::parse($r->created_at));
+                if ($diff >= 0) {
+                    $deltas[] = $diff;
+                }
             }
 
             sort($deltas);
@@ -294,6 +300,7 @@ class MonitoringController extends Controller
             $latest = KryptonSession::getLatestSession();
         } catch (\Throwable $e) {
             Log::warning('Monitoring: getLatestSession failed', ['error' => $e->getMessage()]);
+
             return [];
         }
 
@@ -473,6 +480,7 @@ class MonitoringController extends Controller
 
         if ($openOrders->isEmpty()) {
             $this->dispatchSessionReset($id);
+
             return response()->json([
                 'success' => true,
                 'closed' => 0,
@@ -511,9 +519,14 @@ class MonitoringController extends Controller
 
         if ($posReachable && ! $force) {
             $blockers = $openOrders->filter(function ($order) use ($posOrders) {
-                if (! $order->order_id) return false;
+                if (! $order->order_id) {
+                    return false;
+                }
                 $pos = $posOrders->get((int) $order->order_id);
-                if (! $pos) return false;
+                if (! $pos) {
+                    return false;
+                }
+
                 return (int) ($pos->is_voided ?? 0) === 0
                     && (int) ($pos->is_open ?? 1) === 1
                     && $pos->date_time_closed === null;
@@ -538,7 +551,9 @@ class MonitoringController extends Controller
                 ->where('id', (int) $order->id)
                 ->update(['status' => $next->value, 'updated_at' => now()]);
 
-            if ($updated === 0) continue;
+            if ($updated === 0) {
+                continue;
+            }
 
             $closed++;
             AuditLogService::orderStatusChanged($request, (int) $order->id, $prev, $next->value, null, 'admin:force-end-session');
@@ -580,11 +595,16 @@ class MonitoringController extends Controller
             return OrderStatus::VOIDED;
         }
         $pos = $posOrders->get((int) $order->order_id);
-        if (! $pos) return OrderStatus::VOIDED;
-        if ((int) ($pos->is_voided ?? 0) === 1) return OrderStatus::VOIDED;
+        if (! $pos) {
+            return OrderStatus::VOIDED;
+        }
+        if ((int) ($pos->is_voided ?? 0) === 1) {
+            return OrderStatus::VOIDED;
+        }
         if ((int) ($pos->is_open ?? 1) === 0 || $pos->date_time_closed !== null) {
             return OrderStatus::COMPLETED;
         }
+
         return OrderStatus::VOIDED;
     }
 
@@ -609,9 +629,11 @@ class MonitoringController extends Controller
         try {
             DB::connection($connection)->getPdo();
             DB::connection($connection)->select('SELECT 1');
+
             return true;
         } catch (\Throwable $e) {
             Log::error("Database connection failed: {$connection}", ['error' => $e->getMessage()]);
+
             return false;
         }
     }

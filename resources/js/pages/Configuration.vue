@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accessibility, Image, Monitor, FileText, Package, ShieldCheck, Tv, Wrench, DatabaseZap } from 'lucide-vue-next';
+import { Accessibility, Image, Monitor, FileText, ShieldCheck, Tv, Wrench, DatabaseZap } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -81,15 +81,7 @@ const configModules = [
         icon: Image,
         action: 'Open media library',
     },
-    {
-        title: 'Legacy Packages',
-        description: 'Legacy package definitions (pre-TabletPackageConfig).',
-        href: route('packages.index'),
-        icon: Package,
-        action: 'Open legacy packages',
-    },
 ]
-
 </script>
 
 <template>
