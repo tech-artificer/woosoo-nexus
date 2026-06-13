@@ -45,7 +45,7 @@ watch(searchQuery, (value) => {
 const paginationLinks = computed(() => {
     try {
         return (props.users?.links ?? []).filter((l: any) => l && l.url)
-    } catch (e) {
+    } catch {
         return []
     }
 })
