@@ -86,6 +86,18 @@ describe('Recall gating', () => {
   it.each<KdsTicketState>(['new', 'preparing', 'ready', 'voided'])('rejects recall from %s', (state) => {
     expect(canRecallTicket(makeTicket(state))).toBe(false)
   })
+
+  it('blocks recall when recalled count reaches MAX_RECALLS', () => {
+    const ticket = { ...makeTicket('served'), recalled: 5 }
+
+    expect(canRecallTicket(ticket)).toBe(false)
+  })
+
+  it('allows recall when recalled count is below MAX_RECALLS', () => {
+    const ticket = { ...makeTicket('served'), recalled: 4 }
+
+    expect(canRecallTicket(ticket)).toBe(true)
+  })
 })
 
 describe('filterTickets', () => {
