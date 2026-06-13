@@ -32,7 +32,6 @@ const selectedRows = computed(() => {
   return props.table.getFilteredSelectedRowModel().rows.map(row => row.original)
 })
 
-// Status options for filtering
 const statusOptions = [
   { label: 'Pending', value: 'pending' },
   { label: 'Confirmed', value: 'confirmed' },
@@ -44,17 +43,14 @@ const statusOptions = [
   { label: 'Voided', value: 'voided' },
 ]
 
-// Device options for filtering (derive from props)
 const deviceOptions = computed(() => {
   return (props.devices ?? []).map(d => ({ label: d.name, value: d.name }))
 })
 
-// Table options for filtering (derive from props)
 const tableOptions = computed(() => {
   return (props.tables ?? []).map(t => ({ label: t.name, value: t.name }))
 })
 
-// Dialog states
 const showCompleteDialog = ref(false)
 const showVoidDialog = ref(false)
 
@@ -76,15 +72,15 @@ const handleBulkComplete = () => {
 }
 
 const handleBulkVoid = () => {
-  const ids = selectedRows.value.map((order: any) => order.id)
-  
+  const orderIds = selectedRows.value.map((order: any) => order.order_id)
+
   router.post(route('orders.bulk-void'), {
-    ids: ids,
+    order_ids: orderIds,
   }, {
     onSuccess: () => {
       showVoidDialog.value = false
       props.table.resetRowSelection()
-      toast.success(`${ids.length} order(s) voided successfully`)
+      toast.success(`${orderIds.length} order(s) voided successfully`)
     },
     onError: () => {
       toast.error('Failed to void orders')
@@ -98,17 +94,13 @@ const handleRefresh = () => {
 }
 
 const handleExport = () => {
-  // Get filtered data
   const filteredData = props.table.getFilteredRowModel().rows.map(row => row.original)
-  
-  // Convert to CSV
   const headers = ['Order #', 'Device', 'Table', 'Guests', 'Total', 'Status', 'Created']
   const rows = filteredData.map((order: any) => {
-    const total = Array.isArray(order.items) 
-      ? order.items.reduce((acc: number, item: any) => 
+    const total = Array.isArray(order.items)
+      ? order.items.reduce((acc: number, item: any) =>
           acc + (Number(item?.price) || 0) * (Number(item?.quantity) || 0) + (Number(item?.tax) || 0), 0)
       : 0
-    
     return [
       order.order_number,
       order.device?.name || '',
@@ -119,10 +111,7 @@ const handleExport = () => {
       order.created_at ? new Date(order.created_at).toLocaleString() : '',
     ]
   })
-  
   const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
-  
-  // Download
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -130,7 +119,6 @@ const handleExport = () => {
   link.download = `orders-${new Date().toISOString().split('T')[0]}.csv`
   link.click()
   URL.revokeObjectURL(url)
-  
   toast.success('Orders exported to CSV')
 }
 </script>

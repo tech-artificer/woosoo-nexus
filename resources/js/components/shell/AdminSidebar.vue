@@ -24,7 +24,9 @@ function close() {
 
 function isActive(routeName: string): boolean {
     try {
-        return matchesRoute(route(routeName), currentUrl.value);
+        const href = route(routeName);
+        const path = href.startsWith('http') ? new URL(href).pathname : href;
+        return matchesRoute(path, currentUrl.value);
     } catch {
         return false;
     }

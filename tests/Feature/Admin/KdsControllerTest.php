@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
 use App\Models\User;
+use Illuminate\Testing\Fluent\AssertableJson;
 
 test('admins can advance a confirmed order to in_progress', function () {
     $admin = User::factory()->admin()->create();
@@ -182,6 +183,18 @@ test('recall returns 422 for a completed order', function () {
         ->assertUnprocessable();
 });
 
+test('recall returns 422 when max recalls reached', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 5]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Maximum recalls reached for this order.']);
+
+    expect($order->fresh()->recalled)->toBe(5);
+});
+
 test('non-admin cannot access recall endpoint', function () {
     $user = User::factory()->create(['is_admin' => false]);
     $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED]);
@@ -231,4 +244,55 @@ test('toggle response carries item_id and order_id for optimistic apply', functi
         ->assertJsonPath('item_id', $item->id)
         ->assertJsonPath('order_id', $order->id)
         ->assertJsonPath('done', true);
+});
+
+// --- server_now clock offset ---
+
+test('advance response includes server_now as an integer', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::CONFIRMED]);
+
+    $before = (int) (microtime(true) * 1000);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk()
+        ->assertJsonStructure(['server_now'])
+        ->assertJson(fn (AssertableJson $json) => $json
+            ->where('server_now', fn ($value) => is_int($value) && $value >= $before)
+            ->etc()
+        );
+});
+
+test('recall response includes server_now as an integer', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 0]);
+
+    $before = (int) (microtime(true) * 1000);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertOk()
+        ->assertJsonStructure(['server_now'])
+        ->assertJson(fn (AssertableJson $json) => $json
+            ->where('server_now', fn ($value) => is_int($value) && $value >= $before)
+            ->etc()
+        );
+});
+
+test('toggle response includes server_now as an integer', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $before = (int) (microtime(true) * 1000);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertOk()
+        ->assertJsonStructure(['server_now'])
+        ->assertJson(fn (AssertableJson $json) => $json
+            ->where('server_now', fn ($value) => is_int($value) && $value >= $before)
+            ->etc()
+        );
 });

@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Admin\Reports;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReportQueryRequest;
 use App\Services\Reports\DailySalesReport;
-use App\Services\Reports\MenuItemSalesReport;
-use App\Services\Reports\HourlySalesReport;
-use App\Services\Reports\GuestCountReport;
-use App\Services\Reports\PrintJobAuditReport;
-use App\Services\Reports\OrderStatusReport;
 use App\Services\Reports\DiscountTaxReport;
+use App\Services\Reports\GuestCountReport;
+use App\Services\Reports\HourlySalesReport;
+use App\Services\Reports\MenuItemSalesReport;
+use App\Services\Reports\OrderStatusReport;
+use App\Services\Reports\PrintJobAuditReport;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
@@ -24,21 +25,47 @@ class ReportController extends Controller
 
     public function dailySales(ReportQueryRequest $request)
     {
-        $service = new DailySalesReport();
+        $service = new DailySalesReport;
         [$data, $meta] = $service->getData($request);
 
         return Inertia::render('reports/DailySales', [
             'title' => 'Daily Sales Summary',
             'data' => $data,
             'meta' => $meta,
-            'startDate' => $request->input('start_date'),
-            'endDate' => $request->input('end_date'),
+            'startDate' => $request->input('start_date') ?? $meta['start_date'] ?? null,
+            'endDate' => $request->input('end_date') ?? $meta['end_date'] ?? null,
         ]);
+    }
+
+    public function exportDailySales(ReportQueryRequest $request): StreamedResponse
+    {
+        $service = new DailySalesReport;
+        [$data] = $service->getData($request);
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="daily-sales.csv"',
+        ];
+
+        return response()->stream(function () use ($data) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['date', 'transaction_count', 'total_sales', 'avg_order_value', 'total_guests']);
+            foreach ($data as $row) {
+                fputcsv($out, [
+                    $row['date'],
+                    $row['transaction_count'],
+                    $row['total_sales'],
+                    $row['avg_order_value'],
+                    $row['total_guests'],
+                ]);
+            }
+            fclose($out);
+        }, 200, $headers);
     }
 
     public function menuItems(ReportQueryRequest $request)
     {
-        $service = new MenuItemSalesReport();
+        $service = new MenuItemSalesReport;
         [$data, $meta] = $service->getData($request);
 
         return Inertia::render('reports/MenuItems', [
@@ -52,7 +79,7 @@ class ReportController extends Controller
 
     public function hourlySales(ReportQueryRequest $request)
     {
-        $service = new HourlySalesReport();
+        $service = new HourlySalesReport;
         [$data, $meta] = $service->getData($request);
 
         return Inertia::render('reports/HourlySales', [
@@ -66,7 +93,7 @@ class ReportController extends Controller
 
     public function guestCount(ReportQueryRequest $request)
     {
-        $service = new GuestCountReport();
+        $service = new GuestCountReport;
         [$data, $meta] = $service->getData($request);
 
         return Inertia::render('reports/GuestCount', [
@@ -80,7 +107,7 @@ class ReportController extends Controller
 
     public function printAudit(ReportQueryRequest $request)
     {
-        $service = new PrintJobAuditReport();
+        $service = new PrintJobAuditReport;
         [$data, $meta] = $service->getData($request);
 
         return Inertia::render('reports/PrintAudit', [
@@ -94,7 +121,7 @@ class ReportController extends Controller
 
     public function orderStatus(ReportQueryRequest $request)
     {
-        $service = new OrderStatusReport();
+        $service = new OrderStatusReport;
         [$data, $meta] = $service->getData($request);
 
         return Inertia::render('reports/OrderStatus', [
@@ -108,7 +135,7 @@ class ReportController extends Controller
 
     public function discountTax(ReportQueryRequest $request)
     {
-        $service = new DiscountTaxReport();
+        $service = new DiscountTaxReport;
         [$data, $meta] = $service->getData($request);
 
         return Inertia::render('reports/DiscountTax', [

@@ -19,7 +19,17 @@ class ItemToggled implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [new Channel('admin.orders')];
+        $channels = [
+            new Channel('admin.orders'),
+            new Channel('orders.'.$this->item->order_id),
+        ];
+
+        $deviceId = $this->item->device_order?->device_id;
+        if ($deviceId !== null) {
+            $channels[] = new Channel('device.'.$deviceId);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string

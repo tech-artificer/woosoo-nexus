@@ -18,6 +18,7 @@ async function parseError(response: Response): Promise<string> {
 export type KdsActionResponse = {
   status: string
   order: Record<string, unknown>
+  server_now?: number
 }
 
 export type KdsToggleResponse = {
@@ -25,6 +26,7 @@ export type KdsToggleResponse = {
   order_id: string | number
   done: boolean
   done_at: string | null
+  server_now?: number
 }
 
 export async function postKdsAdvance(orderId: string): Promise<KdsActionResponse> {

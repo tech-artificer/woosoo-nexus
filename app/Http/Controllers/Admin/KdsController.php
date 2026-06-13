@@ -24,6 +24,8 @@ class KdsController extends Controller
         private readonly PosConnectionService $posConnection,
     ) {}
 
+    private const MAX_RECALLS = 5;
+
     private const HIDDEN_STATUSES = [
         OrderStatus::COMPLETED,
         OrderStatus::CANCELLED,
@@ -52,6 +54,7 @@ class KdsController extends Controller
         return Inertia::render('KDS/Display', [
             'title' => 'Kitchen Display',
             'initialTickets' => $orders->map(fn ($order) => $this->toTicket($order))->values(),
+            'serverNow' => (int) (microtime(true) * 1000),
         ]);
     }
 
@@ -96,9 +99,11 @@ class KdsController extends Controller
                     return;
                 }
 
-                // Kitchen-facing single action: contract-safe two-hop in_progress -> ready -> served.
+                // Kitchen-facing single action: in_progress → ready → served.
+                // saveQuietly() for the READY step prevents a spurious observer broadcast;
+                // only the SERVED save triggers the afterCommit dispatch.
                 $locked->status = OrderStatus::READY;
-                $locked->save();
+                $locked->saveQuietly();
                 $locked->status = OrderStatus::SERVED;
                 $locked->save();
                 $next = OrderStatus::SERVED;
@@ -140,6 +145,7 @@ class KdsController extends Controller
         return response()->json([
             'status' => $next->value,
             'order' => OrderBroadcastPayload::make($order),
+            'server_now' => (int) (microtime(true) * 1000),
         ]);
     }
 
@@ -177,6 +183,7 @@ class KdsController extends Controller
             'order_id' => $item->order_id,
             'done' => (bool) $item->done,
             'done_at' => $item->done_at?->toIso8601String(),
+            'server_now' => (int) (microtime(true) * 1000),
         ]);
     }
 
@@ -199,6 +206,10 @@ class KdsController extends Controller
         // Recall is served→in_progress only; other paths to in_progress go through advance().
         if ($order->status !== OrderStatus::SERVED) {
             return response()->json(['message' => 'Order cannot be recalled from its current state.'], 422);
+        }
+
+        if (($order->recalled ?? 0) >= self::MAX_RECALLS) {
+            return response()->json(['message' => 'Maximum recalls reached for this order.'], 422);
         }
 
         $gateMessage = null;
@@ -232,6 +243,7 @@ class KdsController extends Controller
         return response()->json([
             'status' => OrderStatus::IN_PROGRESS->value,
             'order' => OrderBroadcastPayload::make($order),
+            'server_now' => (int) (microtime(true) * 1000),
         ]);
     }
 
