@@ -29,12 +29,12 @@ export function isActive(state: KdsTicketState): boolean {
   return ACTIVE_STATES.includes(state)
 }
 
-export function elapsedFor(ticket: KdsTicket, now: number): number {
+export function elapsedFor(ticket: KdsTicket, now: number, clockOffset = 0): number {
   if (isTerminal(ticket.state)) {
     return ticket.frozenElapsed ?? ticket.elapsed
   }
 
-  return Math.max(0, Math.floor((now - ticket.issuedAt) / 1000))
+  return Math.max(0, Math.floor((now + clockOffset - ticket.issuedAt) / 1000))
 }
 
 export function formatElapsed(seconds: number): string {
@@ -44,12 +44,12 @@ export function formatElapsed(seconds: number): string {
   return `${mins}:${String(secs).padStart(2, '0')}`
 }
 
-export function urgencyFor(ticket: KdsTicket, now: number, thresholds: KdsThresholds = KDS_THRESHOLDS): KdsUrgency {
+export function urgencyFor(ticket: KdsTicket, now: number, clockOffset = 0, thresholds: KdsThresholds = KDS_THRESHOLDS): KdsUrgency {
   if (isTerminal(ticket.state)) {
     return 'ok'
   }
 
-  const elapsed = elapsedFor(ticket, now)
+  const elapsed = elapsedFor(ticket, now, clockOffset)
   const threshold = thresholds[ticket.type]
 
   if (elapsed >= threshold.over) {
