@@ -156,4 +156,39 @@ class PackageManagementTest extends TestCase
         $this->assertDatabaseMissing('package_allowed_menus', ['package_id' => $package->id, 'krypton_menu_id' => 101]);
         $this->assertDatabaseHas('package_allowed_menus', ['package_id' => $package->id, 'krypton_menu_id' => 201]);
     }
+
+    public function test_sync_allowed_menus_rejects_invalid_payload(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $package = Package::create(['name' => 'Set Meal Bad', 'is_active' => true, 'sort_order' => 0]);
+        $package->allowedMenus()->create(['krypton_menu_id' => 101, 'menu_type' => 'meat', 'sort_order' => 0, 'quantity_limit' => 1]);
+
+        /** @var Authenticatable $admin */
+        $response = $this->actingAs($admin)->postJson(route('packages.sync-menus', $package), [
+            'allowed_menus' => [
+                ['krypton_menu_id' => 0, 'quantity_limit' => 1],
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        // Existing meats are untouched when the payload is rejected.
+        $this->assertDatabaseHas('package_allowed_menus', ['package_id' => $package->id, 'krypton_menu_id' => 101]);
+    }
+
+    public function test_store_rejects_max_meat_below_min_meat(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        /** @var Authenticatable $admin */
+        $response = $this->actingAs($admin)->post(route('packages.store'), [
+            'name' => 'Inverted Meat Range',
+            'min_meat' => 3,
+            'max_meat' => 1,
+            'is_active' => true,
+        ]);
+
+        $response->assertSessionHasErrors('max_meat');
+        $this->assertDatabaseMissing('packages', ['name' => 'Inverted Meat Range']);
+    }
 }

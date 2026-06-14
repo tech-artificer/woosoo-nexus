@@ -13,6 +13,7 @@ use App\Models\Krypton\Menu;
 use App\Models\Package;
 use App\Models\PackageAllowedMenu;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -27,26 +28,28 @@ class PackageController extends Controller
             ->orderBy('id')
             ->get();
 
-        $enriched = $packages->map(function (Package $package) {
-            $data = (new PackageResource($package))->resolve();
+        // Preload every referenced Krypton menu name in a single query (avoids N+1).
+        $menuIds = $packages->flatMap(fn (Package $p) => $p->allowedMenus->pluck('krypton_menu_id'))
+            ->filter()->unique()->values()->toArray();
 
-            $menuIds = $package->allowedMenus->pluck('krypton_menu_id')->filter()->unique()->values()->toArray();
-
-            $menuNames = [];
-            if (! empty($menuIds)) {
-                try {
-                    $menuNames = Menu::query()
-                        ->select('id', 'name', 'receipt_name')
-                        ->whereIn('id', $menuIds)
-                        ->get()
-                        ->mapWithKeys(fn (Menu $m) => [
-                            $m->id => $m->name ?: $m->receipt_name ?: ('Menu #'.$m->id),
-                        ])
-                        ->toArray();
-                } catch (QueryException) {
-                    $menuNames = [];
-                }
+        $menuNames = [];
+        if (! empty($menuIds)) {
+            try {
+                $menuNames = Menu::query()
+                    ->select('id', 'name', 'receipt_name')
+                    ->whereIn('id', $menuIds)
+                    ->get()
+                    ->mapWithKeys(fn (Menu $m) => [
+                        $m->id => $m->name ?: $m->receipt_name ?: ('Menu #'.$m->id),
+                    ])
+                    ->toArray();
+            } catch (QueryException) {
+                $menuNames = [];
             }
+        }
+
+        $enriched = $packages->map(function (Package $package) use ($menuNames) {
+            $data = (new PackageResource($package))->resolve();
 
             $data['allowed_menus'] = $package->allowedMenus->map(fn (PackageAllowedMenu $am) => [
                 'id' => $am->id,
@@ -160,9 +163,22 @@ class PackageController extends Controller
         return redirect()->route('packages.index')->with('success', 'Package deleted successfully.');
     }
 
-    public function syncAllowedMenus(Request $request, Package $package)
+    public function syncAllowedMenus(Request $request, Package $package): JsonResponse
     {
-        $this->replaceAllowedMenus($package, $request->input('allowed_menus', []));
+        $validated = $request->validate([
+            'allowed_menus' => ['nullable', 'array'],
+            'allowed_menus.*.krypton_menu_id' => ['required', 'integer', 'min:1'],
+            'allowed_menus.*.extra_price' => ['nullable', 'numeric', 'min:0'],
+            'allowed_menus.*.quantity_limit' => ['nullable', 'integer', 'min:1'],
+            'allowed_menus.*.is_required' => ['nullable', 'boolean'],
+            'allowed_menus.*.is_default' => ['nullable', 'boolean'],
+            'allowed_menus.*.is_active' => ['nullable', 'boolean'],
+            'allowed_menus.*.sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        DB::transaction(function () use ($package, $validated): void {
+            $this->replaceAllowedMenus($package, $validated['allowed_menus'] ?? []);
+        });
 
         $this->broadcastPackageUpdated();
 

@@ -34,7 +34,11 @@ interface AllowedMenuVm {
     id?: number
     krypton_menu_id: number
     menu_name: string
+    extra_price?: number
     quantity_limit: number
+    is_required?: boolean
+    is_default?: boolean
+    is_active?: boolean
     sort_order: number
 }
 
@@ -189,7 +193,11 @@ function executeDelete(): void {
 
 interface SyncEntry {
     krypton_menu_id: number
+    extra_price: number
     quantity_limit: number
+    is_required: boolean
+    is_default: boolean
+    is_active: boolean
     sort_order: number
 }
 
@@ -230,7 +238,15 @@ function toggleSyncMenu(menuId: number, checked: boolean): void {
         if (!isMenuSelected(menuId)) {
             syncForm.allowed_menus = [
                 ...syncForm.allowed_menus,
-                { krypton_menu_id: menuId, quantity_limit: 1, sort_order: syncForm.allowed_menus.length },
+                {
+                    krypton_menu_id: menuId,
+                    extra_price: 0,
+                    quantity_limit: 1,
+                    is_required: false,
+                    is_default: false,
+                    is_active: true,
+                    sort_order: syncForm.allowed_menus.length,
+                },
             ]
         }
     } else {
@@ -249,7 +265,11 @@ function openManageMenus(item: PackageVm): void {
     managingPackage.value = item
     syncForm.allowed_menus = (item.allowed_menus ?? []).map((am, idx) => ({
         krypton_menu_id: am.krypton_menu_id,
+        extra_price: am.extra_price ?? 0,
         quantity_limit: am.quantity_limit,
+        is_required: am.is_required ?? false,
+        is_default: am.is_default ?? false,
+        is_active: am.is_active ?? true,
         sort_order: am.sort_order ?? idx,
     }))
     menuSyncSearch.value = ''
