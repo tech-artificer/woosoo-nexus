@@ -296,3 +296,32 @@ test('toggle response includes server_now as an integer', function () {
             ->etc()
         );
 });
+
+// --- MAX_RECALLS atomicity ---
+
+test('recall is rejected when recalled count is already at the cap', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 5]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Maximum recalls reached for this order.']);
+
+    expect($order->fresh()->recalled)->toBe(5);
+});
+
+// --- advance in_progress → served path ---
+
+test('advance from in_progress resolves directly to served — no intermediate ready status persists', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk()
+        ->assertJsonPath('status', 'served');
+
+    expect($order->fresh()->status)->toBe(OrderStatus::SERVED);
+});
