@@ -162,9 +162,9 @@ class StagingKryptonOrderDataContractTest extends TestCase
             'sort_order' => 0,
         ]);
 
-        $package->modifiers()->createMany([
-            ['krypton_menu_id' => 10, 'sort_order' => 1],
-            ['krypton_menu_id' => 13, 'sort_order' => 2],
+        $package->allowedMenus()->createMany([
+            ['krypton_menu_id' => 10, 'menu_type' => 'meat', 'sort_order' => 1, 'quantity_limit' => 1],
+            ['krypton_menu_id' => 13, 'menu_type' => 'meat', 'sort_order' => 2, 'quantity_limit' => 1],
         ]);
 
         $device = $this->makeStagingDevice();
@@ -207,15 +207,14 @@ class StagingKryptonOrderDataContractTest extends TestCase
         $this->assertNull($rows->firstWhere('menu_id', 11));
     }
 
-
     private function makeStagingDevice(): Device
     {
         return Device::create([
-            'id'         => 199,
-            'name'       => 'Staging Audit Tablet T1',
+            'id' => 199,
+            'name' => 'Staging Audit Tablet T1',
             'ip_address' => '192.168.100.51',
-            'is_active'  => true,
-            'table_id'   => 19,
+            'is_active' => true,
+            'table_id' => 19,
         ]);
     }
 

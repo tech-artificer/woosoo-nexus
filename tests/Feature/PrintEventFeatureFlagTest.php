@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceOrder;
-use App\Models\Branch;
 use App\Models\Krypton\Menu;
 use App\Models\Package;
-use App\Models\PackageModifier;
 use App\Models\PrintEvent;
 use App\Services\PrintEventService;
 use Illuminate\Support\Facades\Config;
@@ -26,7 +25,7 @@ describe('PrintEvent feature flag disabled (MVP default)', function () {
         $device = Device::factory()->create();
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $device->createToken('test')->plainTextToken,
+            'Authorization' => 'Bearer '.$device->createToken('test')->plainTextToken,
         ])->getJson('/api/printer/unprinted-events');
 
         $response->assertStatus(503)
@@ -44,7 +43,7 @@ describe('PrintEvent feature flag disabled (MVP default)', function () {
         $printEvent = PrintEvent::factory()->create();
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $device->createToken('test')->plainTextToken,
+            'Authorization' => 'Bearer '.$device->createToken('test')->plainTextToken,
         ])->postJson("/api/printer/print-events/{$printEvent->id}/ack", [
             'printer_id' => 'TEST_PRINTER',
             'printed_at' => now()->toIso8601String(),
@@ -64,7 +63,7 @@ describe('PrintEvent feature flag disabled (MVP default)', function () {
         $printEvent = PrintEvent::factory()->create();
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $device->createToken('test')->plainTextToken,
+            'Authorization' => 'Bearer '.$device->createToken('test')->plainTextToken,
         ])->postJson("/api/printer/print-events/{$printEvent->id}/failed", [
             'reason' => 'Printer offline',
         ]);
@@ -76,7 +75,7 @@ describe('PrintEvent feature flag disabled (MVP default)', function () {
         $device = Device::factory()->create();
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $device->createToken('test')->plainTextToken,
+            'Authorization' => 'Bearer '.$device->createToken('test')->plainTextToken,
         ])->postJson('/api/printer/heartbeat');
 
         $response->assertStatus(503);
@@ -129,16 +128,17 @@ describe('PrintEvent feature flag disabled (MVP default)', function () {
             'is_active' => true,
             'sort_order' => 0,
         ]);
-        PackageModifier::create([
-            'package_id' => $package->id,
+        $package->allowedMenus()->create([
             'krypton_menu_id' => $modifier->id,
+            'menu_type' => 'meat',
             'sort_order' => 0,
+            'quantity_limit' => 1,
         ]);
 
         $this->createTestSession();
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $device->createToken('test')->plainTextToken,
+            'Authorization' => 'Bearer '.$device->createToken('test')->plainTextToken,
         ])->postJson('/api/devices/create-order', [
             'guest_count' => 2,
             'package_id' => 46,

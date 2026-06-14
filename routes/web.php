@@ -87,11 +87,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/menus', [MenuController::class, 'index'])->name('menus');
         Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');
         Route::post('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
-        // Packages (canonical Package model — POS menu + modifier cuts)
+        // Packages
         Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
         Route::post('/packages', [PackageController::class, 'store'])->name('packages.store');
         Route::put('/packages/{package}', [PackageController::class, 'update'])->name('packages.update');
         Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
+        Route::post('/packages/{package}/menus', [PackageController::class, 'syncAllowedMenus'])->name('packages.sync-menus');
         // Tablet Categories
         Route::get('/tablet-categories', [TabletCategoryController::class, 'index'])->name('tablet-categories.index');
         Route::put('/tablet-categories/reorder', [TabletCategoryController::class, 'reorder'])->name('tablet-categories.reorder');
