@@ -71,7 +71,7 @@ class TabletPackagesApiTest extends TestCase
         $this->assertEquals('meat', $response->json('data.0.allowed_menus.0.menu_type'));
     }
 
-    public function test_packages_response_includes_category_limits(): void
+    public function test_packages_response_includes_meat_limits_and_most_popular(): void
     {
         $device = $this->authenticatedDevice();
 
@@ -80,8 +80,7 @@ class TabletPackagesApiTest extends TestCase
             'is_active' => true,
             'min_meat' => 1,
             'max_meat' => 3,
-            'min_side' => 0,
-            'max_side' => 5,
+            'is_most_popular' => true,
         ]);
 
         $response = $this->withToken($this->deviceToken($device), 'Bearer')
@@ -90,8 +89,9 @@ class TabletPackagesApiTest extends TestCase
         $response->assertOk();
         $this->assertEquals(1, $response->json('data.0.min_meat'));
         $this->assertEquals(3, $response->json('data.0.max_meat'));
-        $this->assertEquals(0, $response->json('data.0.min_side'));
-        $this->assertEquals(5, $response->json('data.0.max_side'));
+        $this->assertTrue($response->json('data.0.is_most_popular'));
+        // Non-meat limits are no longer part of the package contract (banchan is global).
+        $this->assertArrayNotHasKey('min_side', $response->json('data.0'));
     }
 
     public function test_package_details_returns_payload_for_active_package(): void
