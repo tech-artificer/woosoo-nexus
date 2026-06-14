@@ -77,7 +77,7 @@ class PackageManagementTest extends TestCase
             'is_active' => false,
             'sort_order' => 8,
             'allowed_menus' => [
-                ['krypton_menu_id' => 201, 'menu_type' => 'side', 'sort_order' => 0, 'quantity_limit' => 2],
+                ['krypton_menu_id' => 201, 'sort_order' => 0, 'quantity_limit' => 2],
             ],
         ]);
 
@@ -95,10 +95,11 @@ class PackageManagementTest extends TestCase
             'package_id' => $package->id,
             'krypton_menu_id' => 101,
         ]);
+        // Packages store meats only — synced entries are always meat.
         $this->assertDatabaseHas('package_allowed_menus', [
             'package_id' => $package->id,
             'krypton_menu_id' => 201,
-            'menu_type' => 'side',
+            'menu_type' => 'meat',
             'sort_order' => 0,
         ]);
     }
