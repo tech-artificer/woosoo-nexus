@@ -25,6 +25,14 @@ window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };
 
+window.addEventListener('error', (event) => {
+    console.error('[GLOBAL ERROR]', event.error ?? event.message, event);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('[UNHANDLED REJECTION]', event.reason);
+});
+
 try {
     window.Echo = new Echo({
         broadcaster: import.meta.env.VITE_BROADCAST_DRIVER ?? 'reverb',
