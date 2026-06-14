@@ -92,7 +92,7 @@ const pendingDelete = ref<PackageVm | null>(null)
 const form = useForm({
     name: '',
     description: '',
-    base_price: null as number | null,
+    base_price: 0,
     min_meat: 1,
     max_meat: 3,
     min_side: 0,
@@ -124,7 +124,7 @@ function resetForm(): void {
     editingId.value = null
     form.reset()
     form.clearErrors()
-    form.base_price = null
+    form.base_price = 0
     form.min_meat = 1
     form.max_meat = 3
     form.min_side = 0
@@ -147,7 +147,7 @@ function openEdit(item: PackageVm): void {
     editingId.value = item.id
     form.name = item.name
     form.description = item.description ?? ''
-    form.base_price = item.base_price
+    form.base_price = item.base_price ?? 0
     form.min_meat = item.min_meat
     form.max_meat = item.max_meat
     form.min_side = item.min_side
@@ -517,7 +517,7 @@ function submitSyncMenus(): void {
                             <span class="min-w-0 flex-1 truncate text-sm font-medium">
                                 {{ (props.menuOptions ?? []).find((m) => m.id === entry.krypton_menu_id)?.name ?? `#${entry.krypton_menu_id}` }}
                             </span>
-                            <Select :model-value="entry.menu_type" @update:model-value="(v) => setSyncEntryType(entry.krypton_menu_id, v)">
+                            <Select :model-value="entry.menu_type" @update:model-value="(v) => v != null && setSyncEntryType(entry.krypton_menu_id, String(v))">
                                 <SelectTrigger class="h-7 w-24 text-xs">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -530,7 +530,7 @@ function submitSyncMenus(): void {
                                 min="1"
                                 :model-value="entry.quantity_limit"
                                 class="h-7 w-14 text-xs"
-                                @input="(e) => setSyncEntryQty(entry.krypton_menu_id, Number((e.target as HTMLInputElement).value))"
+                                @input="(e: Event) => setSyncEntryQty(entry.krypton_menu_id, Number((e.target as HTMLInputElement).value))"
                             />
                             <button
                                 type="button"
