@@ -3,18 +3,16 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\MenuModifierResource;
 use App\Http\Resources\MenuResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Krypton\Menu;
-use App\Models\ModifierDescription;
 use App\Models\Package;
+use App\Models\PackageAllowedMenu;
 use App\Models\TabletCategory;
 use App\Repositories\Krypton\MenuRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -63,8 +61,7 @@ class TabletApiController extends Controller
     {
         try {
             $resolved = Cache::remember(self::PACKAGES_CACHE_KEY, self::PACKAGES_CACHE_TTL, function () {
-                // Load only active packages from app DB, ordered for display.
-                $dbPackages = Package::with('modifiers')
+                $dbPackages = Package::with('allowedMenus')
                     ->where('is_active', true)
                     ->orderBy('sort_order')
                     ->get();
@@ -73,90 +70,62 @@ class TabletApiController extends Controller
                     return [];
                 }
 
-                $packageMenuIds = $dbPackages->pluck('krypton_menu_id')
-                    ->filter()
-                    ->unique()
-                    ->values()
-                    ->toArray();
-
-                $modifierMenuIds = $dbPackages->flatMap(fn ($p) => $p->modifiers->pluck('krypton_menu_id'))
+                $kryptonMenuIds = $dbPackages->flatMap(fn ($p) => $p->allowedMenus->pluck('krypton_menu_id'))
                     ->filter()->unique()->values()->toArray();
 
-                $menuIds = array_values(array_unique(array_merge($packageMenuIds, $modifierMenuIds)));
+                $kryptonMenus = collect([]);
+                if (! empty($kryptonMenuIds)) {
+                    try {
+                        $kryptonMenus = Menu::with(['image'])
+                            ->whereIn('id', $kryptonMenuIds)
+                            ->get()
+                            ->keyBy('id');
 
-                $kryptonMenus = Menu::with(['image', 'tax', 'group', 'category', 'course'])
-                    ->whereIn('id', $menuIds)
-                    ->get()
-                    ->keyBy('id');
-
-                // Cross-connection patch (MenuImage on mysql, Menu on pos) — without this
-                // the image_url accessor falls through to brand-asset/placeholder URLs
-                // even when an admin-uploaded image exists. Covers both package menus
-                // and the modifier menus the tablet PWA renders inside each package.
-                Menu::attachUploadedImages($kryptonMenus);
-
-                $modifierDescriptions = ModifierDescription::query()
-                    ->whereIn('krypton_menu_id', $modifierMenuIds)
-                    ->pluck('description', 'krypton_menu_id');
-
-                $result = $dbPackages->map(function ($dbPackage) use ($kryptonMenus, $modifierDescriptions) {
-                    $packageMenuId = (int) $dbPackage->krypton_menu_id;
-                    $packageMenu = $kryptonMenus->get($packageMenuId);
-
-                    if (! $packageMenu) {
-                        Log::warning("Invalid Package: id={$dbPackage->id}, krypton_menu_id={$packageMenuId} not found in POS");
-
-                        return null;
+                        Menu::attachUploadedImages($kryptonMenus);
+                    } catch (\Exception $e) {
+                        Log::warning('V2 Tablet API - POS menus unavailable: '.$e->getMessage());
                     }
+                }
 
-                    $modifiers = $dbPackage->modifiers
-                        ->sortBy('sort_order')
-                        ->values()
-                        ->map(function ($packageModifier) use ($kryptonMenus, $modifierDescriptions) {
-                            $menuId = (int) $packageModifier->krypton_menu_id;
-                            $modifierMenu = $kryptonMenus->get($menuId);
+                return $dbPackages->map(function (Package $pkg) use ($kryptonMenus): array {
+                    $allowedMenus = $pkg->allowedMenus->sortBy('sort_order')->map(
+                        function (PackageAllowedMenu $am) use ($kryptonMenus): array {
+                            $kMenu = $kryptonMenus->get($am->krypton_menu_id);
 
-                            if (! $modifierMenu) {
-                                Log::warning("Invalid PackageModifier: id={$packageModifier->id}, krypton_menu_id={$menuId} not found in POS");
+                            return [
+                                'id' => $am->id,
+                                'krypton_menu_id' => $am->krypton_menu_id,
+                                'menu_name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$am->krypton_menu_id}",
+                                'menu_type' => $am->menu_type,
+                                'meat_category_code' => $am->meat_category_code,
+                                'extra_price' => (float) $am->extra_price,
+                                'quantity_limit' => (int) $am->quantity_limit,
+                                'is_required' => (bool) $am->is_required,
+                                'is_default' => (bool) $am->is_default,
+                                'is_active' => (bool) $am->is_active,
+                                'sort_order' => (int) $am->sort_order,
+                            ];
+                        }
+                    )->values()->all();
 
-                                return null;
-                            }
-
-                            $payload = MenuModifierResource::make($modifierMenu)->resolve();
-
-                            $description = $modifierDescriptions->get($menuId);
-                            if ($description !== null && $description !== '') {
-                                $payload['description'] = $description;
-                            }
-
-                            $payload['id'] = $menuId;
-                            $payload['krypton_menu_id'] = $menuId;
-                            $payload['package_modifier_id'] = (int) $packageModifier->id;
-                            $payload['sort_order'] = (int) $packageModifier->sort_order;
-
-                            return $payload;
-                        })
-                        ->filter()
-                        ->values();
-
-                    $payload = MenuResource::make($packageMenu)->resolve();
-                    $description = $dbPackage->description;
-
-                    $payload['id'] = $packageMenuId;
-                    $payload['package_id'] = $packageMenuId;
-                    $payload['krypton_menu_id'] = $packageMenuId;
-                    $payload['description'] = $description;
-                    $payload['package_config_id'] = (int) $dbPackage->id;
-                    $payload['package_config_name'] = $dbPackage->name;
-                    $payload['package_config_description'] = $description;
-                    $payload['is_active'] = (bool) $dbPackage->is_active;
-                    $payload['sort_order'] = (int) $dbPackage->sort_order;
-                    $payload['modifiers'] = $modifiers;
-
-                    return $payload;
-                })->filter()->values();
-
-                return $result->all();
+                    return [
+                        'id' => $pkg->id,
+                        'name' => $pkg->name,
+                        'description' => $pkg->description,
+                        'base_price' => (float) $pkg->base_price,
+                        'min_meat' => (int) $pkg->min_meat,
+                        'max_meat' => (int) $pkg->max_meat,
+                        'min_side' => (int) $pkg->min_side,
+                        'max_side' => (int) $pkg->max_side,
+                        'min_dessert' => (int) $pkg->min_dessert,
+                        'max_dessert' => (int) $pkg->max_dessert,
+                        'min_beverage' => (int) $pkg->min_beverage,
+                        'max_beverage' => (int) $pkg->max_beverage,
+                        'is_active' => (bool) $pkg->is_active,
+                        'sort_order' => (int) $pkg->sort_order,
+                        'allowed_menus' => $allowedMenus,
+                    ];
+                })->values()->all();
             });
 
             return ApiResponse::success($resolved, 'Packages retrieved successfully');
@@ -259,18 +228,17 @@ class TabletApiController extends Controller
     /**
      * GET /api/v2/tablet/packages/{id}
      *
-     * Returns package details by Krypton menu ID.
-     * Only returns if the package is configured and active. No legacy fallback.
+     * Returns package details by Package ID.
+     * Only returns if the package is active.
      *
-     * @param  int  $id  Krypton menu ID (not local package config ID)
+     * @param  int  $id  Local Package ID
      * @return JsonResponse
      */
     public function packageDetails(Request $request, int $id)
     {
         try {
-            // Lookup by krypton_menu_id + is_active. No legacy fallback.
-            $dbPackage = Package::with('modifiers')
-                ->where('krypton_menu_id', $id)
+            $dbPackage = Package::with('allowedMenus')
+                ->where('id', $id)
                 ->where('is_active', true)
                 ->first();
 
@@ -278,74 +246,66 @@ class TabletApiController extends Controller
                 return ApiResponse::error('Package not found', null, 404);
             }
 
-            // Bulk-load package menu + modifier menus from Krypton.
-            $modifierMenuIds = $dbPackage->modifiers->pluck('krypton_menu_id')->filter()->toArray();
-            $allIds = array_unique(array_merge([$id], $modifierMenuIds));
+            $kryptonMenuIds = $dbPackage->allowedMenus->pluck('krypton_menu_id')->filter()->unique()->toArray();
 
-            $kryptonMenus = Menu::with(['image', 'tax', 'group'])
-                ->whereIn('id', $allIds)
-                ->get()
-                ->keyBy('id');
+            $kryptonMenus = collect([]);
+            if (! empty($kryptonMenuIds)) {
+                try {
+                    $kryptonMenus = Menu::with(['image'])
+                        ->whereIn('id', $kryptonMenuIds)
+                        ->get()
+                        ->keyBy('id');
 
-            // Cross-connection patch — see Menu::attachUploadedImages docblock.
-            Menu::attachUploadedImages($kryptonMenus);
-
-            $package = $kryptonMenus->get($id);
-            if (! $package) {
-                return ApiResponse::error('Package not found in POS', null, 404);
+                    Menu::attachUploadedImages($kryptonMenus);
+                } catch (\Exception $e) {
+                    Log::warning("V2 Tablet API - POS menus unavailable for package {$id}: ".$e->getMessage());
+                }
             }
 
-            // Resolve modifiers, exclude invalid entries + log warnings.
-            $modifiers = $dbPackage->modifiers
-                ->map(function ($pm) use ($kryptonMenus) {
-                    $kryptonMenu = $kryptonMenus->get($pm->krypton_menu_id);
-                    if (! $kryptonMenu) {
-                        Log::warning("Invalid PackageModifier: id={$pm->id}, krypton_menu_id={$pm->krypton_menu_id} not found in POS");
+            $allowedMenusByType = $dbPackage->allowedMenus->sortBy('sort_order')
+                ->groupBy('menu_type')
+                ->map(fn ($items) => $items->map(function (PackageAllowedMenu $am) use ($kryptonMenus): array {
+                    $kMenu = $kryptonMenus->get($am->krypton_menu_id);
 
-                        return null;
-                    }
-
-                    return $kryptonMenu;
-                })
-                ->filter()
-                ->values();
-
-            // Set the filtered modifiers collection
-            $package->setRelation('modifiers', $modifiers);
-
-            // Build response matching frontend PackageDetails shape
-            $packageArr = (new MenuResource($package))->resolve();
-
-            // Map modifiers into allowed_menus.meat using MenuModifierResource
-            $allowedMeats = MenuModifierResource::collection($modifiers)->resolve();
+                    return [
+                        'id' => $am->id,
+                        'krypton_menu_id' => $am->krypton_menu_id,
+                        'menu_name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$am->krypton_menu_id}",
+                        'menu_type' => $am->menu_type,
+                        'meat_category_code' => $am->meat_category_code,
+                        'extra_price' => (float) $am->extra_price,
+                        'quantity_limit' => (int) $am->quantity_limit,
+                        'is_required' => (bool) $am->is_required,
+                        'is_default' => (bool) $am->is_default,
+                        'is_active' => (bool) $am->is_active,
+                        'sort_order' => (int) $am->sort_order,
+                    ];
+                })->values()->all());
 
             $response = [
                 'package' => [
-                    'id' => $packageArr['id'] ?? $package->id,
-                    'name' => $packageArr['name'] ?? $package->name,
-                    'description' => $packageArr['kitchen_name'] ?? $packageArr['name'] ?? $package->name,
-                    'base_price' => isset($packageArr['price']) ? (float) str_replace(',', '', $packageArr['price']) : (float) $package->price,
+                    'id' => $dbPackage->id,
+                    'name' => $dbPackage->name,
+                    'description' => $dbPackage->description,
+                    'base_price' => (float) $dbPackage->base_price,
                     'limits' => [
-                        'meat' => ['min' => 1, 'max' => 5],
-                        'side' => ['min' => 0, 'max' => 5],
-                        'dessert' => ['min' => 0, 'max' => 5],
-                        'drinks' => ['min' => 0, 'max' => 5],
+                        'meat' => ['min' => $dbPackage->min_meat, 'max' => $dbPackage->max_meat],
+                        'side' => ['min' => $dbPackage->min_side, 'max' => $dbPackage->max_side],
+                        'dessert' => ['min' => $dbPackage->min_dessert, 'max' => $dbPackage->max_dessert],
+                        'drinks' => ['min' => $dbPackage->min_beverage, 'max' => $dbPackage->max_beverage],
                     ],
                     'has_limits' => true,
                 ],
                 'allowed_menus' => [
-                    'meat' => $allowedMeats,
-                    'side' => [],
-                    'dessert' => [],
-                    'drinks' => [],
+                    'meat' => $allowedMenusByType->get('meat', []),
+                    'side' => $allowedMenusByType->get('side', []),
+                    'dessert' => $allowedMenusByType->get('dessert', []),
+                    'drinks' => $allowedMenusByType->get('drinks', []),
                 ],
                 'default_selections' => [],
             ];
 
-            return ApiResponse::success(
-                $response,
-                'Package details retrieved successfully'
-            );
+            return ApiResponse::success($response, 'Package details retrieved successfully');
         } catch (\Exception $e) {
             Log::error("V2 Tablet API - package details error (ID: $id): ".$e->getMessage());
 
