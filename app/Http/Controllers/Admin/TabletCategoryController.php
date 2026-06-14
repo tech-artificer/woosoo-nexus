@@ -128,7 +128,7 @@ class TabletCategoryController extends Controller
     {
         $validated = $request->validate([
             'menu_ids' => ['required', 'array'],
-            'menu_ids.*' => ['integer', 'min:1'],
+            'menu_ids.*' => ['integer', 'min:1', 'distinct'],
         ]);
 
         DB::transaction(function () use ($tabletCategory, $validated): void {
@@ -158,6 +158,7 @@ class TabletCategoryController extends Controller
 
         $existingIds = $tabletCategory->menuPivots()->pluck('krypton_menu_id')->all();
         $nextOrder = $tabletCategory->menuPivots()->max('sort_order') ?? -1;
+        $attached = [];
 
         foreach ($validated['menu_ids'] as $menuId) {
             if (in_array($menuId, $existingIds, true)) {
@@ -168,9 +169,14 @@ class TabletCategoryController extends Controller
                 'sort_order' => ++$nextOrder,
                 'is_featured' => false,
             ]);
+            $attached[] = $menuId;
         }
 
-        return redirect()->back()->with('success', 'Menu(s) attached.');
+        $message = count($attached) > 0
+            ? count($attached).' menu(s) attached.'
+            : 'All selected menus were already attached.';
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**
