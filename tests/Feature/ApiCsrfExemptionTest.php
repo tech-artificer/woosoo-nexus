@@ -199,8 +199,10 @@ class ApiCsrfExemptionTest extends TestCase
             'Authorization' => 'Bearer ' . $device->createToken('test')->plainTextToken,
         ])->post('/api/order/123/refill');
 
-        // Should not return 419 for order refill endpoints
-        $this->assertContains($response->getStatusCode(), [404, 422]); // 404 if order not found, 422 if validation fails
+        // Should not return 419 for order refill endpoints.
+        // 404 = order not found, 422 = validation failure, 503 = POS session closed (no mock in this test).
+        // All are acceptable — only 419 (CSRF block) would indicate a failure.
+        $this->assertNotSame(419, $response->getStatusCode(), 'CSRF error must not occur on authenticated refill endpoints');
     }
 
     /** @test */

@@ -190,10 +190,11 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
         Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
         Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
         // P0 fix 2026-04-07: throttle order creation to prevent double-tap duplicates (10 req/min per device)
-        Route::post('/devices/create-order', DeviceOrderApiController::class)->middleware('throttle.device:10,1')->name('api.devices.create.order');
+        // session.pos: block when POS has no open session — order cannot be committed without a Krypton session_id
+        Route::post('/devices/create-order', DeviceOrderApiController::class)->middleware(['throttle.device:10,1', 'session.pos'])->name('api.devices.create.order');
 
         Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
-        Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
+        Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->middleware('session.pos')->name('api.service.request');
 
         Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
         Route::get('/device-orders', [OrderApiController::class, 'index']);
@@ -201,8 +202,9 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
         Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
         // Refill endpoint (device-authenticated) and alias for print-refill
-        Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->name('api.order.refill');
-        Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->name('api.order.print-refill');
+        // session.pos: refill creates new POS order rows and requires an open session
+        Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->middleware('session.pos')->name('api.order.refill');
+        Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->middleware('session.pos')->name('api.order.print-refill');
 
         // Session endpoints for devices
         Route::get('/sessions/current', [SessionApiController::class, 'current'])->name('api.sessions.current');
@@ -225,8 +227,9 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
     Route::prefix('v1')->middleware(['auth:device', UpdateDeviceLastSeen::class])->group(function () {
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/{order}', [OrderController::class, 'show']);
-        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
-        Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus']);
+        // session.pos: status mutations write to Krypton POS and require an open session
+        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('session.pos');
+        Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->middleware('session.pos');
     });
 
     // Admin/device-reset endpoints (requires sanctum auth)

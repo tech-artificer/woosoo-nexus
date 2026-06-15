@@ -13,10 +13,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Tests\TestCase;
+use Tests\Traits\MocksKryptonSession;
 
 /**
  * OrderApiController Refill Idempotency Integration Tests
- * 
+ *
  * Tests the full refill API endpoint to verify:
  * - Duplicate refill retry does not call CreateOrderedMenu twice
  * - Same client_submission_id reuses existing print event
@@ -25,7 +26,7 @@ use Tests\TestCase;
  */
 class OrderApiControllerRefillIdempotencyTest extends TestCase
 {
-    use RefreshDatabase;
+    use MocksKryptonSession, RefreshDatabase;
 
     private Device $device;
     private DeviceOrder $deviceOrder;
@@ -35,7 +36,10 @@ class OrderApiControllerRefillIdempotencyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
+        // Provide a valid POS session so CheckSessionIsOpened middleware passes on refill routes.
+        $this->mockActiveKryptonSession();
+
         $this->device = Device::factory()->create([
             'security_code' => 'test-token',
         ]);
