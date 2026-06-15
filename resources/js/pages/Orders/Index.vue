@@ -507,13 +507,6 @@ onMounted(() => {
     .error((error: unknown) => {
       console.error('[Echo] Error connecting to admin.service-requests channel:', error);
     });
-  
-  const printChannel = window.Echo.channel('admin.print');
-  printChannel
-    .listen('.order.printed', () => {})
-    .error((error: unknown) => {
-      console.error('[Echo] Error connecting to admin.print channel:', error);
-    });
 
   // Register local 'order.refill' handler to mark rows visually
   orderRefillHandler = (ev: any) => {
@@ -554,7 +547,6 @@ onUnmounted(() => {
       if (typeof (window.Echo as any).leave === 'function') {
         ;(window.Echo as any).leave('admin.orders')
         ;(window.Echo as any).leave('admin.service-requests')
-        ;(window.Echo as any).leave('admin.print')
       }
     } catch (e) {
       console.warn('Error leaving Echo channels', e)
