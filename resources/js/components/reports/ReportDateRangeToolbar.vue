@@ -40,12 +40,12 @@ function exportCsv() {
 <template>
   <div class="flex flex-wrap items-end gap-3 rounded-[18px] border border-black/8 bg-card/60 p-4 dark:border-white/10">
     <div class="space-y-1">
-      <label class="text-xs font-medium text-muted-foreground">Start date</label>
-      <Input v-model="localStart" type="date" class="h-9 w-40" />
+      <label for="report-start-date" class="text-xs font-medium text-muted-foreground">Start date</label>
+      <Input id="report-start-date" v-model="localStart" type="date" class="h-9 w-40" />
     </div>
     <div class="space-y-1">
-      <label class="text-xs font-medium text-muted-foreground">End date</label>
-      <Input v-model="localEnd" type="date" class="h-9 w-40" />
+      <label for="report-end-date" class="text-xs font-medium text-muted-foreground">End date</label>
+      <Input id="report-end-date" v-model="localEnd" type="date" class="h-9 w-40" />
     </div>
     <Button size="sm" class="h-9" @click="applyRange">Apply</Button>
     <Button

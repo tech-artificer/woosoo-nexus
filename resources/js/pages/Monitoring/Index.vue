@@ -177,12 +177,13 @@ const purgePrintEvents = async () => {
     loading.value = true;
     try {
         await axios.post('/monitoring/purge-print-events');
-        await refreshMetrics();
     } catch (error) {
         console.error('Failed to purge print events:', error);
     } finally {
         loading.value = false;
     }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
 };
 
 const retryPrint = async (orderId: number | null) => {
@@ -201,13 +202,14 @@ const retryPrint = async (orderId: number | null) => {
                 onError: () => reject(new Error('Print retry failed')),
             })
         })
-        await refreshMetrics();
     } catch (error) {
         toastError('Failed to retry print job')
         console.error('Print retry failed:', error);
     } finally {
         loading.value = false;
     }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
 };
 
 // Action feedback uses the global vue-sonner toast (useToast composable)
@@ -224,13 +226,14 @@ const resetSession = async (sessionId: number) => {
         const res = await axios.post(`/monitoring/sessions/${sessionId}/reset`);
         const message = res.data?.message ?? 'Reset dispatched.';
         if (res.data?.success) { toastSuccess(message) } else { toastError(message) }
-        await refreshMetrics();
     } catch (e: any) {
         toastError(e?.response?.data?.message ?? 'Reset failed — see browser console.');
         console.error('Reset session failed:', e);
     } finally {
         loading.value = false;
     }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
 };
 
 const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, unpaidCount: number) => {
@@ -257,13 +260,14 @@ const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, un
         const res = await axios.post(`/monitoring/sessions/${sessionId}/force-end`, { force });
         const message = res.data?.message ?? 'Force-end submitted.';
         if (res.data?.success) { toastSuccess(message) } else { toastError(message) }
-        await refreshMetrics();
     } catch (e: any) {
         toastError(e?.response?.data?.message ?? 'Force-end failed — see browser console.');
         console.error('Force-end failed:', e);
     } finally {
         loading.value = false;
     }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
 };
 
 const fmtSecs = (s: number | null): string => {

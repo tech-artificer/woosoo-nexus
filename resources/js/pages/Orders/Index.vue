@@ -60,7 +60,7 @@ const echoStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting'
 
 // When Echo reconnects after a disconnection, reload orders to catch any missed
 // during the gap. When disconnected for too long, poll as a fallback.
-let disconnectPollTimer: ReturnType<typeof setTimeout> | null = null
+let disconnectPollTimer: ReturnType<typeof setInterval> | null = null
 
 function refreshLocalOrdersFromPage() {
   const updatedOrders = (page.props as any).orders ?? []
@@ -81,13 +81,14 @@ watch(echoStatus, (newStatus, oldStatus) => {
     // Only reload when recovering from a real disconnection, not on initial connect.
     reloadOrdersFromServer()
     if (disconnectPollTimer !== null) {
-      clearTimeout(disconnectPollTimer)
+      clearInterval(disconnectPollTimer)
       disconnectPollTimer = null
     }
   } else if (newStatus === 'disconnected') {
-    // Fallback: if still disconnected after 30 s, reload so the admin sees current state.
-    if (disconnectPollTimer !== null) clearTimeout(disconnectPollTimer)
-    disconnectPollTimer = setTimeout(reloadOrdersFromServer, 30_000)
+    // Fallback: while still disconnected, reload every 30 s so the board doesn't
+    // drift stale during longer outages (not just a single one-shot reload).
+    if (disconnectPollTimer !== null) clearInterval(disconnectPollTimer)
+    disconnectPollTimer = setInterval(reloadOrdersFromServer, 30_000)
   }
 })
 
@@ -537,7 +538,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (disconnectPollTimer !== null) {
-    clearTimeout(disconnectPollTimer)
+    clearInterval(disconnectPollTimer)
     disconnectPollTimer = null
   }
 

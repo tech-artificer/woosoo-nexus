@@ -153,7 +153,7 @@ class KdsController extends Controller
     {
         $gateMessage = null;
 
-        DB::transaction(function () use ($item, &$gateMessage) {
+        DB::transaction(function () use (&$item, &$gateMessage) {
             // Re-read order under lock; serialises with concurrent advance() and re-checks terminal status.
             $order = DeviceOrder::lockForUpdate()->findOrFail($item->order_id);
 
@@ -163,9 +163,15 @@ class KdsController extends Controller
                 return;
             }
 
-            $item->done = ! (bool) ($item->done ?? false);
-            $item->done_at = $item->done ? now() : null;
-            $item->save();
+            // Re-read the item under lock so the flip is computed from the committed
+            // state, not the possibly-stale route-bound instance. Two overlapping
+            // toggles then serialise instead of both inverting the same old value.
+            $lockedItem = DeviceOrderItems::lockForUpdate()->findOrFail($item->id);
+            $lockedItem->done = ! (bool) ($lockedItem->done ?? false);
+            $lockedItem->done_at = $lockedItem->done ? now() : null;
+            $lockedItem->save();
+
+            $item = $lockedItem;
         });
 
         if ($gateMessage !== null) {

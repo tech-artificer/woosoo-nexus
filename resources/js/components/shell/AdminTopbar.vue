@@ -85,7 +85,7 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
             <!-- Mobile hamburger -->
             <button
                 type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none md:hidden"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden"
                 aria-label="Open sidebar"
                 @click="openMobile"
             >
@@ -107,7 +107,7 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
             <!-- HQ -->
             <Link
                 :href="route('monitoring.index')"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="HQ Console"
             >
                 <Building2 class="size-4" />
@@ -116,7 +116,7 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
             <!-- Search -->
             <button
                 type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Search"
                 @click="commandOpen = true"
             >
@@ -126,7 +126,7 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
             <!-- Theme toggle -->
             <button
                 type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Toggle theme"
                 @click="toggleTheme"
             >
@@ -137,7 +137,7 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
             <!-- Refresh -->
             <button
                 type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Refresh page"
                 :disabled="isRefreshing"
                 @click="refresh"
@@ -148,7 +148,7 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
             <!-- Bell -->
             <button
                 type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="Notifications"
             >
                 <Bell class="size-4" />

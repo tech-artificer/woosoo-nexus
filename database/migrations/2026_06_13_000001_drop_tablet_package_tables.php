@@ -13,6 +13,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Intentionally empty — TabletPackageConfig system removed by design.
+        // The TabletPackageConfig system was removed by design; the dropped tables
+        // cannot be reconstructed. Fail loudly so a rollback never reports success
+        // while the schema is actually gone.
+        throw new \RuntimeException('Irreversible migration: tablet_package_* tables were dropped by design and cannot be restored.');
     }
 };

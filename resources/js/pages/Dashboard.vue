@@ -22,17 +22,26 @@ const rangeLabels: Record<StatsRange, string> = {
     month: 'This month',
 };
 
+let latestStatsRequest = 0;
+
 async function fetchLiveStats() {
+    const requestId = ++latestStatsRequest;
     statsLoading.value = true;
     try {
         const res = await fetch(`${route('dashboard.stats')}?range=${statsRange.value}`);
         if (res.ok) {
-            liveStats.value = await res.json();
+            const data = await res.json();
+            // Ignore out-of-order responses from a superseded range selection.
+            if (requestId === latestStatsRequest) {
+                liveStats.value = data;
+            }
         }
     } catch {
         // Keep server-rendered props as fallback
     } finally {
-        statsLoading.value = false;
+        if (requestId === latestStatsRequest) {
+            statsLoading.value = false;
+        }
     }
 }
 

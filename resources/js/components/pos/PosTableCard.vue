@@ -68,8 +68,9 @@ const handleNewOrder = (event: Event) => {
 </script>
 
 <template>
-    <button
-        type="button"
+    <div
+        role="button"
+        tabindex="0"
         class="group relative flex flex-col gap-3 rounded-[18px] border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
         :class="[
             isOpen
@@ -78,6 +79,8 @@ const handleNewOrder = (event: Event) => {
             selected ? 'ring-2 ring-woosoo-accent/60' : '',
         ]"
         @click="handleCardClick"
+        @keydown.enter.prevent="handleCardClick"
+        @keydown.space.prevent="handleCardClick"
     >
         <div class="flex items-start justify-between gap-2">
             <span class="font-mono text-lg font-bold text-foreground">T-{{ tableNumber }}</span>
@@ -117,5 +120,5 @@ const handleNewOrder = (event: Event) => {
             <Plus class="mr-1 h-3 w-3" />
             New Order
         </Button>
-    </button>
+    </div>
 </template>
