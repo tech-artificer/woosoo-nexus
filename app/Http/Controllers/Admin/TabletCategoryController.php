@@ -128,7 +128,7 @@ class TabletCategoryController extends Controller
     {
         $validated = $request->validate([
             'menu_ids' => ['required', 'array'],
-            'menu_ids.*' => ['integer', 'min:1'],
+            'menu_ids.*' => ['integer', 'min:1', 'distinct'],
         ]);
 
         DB::transaction(function () use ($tabletCategory, $validated): void {
@@ -153,7 +153,7 @@ class TabletCategoryController extends Controller
     {
         $validated = $request->validate([
             'menu_ids' => ['required', 'array', 'min:1'],
-            'menu_ids.*' => ['integer', 'min:1'],
+            'menu_ids.*' => ['integer', 'min:1', 'distinct'],
         ]);
 
         $existingIds = $tabletCategory->menuPivots()->pluck('krypton_menu_id')->all();
@@ -202,7 +202,7 @@ class TabletCategoryController extends Controller
     {
         $validated = $request->validate([
             'menu_ids' => ['required', 'array'],
-            'menu_ids.*' => ['integer', 'min:1'],
+            'menu_ids.*' => ['integer', 'min:1', 'distinct'],
         ]);
 
         foreach ($validated['menu_ids'] as $index => $menuId) {
