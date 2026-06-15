@@ -671,13 +671,12 @@ class OrderApiController extends Controller
         $order = DeviceOrder::where('order_id', $orderId)->first();
 
         if (! $order) {
-            return response()->json(['success' => false, 'message' => 'Order not found'], 404);
+            return response()->json(['message' => 'Order not found.'], 404);
         }
 
-        // Branch/session checks are not strictly enforced for this internal dispatch endpoint.
         PrintOrder::dispatch($order);
 
-        return response()->json(['success' => true]);
+        return response()->json(['status' => 'dispatched']);
     }
 
     /**

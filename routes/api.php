@@ -1,6 +1,5 @@
 <?php
 
-use App\Events\PrintOrder;
 use App\Helpers\BroadcastConfig;
 use App\Http\Controllers\Api\DeploymentInfoController;
 use App\Http\Controllers\Api\V1\Auth\AuthApiController;
@@ -20,7 +19,6 @@ use App\Http\Middleware\RequestId;
 use App\Http\Middleware\UpdateDeviceLastSeen;
 use App\Http\Responses\ApiResponse;
 use App\Models\Device;
-use App\Models\DeviceOrder;
 use App\Models\Krypton\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -98,17 +96,7 @@ Route::middleware([
     RequestId::class,
     'auth:device',
     UpdateDeviceLastSeen::class,
-])->get('/order/{orderId}/dispatch', function (Request $request, int $orderId) {
-    $order = DeviceOrder::where('order_id', $orderId)->first();
-
-    if (! $order) {
-        return response()->json(['message' => 'Order not found.'], 404);
-    }
-
-    PrintOrder::dispatch($order);
-
-    return response()->json(['status' => 'dispatched']);
-});
+])->get('/order/{orderId}/dispatch', [OrderApiController::class, 'dispatch']);
 
 // Device-only refill/printed endpoints moved under auth:device group below
 // (see group containing api_printer_routes and device endpoints).
