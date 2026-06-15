@@ -194,12 +194,14 @@ class DashboardController extends Controller
      * GET /dashboard/stats
      * Returns lightweight real-time counts for dashboard widgets.
      * Authenticated (session-based) only.
-     *
-     * @return JsonResponse
      */
-    public function apiStats(Request $request)
+    public function apiStats(Request $request): JsonResponse
     {
-        $range = $request->input('range', 'today');
+        // Normalize unknown ranges to 'today' so the echoed `range` matches the
+        // window actually used for the queries below (no client/server desync).
+        $range = in_array($request->input('range'), ['today', 'week', 'month'], true)
+            ? $request->input('range')
+            : 'today';
         $dashboard = new DashboardService;
         $reverbStatus = $this->getReverbStatus();
 

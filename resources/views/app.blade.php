@@ -18,6 +18,10 @@
                 document.documentElement.setAttribute('data-theme', resolved);
                 if (resolved === 'dark') {
                     document.documentElement.classList.add('dark');
+                } else {
+                    // The server may have rendered <html class="dark"> from the
+                    // appearance cookie; clear it when localStorage resolves light.
+                    document.documentElement.classList.remove('dark');
                 }
             })();
         </script>

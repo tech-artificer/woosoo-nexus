@@ -27,7 +27,7 @@ Every allowed transition is listed here. Any transition not listed is **rejected
 
 ## Allowed transitions
 
-```
+```text
 pending     → confirmed | voided | cancelled
 confirmed   → in_progress | completed | voided
 in_progress → ready | voided

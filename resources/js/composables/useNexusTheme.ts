@@ -20,6 +20,8 @@ function applyTheme(value: NexusTheme): void {
     document.documentElement.classList.toggle('dark', resolved === 'dark');
 }
 
+let systemListenerBound = false;
+
 export function initializeNexusTheme(): void {
     if (typeof window === 'undefined') return;
 
@@ -29,6 +31,11 @@ export function initializeNexusTheme(): void {
         'system';
 
     applyTheme(stored);
+
+    // Bind the system-theme listener once; repeated calls would otherwise stack
+    // duplicate listeners that all fire on every OS theme change.
+    if (systemListenerBound) return;
+    systemListenerBound = true;
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         const current = (localStorage.getItem(STORAGE_KEY) as NexusTheme | null) ?? 'system';

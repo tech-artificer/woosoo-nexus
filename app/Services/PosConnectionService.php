@@ -46,13 +46,17 @@ class PosConnectionService
 
             // Only purge and reconfigure if credentials actually differ from
             // what is already active. Purging on every request would destroy
-            // performance under concurrent PHP-FPM workers.
-            $changed = $current['host'] !== ($override['host'] ?? null)
-                || $current['database'] !== ($override['database'] ?? null)
-                || $current['username'] !== ($override['username'] ?? null)
-                || $current['password'] !== ($override['password'] ?? null);
+            // performance under concurrent PHP-FPM workers. Compare against the
+            // merged result so an intentionally-omitted override (e.g. blank
+            // password falling back to .env) is not seen as a change every request.
+            $next = array_merge($current, $override);
+            $changed = ($current['host'] ?? null) !== ($next['host'] ?? null)
+                || ($current['port'] ?? null) !== ($next['port'] ?? null)
+                || ($current['database'] ?? null) !== ($next['database'] ?? null)
+                || ($current['username'] ?? null) !== ($next['username'] ?? null)
+                || ($current['password'] ?? null) !== ($next['password'] ?? null);
 
-            Config::set('database.connections.pos', array_merge($current, $override));
+            Config::set('database.connections.pos', $next);
 
             if ($changed) {
                 DB::purge('pos');

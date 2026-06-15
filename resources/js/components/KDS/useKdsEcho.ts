@@ -22,7 +22,9 @@ export function useKdsEcho(board: Board) {
       return
     }
     const payload = e as Record<string, unknown>
-    if (!payload.item_id) {
+    // Guard the full shape applyItemToggle relies on — a malformed event must not
+    // corrupt ticket state with an undefined order or non-boolean done flag.
+    if (!payload.item_id || !payload.order_id || typeof payload.done !== 'boolean') {
       return
     }
     board.applyItemToggle(payload as Parameters<typeof board.applyItemToggle>[0])

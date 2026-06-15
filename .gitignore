@@ -84,3 +84,7 @@ skills-lock.json
 
 # Generated documentation artifacts
 *.docx
+
+# Ziggy route snapshot — generated via `php artisan ziggy:generate`; routes are
+# injected at runtime via @routes, so the static file must not be committed.
+/resources/js/ziggy.js
