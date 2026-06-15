@@ -2,12 +2,12 @@
 
 namespace App\Events\Order;
 
+use App\Models\DeviceOrder;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\DeviceOrder;
 
 class OrderPrinted implements ShouldBroadcastNow
 {
@@ -26,13 +26,13 @@ class OrderPrinted implements ShouldBroadcastNow
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
         return [
             new Channel('admin.orders'),
-            new Channel('orders.' . $this->deviceOrder->order_id),
+            new Channel('orders.'.$this->deviceOrder->order_id),
         ];
     }
 
@@ -80,9 +80,13 @@ class OrderPrinted implements ShouldBroadcastNow
 
     /**
      * The event's broadcast name.
+     *
+     * Deliberately distinct from PrintOrder::broadcastAs() which returns 'order.printed'.
+     * PrintOrder = "please print this order" (trigger for the print bridge).
+     * OrderPrinted = "order has been confirmed printed" (ACK from print bridge back to tablet/admin).
      */
     public function broadcastAs(): string
     {
-        return 'order.printed';
+        return 'order.print_confirmed';
     }
 }

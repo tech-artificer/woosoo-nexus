@@ -45,6 +45,7 @@ class PackageSeeder extends Seeder
             'name' => 'Royal Banquet',
             'krypton_menu_id' => 48,
             'sort_order' => 2,
+            'most_popular' => true,
             'description' => 'The ultimate feast — our complete spread of ten pork, nine beef, and two chicken specialties grilled at your table with unlimited sides. Everything on the grill, made for sharing.',
             'codes' => [
                 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10',
@@ -64,6 +65,7 @@ class PackageSeeder extends Seeder
                     'description' => $def['description'] ?? null,
                     'sort_order' => $def['sort_order'],
                     'is_active' => true,
+                    'is_most_popular' => $def['most_popular'] ?? false,
                 ]
             );
 

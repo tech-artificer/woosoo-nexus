@@ -2,20 +2,20 @@
 
 namespace App\Observers;
 
-use App\Models\DeviceOrder;
-use App\Events\Order\OrderStatusUpdated;
+use App\Enums\OrderStatus;
 use App\Events\Order\OrderCancelled;
 use App\Events\Order\OrderCompleted;
+use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderVoided;
-use App\Events\Order\PaymentCompleted;
-use Illuminate\Support\Facades\Log;
+use App\Models\DeviceOrder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DeviceOrderObserver
 {
     /**
      * Handle the DeviceOrder "updated" event.
-     * 
+     *
      * Broadcasts OrderStatusUpdated when device_orders.status changes
      * (triggered by POS DB trigger after_payment_update or manual API update).
      */
@@ -40,16 +40,15 @@ class DeviceOrderObserver
                 OrderStatusUpdated::dispatch($deviceOrder);
 
                 // Fan-out terminal lifecycle events synchronously after commit.
-                if ($newStatusStr === \App\Enums\OrderStatus::COMPLETED->value) {
+                if ($newStatusStr === OrderStatus::COMPLETED->value) {
                     OrderCompleted::dispatch($deviceOrder);
-                    PaymentCompleted::dispatch($deviceOrder);
                 }
 
-                if ($newStatusStr === \App\Enums\OrderStatus::VOIDED->value) {
+                if ($newStatusStr === OrderStatus::VOIDED->value) {
                     OrderVoided::dispatch($deviceOrder);
                 }
 
-                if ($newStatusStr === \App\Enums\OrderStatus::CANCELLED->value) {
+                if ($newStatusStr === OrderStatus::CANCELLED->value) {
                     OrderCancelled::dispatch($deviceOrder);
                 }
             });

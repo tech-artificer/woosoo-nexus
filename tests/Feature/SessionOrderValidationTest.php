@@ -175,8 +175,11 @@ class SessionOrderValidationTest extends TestCase
         $this->assertStringContainsString('session', strtolower($response->json('message')));
     }
 
-    public function test_order_creation_uses_cached_test_session_fallback_when_context_session_missing()
+    public function test_order_creation_blocked_when_context_session_id_is_null()
     {
+        // Context returns session_id = null (POS has no open session).
+        // The CheckSessionIsOpened middleware must block order creation with 503
+        // before the request reaches the controller — no fallback is permitted.
         $this->mockKryptonSessionWith([
             'session_id' => null,
             'terminal_id' => 1,
@@ -195,7 +198,6 @@ class SessionOrderValidationTest extends TestCase
             'table_id' => 4,
         ]);
 
-        $this->createTestSession();
         $token = $device->createToken('test-token')->plainTextToken;
 
         $payload = [
@@ -222,8 +224,9 @@ class SessionOrderValidationTest extends TestCase
             'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
-        $response->assertStatus(201);
-        $this->assertTrue($response->json('success'));
+        $response->assertStatus(503);
+        $this->assertFalse($response->json('success'));
+        $this->assertStringContainsString('session', strtolower($response->json('message')));
     }
 
     public function test_order_creation_returns_503_when_pos_connection_is_unavailable()

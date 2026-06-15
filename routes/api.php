@@ -1,6 +1,5 @@
 <?php
 
-use App\Events\PrintOrder;
 use App\Helpers\BroadcastConfig;
 use App\Http\Controllers\Api\DeploymentInfoController;
 use App\Http\Controllers\Api\V1\Auth\AuthApiController;
@@ -20,7 +19,6 @@ use App\Http\Middleware\RequestId;
 use App\Http\Middleware\UpdateDeviceLastSeen;
 use App\Http\Responses\ApiResponse;
 use App\Models\Device;
-use App\Models\DeviceOrder;
 use App\Models\Krypton\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -98,17 +96,7 @@ Route::middleware([
     RequestId::class,
     'auth:device',
     UpdateDeviceLastSeen::class,
-])->get('/order/{orderId}/dispatch', function (Request $request, int $orderId) {
-    $order = DeviceOrder::where('order_id', $orderId)->first();
-
-    if (! $order) {
-        return response()->json(['message' => 'Order not found.'], 404);
-    }
-
-    PrintOrder::dispatch($order);
-
-    return response()->json(['status' => 'dispatched']);
-});
+])->get('/order/{orderId}/dispatch', [OrderApiController::class, 'dispatch']);
 
 // Device-only refill/printed endpoints moved under auth:device group below
 // (see group containing api_printer_routes and device endpoints).
@@ -190,10 +178,11 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
         Route::post('/devices/refresh', [DeviceAuthApiController::class, 'refresh'])->name('api.devices.refresh');
         Route::post('/devices/logout', [DeviceAuthApiController::class, 'logout'])->name('api.devices.logout');
         // P0 fix 2026-04-07: throttle order creation to prevent double-tap duplicates (10 req/min per device)
-        Route::post('/devices/create-order', DeviceOrderApiController::class)->middleware('throttle.device:10,1')->name('api.devices.create.order');
+        // session.pos: block when POS has no open session — order cannot be committed without a Krypton session_id
+        Route::post('/devices/create-order', DeviceOrderApiController::class)->middleware(['throttle.device:10,1', 'session.pos'])->name('api.devices.create.order');
 
         Route::get('/tables/services', [TableServiceApiController::class, 'index'])->name('api.tables.services');
-        Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->name('api.service.request');
+        Route::post('/service/request', [ServiceRequestApiController::class, 'store'])->middleware('session.pos')->name('api.service.request');
 
         Route::get('/device-order/{order}', [OrderApiController::class, 'show']);
         Route::get('/device-orders', [OrderApiController::class, 'index']);
@@ -201,8 +190,9 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
         Route::get('/device-order/by-order-id/{orderId}', [OrderApiController::class, 'showByExternalId']);
 
         // Refill endpoint (device-authenticated) and alias for print-refill
-        Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->name('api.order.refill');
-        Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->name('api.order.print-refill');
+        // session.pos: refill creates new POS order rows and requires an open session
+        Route::post('/order/{orderId}/refill', [OrderApiController::class, 'refill'])->middleware('session.pos')->name('api.order.refill');
+        Route::post('/order/{orderId}/print-refill', [OrderApiController::class, 'refill'])->middleware('session.pos')->name('api.order.print-refill');
 
         // Session endpoints for devices
         Route::get('/sessions/current', [SessionApiController::class, 'current'])->name('api.sessions.current');
@@ -225,8 +215,9 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
     Route::prefix('v1')->middleware(['auth:device', UpdateDeviceLastSeen::class])->group(function () {
         Route::get('/orders', [OrderController::class, 'index']);
         Route::get('/orders/{order}', [OrderController::class, 'show']);
-        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
-        Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus']);
+        // session.pos: status mutations write to Krypton POS and require an open session
+        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('session.pos');
+        Route::post('/orders/status/bulk', [OrderController::class, 'bulkStatus'])->middleware('session.pos');
     });
 
     // Admin/device-reset endpoints (requires sanctum auth)

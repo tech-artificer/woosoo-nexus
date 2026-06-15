@@ -18,13 +18,8 @@ class PackageFactory extends Factory
             'base_price' => $this->faker->randomFloat(2, 99, 999),
             'min_meat' => 1,
             'max_meat' => 3,
-            'min_side' => 0,
-            'max_side' => 5,
-            'min_dessert' => 0,
-            'max_dessert' => 2,
-            'min_beverage' => 0,
-            'max_beverage' => 2,
             'is_active' => true,
+            'is_most_popular' => false,
             'sort_order' => $this->faker->numberBetween(0, 10),
         ];
     }

@@ -41,7 +41,6 @@ export function useKdsEcho(board: Board) {
       .listen('.order.voided', handleOrderEvent)
       .listen('.order.completed', handleOrderEvent)
       .listen('.order.cancelled', handleOrderEvent)
-      .listen('.order.archived', handleOrderEvent)
       .listen('.item.toggled', handleItemToggle)
   })
 

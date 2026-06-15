@@ -93,6 +93,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/packages/{package}', [PackageController::class, 'update'])->name('packages.update');
         Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
         Route::post('/packages/{package}/menus', [PackageController::class, 'syncAllowedMenus'])->name('packages.sync-menus');
+        Route::post('/packages/{package}/most-popular', [PackageController::class, 'setMostPopular'])->name('packages.most-popular');
         // Tablet Categories
         Route::get('/tablet-categories', [TabletCategoryController::class, 'index'])->name('tablet-categories.index');
         Route::put('/tablet-categories/reorder', [TabletCategoryController::class, 'reorder'])->name('tablet-categories.reorder');

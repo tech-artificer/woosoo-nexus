@@ -174,6 +174,7 @@ class KdsController extends Controller
 
         Log::info('[KDS] toggle item', ['item_id' => $item->id, 'done' => $item->done, 'admin_id' => auth()->id()]);
 
+        $item->loadMissing('device_order');
         app(OrderBroadcaster::class)->itemToggled($item);
 
         // Echo the broadcast shape so the client can dispatch the same applyItemToggle path
@@ -220,6 +221,13 @@ class KdsController extends Controller
             // Stale-state re-check: concurrent request already moved this order.
             if (! $fresh->status->canTransitionTo(OrderStatus::IN_PROGRESS)) {
                 $gateMessage = 'Order state changed concurrently; please retry.';
+
+                return;
+            }
+
+            // Re-check cap under lock: closes the TOCTOU window between the pre-check above and here.
+            if (($fresh->recalled ?? 0) >= self::MAX_RECALLS) {
+                $gateMessage = 'Maximum recalls reached for this order.';
 
                 return;
             }
