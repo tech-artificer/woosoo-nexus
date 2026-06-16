@@ -354,7 +354,7 @@ onMounted(() => {
 
   const printChannel = window.Echo.channel('admin.print');
   printChannel
-    .listen('.order.printed', () => {})
+    .listen('.order.print_confirmed', () => {})
     .error((error: unknown) => { console.error('[Echo] Error connecting to admin.print channel:', error); });
 
   orderRefillHandler = (ev: any) => {

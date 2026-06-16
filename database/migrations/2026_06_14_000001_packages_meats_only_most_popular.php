@@ -10,7 +10,13 @@ return new class extends Migration
     {
         // A package now configures meats only; banchan/sides/desserts/beverages
         // are global (served via Tablet Categories), so the per-package non-meat
-        // limits are removed. Exactly one package may be flagged "most popular".
+        // limits are removed.
+        //
+        // The "exactly one most popular package" invariant is enforced at the
+        // application layer (PackageController::makeOnlyMostPopular(), run inside a
+        // DB transaction on create/update/setMostPopular), not by a DB constraint:
+        // the target POS database is MySQL, which does not support partial/filtered
+        // unique indexes, so a "single true row" constraint isn't expressible here.
         Schema::table('packages', function (Blueprint $table): void {
             $table->boolean('is_most_popular')->default(false)->after('is_active');
         });
