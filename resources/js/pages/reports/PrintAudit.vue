@@ -34,6 +34,15 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const totalPrints = props.data.length
 const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
+
+const getStatusColor = (status: string): 'success' | 'warning' | 'destructive' | 'secondary' | 'outline' => {
+    const s = status.toUpperCase()
+    if (s === 'COMPLETED') return 'success'
+    if (s === 'CONFIRMED' || s === 'SERVED' || s === 'READY') return 'secondary'
+    if (s === 'VOIDED' || s === 'CANCELLED') return 'destructive'
+    if (s === 'PENDING' || s === 'IN_PROGRESS') return 'warning'
+    return 'outline'
+}
 </script>
 
 <template>
@@ -122,11 +131,7 @@ const totalPrintedValue = props.data.reduce((sum, row) => sum + row.total, 0)
                                     <td class="py-3 px-4">{{ row.printed_by || '-' }}</td>
                                     <td class="py-3 px-4 text-xs">{{ new Date(row.printed_at).toLocaleString() }}</td>
                                     <td class="text-center py-3 px-4">
-                                        <Badge v-if="row.status === 'COMPLETED'" variant="default">{{ row.status }}
-                                        </Badge>
-                                        <Badge v-else-if="row.status === 'CONFIRMED'" variant="secondary">{{ row.status
-                                            }}</Badge>
-                                        <Badge v-else variant="outline">{{ row.status }}</Badge>
+                                        <Badge :variant="getStatusColor(row.status)">{{ row.status }}</Badge>
                                     </td>
                                     <td class="text-right py-3 px-4">{{ "₱" + new Intl.NumberFormat("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}).format(row.total) }}</td>
                                     <td class="text-center py-3 px-4 text-xs">{{ row.device_id }}</td>

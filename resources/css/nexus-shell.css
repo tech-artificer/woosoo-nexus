@@ -1,0 +1,23 @@
+/* =============================================================
+   NEXUS ADMIN SHELL — design tokens
+   Sidebar is always dark regardless of page theme.
+   Topbar follows the page theme via --background / --border.
+   ============================================================= */
+
+:root {
+    /* Sidebar (always dark) */
+    --shell-bg:     hsl(20 5% 10%);
+    --shell-border: rgba(255, 255, 255, 0.07);
+    --shell-fg:     hsl(0 0% 82%);
+    --shell-dim:    hsl(0 0% 44%);
+    --shell-active: hsl(30 80% 66%);
+    --shell-hover:  rgba(255, 255, 255, 0.06);
+
+    /* Topbar (follows page theme) */
+    --topbar-h:      52px;
+    --topbar-bg:     var(--background);
+    --topbar-border: var(--border);
+
+    /* Typography */
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', 'Menlo', 'Consolas', 'DejaVu Sans Mono', monospace;
+}

@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum OrderStatus : string
+enum OrderStatus: string
 {
     case PENDING = 'pending';
     case CONFIRMED = 'confirmed';
@@ -17,15 +17,28 @@ enum OrderStatus : string
     public function canTransitionTo(OrderStatus $newStatus): bool
     {
         return match ($this) {
-            self::PENDING     => in_array($newStatus, [self::CONFIRMED, self::VOIDED, self::CANCELLED]),
-            self::CONFIRMED   => in_array($newStatus, [self::IN_PROGRESS, self::COMPLETED, self::VOIDED]),
+            self::PENDING => in_array($newStatus, [self::CONFIRMED, self::VOIDED, self::CANCELLED]),
+            self::CONFIRMED => in_array($newStatus, [self::IN_PROGRESS, self::COMPLETED, self::VOIDED]),
             self::IN_PROGRESS => in_array($newStatus, [self::READY, self::VOIDED]),
-            self::READY       => in_array($newStatus, [self::SERVED, self::VOIDED]),
-            self::SERVED      => in_array($newStatus, [self::COMPLETED, self::VOIDED]),
+            self::READY => in_array($newStatus, [self::SERVED, self::VOIDED]),
+            self::SERVED => in_array($newStatus, [self::COMPLETED, self::VOIDED]),
             self::COMPLETED,
             self::CANCELLED,
             self::VOIDED,
-            self::ARCHIVED    => false, // terminal states - no transitions allowed
+            self::ARCHIVED => false, // terminal states - no transitions allowed
+        };
+    }
+
+    public function kdsState(): string
+    {
+        return match ($this) {
+            self::PENDING,
+            self::CONFIRMED => 'new',
+            self::IN_PROGRESS => 'preparing',
+            self::READY => 'preparing',
+            self::SERVED => 'served',
+            self::VOIDED => 'voided',
+            default => 'new',
         };
     }
 }

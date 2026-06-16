@@ -101,9 +101,10 @@ class OrderCreateAndRefillTest extends TestCase
             'index' => 1,
         ]);
 
-        // Mock KryptonContextService for employee_log_id
+        // Mock KryptonContextService for employee_log_id.
+        // session_id is required by CheckSessionIsOpened middleware on refill routes.
         $kctxMock = Mockery::mock(KryptonContextService::class);
-        $kctxMock->shouldReceive('getData')->andReturn(['employee_log_id' => 12]);
+        $kctxMock->shouldReceive('getData')->andReturn(['session_id' => 1, 'employee_log_id' => 12]);
         $this->app->instance(KryptonContextService::class, $kctxMock);
 
         // Mock POS connection like in OrderRefillTest

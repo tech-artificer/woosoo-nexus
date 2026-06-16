@@ -1,19 +1,25 @@
 <?php
 
-use App\Http\Middleware\HandleAppearance;
+use App\Exceptions\Handler;
+use App\Http\Middleware\ApiCsrfExemption;
+use App\Http\Middleware\CheckSessionIsOpened;
 use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\PrintEventFeatureFlag;
 use App\Http\Middleware\RequestId;
-use Illuminate\Routing\Middleware\SubstituteBindings;
+use App\Http\Middleware\ThrottleByDevice;
 use App\Http\Middleware\TrustProxies;
-use Illuminate\Http\Middleware\HandleCors;
+use App\Support\ApiErrorCode;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
-use Illuminate\Database\QueryException;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
-// use App\Http\Middleware\CheckSessionIsOpened;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -39,7 +45,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(append: [
             ForceJsonResponse::class,
-            // CheckSessionIsOpened::class,
             SubstituteBindings::class,
         ]);
 
@@ -53,38 +58,39 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'requestId' => RequestId::class,
-            'throttle.device' => \App\Http\Middleware\ThrottleByDevice::class,
-            'print_events.enabled' => \App\Http\Middleware\PrintEventFeatureFlag::class,
+            'throttle.device' => ThrottleByDevice::class,
+            'print_events.enabled' => PrintEventFeatureFlag::class,
+            'session.pos' => CheckSessionIsOpened::class,
         ]);
 
         // Replace CSRF middleware with an exemption-aware variant.
         // Exempt only stateless device-bootstrap API endpoints; keep CSRF
         // enabled for session-authenticated web and API routes.
         $middleware->replace(
-            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
-            \App\Http\Middleware\ApiCsrfExemption::class
+            ValidateCsrfToken::class,
+            ApiCsrfExemption::class
         );
 
         // Enable stateful API for web admin (Inertia + Sanctum session auth)
         // Device API still uses Bearer tokens via auth:device guard.
         $middleware->statefulApi();
     })
-    
+
     ->withExceptions(function (Exceptions $exceptions) {
-       $exceptions->render(function (QueryException $exception, Request $request) {
+        $exceptions->render(function (QueryException $exception, Request $request) {
 
             if ($request->is('api/*')) {
                 if ($exception->errorInfo[1] == 1062) {
                     return response()->json([
                         'success' => false,
                         'error' => [
-                            'code'    => 'DUPLICATE_ENTRY',
+                            'code' => 'DUPLICATE_ENTRY',
                             'message' => 'A duplicate entry was detected.',
                             'details' => [],
                         ],
                         'meta' => [
                             'request_id' => $request->attributes->get('request_id', ''),
-                            'timestamp'  => now()->toIso8601String(),
+                            'timestamp' => now()->toIso8601String(),
                         ],
                     ], 409);
                 }
@@ -92,13 +98,13 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Structured JSON error envelope for all API 4xx/5xx responses.
-        $exceptions->render(function (\Throwable $e, Request $request) {
-            if (!$request->is('api/*') && !$request->expectsJson()) {
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (! $request->is('api/*') && ! $request->expectsJson()) {
                 return null; // Let Inertia handle web routes
             }
 
             // Let the default handler build its response first, then re-wrap it
-            $defaultHandler = new \App\Exceptions\Handler(app());
+            $defaultHandler = new Handler(app());
             $response = $defaultHandler->render($request, $e);
 
             $status = $response->getStatusCode();
@@ -115,19 +121,19 @@ return Application::configure(basePath: dirname(__DIR__))
                 return $response;
             }
 
-            $code    = \App\Support\ApiErrorCode::fromException($e, $status);
+            $code = ApiErrorCode::fromException($e, $status);
             $message = $original['message'] ?? ($e->getMessage() ?: 'An unexpected error occurred.');
 
             return response()->json([
                 'success' => false,
-                'error'   => [
-                    'code'    => $code,
+                'error' => [
+                    'code' => $code,
                     'message' => $message,
                     'details' => $original['errors'] ?? [],
                 ],
                 'meta' => [
                     'request_id' => $request->attributes->get('request_id', ''),
-                    'timestamp'  => now()->toIso8601String(),
+                    'timestamp' => now()->toIso8601String(),
                 ],
             ], $status);
         });

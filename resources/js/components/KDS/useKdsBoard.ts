@@ -16,6 +16,7 @@ type OrderPayload = {
     is_refill?: boolean
     done?: boolean
     done_at?: string | null
+    notes?: string | null
   }>
   recalled?: number | null
   void_reason?: string | null
@@ -64,6 +65,7 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
       qty: it.quantity ?? 1,
       name: it.name ?? '',
       done: (it.done ?? false),
+      notes: it.notes ?? undefined,
     })),
     recalled: payload.recalled ?? undefined,
     voidReason: payload.void_reason ?? undefined,
@@ -72,6 +74,11 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
 
 export function useKdsBoard(initialTickets: KdsTicket[]) {
   const tickets = ref<KdsTicket[]>(initialTickets.map((t) => ({ ...t, items: t.items.map((i) => ({ ...i })) })))
+  const clockOffset = ref(0)
+
+  function setClockOffset(serverNow: number): void {
+    clockOffset.value = serverNow - Date.now()
+  }
 
   function applyOrderUpdate(payload: OrderPayload): void {
     const id = String(payload.id)
@@ -109,5 +116,5 @@ export function useKdsBoard(initialTickets: KdsTicket[]) {
     })
   }
 
-  return { tickets, applyOrderUpdate, applyItemToggle }
+  return { tickets, applyOrderUpdate, applyItemToggle, clockOffset, setClockOffset }
 }

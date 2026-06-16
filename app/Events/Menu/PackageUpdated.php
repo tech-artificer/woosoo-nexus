@@ -14,7 +14,6 @@ class PackageUpdated implements ShouldBroadcastNow
 
     public function __construct(
         public readonly int $deviceId,
-        public readonly ?int $packageId = null,
     ) {}
 
     public function broadcastOn(): array
@@ -28,7 +27,6 @@ class PackageUpdated implements ShouldBroadcastNow
     {
         return [
             'device_id' => $this->deviceId,
-            'package_id' => $this->packageId,
         ];
     }
 

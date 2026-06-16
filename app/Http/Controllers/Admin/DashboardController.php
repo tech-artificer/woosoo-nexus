@@ -2,24 +2,25 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\Krypton\Table;
-use App\Models\Krypton\Session;
-use App\Repositories\Krypton\TableRepository;
-use App\Repositories\Krypton\OrderRepository;
 use App\Models\Device;
 use App\Models\DeviceOrder;
-use App\Enums\OrderStatus;
+use App\Models\Krypton\Session;
+use App\Repositories\Krypton\OrderRepository;
+use App\Repositories\Krypton\TableRepository;
 use App\Services\DashboardService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     protected $tableRepository;
+
     protected $orderRepository;
+
     public function __construct(TableRepository $tableRepository, OrderRepository $orderRepository)
     {
         $this->tableRepository = $tableRepository;
@@ -40,6 +41,7 @@ class DashboardController extends Controller
 
         if ($fp) {
             fclose($fp);
+
             return [
                 'ok' => true,
                 'host' => $host,
@@ -60,10 +62,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Dashboard for admin
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Inertia\Response
+     * Dashboard for admin.
      */
     public function index()
     {
@@ -81,25 +80,25 @@ class DashboardController extends Controller
 
         if (! $session) {
             session()->flash('warning', 'Dashboard data is unavailable — POS system is currently offline.');
+
             return Inertia::render('Dashboard', [
-                'title'        => 'Dashboard',
-                'description'  => 'Analytics',
-                'tableOrders'  => [],
-                'openOrders'   => [],
+                'title' => 'Dashboard',
+                'description' => 'Analytics',
+                'tableOrders' => [],
+                'openOrders' => [],
                 'reverbStatus' => $reverbStatus,
-                'sessionId'    => null,
-                'totalSales'   => '0.00',
-                'totalOrders'  => 0,
-                'guestCount'   => 0,
+                'sessionId' => null,
+                'totalSales' => '0.00',
+                'totalOrders' => 0,
+                'guestCount' => 0,
                 'monthlySales' => '0.00',
-                'salesData'    => [],
-                'topItems'     => [],
-                'devices'      => [],
+                'salesData' => [],
+                'topItems' => [],
+                'devices' => [],
             ]);
         }
 
-
-        $dashboard = new DashboardService(); 
+        $dashboard = new DashboardService;
 
         $totalSales = $dashboard->totalSales();
         $monthlySales = $dashboard->monthlySales();
@@ -130,7 +129,7 @@ class DashboardController extends Controller
         foreach ($tableOrders as $tableOrder) {
             $tableId = $tableOrder->table_id ?? $tableOrder->id;
             $device = $devicesByTableId->get($tableId);
-            if( $device ) {
+            if ($device) {
                 $tableOrder->device = $device;
             }
         }
@@ -195,13 +194,23 @@ class DashboardController extends Controller
      * GET /dashboard/stats
      * Returns lightweight real-time counts for dashboard widgets.
      * Authenticated (session-based) only.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function apiStats()
+    public function apiStats(Request $request): JsonResponse
     {
-        $dashboard = new DashboardService();
+        // Normalize unknown ranges to 'today' so the echoed `range` matches the
+        // window actually used for the queries below (no client/server desync).
+        $range = in_array($request->input('range'), ['today', 'week', 'month'], true)
+            ? $request->input('range')
+            : 'today';
+        $dashboard = new DashboardService;
         $reverbStatus = $this->getReverbStatus();
+
+        $startDate = match ($range) {
+            'week' => now()->subDays(6)->startOfDay(),
+            'month' => now()->subDays(29)->startOfDay(),
+            default => today()->startOfDay(),
+        };
+        $endDate = now()->endOfDay();
 
         $pendingStatuses = [
             OrderStatus::PENDING->value,
@@ -209,21 +218,26 @@ class DashboardController extends Controller
             OrderStatus::IN_PROGRESS->value,
         ];
 
-        $activeDevices    = Device::where('is_active', true)->count();
-        $pendingOrders    = DeviceOrder::whereIn('status', $pendingStatuses)->count();
-        $todayRevenue     = DeviceOrder::whereDate('created_at', today())
-                               ->whereNotIn('status', [OrderStatus::VOIDED->value, OrderStatus::CANCELLED->value])
-                               ->sum('total');
-        $todayOrderCount  = DeviceOrder::whereDate('created_at', today())->count();
+        $activeDevices = Device::where('is_active', true)->count();
+        $pendingOrders = DeviceOrder::whereIn('status', $pendingStatuses)->count();
+        $rangeRevenue = DeviceOrder::whereBetween('created_at', [$startDate, $endDate])
+            ->whereNotIn('status', [OrderStatus::VOIDED->value, OrderStatus::CANCELLED->value])
+            ->sum('total');
+        $rangeOrderCount = DeviceOrder::whereBetween('created_at', [$startDate, $endDate])->count();
 
         return response()->json([
-            'active_devices'   => $activeDevices,
-            'pending_orders'   => $pendingOrders,
-            'today_revenue'    => (float) $todayRevenue,
-            'today_orders'     => $todayOrderCount,
-            'reverb'           => $reverbStatus,
-            'top_items'        => $dashboard->getTopItems(5),
-            'generated_at'     => now()->toIso8601String(),
+            'range' => $range,
+            'active_devices' => $activeDevices,
+            'pending_orders' => $pendingOrders,
+            'today_revenue' => (float) $rangeRevenue,
+            'today_orders' => $rangeOrderCount,
+            'total_sales' => $dashboard->totalSales($startDate, $endDate),
+            'total_orders' => $dashboard->getTotalOrders($startDate, $endDate),
+            'guest_count' => $dashboard->getTotalGuests($startDate, $endDate),
+            'sales_data' => $dashboard->getSalesData($range === 'month' ? 30 : ($range === 'week' ? 7 : 1)),
+            'reverb' => $reverbStatus,
+            'top_items' => $dashboard->getTopItems(5, $startDate, $endDate),
+            'generated_at' => now()->toIso8601String(),
         ]);
     }
 }

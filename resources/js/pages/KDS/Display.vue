@@ -8,15 +8,18 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { postKdsAdvance, postKdsToggleItem } from '@/components/KDS/kdsApi'
+import KdsVoidModal from '@/components/KDS/KdsVoidModal.vue'
+import { postKdsAdvance, postKdsRecall, postKdsToggleItem, postKdsVoid } from '@/components/KDS/kdsApi'
 import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
+import { useKdsChime } from '@/components/KDS/useKdsChime'
 import { useKdsEcho } from '@/components/KDS/useKdsEcho'
 
 const props = defineProps<{
   title: string
   initialTickets: KdsTicket[]
+  serverNow: number
 }>()
 
 function seedTickets(source: KdsTicket[]): KdsTicket[] {
@@ -28,18 +31,25 @@ function seedTickets(source: KdsTicket[]): KdsTicket[] {
 }
 
 const board = useKdsBoard(seedTickets(props.initialTickets))
-useKdsEcho(board)
+const { muted: chimeMuted, play: playChime, toggleMuted: toggleChime } = useKdsChime()
+const { connected } = useKdsEcho(board, { onOrderCreated: playChime })
 
 const tickets = board.tickets
+const { clockOffset, setClockOffset } = board
 const selectedFilter = ref<KdsFilter>('active')
 const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
 const pendingAdvance = ref<Set<string>>(new Set())
+const pendingRecall = ref<Set<string>>(new Set())
 const pendingToggle = ref<Set<string>>(new Set())
+const pendingVoid = ref<Set<string>>(new Set())
+const voidTarget = ref<KdsTicket | null>(null)
+const voidModalOpen = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
+const correctedNow = computed(() => now.value + clockOffset.value)
 const activeTickets = computed(() => tickets.value.filter((ticket) => ACTIVE_STATES.includes(ticket.state)))
-const visibleTickets = computed(() => sortTickets(filterTickets(tickets.value, selectedFilter.value, now.value), now.value))
+const visibleTickets = computed(() => sortTickets(filterTickets(tickets.value, selectedFilter.value, correctedNow.value), correctedNow.value))
 const clockLabel = computed(() => new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
   minute: '2-digit',
@@ -51,10 +61,10 @@ const dateLabel = computed(() => new Intl.DateTimeFormat('en-US', {
 }).format(now.value))
 const counts = computed<Record<KdsFilter, number>>(() => ({
   active: activeTickets.value.length,
-  overdue: filterTickets(tickets.value, 'overdue', now.value).length,
+  overdue: filterTickets(tickets.value, 'overdue', correctedNow.value).length,
   new: tickets.value.filter((ticket) => ticket.state === 'new').length,
   preparing: tickets.value.filter((ticket) => ticket.state === 'preparing' || ticket.state === 'ready').length,
-  ready: 0,
+  ready: tickets.value.filter((ticket) => ticket.state === 'ready').length,
   served: tickets.value.filter((ticket) => ticket.state === 'served').length,
   voided: tickets.value.filter((ticket) => ticket.state === 'voided').length,
 }))
@@ -73,7 +83,18 @@ async function toggleItem(ticketId: string, itemId: string) {
   pendingToggle.value.add(itemId)
 
   try {
-    await postKdsToggleItem(itemId)
+    const response = await postKdsToggleItem(itemId)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
+    // Optimistic apply — same shape as the Echo `item.toggled` payload, so the live broadcast
+    // landing milliseconds later is idempotent (applies the same state, no flicker).
+    board.applyItemToggle({
+      item_id: response.item_id,
+      order_id: response.order_id,
+      done: response.done,
+      done_at: response.done_at,
+    })
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to update item.')
   } finally {
@@ -102,11 +123,87 @@ async function advanceTicket(ticketId: string) {
   pendingAdvance.value.add(ticketId)
 
   try {
-    await postKdsAdvance(ticketId)
+    const response = await postKdsAdvance(ticketId)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
+    // Optimistic apply — full payload matches Echo `order.updated` shape, so the live broadcast
+    // landing milliseconds later applies the same state idempotently (no flicker, no double-render).
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
+    toast.success(response.status === 'served' ? 'Order marked as served.' : 'Order started.')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Unable to advance order.')
   } finally {
     pendingAdvance.value.delete(ticketId)
+  }
+}
+
+async function recallTicket(ticketId: string) {
+  const ticket = tickets.value.find((item) => item.id === ticketId)
+
+  if (!ticket || ticket.state !== 'served') {
+    return
+  }
+
+  if (pendingRecall.value.has(ticketId)) {
+    return
+  }
+
+  pendingRecall.value.add(ticketId)
+
+  try {
+    const response = await postKdsRecall(ticketId)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
+    // Optimistic apply — see advanceTicket() for rationale.
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
+    toast.success('Order recalled — now preparing.')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Unable to recall order.')
+  } finally {
+    pendingRecall.value.delete(ticketId)
+  }
+}
+
+function requestVoid(ticketId: string) {
+  const ticket = tickets.value.find((item) => item.id === ticketId)
+
+  if (!ticket || ticket.state === 'voided' || ticket.state === 'served') {
+    return
+  }
+
+  voidTarget.value = ticket
+  voidModalOpen.value = true
+}
+
+async function confirmVoid(reason: string) {
+  const ticket = voidTarget.value
+
+  if (!ticket) {
+    return
+  }
+
+  if (pendingVoid.value.has(ticket.id)) {
+    return
+  }
+
+  pendingVoid.value.add(ticket.id)
+  voidModalOpen.value = false
+
+  try {
+    const response = await postKdsVoid(ticket.id, reason)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
+    // Optimistic apply — see advanceTicket() for rationale.
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
+    toast.success('Order voided.')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Unable to void order.')
+  } finally {
+    pendingVoid.value.delete(ticket.id)
+    voidTarget.value = null
   }
 }
 
@@ -121,6 +218,7 @@ function toggleDensity() {
 
 onMounted(() => {
   document.body.classList.add('kds-active')
+  setClockOffset(props.serverNow)
 
   try {
     const storedDensity = window.localStorage.getItem('kds-density')
@@ -158,6 +256,9 @@ onBeforeUnmount(() => {
           :overdue="counts.overdue"
           :clock="clockLabel"
           :date-label="dateLabel"
+          :online="connected"
+          :chime-muted="chimeMuted"
+          @toggle-chime="toggleChime"
         />
 
         <div class="kds-subbar">
@@ -179,14 +280,22 @@ onBeforeUnmount(() => {
               :key="ticket.id"
               :ticket="ticket"
               :now="now"
+              :clock-offset="clockOffset"
               :density="density"
               @advance="advanceTicket"
+              @recall="recallTicket"
               @toggle-item="toggleItem"
+              @void="requestVoid"
             />
           </div>
           <KdsEmptyState v-else />
         </section>
     </section>
+    <KdsVoidModal
+      v-model:open="voidModalOpen"
+      :table="voidTarget?.table"
+      @confirm="confirmVoid"
+    />
     <Toaster position="top-center" rich-colors />
   </main>
 </template>
@@ -201,7 +310,7 @@ onBeforeUnmount(() => {
   --kds-fg0: #f4efe7;
   --kds-fg1: #ddd4c7;
   --kds-fg2: #a89d8e;
-  --kds-fg3: #70675e;
+  --kds-fg3: #7a7168;
   --kds-accent: #f6b56d;
   --kds-new: #85a9d8;
   --kds-preparing: #de8a48;
@@ -306,7 +415,7 @@ body.kds-active {
 .kds-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .kds-grid.density-compact {
@@ -439,6 +548,37 @@ body.kds-active {
   color: #7fdb88;
 }
 
+:deep(.kds-online.is-offline) {
+  border-color: rgb(214 85 64 / 0.35);
+  background: rgb(214 85 64 / 0.14);
+  color: var(--kds-overdue);
+}
+
+:deep(.kds-chime-toggle) {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 999px;
+  background: var(--kds-bg2);
+  color: var(--kds-fg1);
+}
+
+:deep(.kds-chime-toggle[aria-pressed="true"]) {
+  color: var(--kds-fg3);
+}
+
+:deep(.kds-chime-toggle svg) {
+  width: 16px;
+  height: 16px;
+}
+
+:deep(.kds-chime-toggle:focus-visible) {
+  outline: 3px solid rgb(246 181 109 / 0.45);
+  outline-offset: 2px;
+}
+
 :deep(.kds-rush) {
   border: 1px solid rgb(214 85 64 / 0.35);
   background: rgb(214 85 64 / 0.14);
@@ -567,10 +707,29 @@ body.kds-active {
   opacity: 0.72;
 }
 
+@keyframes kds-overdue-pulse {
+  0%,
+  100% {
+    border-color: rgb(214 85 64 / 0.42);
+    box-shadow:
+      0 0 0 1px rgb(214 85 64 / 0.14),
+      0 24px 56px rgb(214 85 64 / 0.12);
+  }
+
+  50% {
+    border-color: rgb(214 85 64 / 0.72);
+    box-shadow:
+      0 0 0 2px rgb(214 85 64 / 0.32),
+      0 24px 56px rgb(214 85 64 / 0.24);
+  }
+}
+
 :deep(.kds-ticket.urgency-over:not(.is-terminal)) {
+  border-left-width: 6px;
   border-color: rgb(214 85 64 / 0.45);
   border-left-color: var(--kds-overdue);
   box-shadow: 0 0 0 1px rgb(214 85 64 / 0.16), 0 24px 56px rgb(214 85 64 / 0.13);
+  animation: kds-overdue-pulse 1.4s ease-in-out infinite;
 }
 
 :deep(.kds-ticket-header) {
@@ -625,8 +784,9 @@ body.kds-active {
   color: var(--kds-warning);
 }
 
-:deep(.urgency-over .kds-timer) {
+:deep(.urgency-over:not(.is-terminal) .kds-timer) {
   color: var(--kds-overdue);
+  font-size: 36px;
 }
 
 :deep(.is-struck) {
@@ -685,6 +845,22 @@ body.kds-active {
   padding: 0 16px 8px;
 }
 
+:deep(.kds-items-progress) {
+  color: var(--kds-fg2);
+  font-family: var(--kds-font-m);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--kds-weight-data);
+  letter-spacing: 0.08em;
+}
+
+:deep(.kds-items-progress.has-progress) {
+  color: var(--kds-warning);
+}
+
+:deep(.kds-items-progress.is-complete) {
+  color: var(--kds-ready);
+}
+
 :deep(.kds-item-row) {
   width: 100%;
   min-height: 44px;
@@ -694,7 +870,7 @@ body.kds-active {
   background: transparent;
   color: var(--kds-fg0);
   font-family: var(--kds-font-s);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: var(--kds-weight-body);
   padding: 0 16px;
   text-align: left;
@@ -715,7 +891,23 @@ body.kds-active {
 }
 
 :deep(.kds-item-row.is-done) {
-  color: rgb(244 239 231 / 0.62);
+  color: rgb(244 239 231 / 0.58);
+}
+
+:deep(.kds-item-row.is-done .kds-item-name.is-done) {
+  text-decoration: line-through;
+  text-decoration-color: rgb(244 239 231 / 0.42);
+  text-decoration-thickness: 2px;
+}
+
+:deep(.kds-item-row.is-done .kds-item-check[data-state="checked"]) {
+  border-color: rgb(111 199 120 / 0.65);
+  background: rgb(111 199 120 / 0.22);
+  color: var(--kds-ready);
+}
+
+:deep(.kds-item-row.is-done .kds-item-qty) {
+  color: rgb(246 181 109 / 0.52);
 }
 
 :deep(.kds-item-row.is-disabled) {
@@ -737,12 +929,29 @@ body.kds-active {
   min-width: 34px;
 }
 
+:deep(.kds-item-text) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
 :deep(.kds-item-name) {
   min-width: 0;
 }
 
+:deep(.kds-item-note) {
+  color: var(--kds-fg2);
+  font-size: 13px;
+  font-style: italic;
+  font-weight: var(--kds-weight-caption);
+  line-height: 1.25;
+}
+
 :deep(.kds-safety) {
-  color: var(--kds-warning);
+  color: #e8b85a;
+  font-size: 15px;
+  font-weight: var(--kds-weight-label);
 }
 
 :deep(.kds-ticket-footer) {
@@ -805,14 +1014,39 @@ body.kds-active {
   opacity: 0.45;
 }
 
-:deep(.kds-card-action.is-recall) {
-  border-color: rgb(246 181 109 / 0.28);
+:deep(.kds-card-action:focus-visible) {
+  outline: 3px solid rgb(246 181 109 / 0.45);
+  outline-offset: 2px;
+}
+
+:deep(.kds-recall-action) {
+  border-color: rgb(246 181 109 / 0.35);
   background: rgb(246 181 109 / 0.08);
   color: var(--kds-accent);
 }
 
-:deep(.kds-card-action:focus-visible) {
-  outline: 3px solid rgb(246 181 109 / 0.45);
+:deep(.kds-recall-action:hover) {
+  background: rgb(246 181 109 / 0.16);
+  color: var(--kds-accent);
+}
+
+:deep(.kds-void-action) {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border: 1px solid rgb(214 85 64 / 0.28);
+  border-radius: 8px;
+  background: rgb(214 85 64 / 0.08);
+  color: var(--kds-overdue);
+}
+
+:deep(.kds-void-action:hover) {
+  background: rgb(214 85 64 / 0.18);
+  color: var(--kds-overdue);
+}
+
+:deep(.kds-void-action:focus-visible) {
+  outline: 3px solid rgb(214 85 64 / 0.45);
   outline-offset: 2px;
 }
 

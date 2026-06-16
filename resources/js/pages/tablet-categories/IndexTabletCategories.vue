@@ -56,6 +56,10 @@ const selectedCategory = computed(() =>
     props.categories.find((c) => c.id === selectedId.value) ?? null,
 )
 
+const sortedCategories = computed(() =>
+    [...props.categories].sort((a, b) => a.sort_order - b.sort_order),
+)
+
 // ─── Category Drag Reorder ─────────────────────────────────────────────────
 const dragOverId = ref<number | null>(null)
 const isReordering = ref(false)
@@ -73,7 +77,7 @@ function onDragOver(e: DragEvent, id: number) {
 
 function onDrop(targetId: number) {
     if (!draggingId || draggingId === targetId) return
-    const ordered = [...props.categories].sort((a, b) => a.sort_order - b.sort_order)
+    const ordered = [...sortedCategories.value]
     const fromIdx = ordered.findIndex((c) => c.id === draggingId)
     const toIdx   = ordered.findIndex((c) => c.id === targetId)
     if (fromIdx === -1 || toIdx === -1) return
@@ -231,7 +235,7 @@ function submitAttach() {
         <div class="space-y-5">
             <!-- Hero header -->
             <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#f6b56d]/10 via-transparent to-transparent dark:from-[#f6b56d]/6" />
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
                 <div class="relative flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div class="space-y-2">
                         <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
@@ -263,13 +267,13 @@ function submitAttach() {
                         </div>
                         <div class="flex-1 overflow-y-auto py-1">
                             <div
-                                v-for="(cat, index) in [...categories].sort((a, b) => a.sort_order - b.sort_order)"
+                                v-for="(cat, index) in sortedCategories"
                                 :key="cat.id"
                                 class="flex cursor-pointer items-center gap-2 px-3 py-2.5 transition-colors"
                                 :class="{
-                                    'bg-[#2a1e0c] text-[#F6B56D]': selectedId === cat.id,
+                                    'bg-woosoo-accent/12 text-woosoo-accent border border-woosoo-accent/30': selectedId === cat.id,
                                     'hover:bg-black/4 dark:hover:bg-white/4': selectedId !== cat.id,
-                                    'border-t-2 border-[#f6b56d]/60': dragOverId === cat.id,
+                                    'border-t-2 border-woosoo-accent/60': dragOverId === cat.id,
                                 }"
                                 draggable="true"
                                 @click="selectedId = cat.id"
@@ -278,8 +282,10 @@ function submitAttach() {
                                 @dragover="onDragOver($event, cat.id)"
                                 @drop="onDrop(cat.id)"
                             >
-                                <GripVertical class="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40" />
-                                <span class="w-4 shrink-0 font-mono text-[10px] text-muted-foreground">#{{ index + 1 }}</span>
+                                <GripVertical class="h-4 w-4 shrink-0 cursor-grab rounded p-0.5 text-muted-foreground/50 hover:bg-black/5 dark:hover:bg-white/5" />
+                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-black/5 font-mono text-[10px] font-semibold text-muted-foreground dark:bg-white/8">
+                                    {{ index + 1 }}
+                                </span>
                                 <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ cat.name }}</span>
                                 <span class="font-mono text-[10px] text-muted-foreground">{{ cat.menu_count }}</span>
                                 <button
@@ -358,7 +364,7 @@ function submitAttach() {
                                         <button
                                             class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase transition-colors"
                                             :class="menu.is_featured
-                                                ? 'bg-[#f6b56d]/20 text-[#f6b56d] hover:bg-[#f6b56d]/30'
+                                                ? 'bg-woosoo-accent/20 text-woosoo-accent hover:bg-woosoo-accent/30'
                                                 : 'bg-muted text-muted-foreground hover:bg-muted/80'"
                                             @click="toggleFeatured(selectedCategory, menu)"
                                         >
@@ -467,11 +473,11 @@ function submitAttach() {
                             v-for="m in filteredUnattached"
                             :key="m.id"
                             class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50"
-                            :class="{ 'bg-[#f6b56d]/10': selectedAttachIds.includes(m.id) }"
+                            :class="{ 'bg-woosoo-accent/10': selectedAttachIds.includes(m.id) }"
                             @click="toggleAttachSelection(m.id)"
                         >
                             <div class="h-3.5 w-3.5 shrink-0 rounded border"
-                                :class="selectedAttachIds.includes(m.id) ? 'border-[#f6b56d] bg-[#f6b56d]' : 'border-border'"
+                                :class="selectedAttachIds.includes(m.id) ? 'border-woosoo-accent bg-woosoo-accent' : 'border-border'"
                             />
                             <span class="text-sm">{{ m.name }}</span>
                         </div>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-vue-next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { type BreadcrumbItem } from '@/types';
@@ -29,6 +30,7 @@ interface MonitoringMetrics {
         items: Array<{
             id: number;
             device_order_id: number;
+            order_id: number | null;
             order_number: string;
             device_name: string;
             table_name: string;
@@ -175,12 +177,39 @@ const purgePrintEvents = async () => {
     loading.value = true;
     try {
         await axios.post('/monitoring/purge-print-events');
-        await refreshMetrics();
     } catch (error) {
         console.error('Failed to purge print events:', error);
     } finally {
         loading.value = false;
     }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
+};
+
+const retryPrint = async (orderId: number | null) => {
+    if (!orderId || loading.value) return;
+
+    loading.value = true;
+    try {
+        await new Promise<void>((resolve, reject) => {
+            router.post(route('orders.print'), { order_id: orderId }, {
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    toastSuccess('Print job re-queued')
+                    resolve()
+                },
+                onError: () => reject(new Error('Print retry failed')),
+            })
+        })
+    } catch (error) {
+        toastError('Failed to retry print job')
+        console.error('Print retry failed:', error);
+    } finally {
+        loading.value = false;
+    }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
 };
 
 // Action feedback uses the global vue-sonner toast (useToast composable)
@@ -197,13 +226,14 @@ const resetSession = async (sessionId: number) => {
         const res = await axios.post(`/monitoring/sessions/${sessionId}/reset`);
         const message = res.data?.message ?? 'Reset dispatched.';
         if (res.data?.success) { toastSuccess(message) } else { toastError(message) }
-        await refreshMetrics();
     } catch (e: any) {
         toastError(e?.response?.data?.message ?? 'Reset failed — see browser console.');
         console.error('Reset session failed:', e);
     } finally {
         loading.value = false;
     }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
 };
 
 const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, unpaidCount: number) => {
@@ -230,13 +260,14 @@ const forceEndSession = async (sessionId: number, canSafelyForceEnd: boolean, un
         const res = await axios.post(`/monitoring/sessions/${sessionId}/force-end`, { force });
         const message = res.data?.message ?? 'Force-end submitted.';
         if (res.data?.success) { toastSuccess(message) } else { toastError(message) }
-        await refreshMetrics();
     } catch (e: any) {
         toastError(e?.response?.data?.message ?? 'Force-end failed — see browser console.');
         console.error('Force-end failed:', e);
     } finally {
         loading.value = false;
     }
+    // refreshMetrics() guards on `loading`, so it must run after the reset above.
+    await refreshMetrics();
 };
 
 const fmtSecs = (s: number | null): string => {
@@ -302,22 +333,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
+                        <Button variant="outline" size="sm" as-child>
+                            <Link :href="route('reports.print-audit')">Print Audit</Link>
+                        </Button>
                         <Button variant="outline" size="sm" @click="toggleAutoRefresh"
                             :class="{ 'bg-woosoo-accent/10 text-woosoo-primary-dark': autoRefresh }">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2"
-                                :class="{ 'animate-spin': autoRefresh }" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
+                            <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': autoRefresh }" />
                             {{ autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}
                         </Button>
                         <Button size="sm" @click="refreshMetrics" :disabled="loading">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2"
-                                :class="{ 'animate-spin': loading }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
+                            <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': loading }" />
                             Refresh Now
                         </Button>
                     </div>
@@ -325,7 +350,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <!-- Alert Banner -->
-            <div v-if="hasAlerts" class="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            <div v-if="hasAlerts" class="bg-destructive/10 border border-destructive/20 rounded-[20px] p-4">
                 <div class="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-destructive" viewBox="0 0 20 20"
                         fill="currentColor">
@@ -463,6 +488,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     <th class="text-left p-2">Type</th>
                                     <th class="text-left p-2">Attempts</th>
                                     <th class="text-left p-2">Last Error</th>
+                                    <th class="text-left p-2">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -479,6 +505,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </td>
                                     <td class="p-2 text-xs text-muted-foreground truncate max-w-xs">
                                         {{ evt.last_error || 'N/A' }}
+                                    </td>
+                                    <td class="p-2">
+                                        <Button
+                                            v-if="evt.order_id"
+                                            variant="outline"
+                                            size="sm"
+                                            :disabled="loading"
+                                            @click="retryPrint(evt.order_id)"
+                                        >
+                                            Retry
+                                        </Button>
+                                        <span v-else class="text-xs text-muted-foreground">—</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -506,7 +544,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
 
-                    <div v-if="metrics.printLatency.stuck > 0" class="mb-4 p-3 rounded bg-destructive/10 border border-destructive/20 text-sm">
+                    <div v-if="metrics.printLatency.stuck > 0" class="mb-4 p-3 rounded-[20px] bg-destructive/10 border border-destructive/20 text-sm">
                         <strong class="text-destructive">{{ metrics.printLatency.stuck }} stuck event(s)</strong>
                         — broadcast went out but never acknowledged (&gt;2 min).
                     </div>

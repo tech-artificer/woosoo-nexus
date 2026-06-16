@@ -8,7 +8,7 @@ import Pusher from 'pusher-js';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
-import { initializeTheme } from './composables/useAppearance';
+import { initializeNexusTheme } from './composables/useNexusTheme';
 
 declare global {
     interface Window {
@@ -24,6 +24,14 @@ window.Pusher = Pusher;
 window.config = {
     baseUrl: document.querySelector('meta[name="asset-base-url"]')?.getAttribute('content') || '/',
 };
+
+window.addEventListener('error', (event) => {
+    console.error('[GLOBAL ERROR]', event.error ?? event.message, event);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('[UNHANDLED REJECTION]', event.reason);
+});
 
 try {
     window.Echo = new Echo({
@@ -59,5 +67,5 @@ createInertiaApp({
     },
 });
 
-// This will set light / dark mode on page load...
-initializeTheme();
+// Sync data-theme + .dark from nexus-theme (blade inline script handles first paint)
+initializeNexusTheme();

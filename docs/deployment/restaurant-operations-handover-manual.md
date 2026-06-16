@@ -1,6 +1,6 @@
 ---
 status: canonical
-last_reviewed: 2026-05-26
+last_reviewed: 2026-06-16
 scope: ecosystem
 ---
 
@@ -338,6 +338,100 @@ Perform before the restaurant opens for the day.
    curl -k https://192.168.1.31:4443/build-info.json
    ```
 7. Run the acceptance checklist (see _Final Handover Acceptance_).
+
+### Software Update (New Code Without Full Re-setup)
+
+Run this workflow when a new bugfix or feature is released and pushed to the `staging` branch.
+This is the routine update path and does not require system reconfiguration.
+
+1. **SSH into the Pi:**
+   ```bash
+   ssh pi@192.168.1.31
+   ```
+
+2. **Navigate to the Nexus repo:**
+   ```bash
+   cd /opt/woosoo/woosoo-nexus
+   ```
+
+3. **Run the update script:**
+   ```bash
+   sudo bash scripts/deployment/update-client.sh
+   ```
+   The script will:
+   - Pull the latest code from `staging` branch for both `woosoo-nexus` and `tablet-ordering-pwa`
+   - Verify both repos are on the correct branch
+   - Build new Docker images
+   - Start/restart services
+   - Run database migrations
+   - Clear and recache Laravel config, routes, and views
+   - Show container status
+   - Run health checks at the end
+
+   A backup snapshot is automatically saved to `/opt/woosoo/backups/update-YYYYMMDD-HHMMSS/` before pulling new code — **note this directory name in case rollback is needed**.
+
+4. **Check the output for errors:**
+   - Look for `ERROR` lines in the script output.
+   - If migrations fail or Docker build fails, the update may be incomplete. See **Rollback** below to revert.
+
+5. **Confirm services are healthy:**
+   ```bash
+   docker compose --env-file ./woosoo-nexus/.env -f compose.yaml ps
+   ```
+   All services should show `Up` status.
+
+6. **Run post-update smoke checks:**
+   ```bash
+   curl -k https://192.168.1.31/api/health
+   curl -k https://192.168.1.31:4443/build-info.json
+   ```
+   Both should return HTTP 200 or valid JSON.
+
+7. **Verify the Tablet PWA version:**
+   - Open `https://192.168.1.31:4443` in Chrome on a tablet or browser.
+   - The welcome screen should load without errors.
+   - Tap **Begin the Feast** to confirm navigation works.
+
+### Rollback
+
+Revert to the previous commit if an update breaks something and you need to recover quickly.
+
+1. **Find the backup directory from the failed update:**
+   ```bash
+   ls /opt/woosoo/backups/
+   ```
+   Look for the most recent `update-YYYYMMDD-HHMMSS` directory. (If you ran the update earlier today, it will have today's date.)
+
+2. **Run the rollback script with the backup directory:**
+   ```bash
+   sudo bash scripts/deployment/rollback-client.sh /opt/woosoo/backups/update-YYYYMMDD-HHMMSS
+   ```
+   Replace `update-YYYYMMDD-HHMMSS` with the actual directory name. The script will:
+   - Restore both git repos to their pre-update commits
+   - Restore the `.env` configuration file
+   - Rebuild Docker images
+   - Restart services
+   - Clear and recache Laravel config, routes, and views
+   - Display container status
+
+3. **Confirm services are healthy:**
+   ```bash
+   docker compose --env-file ./woosoo-nexus/.env -f compose.yaml ps
+   ```
+   All services should show `Up` status.
+
+4. **Re-run smoke checks:**
+   ```bash
+   curl -k https://192.168.1.31/api/health
+   curl -k https://192.168.1.31:4443/build-info.json
+   ```
+
+5. **Verify tablet and admin are operational:**
+   - Open `https://192.168.1.31` (Nexus admin) and confirm login works.
+   - Open `https://192.168.1.31:4443` (Tablet PWA) and confirm the welcome screen appears.
+
+6. **Notify the developer:**
+   - Report the failed update and the rollback to the developer responsible for the code so the issue can be investigated.
 
 ---
 

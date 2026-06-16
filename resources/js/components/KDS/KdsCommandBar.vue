@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { ChefHat, Clock3, Flame, Wifi } from 'lucide-vue-next'
+import { Bell, BellOff, ChefHat, Clock3, Flame, Wifi, WifiOff } from 'lucide-vue-next'
 
-defineProps<{
-  active: number
-  newCount: number
-  preparing: number
-  overdue: number
-  clock: string
-  dateLabel: string
+withDefaults(
+  defineProps<{
+    active: number
+    newCount: number
+    preparing: number
+    overdue: number
+    clock: string
+    dateLabel: string
+    online?: boolean
+    chimeMuted?: boolean
+  }>(),
+  { online: true, chimeMuted: false },
+)
+
+defineEmits<{
+  toggleChime: []
 }>()
 </script>
 
@@ -43,9 +52,20 @@ defineProps<{
     </div>
 
     <div class="kds-status-clock">
-      <span class="kds-online">
-        <Wifi aria-hidden="true" />
-        Online
+      <button
+        type="button"
+        class="kds-chime-toggle"
+        :aria-pressed="chimeMuted"
+        :aria-label="chimeMuted ? 'Unmute new-order chime' : 'Mute new-order chime'"
+        @click="$emit('toggleChime')"
+      >
+        <BellOff v-if="chimeMuted" aria-hidden="true" />
+        <Bell v-else aria-hidden="true" />
+      </button>
+      <span class="kds-online" :class="{ 'is-offline': !online }">
+        <Wifi v-if="online" aria-hidden="true" />
+        <WifiOff v-else aria-hidden="true" />
+        {{ online ? 'Online' : 'Offline' }}
       </span>
       <span v-if="overdue > 0" class="kds-rush">
         <Flame aria-hidden="true" />

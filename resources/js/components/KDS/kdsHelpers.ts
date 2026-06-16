@@ -12,12 +12,12 @@ export const STAGE_SORT: Record<KdsTicketState, number> = {
 
 export const KDS_THRESHOLDS: KdsThresholds = {
   initial: {
-    warn: 15 * 60,
-    over: 25 * 60,
+    warn: 10 * 60,
+    over: 14 * 60,
   },
   refill: {
-    warn: 15 * 60,
-    over: 25 * 60,
+    warn: 10 * 60,
+    over: 14 * 60,
   },
 }
 
@@ -29,12 +29,12 @@ export function isActive(state: KdsTicketState): boolean {
   return ACTIVE_STATES.includes(state)
 }
 
-export function elapsedFor(ticket: KdsTicket, now: number): number {
+export function elapsedFor(ticket: KdsTicket, now: number, clockOffset = 0): number {
   if (isTerminal(ticket.state)) {
     return ticket.frozenElapsed ?? ticket.elapsed
   }
 
-  return Math.max(0, Math.floor((now - ticket.issuedAt) / 1000))
+  return Math.max(0, Math.floor((now + clockOffset - ticket.issuedAt) / 1000))
 }
 
 export function formatElapsed(seconds: number): string {
@@ -44,12 +44,12 @@ export function formatElapsed(seconds: number): string {
   return `${mins}:${String(secs).padStart(2, '0')}`
 }
 
-export function urgencyFor(ticket: KdsTicket, now: number, thresholds: KdsThresholds = KDS_THRESHOLDS): KdsUrgency {
+export function urgencyFor(ticket: KdsTicket, now: number, clockOffset = 0, thresholds: KdsThresholds = KDS_THRESHOLDS): KdsUrgency {
   if (isTerminal(ticket.state)) {
     return 'ok'
   }
 
-  const elapsed = elapsedFor(ticket, now)
+  const elapsed = elapsedFor(ticket, now, clockOffset)
   const threshold = thresholds[ticket.type]
 
   if (elapsed >= threshold.over) {
@@ -129,6 +129,13 @@ export function canAdvanceTicket(ticket: KdsTicket): boolean {
   }
 
   return nextStateFor(ticket.state) !== null
+}
+
+const MAX_RECALLS = 5
+
+/** Recall is the served→in_progress edge only; voided orders need a new ticket (see order-state.contract.md). */
+export function canRecallTicket(ticket: KdsTicket): boolean {
+  return ticket.state === 'served' && (ticket.recalled ?? 0) < MAX_RECALLS
 }
 
 /** Primary action `:disabled` — Mark as Served gated until every checklist item is done. */

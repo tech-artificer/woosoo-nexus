@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\DeviceOrder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -42,7 +43,25 @@ test('kds index returns 200 with empty tickets when pos connection fails', funct
 
 test('kds index returns 200 with tickets when pos unreachable and active orders exist', function () {
     $admin = User::factory()->create(['is_admin' => true]);
-    \App\Models\DeviceOrder::factory()->confirmed()->create(['table_id' => null]);
+    DeviceOrder::factory()->confirmed()->create(['table_id' => null]);
+
+    actingAs($admin);
+
+    get(route('kds.display'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('KDS/Display')
+            ->has('initialTickets', 1)
+            ->where('initialTickets.0.table', '—')
+        );
+});
+
+test('kds index returns 200 when pos unreachable and an order has a table_id set', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    // table_id set + POS down is the exact case that previously triggered a lazy-load 500:
+    // toTicket() must NOT touch the POS-backed device.table/table relations when POS is down.
+    DeviceOrder::factory()->confirmed()->create(['table_id' => 1]);
 
     actingAs($admin);
 

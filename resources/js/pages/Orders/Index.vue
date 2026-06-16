@@ -1,22 +1,24 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
 import { columns } from '@/components/Orders/columns';
-import DataTable from '@/components/Orders/DataTable.vue'
-import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue'
-import StatsCards from '@/components/Stats/StatsCards.vue'
+import DataTable from '@/components/Orders/DataTable.vue';
+import OrderDetailSheet from '@/components/Orders/OrderDetailSheet.vue';
+import OrderStatusBadge from '@/components/Orders/OrderStatusBadge.vue';
 import type { DeviceOrder, User} from '@/types/models';
+import { formatCurrency } from '@/lib/utils';
 import { toast } from 'vue-sonner';
 import {
     Tabs,
     TabsContent,
     TabsList,
     TabsTrigger,
-} from "@/components/ui/tabs"
+} from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { RefreshCw } from 'lucide-vue-next'
 
 interface OrdersPageProps {
   title: string
@@ -58,63 +60,156 @@ const echoStatus = ref<'connecting' | 'connected' | 'disconnected'>('connecting'
 
 // When Echo reconnects after a disconnection, reload orders to catch any missed
 // during the gap. When disconnected for too long, poll as a fallback.
-let disconnectPollTimer: ReturnType<typeof setTimeout> | null = null
+let disconnectPollTimer: ReturnType<typeof setInterval> | null = null
+
+function refreshLocalOrdersFromPage() {
+  const updatedOrders = (page.props as any).orders ?? []
+  const updatedHistory = (page.props as any).orderHistory ?? []
+  localOrders.value = Array.isArray(updatedOrders) ? [...updatedOrders] : []
+  localOrderHistory.value = Array.isArray(updatedHistory) ? [...updatedHistory] : []
+}
+
+function reloadOrdersFromServer() {
+  router.reload({
+    only: ['orders', 'orderHistory'],
+    onSuccess: refreshLocalOrdersFromPage,
+  })
+}
 
 watch(echoStatus, (newStatus, oldStatus) => {
   if (newStatus === 'connected' && oldStatus === 'disconnected') {
     // Only reload when recovering from a real disconnection, not on initial connect.
-    // Using oldStatus === 'disconnected' prevents a spurious reload on first mount.
-    router.reload({
-      only: ['orders', 'orderHistory'],
-      onSuccess: () => {
-        // Refresh UI state from updated props after reload completes
-        const updatedOrders = (page.props as any).orders ?? []
-        const updatedHistory = (page.props as any).orderHistory ?? []
-        localOrders.value = Array.isArray(updatedOrders) ? [...updatedOrders] : []
-        localOrderHistory.value = Array.isArray(updatedHistory) ? [...updatedHistory] : []
-      },
-    })
+    reloadOrdersFromServer()
     if (disconnectPollTimer !== null) {
-      clearTimeout(disconnectPollTimer)
+      clearInterval(disconnectPollTimer)
       disconnectPollTimer = null
     }
   } else if (newStatus === 'disconnected') {
-    // Fallback: if still disconnected after 30 s, do a data reload so the admin
-    // at least sees the current state even without a live WebSocket.
-    if (disconnectPollTimer !== null) clearTimeout(disconnectPollTimer)
-    disconnectPollTimer = setTimeout(() => {
-      router.reload({
-        only: ['orders', 'orderHistory'],
-        onSuccess: () => {
-          // Refresh UI state from updated props after reload completes
-          const updatedOrders = (page.props as any).orders ?? []
-          const updatedHistory = (page.props as any).orderHistory ?? []
-          localOrders.value = Array.isArray(updatedOrders) ? [...updatedOrders] : []
-          localOrderHistory.value = Array.isArray(updatedHistory) ? [...updatedHistory] : []
-        },
-      })
-    }, 30_000)
+    // Fallback: while still disconnected, reload every 30 s so the board doesn't
+    // drift stale during longer outages (not just a single one-shot reload).
+    if (disconnectPollTimer !== null) clearInterval(disconnectPollTimer)
+    disconnectPollTimer = setInterval(reloadOrdersFromServer, 30_000)
   }
 })
 
 // Track which order IDs have active print animations to prevent duplicate animations
 const animatedOrderIds = new Set<number>()
 
-// Reactive stats always derived from live local arrays — never stale server snapshot
-const liveStats = computed(() => [
-  {
-    title: 'Live Orders',
-    value: localOrders.value.length,
-    subtitle: 'Pending and in-progress',
-    variant: 'primary' as const,
-  },
-  {
-    title: 'Order History',
-    value: localOrderHistory.value.length,
-    subtitle: 'Completed / voided',
-    variant: 'default' as const,
-  },
-])
+const KANBAN_COLUMNS = [
+  { key: 'confirmed', label: 'CONFIRMED', statuses: ['confirmed', 'pending', 'in_progress', 'ready', 'served'] },
+  { key: 'completed', label: 'COMPLETED', statuses: ['completed'] },
+  { key: 'voided', label: 'VOIDED', statuses: ['voided'] },
+  { key: 'cancelled', label: 'CANCELLED', statuses: ['cancelled'] },
+] as const
+
+function orderStatusKey(order: DeviceOrder): string {
+  return String(order.status ?? '').toLowerCase()
+}
+
+function ordersInColumn(statuses: readonly string[]): DeviceOrder[] {
+  return filteredLocalOrders.value.filter((o) => statuses.includes(orderStatusKey(o)))
+}
+
+const kanbanStatusFilter = ref<string[]>([])
+const kanbanTableFilter = ref<string>('all')
+const kanbanTimeRange = ref<'all' | 'today' | 'hour'>('all')
+
+const kanbanTableOptions = computed(() => {
+  const names = new Set<string>()
+  localOrders.value.forEach((o) => {
+    const name = o.table?.name
+    if (name) names.add(name)
+  })
+  return Array.from(names).sort()
+})
+
+const filteredLocalOrders = computed(() => {
+  let list = localOrders.value
+
+  if (kanbanStatusFilter.value.length > 0) {
+    list = list.filter((o) => kanbanStatusFilter.value.includes(orderStatusKey(o)))
+  }
+
+  if (kanbanTableFilter.value !== 'all') {
+    list = list.filter((o) => o.table?.name === kanbanTableFilter.value)
+  }
+
+  if (kanbanTimeRange.value === 'today') {
+    const today = new Date().toDateString()
+    list = list.filter((o) => o.created_at && new Date(o.created_at).toDateString() === today)
+  } else if (kanbanTimeRange.value === 'hour') {
+    const cutoff = Date.now() - 3_600_000
+    list = list.filter((o) => o.created_at && new Date(o.created_at).getTime() >= cutoff)
+  }
+
+  return list
+})
+
+const kanbanStatusOptions = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Confirmed', value: 'confirmed' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Ready', value: 'ready' },
+  { label: 'Served', value: 'served' },
+]
+
+function toggleKanbanStatus(value: string) {
+  const idx = kanbanStatusFilter.value.indexOf(value)
+  if (idx === -1) {
+    kanbanStatusFilter.value = [...kanbanStatusFilter.value, value]
+  } else {
+    kanbanStatusFilter.value = kanbanStatusFilter.value.filter((s) => s !== value)
+  }
+}
+
+function handleKanbanRefresh() {
+  reloadOrdersFromServer()
+  toast.success('Orders refreshed')
+}
+
+const kanbanColumns = computed(() =>
+  KANBAN_COLUMNS.map((col) => {
+    const orders = ordersInColumn(col.statuses)
+    return { ...col, orders, count: orders.length }
+  }),
+)
+
+const dispatchSummary = computed(() => {
+  const confirmed = ordersInColumn(KANBAN_COLUMNS[0].statuses).length
+  const completed = ordersInColumn(KANBAN_COLUMNS[1].statuses).length
+  const voidedCancelled =
+    ordersInColumn(KANBAN_COLUMNS[2].statuses).length +
+    ordersInColumn(KANBAN_COLUMNS[3].statuses).length
+  return { confirmed, completed, voidedCancelled }
+})
+
+function formatElapsed(createdAt?: string | null): string {
+  if (!createdAt) return '—'
+  const diffMs = Date.now() - new Date(createdAt).getTime()
+  if (!Number.isFinite(diffMs) || diffMs < 0) return '—'
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  const rem = mins % 60
+  return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`
+}
+
+function orderTotal(order: DeviceOrder): number {
+  const raw = order.total ?? (order as any).total_amount ?? (order.meta as any)?.order_check?.total_amount
+  return typeof raw === 'number' ? raw : Number(raw || 0)
+}
+
+function orderItemsPreview(order: DeviceOrder): { name: string; quantity: number }[] {
+  const items = Array.isArray(order.items) ? order.items : []
+  return items.slice(0, 2).map((it: any) => ({
+    name: it.name || it.menu?.name || 'Item',
+    quantity: it.quantity ?? it.qty ?? 1,
+  }))
+}
+
+function packageLabel(order: DeviceOrder): string {
+  return order.name || (order.meta as any)?.package?.name || '—'
+}
 
 // Play a short audio ping for new orders (no external dependency)
 function playNewOrderPing() {
@@ -181,30 +276,57 @@ const openOrderDetail = (order: DeviceOrder) => {
 const handleDetailPrint = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  router.post('/orders/print', { order_id: orderId }, {
+  router.post(route('orders.print'), { order_id: orderId }, {
     preserveState: true,
     preserveScroll: true,
+    onSuccess: () => toast.success('Order Sent to Printer'),
+    onError: () => toast.error('Failed to send order to printer.'),
   })
 }
 
 const handleDetailComplete = () => {
   const orderId = selectedOrder.value?.order_id
   if (!orderId) return
-  // Close sheet immediately — broadcast will move the row to history
   isDetailOpen.value = false
-  router.post('/orders/complete', { order_id: orderId }, {
+  router.post(route('orders.complete'), { order_id: orderId }, {
     preserveState: true,
     preserveScroll: true,
     onError: () => {
-      // Re-open on failure so admin can retry
       isDetailOpen.value = true
       toast.error('Failed to complete order. Please try again.')
     },
   })
 }
 
-// DataTable handles all client-side column filtering
+const handleDetailVoid = () => {
+  const id = selectedOrder.value?.id
+  if (!id) return
+  isDetailOpen.value = false
+  router.delete(route('orders.destroy', { id }), {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => toast.success('Order voided'),
+    onError: () => {
+      isDetailOpen.value = true
+      toast.error('Failed to void order. Please try again.')
+    },
+  })
+}
 
+const handleDetailCancel = () => {
+  const id = selectedOrder.value?.id
+  if (!id) return
+  isDetailOpen.value = false
+  router.post(route('orders.update-status', { id }), { status: 'cancelled' }, {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => toast.success('Order cancelled'),
+    onError: () => {
+      isDetailOpen.value = true
+      toast.error('Failed to cancel order. Please try again.')
+    },
+  })
+}
 
 const handleOrderEvent = (event: DeviceOrder) => {
   const incoming = (event as any)?.order ? (event as any).order : event
@@ -355,7 +477,7 @@ onMounted(() => {
     .listen('.order.updated', (e: DeviceOrder) => {
       handleOrderEvent(e);
     })
-    .listen('.order.printed', (e: DeviceOrder) => {
+    .listen('.order.print_confirmed', (e: DeviceOrder) => {
       handleOrderEvent(e);
     })
     .error((error: unknown) => {
@@ -385,13 +507,6 @@ onMounted(() => {
     .listen('.service-request.notification', () => {})
     .error((error: unknown) => {
       console.error('[Echo] Error connecting to admin.service-requests channel:', error);
-    });
-  
-  const printChannel = window.Echo.channel('admin.print');
-  printChannel
-    .listen('.order.printed', () => {})
-    .error((error: unknown) => {
-      console.error('[Echo] Error connecting to admin.print channel:', error);
     });
 
   // Register local 'order.refill' handler to mark rows visually
@@ -423,7 +538,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (disconnectPollTimer !== null) {
-    clearTimeout(disconnectPollTimer)
+    clearInterval(disconnectPollTimer)
     disconnectPollTimer = null
   }
 
@@ -433,7 +548,6 @@ onUnmounted(() => {
       if (typeof (window.Echo as any).leave === 'function') {
         ;(window.Echo as any).leave('admin.orders')
         ;(window.Echo as any).leave('admin.service-requests')
-        ;(window.Echo as any).leave('admin.print')
       }
     } catch (e) {
       console.warn('Error leaving Echo channels', e)
@@ -451,8 +565,8 @@ onUnmounted(() => {
 <style scoped>
 @keyframes print-highlight {
   0% {
-    border-left: 4px solid rgb(34, 197, 94);
-    background-color: rgba(34, 197, 94, 0.05);
+    border-left: 4px solid var(--color-woosoo-green);
+    background-color: color-mix(in srgb, var(--color-woosoo-green) 5%, transparent);
   }
   100% {
     border-left: 4px solid transparent;
@@ -469,7 +583,25 @@ onUnmounted(() => {
     <Head :title="title" :description="description" />
    
     <AppLayout :breadcrumbs="breadcrumbs">
-      <div class="space-y-4">
+      <div class="space-y-5">
+        <!-- Hero header -->
+        <section class="relative overflow-hidden rounded-[26px] border border-black/8 bg-card/92 px-5 py-6 shadow-sm shadow-black/5 backdrop-blur-sm dark:border-white/10 md:px-6">
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-woosoo-accent/10 via-transparent to-transparent dark:from-woosoo-accent/6" />
+          <div class="relative flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div class="space-y-2">
+              <span class="inline-flex rounded-full border border-border/70 bg-accent/12 px-3 py-1 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                Kitchen Dispatch
+              </span>
+              <h2 class="font-header text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                Orders
+              </h2>
+              <p class="text-sm text-muted-foreground">
+                Live kitchen queue by status — updates in real time when connected.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <!-- WebSocket connection status pill -->
         <div class="flex items-center justify-end">
           <span
@@ -521,20 +653,122 @@ onUnmounted(() => {
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="live_orders" class="space-y-4 pt-3">
-                  <!-- Filters have been moved into the Orders DataTable toolbar -->
-                  <div class="flex flex-wrap items-center justify-between gap-3">
-                    <!-- Always reactive — derived from localOrders/localOrderHistory, never from static server prop -->
-                    <StatsCards :cards="liveStats" />
+                  <!-- Kanban toolbar: filters + refresh -->
+                  <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <span class="text-xs font-medium text-muted-foreground mr-1">Status:</span>
+                      <Button
+                        v-for="opt in kanbanStatusOptions"
+                        :key="opt.value"
+                        variant="outline"
+                        size="sm"
+                        class="h-7 text-xs"
+                        :class="kanbanStatusFilter.includes(opt.value) ? 'border-woosoo-accent bg-woosoo-accent/10' : ''"
+                        @click="toggleKanbanStatus(opt.value)"
+                      >
+                        {{ opt.label }}
+                      </Button>
+                    </div>
+                    <select
+                      v-model="kanbanTableFilter"
+                      class="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      aria-label="Filter by table"
+                    >
+                      <option value="all">All tables</option>
+                      <option v-for="name in kanbanTableOptions" :key="name" :value="name">{{ name }}</option>
+                    </select>
+                    <select
+                      v-model="kanbanTimeRange"
+                      class="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      aria-label="Filter by time"
+                    >
+                      <option value="all">All time</option>
+                      <option value="today">Today</option>
+                      <option value="hour">Last hour</option>
+                    </select>
+                    <Button variant="outline" size="sm" class="h-8" aria-label="Refresh orders" @click="handleKanbanRefresh">
+                      <RefreshCw class="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <!-- Summary chip row -->
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-full border border-woosoo-accent/30 bg-woosoo-accent/10 px-3 py-1.5 text-xs font-medium text-foreground">
+                      {{ dispatchSummary.confirmed }} confirmed
+                      <span class="mx-1.5 text-muted-foreground">·</span>
+                      {{ dispatchSummary.completed }} completed
+                      <span class="mx-1.5 text-muted-foreground">·</span>
+                      {{ dispatchSummary.voidedCancelled }} voided/cancelled
+                    </span>
                   </div>
 
-                  <div class="w-full overflow-x-auto">
-                    <DataTable
-                      :data="localOrders"
-                      :columns="columns"
-                      :devices="devices"
-                      :tables="tables"
-                      @row-click="openOrderDetail"
-                    />
+                  <!-- Kanban columns -->
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div
+                      v-for="column in kanbanColumns"
+                      :key="column.key"
+                      class="flex min-h-[320px] flex-col rounded-[18px] border border-black/8 bg-white/50 dark:border-white/10 dark:bg-white/[0.03]"
+                    >
+                      <div class="flex items-center justify-between border-b border-black/8 px-4 py-3 dark:border-white/10">
+                        <h3 class="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+                          {{ column.label }}
+                        </h3>
+                        <Badge
+                          variant="secondary"
+                          class="h-5 min-w-5 rounded-full px-1.5 text-xs tabular-nums"
+                        >
+                          {{ column.count }}
+                        </Badge>
+                      </div>
+
+                      <div class="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
+                        <button
+                          v-for="order in column.orders"
+                          :key="order.id ?? order.order_id ?? order.order_number"
+                          type="button"
+                          :data-order-id="order.id ?? order.order_id"
+                          class="group w-full rounded-[14px] border border-black/8 bg-card p-3 text-left transition-all hover:border-woosoo-accent/40 hover:shadow-sm dark:border-white/10"
+                          :class="{ 'ring-1 ring-woosoo-accent/30': order.__is_refill }"
+                          @click="openOrderDetail(order)"
+                        >
+                          <div class="flex items-start justify-between gap-2">
+                            <span class="text-sm font-bold text-foreground">ORD-{{ order.order_number }}</span>
+                            <OrderStatusBadge :status="orderStatusKey(order)" class="shrink-0 text-[10px]" />
+                          </div>
+                          <p class="mt-1.5 truncate text-xs text-muted-foreground">
+                            {{ order.device?.name ?? '—' }}
+                            <span v-if="order.table?.name"> · {{ order.table.name }}</span>
+                          </p>
+                          <p class="mt-1 truncate text-xs text-foreground/80">
+                            {{ packageLabel(order) }}
+                            <span class="text-muted-foreground"> · {{ order.guest_count ?? '—' }} pax</span>
+                          </p>
+                          <p v-if="orderItemsPreview(order).length" class="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+                            <span
+                              v-for="(item, idx) in orderItemsPreview(order)"
+                              :key="idx"
+                              class="block truncate"
+                            >
+                              {{ item.name }} ×{{ item.quantity }}
+                            </span>
+                          </p>
+                          <div class="mt-2 flex items-center justify-between gap-2 border-t border-black/5 pt-2 dark:border-white/8">
+                            <span class="text-sm font-semibold tabular-nums text-woosoo-accent">
+                              {{ formatCurrency(orderTotal(order)) }}
+                            </span>
+                            <span class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                              {{ formatElapsed(order.created_at) }}
+                            </span>
+                          </div>
+                        </button>
+
+                        <p
+                          v-if="column.orders.length === 0"
+                          class="flex flex-1 items-center justify-center py-8 text-center text-xs text-muted-foreground"
+                        >
+                          No {{ column.label.toLowerCase() }} orders
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
                 <TabsContent value="order_history" class="space-y-4 pt-3">
@@ -555,6 +789,8 @@ onUnmounted(() => {
               :order="selectedOrder"
               @print="handleDetailPrint"
               @complete="handleDetailComplete"
+              @void="handleDetailVoid"
+              @cancel-order="handleDetailCancel"
             />
         </div>
     </AppLayout>

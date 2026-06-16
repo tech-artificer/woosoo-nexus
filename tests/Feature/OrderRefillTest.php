@@ -86,9 +86,10 @@ class OrderRefillTest extends TestCase
             'guest_count' => 1,
         ]);
 
-        // Mock KryptonContextService to provide an employee_log_id
+        // Mock KryptonContextService to provide a valid session and employee_log_id.
+        // session_id is required by CheckSessionIsOpened middleware on refill routes.
         $kctxMock = Mockery::mock(KryptonContextService::class);
-        $kctxMock->shouldReceive('getData')->andReturn(['employee_log_id' => 12]);
+        $kctxMock->shouldReceive('getData')->andReturn(['session_id' => 1, 'employee_log_id' => 12]);
         $this->app->instance(KryptonContextService::class, $kctxMock);
 
         // Mock POS connection to accept ordered_menus inserts
@@ -190,7 +191,7 @@ class OrderRefillTest extends TestCase
         ]);
 
         $kctxMock = Mockery::mock(KryptonContextService::class);
-        $kctxMock->shouldReceive('getData')->andReturn(['employee_log_id' => 12]);
+        $kctxMock->shouldReceive('getData')->andReturn(['session_id' => 1, 'employee_log_id' => 12]);
         $this->app->instance(KryptonContextService::class, $kctxMock);
 
         DB::connection('pos')->table('menu_groups')->insert([
@@ -304,7 +305,7 @@ class OrderRefillTest extends TestCase
         ]);
 
         $kctxMock = Mockery::mock(KryptonContextService::class);
-        $kctxMock->shouldReceive('getData')->andReturn(['employee_log_id' => 12]);
+        $kctxMock->shouldReceive('getData')->andReturn(['session_id' => 1, 'employee_log_id' => 12]);
         $this->app->instance(KryptonContextService::class, $kctxMock);
 
         $qb = Mockery::mock();

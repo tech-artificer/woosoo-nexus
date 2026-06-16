@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\MediaLibraryController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\MonitoringController;
 use App\Http\Controllers\Admin\OrderController;
-use App\Http\Controllers\Admin\PackageConfigController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PosConnectionController;
@@ -56,6 +55,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/kds', [KdsController::class, 'index'])->name('kds.display');
         Route::post('/kds/orders/{order}/advance', [KdsController::class, 'advance'])->name('kds.advance');
         Route::post('/kds/items/{item}/toggle', [KdsController::class, 'toggleItem'])->name('kds.toggle-item');
+        Route::post('/kds/orders/{order}/recall', [KdsController::class, 'recall'])->name('kds.orders.recall');
+        Route::post('/kds/orders/{order}/void', [KdsController::class, 'void'])->name('kds.orders.void');
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
@@ -87,17 +88,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/menus', [MenuController::class, 'index'])->name('menus');
         Route::post('/menus/bulk-toggle-availability', [MenuController::class, 'bulkToggleAvailability'])->name('menus.bulk-toggle-availability');
         Route::post('/menus/{menu}/image', [MenuController::class, 'uploadImage'])->name('menu.upload.image');
-        // Packages (legacy Package model)
+        // Packages
         Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
         Route::post('/packages', [PackageController::class, 'store'])->name('packages.store');
         Route::put('/packages/{package}', [PackageController::class, 'update'])->name('packages.update');
         Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
-        // Package Configs (TabletPackageConfig — admin-managed tablet packages)
-        Route::get('/package-configs', [PackageConfigController::class, 'index'])->name('package-configs.index');
-        Route::post('/package-configs', [PackageConfigController::class, 'store'])->name('package-configs.store');
-        Route::put('/package-configs/{packageConfig}', [PackageConfigController::class, 'update'])->name('package-configs.update');
-        Route::delete('/package-configs/{packageConfig}', [PackageConfigController::class, 'destroy'])->name('package-configs.destroy');
-        Route::post('/package-configs/{packageConfig}/menus', [PackageConfigController::class, 'syncAllowedMenus'])->name('package-configs.sync-menus');
+        Route::post('/packages/{package}/menus', [PackageController::class, 'syncAllowedMenus'])->name('packages.sync-menus');
+        Route::post('/packages/{package}/most-popular', [PackageController::class, 'setMostPopular'])->name('packages.most-popular');
         // Tablet Categories
         Route::get('/tablet-categories', [TabletCategoryController::class, 'index'])->name('tablet-categories.index');
         Route::put('/tablet-categories/reorder', [TabletCategoryController::class, 'reorder'])->name('tablet-categories.reorder');
@@ -163,6 +160,19 @@ Route::middleware(['auth'])->group(function () {
             return response()->json($branch->settings ?? []);
         })->name('admin.settings.put');
 
+        Route::post('/admin/api/settings/reset', function () use ($settingsDefaults) {
+            $branch = app(LocalBranchResolver::class)->resolve();
+
+            if (! $branch) {
+                return response()->json(['message' => 'No active branch configured.'], 422);
+            }
+
+            $branch->settings = $settingsDefaults;
+            $branch->save();
+
+            return response()->json(array_merge($settingsDefaults, $branch->settings ?? []));
+        })->name('admin.settings.reset');
+
         Route::get('/admin/settings', function () {
             return Inertia::render('Admin/Settings');
         })->name('admin.settings.page');
@@ -175,7 +185,6 @@ Route::middleware(['auth'])->group(function () {
         // User
         Route::resource('/users', UserController::class);
         Route::prefix('users')->name('users.')->group(function () {
-            // Route::get('trashed', [UserController::class, 'trashed'])->name('trashed');
             Route::patch('{id}/restore', [UserController::class, 'restore'])->name('restore');
             Route::post('bulk-destroy', [UserController::class, 'bulkDestroy'])->name('bulk-destroy');
             Route::post('bulk-restore', [UserController::class, 'bulkRestore'])->name('bulk-restore');
@@ -236,6 +245,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('/', [ReportController::class, 'index'])->name('index');
             Route::get('/daily-sales', [ReportController::class, 'dailySales'])->name('daily-sales');
+            Route::get('/daily-sales/export', [ReportController::class, 'exportDailySales'])->name('daily-sales.export');
             Route::get('/menu-items', [ReportController::class, 'menuItems'])->name('menu-items');
             Route::get('/hourly-sales', [ReportController::class, 'hourlySales'])->name('hourly-sales');
             Route::get('/guest-count', [ReportController::class, 'guestCount'])->name('guest-count');

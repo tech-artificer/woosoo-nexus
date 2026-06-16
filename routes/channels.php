@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Broadcast;
 use App\Models\Device;
+use Illuminate\Support\Facades\Broadcast;
 
 // If no broadcasting driver credentials are present (e.g. during CI/composer install),
 // avoid attempting to instantiate the broadcaster (which may construct Pusher)
@@ -27,6 +27,5 @@ Broadcast::channel('service-requests.{orderId}', function (Device $device, int $
     return $device->orders()->where('order_id', $orderId)->exists();
 });
 
-Broadcast::channel('admin.orders', fn($user) => $user->is_admin);
-Broadcast::channel('admin.service-requests', fn($user) => $user->is_admin);
-Broadcast::channel('admin.print', fn($user) => $user->is_admin);
+Broadcast::channel('admin.orders', fn ($user) => $user->is_admin);
+Broadcast::channel('admin.service-requests', fn ($user) => $user->is_admin);

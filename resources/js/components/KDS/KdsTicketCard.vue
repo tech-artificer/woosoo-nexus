@@ -1,30 +1,34 @@
 <script setup lang="ts">
-import { ArrowRight, Check } from 'lucide-vue-next'
+import { ArrowRight, Ban, Check, RotateCcw } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { elapsedFor, formatElapsed, isAdvanceBlocked, isTerminal, nextStateFor, stateLabel, ticketTypeLabel, urgencyFor } from './kdsHelpers'
+import { canRecallTicket, elapsedFor, formatElapsed, isAdvanceBlocked, isTerminal, nextStateFor, stateLabel, ticketTypeLabel, urgencyFor } from './kdsHelpers'
 import type { KdsDensity, KdsTicket } from './kdsTypes'
 
 const props = defineProps<{
   ticket: KdsTicket
   now: number
+  clockOffset: number
   density: KdsDensity
 }>()
 
 const emit = defineEmits<{
   advance: [ticketId: string]
+  recall: [ticketId: string]
   toggleItem: [ticketId: string, itemId: string]
+  void: [ticketId: string]
 }>()
 
 const doneCount = computed(() => props.ticket.items.filter((item) => item.done).length)
 const totalCount = computed(() => props.ticket.items.length)
 const terminal = computed(() => isTerminal(props.ticket.state))
-const elapsed = computed(() => elapsedFor(props.ticket, props.now))
-const urgency = computed(() => urgencyFor(props.ticket, props.now))
+const elapsed = computed(() => elapsedFor(props.ticket, props.now, props.clockOffset))
+const urgency = computed(() => urgencyFor(props.ticket, props.now, props.clockOffset))
 const nextState = computed(() => nextStateFor(props.ticket.state))
 const advanceBlocked = computed(() => isAdvanceBlocked(props.ticket))
+const recallable = computed(() => canRecallTicket(props.ticket))
 const actionLabel = computed(() => {
   if (props.ticket.state === 'new') return 'Start Preparing'
   if (props.ticket.state === 'preparing' || props.ticket.state === 'ready') return 'Mark as Served'
@@ -89,7 +93,15 @@ function splitSafetyName(name: string) {
     <section class="kds-items" :aria-label="`Items for order ${ticket.id}`">
       <div class="kds-items-head">
         <span>Items</span>
-        <span>{{ doneCount }} / {{ totalCount }} checked</span>
+        <span
+          class="kds-items-progress"
+          :class="{
+            'has-progress': doneCount > 0,
+            'is-complete': totalCount > 0 && doneCount === totalCount,
+          }"
+        >
+          {{ doneCount }} / {{ totalCount }} checked
+        </span>
       </div>
 
       <button
@@ -109,12 +121,15 @@ function splitSafetyName(name: string) {
           tabindex="-1"
         />
         <span class="kds-item-qty">{{ item.qty }}x</span>
-        <span class="kds-item-name">
-          <template v-if="item.safety">
-            <span>{{ splitSafetyName(item.name).base }}</span>
-            <span class="kds-safety"> - {{ splitSafetyName(item.name).modifier }}</span>
-          </template>
-          <template v-else>{{ item.name }}</template>
+        <span class="kds-item-text">
+          <span class="kds-item-name" :class="{ 'is-done': item.done }">
+            <template v-if="item.safety">
+              <span>{{ splitSafetyName(item.name).base }}</span>
+              <span class="kds-safety"> - {{ splitSafetyName(item.name).modifier }}</span>
+            </template>
+            <template v-else>{{ item.name }}</template>
+          </span>
+          <span v-if="item.notes" class="kds-item-note">{{ item.notes }}</span>
         </span>
       </button>
     </section>
@@ -138,6 +153,29 @@ function splitSafetyName(name: string) {
       >
         {{ actionLabel }}
         <ArrowRight data-icon="inline-end" aria-hidden="true" />
+      </Button>
+
+      <Button
+        v-else-if="recallable"
+        type="button"
+        variant="outline"
+        class="kds-card-action kds-recall-action"
+        @click="emit('recall', ticket.id)"
+      >
+        <RotateCcw data-icon="inline-start" aria-hidden="true" />
+        Recall
+      </Button>
+
+      <Button
+        v-if="!terminal"
+        type="button"
+        variant="ghost"
+        size="icon"
+        class="kds-void-action"
+        :aria-label="`Void order ${ticket.id}`"
+        @click="emit('void', ticket.id)"
+      >
+        <Ban aria-hidden="true" />
       </Button>
     </footer>
   </article>

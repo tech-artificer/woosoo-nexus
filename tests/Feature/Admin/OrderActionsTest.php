@@ -183,6 +183,53 @@ class OrderActionsTest extends TestCase
         $this->assertSame(OrderStatus::COMPLETED->value, $order->status->value);
     }
 
+    public function test_admin_can_void_single_order_via_destroy(): void
+    {
+        [$admin, $order] = $this->seedAdminAndOrder(5010, OrderStatus::CONFIRMED);
+
+        Event::fake([OrderStatusUpdated::class]);
+
+        $response = $this->actingAs($admin)->delete('/orders/'.$order->id);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::VOIDED->value, $order->status->value);
+    }
+
+    public function test_admin_can_cancel_pending_order_via_update_status(): void
+    {
+        [$admin, $order] = $this->seedAdminAndOrder(5011, OrderStatus::PENDING);
+
+        Event::fake([OrderStatusUpdated::class]);
+
+        $response = $this->actingAs($admin)->post('/orders/'.$order->id.'/status', [
+            'status' => OrderStatus::CANCELLED->value,
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::CANCELLED->value, $order->status->value);
+    }
+
+    public function test_update_status_rejects_invalid_transition(): void
+    {
+        [$admin, $order] = $this->seedAdminAndOrder(5012, OrderStatus::CONFIRMED);
+
+        $response = $this->actingAs($admin)->post('/orders/'.$order->id.'/status', [
+            'status' => OrderStatus::CANCELLED->value,
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error', 'Invalid status transition.');
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::CONFIRMED->value, $order->status->value);
+    }
+
     /**
      * @return array{0: User, 1: DeviceOrder}
      */
@@ -191,8 +238,8 @@ class OrderActionsTest extends TestCase
         Branch::firstOrCreate(['name' => 'Main'], ['location' => 'HQ']);
 
         $device = Device::create([
-            'name' => 'Admin Action Device ' . $externalOrderId,
-            'ip_address' => '127.0.0.' . ((($externalOrderId % 200) + 1)),
+            'name' => 'Admin Action Device '.$externalOrderId,
+            'ip_address' => '127.0.0.'.((($externalOrderId % 200) + 1)),
             'is_active' => true,
             'table_id' => ($externalOrderId % 100) + 1,
         ]);
@@ -205,7 +252,7 @@ class OrderActionsTest extends TestCase
             'terminal_session_id' => 1,
             'session_id' => $sessionId,
             'order_id' => $externalOrderId,
-            'order_number' => 'ORD-' . $externalOrderId,
+            'order_number' => 'ORD-'.$externalOrderId,
             'status' => $status->value,
             'subtotal' => 100,
             'tax' => 10,
