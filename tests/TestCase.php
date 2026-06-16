@@ -303,6 +303,7 @@ abstract class TestCase extends BaseTestCase
                 }
                 $schemaDefault->create('device_orders', function (Blueprint $table) {
                     $table->increments('id');
+                    $table->string('void_reason')->nullable();
                     $table->integer('device_id')->nullable();
                     $table->integer('table_id')->nullable();
                     $table->integer('terminal_session_id')->nullable();
@@ -365,6 +366,7 @@ abstract class TestCase extends BaseTestCase
             }
             $testingSchema->create('device_orders', function (Blueprint $table) {
                 $table->increments('id');
+                $table->string('void_reason')->nullable();
                 $table->integer('device_id')->nullable();
                 $table->integer('table_id')->nullable();
                 $table->integer('terminal_session_id')->nullable();

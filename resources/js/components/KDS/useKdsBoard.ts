@@ -16,6 +16,7 @@ type OrderPayload = {
     is_refill?: boolean
     done?: boolean
     done_at?: string | null
+    notes?: string | null
   }>
   recalled?: number | null
   void_reason?: string | null
@@ -64,6 +65,7 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
       qty: it.quantity ?? 1,
       name: it.name ?? '',
       done: (it.done ?? false),
+      notes: it.notes ?? undefined,
     })),
     recalled: payload.recalled ?? undefined,
     voidReason: payload.void_reason ?? undefined,

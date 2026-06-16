@@ -9,6 +9,7 @@ export interface KdsItem {
   qty: number
   name: string
   done: boolean
+  notes?: string
   safety?: boolean
 }
 

@@ -29,4 +29,17 @@ enum OrderStatus: string
             self::ARCHIVED => false, // terminal states - no transitions allowed
         };
     }
+
+    public function kdsState(): string
+    {
+        return match ($this) {
+            self::PENDING,
+            self::CONFIRMED => 'new',
+            self::IN_PROGRESS => 'preparing',
+            self::READY => 'preparing',
+            self::SERVED => 'served',
+            self::VOIDED => 'voided',
+            default => 'new',
+        };
+    }
 }

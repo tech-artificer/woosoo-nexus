@@ -59,6 +59,7 @@ class DeviceOrder extends Model
         'printed_at' => UtcDateTimeCast::class,
         'printed_by' => 'string',
         'recalled' => 'integer',
+        'void_reason' => 'string',
     ];
 
     /**

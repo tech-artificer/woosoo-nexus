@@ -8,10 +8,12 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { postKdsAdvance, postKdsRecall, postKdsToggleItem } from '@/components/KDS/kdsApi'
+import KdsVoidModal from '@/components/KDS/KdsVoidModal.vue'
+import { postKdsAdvance, postKdsRecall, postKdsToggleItem, postKdsVoid } from '@/components/KDS/kdsApi'
 import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
+import { useKdsChime } from '@/components/KDS/useKdsChime'
 import { useKdsEcho } from '@/components/KDS/useKdsEcho'
 
 const props = defineProps<{
@@ -29,7 +31,8 @@ function seedTickets(source: KdsTicket[]): KdsTicket[] {
 }
 
 const board = useKdsBoard(seedTickets(props.initialTickets))
-useKdsEcho(board)
+const { muted: chimeMuted, play: playChime, toggleMuted: toggleChime } = useKdsChime()
+const { connected } = useKdsEcho(board, { onOrderCreated: playChime })
 
 const tickets = board.tickets
 const { clockOffset, setClockOffset } = board
@@ -39,6 +42,9 @@ const now = ref(Date.now())
 const pendingAdvance = ref<Set<string>>(new Set())
 const pendingRecall = ref<Set<string>>(new Set())
 const pendingToggle = ref<Set<string>>(new Set())
+const pendingVoid = ref<Set<string>>(new Set())
+const voidTarget = ref<KdsTicket | null>(null)
+const voidModalOpen = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
 const correctedNow = computed(() => now.value + clockOffset.value)
@@ -58,7 +64,7 @@ const counts = computed<Record<KdsFilter, number>>(() => ({
   overdue: filterTickets(tickets.value, 'overdue', correctedNow.value).length,
   new: tickets.value.filter((ticket) => ticket.state === 'new').length,
   preparing: tickets.value.filter((ticket) => ticket.state === 'preparing' || ticket.state === 'ready').length,
-  ready: 0,
+  ready: tickets.value.filter((ticket) => ticket.state === 'ready').length,
   served: tickets.value.filter((ticket) => ticket.state === 'served').length,
   voided: tickets.value.filter((ticket) => ticket.state === 'voided').length,
 }))
@@ -160,6 +166,47 @@ async function recallTicket(ticketId: string) {
   }
 }
 
+function requestVoid(ticketId: string) {
+  const ticket = tickets.value.find((item) => item.id === ticketId)
+
+  if (!ticket || ticket.state === 'voided' || ticket.state === 'served') {
+    return
+  }
+
+  voidTarget.value = ticket
+  voidModalOpen.value = true
+}
+
+async function confirmVoid(reason: string) {
+  const ticket = voidTarget.value
+
+  if (!ticket) {
+    return
+  }
+
+  if (pendingVoid.value.has(ticket.id)) {
+    return
+  }
+
+  pendingVoid.value.add(ticket.id)
+  voidModalOpen.value = false
+
+  try {
+    const response = await postKdsVoid(ticket.id, reason)
+    if (response.server_now != null) {
+      setClockOffset(response.server_now)
+    }
+    // Optimistic apply — see advanceTicket() for rationale.
+    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
+    toast.success('Order voided.')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Unable to void order.')
+  } finally {
+    pendingVoid.value.delete(ticket.id)
+    voidTarget.value = null
+  }
+}
+
 function toggleDensity() {
   density.value = density.value === 'comfortable' ? 'compact' : 'comfortable'
   try {
@@ -209,6 +256,9 @@ onBeforeUnmount(() => {
           :overdue="counts.overdue"
           :clock="clockLabel"
           :date-label="dateLabel"
+          :online="connected"
+          :chime-muted="chimeMuted"
+          @toggle-chime="toggleChime"
         />
 
         <div class="kds-subbar">
@@ -235,11 +285,17 @@ onBeforeUnmount(() => {
               @advance="advanceTicket"
               @recall="recallTicket"
               @toggle-item="toggleItem"
+              @void="requestVoid"
             />
           </div>
           <KdsEmptyState v-else />
         </section>
     </section>
+    <KdsVoidModal
+      v-model:open="voidModalOpen"
+      :table="voidTarget?.table"
+      @confirm="confirmVoid"
+    />
     <Toaster position="top-center" rich-colors />
   </main>
 </template>
@@ -490,6 +546,37 @@ body.kds-active {
   border: 1px solid rgb(82 190 102 / 0.35);
   background: rgb(82 190 102 / 0.16);
   color: #7fdb88;
+}
+
+:deep(.kds-online.is-offline) {
+  border-color: rgb(214 85 64 / 0.35);
+  background: rgb(214 85 64 / 0.14);
+  color: var(--kds-overdue);
+}
+
+:deep(.kds-chime-toggle) {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 999px;
+  background: var(--kds-bg2);
+  color: var(--kds-fg1);
+}
+
+:deep(.kds-chime-toggle[aria-pressed="true"]) {
+  color: var(--kds-fg3);
+}
+
+:deep(.kds-chime-toggle svg) {
+  width: 16px;
+  height: 16px;
+}
+
+:deep(.kds-chime-toggle:focus-visible) {
+  outline: 3px solid rgb(246 181 109 / 0.45);
+  outline-offset: 2px;
 }
 
 :deep(.kds-rush) {
@@ -842,8 +929,23 @@ body.kds-active {
   min-width: 34px;
 }
 
+:deep(.kds-item-text) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
 :deep(.kds-item-name) {
   min-width: 0;
+}
+
+:deep(.kds-item-note) {
+  color: var(--kds-fg2);
+  font-size: 13px;
+  font-style: italic;
+  font-weight: var(--kds-weight-caption);
+  line-height: 1.25;
 }
 
 :deep(.kds-safety) {
@@ -926,6 +1028,26 @@ body.kds-active {
 :deep(.kds-recall-action:hover) {
   background: rgb(246 181 109 / 0.16);
   color: var(--kds-accent);
+}
+
+:deep(.kds-void-action) {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border: 1px solid rgb(214 85 64 / 0.28);
+  border-radius: 8px;
+  background: rgb(214 85 64 / 0.08);
+  color: var(--kds-overdue);
+}
+
+:deep(.kds-void-action:hover) {
+  background: rgb(214 85 64 / 0.18);
+  color: var(--kds-overdue);
+}
+
+:deep(.kds-void-action:focus-visible) {
+  outline: 3px solid rgb(214 85 64 / 0.45);
+  outline-offset: 2px;
 }
 
 :deep(.kds-empty) {

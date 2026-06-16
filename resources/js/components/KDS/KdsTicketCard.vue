@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Check, RotateCcw } from 'lucide-vue-next'
+import { ArrowRight, Ban, Check, RotateCcw } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ const emit = defineEmits<{
   advance: [ticketId: string]
   recall: [ticketId: string]
   toggleItem: [ticketId: string, itemId: string]
+  void: [ticketId: string]
 }>()
 
 const doneCount = computed(() => props.ticket.items.filter((item) => item.done).length)
@@ -120,12 +121,15 @@ function splitSafetyName(name: string) {
           tabindex="-1"
         />
         <span class="kds-item-qty">{{ item.qty }}x</span>
-        <span class="kds-item-name" :class="{ 'is-done': item.done }">
-          <template v-if="item.safety">
-            <span>{{ splitSafetyName(item.name).base }}</span>
-            <span class="kds-safety"> - {{ splitSafetyName(item.name).modifier }}</span>
-          </template>
-          <template v-else>{{ item.name }}</template>
+        <span class="kds-item-text">
+          <span class="kds-item-name" :class="{ 'is-done': item.done }">
+            <template v-if="item.safety">
+              <span>{{ splitSafetyName(item.name).base }}</span>
+              <span class="kds-safety"> - {{ splitSafetyName(item.name).modifier }}</span>
+            </template>
+            <template v-else>{{ item.name }}</template>
+          </span>
+          <span v-if="item.notes" class="kds-item-note">{{ item.notes }}</span>
         </span>
       </button>
     </section>
@@ -160,6 +164,18 @@ function splitSafetyName(name: string) {
       >
         <RotateCcw data-icon="inline-start" aria-hidden="true" />
         Recall
+      </Button>
+
+      <Button
+        v-if="!terminal"
+        type="button"
+        variant="ghost"
+        size="icon"
+        class="kds-void-action"
+        :aria-label="`Void order ${ticket.id}`"
+        @click="emit('void', ticket.id)"
+      >
+        <Ban aria-hidden="true" />
       </Button>
     </footer>
   </article>
