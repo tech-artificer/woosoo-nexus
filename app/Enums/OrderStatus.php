@@ -21,8 +21,7 @@ enum OrderStatus: string
             self::CONFIRMED => in_array($newStatus, [self::IN_PROGRESS, self::COMPLETED, self::VOIDED]),
             self::IN_PROGRESS => in_array($newStatus, [self::READY, self::VOIDED]),
             self::READY => in_array($newStatus, [self::SERVED, self::VOIDED]),
-            // KDS-driven recall edge only — payment/POS paths must not use this transition.
-            self::SERVED => in_array($newStatus, [self::IN_PROGRESS, self::COMPLETED, self::VOIDED]),
+            self::SERVED => in_array($newStatus, [self::COMPLETED, self::VOIDED]),
             self::COMPLETED,
             self::CANCELLED,
             self::VOIDED,

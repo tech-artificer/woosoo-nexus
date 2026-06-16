@@ -53,5 +53,15 @@ return new class extends Migration
             ]);
             $table->unsignedBigInteger('krypton_menu_id')->nullable(false)->change();
         });
+
+        Schema::create('package_modifiers', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('package_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('krypton_menu_id');
+            $table->unsignedSmallInteger('sort_order')->default(0);
+            $table->timestamps();
+
+            $table->index(['package_id', 'sort_order']);
+        });
     }
 };
