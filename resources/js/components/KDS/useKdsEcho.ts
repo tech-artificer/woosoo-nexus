@@ -9,6 +9,7 @@ type EchoOptions = {
 
 export function useKdsEcho(board: Board, options: EchoOptions = {}) {
   let channel: ReturnType<typeof window.Echo.channel> | null = null
+  let pusherConnection: any = null
   // Reactive WebSocket connectivity for the Online/Offline badge. Starts true so the
   // badge doesn't flash Offline before the first connection event lands.
   const connected = ref(true)
@@ -65,20 +66,27 @@ export function useKdsEcho(board: Board, options: EchoOptions = {}) {
     // must be revisited — the connection state shape differs across Echo connectors.
     const pusher = (window.Echo as any)?.connector?.pusher
     if (pusher?.connection) {
-      connected.value = pusher.connection.state === 'connected'
-      pusher.connection.bind('connected', () => {
+      pusherConnection = pusher.connection
+      connected.value = pusherConnection.state === 'connected'
+      pusherConnection.bind('connected', () => {
         connected.value = true
       })
-      pusher.connection.bind('disconnected', () => {
+      pusherConnection.bind('disconnected', () => {
         connected.value = false
       })
-      pusher.connection.bind('unavailable', () => {
+      pusherConnection.bind('unavailable', () => {
         connected.value = false
       })
     }
   })
 
   onBeforeUnmount(() => {
+    if (pusherConnection) {
+      pusherConnection.unbind('connected')
+      pusherConnection.unbind('disconnected')
+      pusherConnection.unbind('unavailable')
+      pusherConnection = null
+    }
     if (channel && typeof (window.Echo as any).leave === 'function') {
       ;(window.Echo as any).leave('admin.orders')
       channel = null
