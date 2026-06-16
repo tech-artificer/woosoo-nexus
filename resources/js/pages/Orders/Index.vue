@@ -477,7 +477,7 @@ onMounted(() => {
     .listen('.order.updated', (e: DeviceOrder) => {
       handleOrderEvent(e);
     })
-    .listen('.order.printed', (e: DeviceOrder) => {
+    .listen('.order.print_confirmed', (e: DeviceOrder) => {
       handleOrderEvent(e);
     })
     .error((error: unknown) => {

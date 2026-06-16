@@ -328,7 +328,7 @@ onMounted(() => {
       toast.warning(`Order #${order?.order_number ?? ''} voided`, { duration: 5000 })
     })
     .listen('.order.updated', (e: DeviceOrder) => { handleOrderEvent(e); })
-    .listen('.order.printed', (e: DeviceOrder) => { handleOrderEvent(e); })
+    .listen('.order.print_confirmed', (e: DeviceOrder) => { handleOrderEvent(e); })
     .error((error: unknown) => {
       console.error('[Echo] Error connecting to admin.orders channel:', error);
       echoStatus.value = 'disconnected'

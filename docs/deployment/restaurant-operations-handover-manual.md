@@ -1,6 +1,6 @@
 ---
 status: canonical
-last_reviewed: 2026-05-26
+last_reviewed: 2026-06-16
 scope: ecosystem
 ---
 
@@ -376,7 +376,7 @@ This is the routine update path and does not require system reconfiguration.
 
 5. **Confirm services are healthy:**
    ```bash
-   docker compose ps
+   docker compose --env-file ./woosoo-nexus/.env -f compose.yaml ps
    ```
    All services should show `Up` status.
 
@@ -416,7 +416,7 @@ Revert to the previous commit if an update breaks something and you need to reco
 
 3. **Confirm services are healthy:**
    ```bash
-   docker compose ps
+   docker compose --env-file ./woosoo-nexus/.env -f compose.yaml ps
    ```
    All services should show `Up` status.
 

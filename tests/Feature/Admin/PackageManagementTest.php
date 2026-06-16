@@ -154,7 +154,12 @@ class PackageManagementTest extends TestCase
         $response->assertOk()->assertJsonPath('success', true);
 
         $this->assertDatabaseMissing('package_allowed_menus', ['package_id' => $package->id, 'krypton_menu_id' => 101]);
-        $this->assertDatabaseHas('package_allowed_menus', ['package_id' => $package->id, 'krypton_menu_id' => 201]);
+        $this->assertDatabaseHas('package_allowed_menus', [
+            'package_id' => $package->id,
+            'krypton_menu_id' => 201,
+            'menu_type' => 'meat', // normalized — packages configure meats only
+            'quantity_limit' => 3,
+        ]);
     }
 
     public function test_sync_allowed_menus_rejects_invalid_payload(): void

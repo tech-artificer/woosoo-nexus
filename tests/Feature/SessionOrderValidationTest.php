@@ -2,20 +2,24 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
+use App\Models\Branch;
+use App\Models\Device;
+use App\Models\DeviceOrder;
+use App\Models\Krypton\Menu;
+use App\Models\Package;
+use App\Services\Krypton\OrderService;
+use App\Services\PrintEventService;
+use Illuminate\Database\QueryException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use PDOException;
 use Tests\TestCase;
 use Tests\Traits\MocksKryptonSession;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\DB;
-use App\Models\Device;
-use App\Models\Branch;
-use App\Models\Krypton\Menu;
-use App\Services\Krypton\OrderService;
-use PDOException;
 
 class SessionOrderValidationTest extends TestCase
 {
-    use RefreshDatabase, MocksKryptonSession;
+    use MocksKryptonSession, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -30,7 +34,7 @@ class SessionOrderValidationTest extends TestCase
 
         // create-order resolves package_id via Package (krypton_menu_id|id) + is_active.
         // Tests post package_id=1; seed a matching active package.
-        \App\Models\Package::create([
+        Package::create([
             'krypton_menu_id' => 1,
             'name' => 'Test Package',
             'is_active' => true,
@@ -71,14 +75,14 @@ class SessionOrderValidationTest extends TestCase
                     'quantity' => 1,
                     'price' => 1.00,
                     'subtotal' => 1.00,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         // Order creation should succeed with active Krypton session
@@ -106,14 +110,14 @@ class SessionOrderValidationTest extends TestCase
         $sessionId = $this->createTestSession();
 
         // create a device order with the active session
-        $deviceOrder = \App\Models\DeviceOrder::create([
+        $deviceOrder = DeviceOrder::create([
             'device_id' => $device->id,
             'table_id' => $device->table_id,
             'terminal_session_id' => 1,
             'session_id' => $sessionId,
             'order_id' => 888,
             'order_number' => 'ORD-000888-888',
-            'status' => \App\Enums\OrderStatus::COMPLETED->value,
+            'status' => OrderStatus::COMPLETED->value,
             'subtotal' => 1.00,
             'tax' => 0.00,
             'discount' => 0.00,
@@ -121,7 +125,7 @@ class SessionOrderValidationTest extends TestCase
             'guest_count' => 1,
         ]);
 
-        $svc = app(\App\Services\PrintEventService::class);
+        $svc = app(PrintEventService::class);
         $res = $svc->createForOrder($deviceOrder, 'INITIAL');
 
         // Since sessions are device-local, print events should be created.
@@ -159,14 +163,14 @@ class SessionOrderValidationTest extends TestCase
                     'quantity' => 1,
                     'price' => 1.00,
                     'subtotal' => 1.00,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         // Should return 503 Service Unavailable when session is missing
@@ -175,7 +179,7 @@ class SessionOrderValidationTest extends TestCase
         $this->assertStringContainsString('session', strtolower($response->json('message')));
     }
 
-    public function test_order_creation_blocked_when_context_session_id_is_null()
+    public function test_order_creation_blocked_when_context_session_id_is_null(): void
     {
         // Context returns session_id = null (POS has no open session).
         // The CheckSessionIsOpened middleware must block order creation with 503
@@ -219,9 +223,9 @@ class SessionOrderValidationTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         $response->assertStatus(503);
@@ -272,9 +276,9 @@ class SessionOrderValidationTest extends TestCase
         });
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         $response->assertStatus(503);
@@ -318,9 +322,9 @@ class SessionOrderValidationTest extends TestCase
         });
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
+            'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
-            'X-Idempotency-Key' => \Illuminate\Support\Str::uuid()->toString(),
+            'X-Idempotency-Key' => Str::uuid()->toString(),
         ])->postJson('/api/devices/create-order', $payload);
 
         $response->assertStatus(422);

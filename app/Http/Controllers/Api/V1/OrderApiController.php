@@ -671,12 +671,12 @@ class OrderApiController extends Controller
         $order = DeviceOrder::where('order_id', $orderId)->first();
 
         if (! $order) {
-            return response()->json(['message' => 'Order not found.'], 404);
+            return response()->json(['success' => false, 'message' => 'Order not found.'], 404);
         }
 
         PrintOrder::dispatch($order);
 
-        return response()->json(['status' => 'dispatched']);
+        return response()->json(['success' => true, 'status' => 'dispatched']);
     }
 
     /**
