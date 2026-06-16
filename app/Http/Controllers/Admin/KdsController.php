@@ -71,7 +71,7 @@ class KdsController extends Controller
         if ($current === OrderStatus::PENDING) {
             DB::transaction(function () use ($order) {
                 $order->status = OrderStatus::CONFIRMED;
-                $order->saveQuietly();
+                $order->save();
             });
             $order->refresh();
             $current = OrderStatus::CONFIRMED;
