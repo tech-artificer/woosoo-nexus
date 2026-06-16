@@ -1,10 +1,24 @@
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { useKdsBoard } from './useKdsBoard'
 
 type Board = ReturnType<typeof useKdsBoard>
 
-export function useKdsEcho(board: Board) {
+type EchoOptions = {
+  onOrderCreated?: () => void
+}
+
+export function useKdsEcho(board: Board, options: EchoOptions = {}) {
   let channel: ReturnType<typeof window.Echo.channel> | null = null
+  // Reactive WebSocket connectivity for the Online/Offline badge. Starts true so the
+  // badge doesn't flash Offline before the first connection event lands.
+  const connected = ref(true)
+
+  function handleOrderCreated(e: unknown): void {
+    // Play the new-order chime unconditionally — `.order.created` is a true new-order
+    // signal and F1 removed the duplicate broadcasts, so no dedup wrapper is needed.
+    options.onOrderCreated?.()
+    handleOrderEvent(e)
+  }
 
   function handleOrderEvent(e: unknown): void {
     if (!e || typeof e !== 'object') {
@@ -38,12 +52,30 @@ export function useKdsEcho(board: Board) {
 
     channel = window.Echo.channel('admin.orders')
     channel
-      .listen('.order.created', handleOrderEvent)
+      .listen('.order.created', handleOrderCreated)
       .listen('.order.updated', handleOrderEvent)
+      .listen('.order.details.updated', handleOrderEvent)
       .listen('.order.voided', handleOrderEvent)
       .listen('.order.completed', handleOrderEvent)
       .listen('.order.cancelled', handleOrderEvent)
       .listen('.item.toggled', handleItemToggle)
+
+    // Coupling note: `connector.pusher.connection` is specific to the pusher-js client
+    // that Laravel Reverb uses. If the broadcaster/driver is ever swapped, this binding
+    // must be revisited — the connection state shape differs across Echo connectors.
+    const pusher = (window.Echo as any)?.connector?.pusher
+    if (pusher?.connection) {
+      connected.value = pusher.connection.state === 'connected'
+      pusher.connection.bind('connected', () => {
+        connected.value = true
+      })
+      pusher.connection.bind('disconnected', () => {
+        connected.value = false
+      })
+      pusher.connection.bind('unavailable', () => {
+        connected.value = false
+      })
+    }
   })
 
   onBeforeUnmount(() => {
@@ -52,4 +84,6 @@ export function useKdsEcho(board: Board) {
       channel = null
     }
   })
+
+  return { connected }
 }

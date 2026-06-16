@@ -56,6 +56,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/kds/orders/{order}/advance', [KdsController::class, 'advance'])->name('kds.advance');
         Route::post('/kds/items/{item}/toggle', [KdsController::class, 'toggleItem'])->name('kds.toggle-item');
         Route::post('/kds/orders/{order}/recall', [KdsController::class, 'recall'])->name('kds.orders.recall');
+        Route::post('/kds/orders/{order}/void', [KdsController::class, 'void'])->name('kds.orders.void');
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');

@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\OrderStatus;
+use App\Events\Order\OrderStatusUpdated;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\Fluent\AssertableJson;
 
 test('admins can advance a confirmed order to in_progress', function () {
@@ -324,4 +326,138 @@ test('advance from in_progress resolves directly to served — no intermediate r
         ->assertJsonPath('status', 'served');
 
     expect($order->fresh()->status)->toBe(OrderStatus::SERVED);
+});
+
+// --- F1: single duplicate-free broadcast per transition ---
+
+test('advancing a confirmed order broadcasts OrderStatusUpdated exactly once', function () {
+    Event::fake([OrderStatusUpdated::class]);
+
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::CONFIRMED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk();
+
+    Event::assertDispatchedTimes(OrderStatusUpdated::class, 1);
+});
+
+test('advancing in_progress to served broadcasts OrderStatusUpdated exactly once', function () {
+    Event::fake([OrderStatusUpdated::class]);
+
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk()
+        ->assertJsonPath('status', 'served');
+
+    Event::assertDispatchedTimes(OrderStatusUpdated::class, 1);
+});
+
+test('recalling a served order broadcasts OrderStatusUpdated exactly once', function () {
+    Event::fake([OrderStatusUpdated::class]);
+
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 0]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertOk();
+
+    Event::assertDispatchedTimes(OrderStatusUpdated::class, 1);
+});
+
+test('advancing a pending order emits CONFIRMED then a single IN_PROGRESS broadcast', function () {
+    Event::fake([OrderStatusUpdated::class]);
+
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::PENDING]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk()
+        ->assertJsonPath('status', 'in_progress');
+
+    // D1: the PENDING→CONFIRMED auto-advance keeps its observer broadcast (a unique
+    // CONFIRMED event), while CONFIRMED→IN_PROGRESS is the single controller broadcast.
+    // Exactly 2 — not 3 — proves the duplicate IN_PROGRESS broadcast is gone (pre-fix this
+    // path emitted CONFIRMED + 2×IN_PROGRESS = 3).
+    Event::assertDispatchedTimes(OrderStatusUpdated::class, 2);
+});
+
+// --- F5: void action ---
+
+test('admin can void an active order, persisting status and reason', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS, 'order_id' => null]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Kitchen error'])
+        ->assertOk()
+        ->assertJsonPath('status', 'voided')
+        ->assertJsonPath('order.void_reason', 'Kitchen error');
+
+    $fresh = $order->fresh();
+    expect($fresh->status)->toBe(OrderStatus::VOIDED);
+    expect($fresh->void_reason)->toBe('Kitchen error');
+});
+
+test('void requires a reason', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS, 'order_id' => null]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", [])
+        ->assertUnprocessable()
+        ->assertJsonPath('error.code', 'VALIDATION_ERROR')
+        ->assertJsonPath('error.details.reason.0', 'The reason field is required.');
+
+    expect($order->fresh()->status)->toBe(OrderStatus::IN_PROGRESS);
+});
+
+test('void returns 422 for an already-voided order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::VOIDED, 'order_id' => null]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Kitchen error'])
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Order cannot be voided from its current state.']);
+
+    expect($order->fresh()->status)->toBe(OrderStatus::VOIDED);
+});
+
+test('void returns 422 for a completed order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::COMPLETED, 'order_id' => null]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Kitchen error'])
+        ->assertUnprocessable();
+
+    expect($order->fresh()->status)->toBe(OrderStatus::COMPLETED);
+});
+
+test('non-admin cannot access the void endpoint', function () {
+    $user = User::factory()->create(['is_admin' => false]);
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS, 'order_id' => null]);
+
+    $this->actingAs($user)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Kitchen error'])
+        ->assertForbidden();
+
+    expect($order->fresh()->status)->toBe(OrderStatus::IN_PROGRESS);
+});
+
+test('guest cannot access the void endpoint', function () {
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS, 'order_id' => null]);
+
+    $this->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Kitchen error'])
+        ->assertUnauthorized();
+
+    expect($order->fresh()->status)->toBe(OrderStatus::IN_PROGRESS);
 });
