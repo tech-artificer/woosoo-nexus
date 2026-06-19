@@ -1,5 +1,7 @@
 # Woosoo Nexus — Business Requirements & System Specification
 
+> **Scope & authority.** Business/executive narrative of **delivered Nexus capabilities**. **Not** the runtime source of truth — for any specific fact defer to the cross-app contracts and the **Authority Map** in the platform repo's `AGENTS.md` (`woosoo-platform/AGENTS.md`). Verify against live source; narrative may lag code.
+
 **Document Type:** Business Requirements Document (BRD) / System Specification  
 **Classification:** Client-Facing / Executive Review  
 **Platform:** Woosoo Nexus — Integrated Restaurant Operations Platform  
