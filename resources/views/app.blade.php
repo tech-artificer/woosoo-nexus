@@ -53,6 +53,7 @@
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
         @routes
+        <script>if (window.Ziggy) { window.Ziggy.url = window.location.origin; }</script>
         @vite(['resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
