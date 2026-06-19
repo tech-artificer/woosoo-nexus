@@ -76,7 +76,6 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
 </script>
 
 <template>
-    <div class="contents">
     <header
         class="sticky top-0 z-20 flex h-[var(--topbar-h)] shrink-0 items-center justify-between gap-3 border-b px-4"
         style="background: var(--topbar-bg); border-color: var(--topbar-border)"
@@ -184,5 +183,4 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
             </CommandGroup>
         </CommandList>
     </CommandDialog>
-    </div>
 </template>

@@ -34,7 +34,6 @@ function isActive(routeName: string): boolean {
 </script>
 
 <template>
-    <div class="contents">
     <!-- Desktop: fixed 224px sidebar -->
     <aside
         class="fixed inset-y-0 left-0 z-30 hidden w-56 flex-col bg-[var(--shell-bg)] md:flex"
@@ -53,5 +52,4 @@ function isActive(routeName: string): boolean {
             <AdminSidebarContent :is-active="isActive" :nav-badges="navBadges" :user="user" @nav="close" />
         </SheetContent>
     </Sheet>
-    </div>
 </template>

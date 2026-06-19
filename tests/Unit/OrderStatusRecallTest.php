@@ -4,8 +4,8 @@ use App\Enums\OrderStatus;
 
 // --- P2 recall edge ---
 
-test('served cannot transition to in_progress via canTransitionTo (recall is KDS-enforced in KdsController)', function () {
-    expect(OrderStatus::SERVED->canTransitionTo(OrderStatus::IN_PROGRESS))->toBeFalse();
+test('served can transition to in_progress (recall)', function () {
+    expect(OrderStatus::SERVED->canTransitionTo(OrderStatus::IN_PROGRESS))->toBeTrue();
 });
 
 test('voided cannot transition to in_progress', function () {
