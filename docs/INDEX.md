@@ -1,6 +1,8 @@
-# Woosoo Canonical Documentation Index
+# Woosoo Nexus — Documentation Index
 
-This is the authoritative navigation root for active documentation.
+Navigation index for **woosoo-nexus** docs only (scope: this repo). For ecosystem-wide authority
+(cross-app contracts, order state, real-time events, agent rules), the single source is the
+**Authority Map** in the platform repo's `AGENTS.md` (`woosoo-platform/AGENTS.md`).
 
 ## AI Agent Onboarding
 
