@@ -66,3 +66,9 @@ Contracts live in `woosoo-platform/contracts/`.
 - Historical/transitional docs live under `docs/archive/`.
 - Root-level markdown is intentionally minimal.
 - PRs must pass the documentation checklist in `.github/pull_request_template.md`.
+
+## Release process
+
+On each staging→main promotion: tag the release (e.g. `v2026.06.19`), run `git cliff -o CHANGELOG.md`, and commit the updated changelog.
+
+Optional Conventional Commits enforcement: `git config core.hooksPath .githooks`
