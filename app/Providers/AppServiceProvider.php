@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\PrintOrder;
+use App\Listeners\UpdatePrintEventStatusOnDispatch;
 use App\Models\DeviceOrder;
 use App\Models\OrderUpdateLog;
 use App\Models\User;
@@ -18,23 +20,21 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Routing\Route;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
 // use Illuminate\Routing\Route;
 // use App\Services\Krypton\OrderService;
 // Spatie Roles/Permissions
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+// use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
-// use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use App\Events\PrintOrder;
-use App\Listeners\UpdatePrintEventStatusOnDispatch;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -59,12 +59,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(PosConnectionService $posConnection): void
     {
-        // Force HTTPS URL generation when APP_URL is configured for HTTPS.
-        // This ensures Ziggy, route(), asset(), and all URL helpers produce
-        // https:// URLs even when the inner nginx→PHP-FPM chain does not
-        // forward X-Forwarded-Proto in a form that TrustProxies can detect.
+        // Force root URL to the actual request host so all URL helpers, redirect()->route(),
+        // and Ziggy produce same-origin URLs regardless of whether the Pi is accessed via
+        // 192.168.100.42 (home), 192.168.1.31 (restaurant), or woosoo.local (if DNS).
+        // In console context (queue, artisan) fall back to forceScheme so generated URLs
+        // still use the configured HTTPS scheme with APP_URL's host.
         if (str_starts_with(config('app.url'), 'https://')) {
-            URL::forceScheme('https');
+            if (! $this->app->runningInConsole() && ($host = request()->getHost()) !== '') {
+                URL::forceRootUrl("https://{$host}");
+            } else {
+                URL::forceScheme('https');
+            }
         }
 
         // Apply DB-stored POS credentials to the 'pos' connection (overrides .env defaults).

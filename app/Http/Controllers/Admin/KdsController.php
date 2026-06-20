@@ -228,10 +228,8 @@ class KdsController extends Controller
         DB::transaction(function () use ($order, &$gateMessage) {
             $fresh = DeviceOrder::lockForUpdate()->findOrFail($order->id);
 
-            // Stale-state re-check under lock: recall is SERVED→IN_PROGRESS only.
-            // Bypass canTransitionTo() — that gate intentionally excludes this edge
-            // so only KdsController::recall() can drive it.
-            if ($fresh->status !== OrderStatus::SERVED) {
+            // Stale-state re-check: concurrent request already moved this order.
+            if (! $fresh->status->canTransitionTo(OrderStatus::IN_PROGRESS)) {
                 $gateMessage = 'Order state changed concurrently; please retry.';
 
                 return;
@@ -244,13 +242,9 @@ class KdsController extends Controller
                 return;
             }
 
-            // Write directly via DB to bypass the model setter (which enforces
-            // canTransitionTo and would reject this KDS-exclusive edge).
-            DB::table('device_orders')->where('id', $fresh->id)->update([
-                'status' => OrderStatus::IN_PROGRESS->value,
-                'recalled' => ($fresh->recalled ?? 0) + 1,
-                'updated_at' => now(),
-            ]);
+            $fresh->status = OrderStatus::IN_PROGRESS;
+            $fresh->recalled = ($fresh->recalled ?? 0) + 1;
+            $fresh->saveQuietly();
         });
 
         if ($gateMessage !== null) {
