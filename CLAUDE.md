@@ -1,6 +1,9 @@
-# Woosoo Nexus — Project Conventions (authoritative)
+# Woosoo Nexus — Project Conventions (repo-local)
 
-> Project-owned. **Overrides** the Laravel Boost "Test Enforcement" rule below when they conflict.
+> Scope: **woosoo-nexus only.** Authoritative *within this repo* for the conventions below;
+> **overrides** the Laravel Boost "Test Enforcement" rule when they conflict. For ecosystem-wide
+> rules and the topic→authority map, defer to the platform repo's `AGENTS.md`
+> (`woosoo-platform/AGENTS.md`).
 
 ## Testing policy — test what matters, not everything
 

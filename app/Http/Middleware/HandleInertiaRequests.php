@@ -49,9 +49,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),
-                // Use url()->current() so URL::forceScheme('https') is respected,
-                // rather than $request->url() which reads the raw Symfony request
-                // scheme (http) before TrustProxies can rewrite it.
+                // Override url with the actual request host (set via URL::forceRootUrl in
+                // AppServiceProvider) so client-side route() calls generate same-origin URLs
+                // regardless of whether the Pi is reached via IP or hostname.
+                'url' => rtrim(url('/'), '/'),
                 'location' => url()->current(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
