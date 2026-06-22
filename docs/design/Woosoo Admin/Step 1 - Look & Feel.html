@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Step 1 — Look & Feel · Woosoo Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=Kanit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="series.css">
+<style>
+:root {
+  --bg0: #0d0b09;
+  --bg1: #141210;
+  --bg2: #1b1815;
+  --bg3: #23201a;
+  --bg4: #2b2720;
+  --bdr1: #252220;
+  --bdr2: #352f26;
+  --bdr3: #463929;
+  --fg0: #f2ebe0;
+  --fg1: #c0b4a0;
+  --fg2: #7e7264;
+  --fg3: #524a3e;
+  --accent: #F6B56D;
+  --acch:   #f9c48a;
+  --accm:   #2a1e0c;
+  --accb:   #3d2c14;
+  --accfg:  #1a1208;
+  --green:  #6ea868;
+  --red:    #c94f40;
+  --font-d: 'Raleway', sans-serif;
+  --font-s: 'Kanit', sans-serif;
+  --font-m: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg0); color: var(--fg0); font-family: var(--font-s); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+body { max-width: 1100px; margin: 0 auto; padding: 48px 32px 96px; }
+
+/* ── HEADER ── */
+.doc-header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid var(--bdr2); }
+.doc-eyebrow { font-family: var(--font-d); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+.doc-title { font-family: var(--font-d); font-size: 32px; font-weight: 800; color: var(--fg0); line-height: 1.1; margin-bottom: 10px; }
+.doc-sub { font-size: 15px; color: var(--fg1); max-width: 600px; line-height: 1.6; }
+
+/* ── SECTION ── */
+.section { margin-bottom: 56px; }
+.section-num { font-family: var(--font-m); font-size: 10px; color: var(--accent); font-weight: 500; margin-bottom: 4px; }
+.section-title { font-family: var(--font-d); font-size: 19px; font-weight: 700; color: var(--fg0); margin-bottom: 6px; }
+.section-desc { font-size: 13.5px; color: var(--fg2); margin-bottom: 20px; line-height: 1.6; }
+.section-desc strong { color: var(--fg1); font-weight: 500; }
+
+/* ── COMPARISON ── */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.compare-col { border-radius: 10px; overflow: hidden; border: 1px solid var(--bdr2); }
+.compare-label { font-family: var(--font-d); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; padding: 8px 14px; border-bottom: 1px solid var(--bdr2); display: flex; align-items: center; gap: 7px; }
+.compare-label.current { background: var(--bg2); color: var(--fg3); }
+.compare-label.target  { background: var(--accm); color: var(--accent); border-color: var(--accb); }
+.compare-body { padding: 16px; background: var(--bg1); }
+
+/* ── FAKE SIDEBAR ── */
+.fake-sidebar { width: 180px; background: var(--bg1); border-radius: 8px; padding: 10px; border: 1px solid var(--bdr1); }
+.fake-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 16px; font-size: 13px; font-weight: 600;
+  color: rgba(255,255,255,0.55); cursor: default; position: relative;
+  font-family: var(--font-s);
+}
+.fake-nav-item.active-white { background: #fff; color: #252525; border-radius: 16px; }
+.fake-nav-item.active-amber { background: var(--accm); color: var(--accent); border: 1px solid var(--accb); border-radius: 6px; }
+.fake-nav-item.active-amber::before {
+  content: ''; position: absolute; left: -10px; top: 6px; bottom: 6px;
+  width: 2px; background: var(--accent); border-radius: 0 2px 2px 0;
+}
+.fake-nav-item .fake-icon { width: 16px; height: 16px; border-radius: 3px; background: currentColor; opacity: 0.6; flex-shrink: 0; }
+.fake-nav-label-group { font-family: var(--font-d); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.28); padding: 10px 10px 4px; font-weight: 700; }
+
+/* ── FAKE LOGO AREA ── */
+.fake-logo-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04));
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-d); font-weight: 800; font-size: 13px; color: #fff;
+}
+.fake-logo-simple {
+  padding: 4px 8px 12px;
+  border-bottom: 1px solid var(--bdr1);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-d); font-weight: 800; font-size: 15px; color: var(--fg0);
+}
+.fake-logo-icon { width: 26px; height: 26px; border-radius: 6px; background: var(--accent); opacity: 0.9; flex-shrink: 0; }
+.fake-logo-sub { font-size: 8px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; display: block; margin-top: 1px; }
+
+/* ── FAKE TOPBAR ── */
+.fake-header-float {
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 26px;
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-d); font-size: 15px; font-weight: 600; color: #252525;
+  margin-bottom: 4px;
+}
+.fake-header-flat {
+  background: var(--bg0);
+  border-bottom: 1px solid var(--bdr1);
+  padding: 0 24px;
+  height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-d); font-size: 15px; font-weight: 700; color: var(--fg0);
+  margin-bottom: 4px;
+}
+.fake-trigger-circle { width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+.fake-trigger-sq { width: 28px; height: 28px; border-radius: 6px; background: var(--bg3); flex-shrink: 0; }
+.fake-badge { font-family: var(--font-d); font-size: 9px; background: rgba(246,181,109,0.12); border: 1px solid rgba(0,0,0,0.08); border-radius: 99px; padding: 4px 10px; color: rgba(37,37,37,0.7); display: flex; align-items: center; gap: 5px; }
+.fake-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+
+/* ── FAKE KPI CARDS ── */
+.fake-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fake-kpi-card-float {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 20px;
+  padding: 14px;
+  color: #252525;
+}
+.fake-kpi-card-flat {
+  background: var(--bg2);
+  border: 1px solid var(--bdr1);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.fake-kpi-label { font-family: var(--font-d); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
+.fake-kpi-card-float .fake-kpi-label { color: rgba(37,37,37,0.45); }
+.fake-kpi-card-flat .fake-kpi-label { color: var(--fg2); }
+.fake-kpi-val { font-family: var(--font-m); font-size: 22px; letter-spacing: -0.02em; font-weight: 500; }
+.fake-kpi-card-float .fake-kpi-val { color: #1a1a1a; }
+.fake-kpi-card-flat .fake-kpi-val { color: var(--fg0); }
+.fake-kpi-help { font-size: 11px; margin-top: 3px; }
+.fake-kpi-card-float .fake-kpi-help { color: rgba(37,37,37,0.5); }
+.fake-kpi-card-flat .fake-kpi-help { color: var(--fg2); }
+
+/* ── CODE BLOCK ── */
+.file-patch { margin-bottom: 12px; }
+.file-path {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-m); font-size: 11px; color: var(--accent);
+  background: var(--accm); border: 1px solid var(--accb);
+  padding: 5px 10px; border-radius: 6px 6px 0 0;
+  margin-bottom: -1px; position: relative; z-index: 1;
+}
+.file-path-icon { width: 10px; height: 10px; border-radius: 2px; background: var(--accent); opacity: 0.6; }
+pre {
+  background: var(--bg2); border: 1px solid var(--bdr2);
+  border-radius: 0 6px 6px 6px;
+  padding: 16px 18px; overflow-x: auto;
+  font-family: var(--font-m); font-size: 12px; line-height: 1.65;
+  color: var(--fg1);
+  white-space: pre;
+}
+.del { color: #c94f40; background: rgba(201,79,64,0.08); display: block; margin: 0 -18px; padding: 0 18px; }
+.add { color: #6ea868; background: rgba(110,168,104,0.08); display: block; margin: 0 -18px; padding: 0 18px; }
+.cm  { color: var(--fg3); }
+
+/* ── IMPACT BADGE ── */
+.impact { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-d); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; padding: 3px 8px; border-radius: 99px; margin-bottom: 10px; }
+.impact.high   { color: var(--accent); background: var(--accm); border: 1px solid var(--accb); }
+.impact.medium { color: var(--fg1); background: var(--bg3); border: 1px solid var(--bdr2); }
+
+/* ── DIVIDER ── */
+.divider { border: 0; border-top: 1px solid var(--bdr1); margin: 48px 0; }
+
+/* ── CHECKLIST ── */
+.checklist { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; color: var(--fg1); }
+.check-box { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--bdr2); background: var(--bg2); flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; }
+.check-box.done { background: var(--accm); border-color: var(--accb); }
+.check-box.done::after { content: '✓'; font-size: 10px; color: var(--accent); font-weight: 700; font-family: var(--font-d); }
+.check-file { font-family: var(--font-m); font-size: 11px; color: var(--accent); }
+
+/* ── NOTICE ── */
+.notice { background: var(--accm); border: 1px solid var(--accb); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--fg1); margin-bottom: 16px; display: flex; gap: 10px; }
+.notice-icon { color: var(--accent); font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.notice strong { color: var(--accent); }
+
+/* ── OVERVIEW TABLE ── */
+.ov-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ov-table th { text-align: left; padding: 8px 14px; font-family: var(--font-d); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg3); font-weight: 700; border-bottom: 1px solid var(--bdr1); }
+.ov-table td { padding: 10px 14px; border-bottom: 1px solid var(--bdr1); vertical-align: middle; color: var(--fg1); }
+.ov-table tr:last-child td { border-bottom: 0; }
+.ov-table .label-cell { font-family: var(--font-d); font-size: 12px; font-weight: 700; color: var(--fg0); }
+.ov-table .file-cell { font-family: var(--font-m); font-size: 11px; color: var(--accent); }
+.badge-impact { display: inline-block; font-family: var(--font-d); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 99px; }
+.badge-high   { background: var(--accm); color: var(--accent); border: 1px solid var(--accb); }
+.badge-medium { background: var(--bg3); color: var(--fg2); border: 1px solid var(--bdr2); }
+.badge-low    { background: var(--bg2); color: var(--fg3); border: 1px solid var(--bdr1); }
+
+/* ── LIGHT PREVIEW ── */
+.light-preview { background: linear-gradient(180deg, #f8f4ed 0%, #f1ede7 100%); border-radius: 10px; padding: 16px; border: 1px solid rgba(0,0,0,0.06); }
+.light-fake-card { background: white; border-radius: 24px; border: 1px solid rgba(0,0,0,0.06); padding: 16px; }
+.light-fake-card .fake-kpi-label { color: rgba(37,37,37,0.45); }
+.light-fake-card .fake-kpi-val { color: #1a1a1a; font-family: var(--font-m); font-size: 22px; font-weight: 500; }
+.light-fake-card .fake-kpi-help { color: rgba(37,37,37,0.45); font-size: 11px; }
+
+.light-fake-btn-primary { display: inline-flex; align-items: center; height: 34px; padding: 0 16px; border-radius: 8px; background: #B08047; color: white; font-family: var(--font-d); font-size: 12px; font-weight: 700; letter-spacing: 0.03em; border: 0; cursor: default; }
+.light-fake-btn-secondary { display: inline-flex; align-items: center; height: 34px; padding: 0 16px; border-radius: 8px; background: rgba(0,0,0,0.06); color: #252525; font-family: var(--font-d); font-size: 12px; font-weight: 600; border: 1px solid rgba(0,0,0,0.1); cursor: default; }
+.dark-fake-btn-primary { display: inline-flex; align-items: center; height: 34px; padding: 0 16px; border-radius: 8px; background: var(--accent); color: var(--accfg); font-family: var(--font-d); font-size: 12px; font-weight: 700; letter-spacing: 0.03em; border: 0; cursor: default; }
+.dark-fake-btn-secondary { display: inline-flex; align-items: center; height: 34px; padding: 0 16px; border-radius: 8px; background: var(--bg3); color: var(--fg0); font-family: var(--font-d); font-size: 12px; font-weight: 600; border: 1px solid var(--bdr2); cursor: default; }
+
+.row-btns { display: flex; gap: 8px; margin-top: 8px; }
+
+/* ── TOKEN TABLE ── */
+.token-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--bdr1); }
+.token-row:last-child { border-bottom: 0; }
+.token-swatch { width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.07); }
+.token-name { font-family: var(--font-m); font-size: 11px; color: var(--accent); flex: 1; }
+.token-hex { font-family: var(--font-m); font-size: 11px; color: var(--fg2); }
+.token-role { font-size: 12px; color: var(--fg2); flex: 2; }
+
+/* ── FOOTER ── */
+.doc-footer { margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--bdr1); display: flex; align-items: center; justify-content: space-between; }
+.doc-footer-left { font-family: var(--font-d); font-size: 12px; color: var(--fg3); }
+.doc-footer-step { font-family: var(--font-m); font-size: 11px; color: var(--accent); background: var(--accm); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--accb); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════ -->
+<div class="doc-header">
+  <div class="doc-eyebrow">Woosoo Nexus · Design Alignment</div>
+  <div class="doc-title">Step 1 — Look &amp; Feel</div>
+  <div class="doc-sub">Four targeted file edits that align the real Laravel/Vue admin to the Woosoo brand system. No logic changes, no component rebuilds — purely visual.</div>
+  <div class="doc-nav">
+    <a href="Design Alignment - Roadmap.html">Roadmap</a>
+    <a href="Step 1 - Look & Feel.html" class="cur">Step 1 · Look &amp; Feel</a>
+    <a href="Step 2 - Layout & Navigation.html">Step 2 · Layout</a>
+    <a href="Step 3 - Component Theming.html">Step 3 · Components</a>
+    <a href="Step 4 - Page by Page.html">Step 4 · Pages</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     OVERVIEW TABLE
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">What changes, and where</div>
+  <div class="section-desc">All four changes are <strong>CSS/class-string only</strong>. No business logic, no props, no data.</div>
+
+  <table class="ov-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>What changes</th>
+        <th>File</th>
+        <th>Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">01</td>
+        <td class="label-cell">Sidebar active item style</td>
+        <td class="file-cell">components/ui/sidebar/index.ts</td>
+        <td><span class="badge-impact badge-high">High</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">02</td>
+        <td class="label-cell">Collapsible nav active + sub-item style</td>
+        <td class="file-cell">components/NavMain.vue</td>
+        <td><span class="badge-impact badge-high">High</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">03</td>
+        <td class="label-cell">Sidebar logo area (remove glassmorphism)</td>
+        <td class="file-cell">components/AppSidebar.vue</td>
+        <td><span class="badge-impact badge-medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">04</td>
+        <td class="label-cell">Page header (flatten floating pill)</td>
+        <td class="file-cell">components/AppSidebarHeader.vue</td>
+        <td><span class="badge-impact badge-medium">Medium</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">05</td>
+        <td class="label-cell">app.css — sidebar left-bar indicator</td>
+        <td class="file-cell">resources/css/app.css</td>
+        <td><span class="badge-impact badge-medium">Medium</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:16px;" class="notice">
+    <span class="notice-icon">✓</span>
+    <div><strong>Already correct in app.css:</strong> Brand tokens (amber <code>#F6B56D</code>, Raleway, Kanit, dark sidebar background, light/dark mode gradients) are all properly defined. No token work needed.</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════════
+     CHANGE 01 — SIDEBAR ACTIVE ITEM
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">Change 01 / 05</div>
+  <div class="section-title">Sidebar active item</div>
+  <span class="impact high">● High impact</span>
+  <div class="section-desc">
+    Currently the active nav item uses a <strong>white background with dark text</strong> — this creates a harsh, inverted look on the dark sidebar. The brand spec calls for a <strong>warm amber-tinted background</strong> with amber text, matching how the tablet-ordering UI handles selection.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — white active</div>
+      <div class="compare-body">
+        <div class="fake-sidebar">
+          <div class="fake-nav-item active-white">
+            <div class="fake-icon"></div> Dashboard
+          </div>
+          <div class="fake-nav-label-group">Operations</div>
+          <div class="fake-nav-item" style="color:rgba(255,255,255,0.4)">
+            <div class="fake-icon"></div> Orders
+          </div>
+          <div class="fake-nav-item" style="color:rgba(255,255,255,0.4)">
+            <div class="fake-icon"></div> POS
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — amber active</div>
+      <div class="compare-body">
+        <div class="fake-sidebar" style="padding-left:14px;">
+          <div class="fake-nav-item active-amber">
+            <div class="fake-icon"></div> Dashboard
+          </div>
+          <div class="fake-nav-label-group">Operations</div>
+          <div class="fake-nav-item" style="color:rgba(255,255,255,0.4)">
+            <div class="fake-icon"></div> Orders
+          </div>
+          <div class="fake-nav-item" style="color:rgba(255,255,255,0.4)">
+            <div class="fake-icon"></div> POS
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/ui/sidebar/index.ts</div>
+<pre><span class="cm">// In sidebarMenuButtonVariants cva(...) — the long base class string</span>
+<span class="cm">// Find and replace these three data-[active=true] classes:</span>
+
+<span class="del">- data-[active=true]:bg-white</span>
+<span class="del">- data-[active=true]:text-woosoo-dark-gray</span>
+<span class="del">- data-[active=true]:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.6)]</span>
+
+<span class="add">+ data-[active=true]:bg-[#2a1e0c]</span>
+<span class="add">+ data-[active=true]:text-[#F6B56D]</span>
+<span class="add">+ data-[active=true]:border</span>
+<span class="add">+ data-[active=true]:border-[#3d2c14]</span>
+<span class="add">+ data-[active=true]:shadow-none</span>
+<span class="add">+ data-[active=true]:rounded-md</span>
+
+<span class="cm">// Also change hover states to match brand (keep subtle):</span>
+<span class="del">- hover:bg-white/10  hover:text-white</span>
+<span class="add">+ hover:bg-white/8   hover:text-white</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════════
+     CHANGE 02 — NAVMAIN COLLAPSIBLE
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">Change 02 / 05</div>
+  <div class="section-title">Collapsible nav trigger &amp; sub-items</div>
+  <span class="impact high">● High impact</span>
+  <div class="section-desc">
+    The <code>CollapsibleTrigger</code> and child <code>SidebarMenuButton</code> in <code>NavMain.vue</code> have their own hardcoded active classes that override the CVA variants. These also need to flip from white→amber.
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/NavMain.vue</div>
+<pre><span class="cm">// CollapsibleTrigger — line ~67</span>
+  class="flex min-h-10 w-full items-center gap-3 rounded-2xl px-3 py-2.5
+         text-white/78 transition-colors
+         hover:bg-white/10 hover:text-white
+<span class="del">-        data-[active=true]:bg-white data-[active=true]:text-woosoo-dark-gray</span>
+<span class="add">+        data-[active=true]:bg-[#2a1e0c] data-[active=true]:text-[#F6B56D]</span>
+<span class="add">+        data-[active=true]:border data-[active=true]:border-[#3d2c14]</span>
+<span class="add">+        data-[active=true]:rounded-md</span>
+         group-data-[collapsible=icon]:justify-center
+         group-data-[collapsible=icon]:px-0"
+
+<span class="cm">// Child SidebarMenuButton — line ~84</span>
+  class="text-white/72
+<span class="del">-        data-[active=true]:text-woosoo-dark-gray"</span>
+<span class="add">+        data-[active=true]:text-[#F6B56D]</span>
+<span class="add">+        data-[active=true]:bg-[#2a1e0c]</span>
+<span class="add">+        data-[active=true]:border data-[active=true]:border-[#3d2c14]"</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════════
+     CHANGE 03 — SIDEBAR LOGO AREA
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">Change 03 / 05</div>
+  <div class="section-title">Sidebar logo area</div>
+  <span class="impact medium">● Medium impact</span>
+  <div class="section-desc">
+    The current logo is wrapped in a heavy glassmorphism pill (<code>rounded-[30px] backdrop-blur-xl</code>). The brand spec calls for a simple flat logo mark at the top of the sidebar — consistent with the dense, operational POS aesthetic.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — glassmorphism pill</div>
+      <div class="compare-body">
+        <div class="fake-logo-glass">
+          <div class="fake-logo-icon"></div>
+          <div>
+            <div>WOOSOO</div>
+            <span class="fake-logo-sub">Nexus</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — flat logo mark</div>
+      <div class="compare-body">
+        <div class="fake-logo-simple">
+          <div class="fake-logo-icon"></div>
+          <div>
+            <div>WOOSOO</div>
+            <span class="fake-logo-sub">Nexus</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/AppSidebar.vue</div>
+<pre><span class="cm">// SidebarHeader — replace the glass wrapper div</span>
+&lt;SidebarHeader class="px-3 pt-3"&gt;
+<span class="del">-   &lt;div class="overflow-hidden rounded-[30px] border border-white/10</span>
+<span class="del">-        bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.04))]</span>
+<span class="del">-        p-3 text-white shadow-[0_26px_65px_-42px_rgba(0,0,0,0.6)] backdrop-blur-xl"&gt;</span>
+<span class="add">+   &lt;div class="pb-2 border-b border-white/8"&gt;</span>
+        &lt;SidebarMenu&gt;
+            &lt;SidebarMenuItem&gt;
+                &lt;SidebarMenuButton as-child size="lg"
+<span class="del">-                   class="rounded-[22px] bg-white/8 hover:bg-white/12</span>
+<span class="del">-                         data-[active=true]:bg-white</span>
+<span class="del">-                         data-[active=true]:text-woosoo-dark-gray"&gt;</span>
+<span class="add">+                   class="hover:bg-white/8"&gt;</span>
+                    &lt;Link :href="route('dashboard')"&gt;
+                        &lt;AppLogo /&gt;
+                    &lt;/Link&gt;
+                &lt;/SidebarMenuButton&gt;
+            &lt;/SidebarMenuItem&gt;
+        &lt;/SidebarMenu&gt;
+    &lt;/div&gt;
+&lt;/SidebarHeader&gt;</pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════════
+     CHANGE 04 — PAGE HEADER
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">Change 04 / 05</div>
+  <div class="section-title">Page header</div>
+  <span class="impact medium">● Medium impact</span>
+  <div class="section-desc">
+    The topbar is currently a floating frosted-glass pill that hovers over the content. For a dense operations tool, a flat, flush topbar reads more authoritative and leaves more vertical space for content.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — floating pill</div>
+      <div class="compare-body">
+        <div class="fake-header-float" style="background:rgba(255,255,255,0.78);color:#252525;">
+          <div class="fake-trigger-circle"></div>
+          <span style="font-family:var(--font-d);font-size:14px;font-weight:700;color:#252525;flex:1;">Dashboard</span>
+          <div class="fake-badge">
+            <span class="fake-badge-dot"></span>
+            Secure admin workspace
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — flat topbar</div>
+      <div class="compare-body">
+        <div class="fake-header-flat">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="fake-trigger-sq"></div>
+            <div>
+              <div style="font-family:var(--font-d);font-size:15px;font-weight:700;color:var(--fg0);">Dashboard</div>
+              <div style="font-size:11px;color:var(--fg2);margin-top:1px;">Home</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-family:var(--font-m);font-size:11px;color:var(--fg3);">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);"></span>
+            Secure workspace
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/components/AppSidebarHeader.vue</div>
+<pre>&lt;template&gt;
+    &lt;header class="shrink-0 px-0"&gt;
+        &lt;div class="flex h-[52px] items-center justify-between gap-4
+<span class="del">-                    rounded-[26px] border border-black/8 bg-white/78</span>
+<span class="del">-                    px-4 py-3 shadow-[0_26px_70px_-46px_rgba(37,37,37,0.4)]</span>
+<span class="del">-                    backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.05]</span>
+<span class="del">-                    min-h-[76px] md:px-5"&gt;</span>
+<span class="add">+                    border-b border-border/60 bg-background px-5</span>
+<span class="add">+                    dark:border-white/[0.06]"&gt;</span>
+
+            &lt;div class="flex min-w-0 items-center gap-3"&gt;
+                &lt;SidebarTrigger
+<span class="del">-                   class="size-10 rounded-full border border-black/10 bg-white/88</span>
+<span class="del">-                         shadow-sm hover:bg-white dark:border-white/10</span>
+<span class="del">-                         dark:bg-white/[0.06]" /&gt;</span>
+<span class="add">+                   class="size-8 rounded-md hover:bg-muted" /&gt;</span>
+
+                &lt;div class="min-w-0"&gt;
+                    &lt;h2 class="truncate font-header text-lg font-semibold
+                               tracking-tight text-foreground"&gt;
+                        {{ currentTitle }}
+                    &lt;/h2&gt;
+                    &lt;div v-if="breadcrumbs?.length" class="mt-0.5 text-xs
+                                                           text-muted-foreground"&gt;
+                        &lt;Breadcrumbs :breadcrumbs="breadcrumbs" /&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;div class="hidden items-center gap-2 text-xs
+                        font-medium text-muted-foreground md:flex"&gt;
+                &lt;span class="inline-flex h-2 w-2 rounded-full
+                             bg-emerald-500"&gt;&lt;/span&gt;
+                Secure workspace
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/header&gt;
+&lt;/template&gt;</pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════════
+     CHANGE 05 — CSS LEFT BAR INDICATOR
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-num">Change 05 / 05</div>
+  <div class="section-title">Active sidebar left-bar indicator</div>
+  <span class="impact medium">● Medium impact</span>
+  <div class="section-desc">
+    The brand mockup shows a 2px amber bar on the left edge of the active nav item. This can't be done purely with Tailwind utility classes on the button — add it as a CSS rule in <code>app.css</code>.
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/css/app.css</div>
+<pre><span class="cm">/* Add at the bottom of app.css */</span>
+
+<span class="add">/* Sidebar active item — left accent bar */</span>
+<span class="add">[data-sidebar="menu-button"][data-active="true"] {</span>
+<span class="add">    position: relative;</span>
+<span class="add">}</span>
+<span class="add">[data-sidebar="menu-button"][data-active="true"]::before {</span>
+<span class="add">    content: '';</span>
+<span class="add">    position: absolute;</span>
+<span class="add">    left: -8px;   /* sits outside the button, in the sidebar padding */</span>
+<span class="add">    top: 6px;</span>
+<span class="add">    bottom: 6px;</span>
+<span class="add">    width: 2px;</span>
+<span class="add">    background: #F6B56D;  /* --color-woosoo-accent */</span>
+<span class="add">    border-radius: 0 2px 2px 0;</span>
+<span class="add">}</span>
+
+<span class="cm">/* Tighten sidebar nav item border-radius (optional — brand uses 6px) */</span>
+<span class="add">[data-sidebar="menu-button"] {</span>
+<span class="add">    border-radius: 6px !important;</span>
+<span class="add">}</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════════
+     WHAT STAYS THE SAME
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">What's already correct ✓</div>
+  <div class="section-desc">These are already aligned with the brand spec — don't touch them.</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div>
+      <div style="font-family:var(--font-d);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg3);font-weight:700;margin-bottom:12px;">Brand tokens in app.css</div>
+      <div class="token-row">
+        <div class="token-swatch" style="background:#F6B56D;"></div>
+        <div class="token-name">--color-woosoo-accent</div>
+        <div class="token-hex">#F6B56D</div>
+      </div>
+      <div class="token-row">
+        <div class="token-swatch" style="background:#B08047;"></div>
+        <div class="token-name">--color-woosoo-primary-dark</div>
+        <div class="token-hex">#B08047</div>
+      </div>
+      <div class="token-row">
+        <div class="token-swatch" style="background:#FCD8BA;"></div>
+        <div class="token-name">--color-woosoo-primary-light</div>
+        <div class="token-hex">#FCD8BA</div>
+      </div>
+      <div class="token-row">
+        <div class="token-swatch" style="background:#252525;border:1px solid var(--bdr2);"></div>
+        <div class="token-name">--color-woosoo-dark-gray</div>
+        <div class="token-hex">#252525</div>
+      </div>
+      <div class="token-row">
+        <div class="token-swatch" style="background:#16A34A;"></div>
+        <div class="token-name">--color-woosoo-green</div>
+        <div class="token-hex">#16A34A</div>
+      </div>
+      <div class="token-row">
+        <div class="token-swatch" style="background:#DC2626;"></div>
+        <div class="token-name">--color-woosoo-red</div>
+        <div class="token-hex">#DC2626</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:var(--font-d);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg3);font-weight:700;margin-bottom:12px;">Typography</div>
+      <div class="token-row">
+        <div style="width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:var(--font-d);font-size:16px;font-weight:800;color:var(--fg0);">R</span>
+        </div>
+        <div class="token-name">--font-header</div>
+        <div class="token-role">Raleway — headings, buttons, labels</div>
+      </div>
+      <div class="token-row">
+        <div style="width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:var(--font-s);font-size:16px;font-weight:500;color:var(--fg0);">K</span>
+        </div>
+        <div class="token-name">--font-sans</div>
+        <div class="token-role">Kanit — body text, table content</div>
+      </div>
+      <div class="token-row">
+        <div style="width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:var(--font-m);font-size:14px;font-weight:400;color:var(--fg0);">M</span>
+        </div>
+        <div class="token-name">--font-mono</div>
+        <div class="token-role">JetBrains Mono — IDs, numbers, code</div>
+      </div>
+
+      <div style="margin-top:20px;font-family:var(--font-d);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg3);font-weight:700;margin-bottom:12px;">Buttons (light mode)</div>
+      <div class="row-btns">
+        <div class="light-fake-btn-primary">New Order</div>
+        <div class="light-fake-btn-secondary">Cancel</div>
+      </div>
+      <div style="margin-top:8px;font-family:var(--font-d);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg3);font-weight:700;margin-bottom:10px;">Buttons (dark mode)</div>
+      <div class="row-btns">
+        <div class="dark-fake-btn-primary">New Order</div>
+        <div class="dark-fake-btn-secondary">Cancel</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════════════════
+     CHECKLIST
+═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">Implementation checklist</div>
+  <div class="section-desc">Do these in order — changes 01 and 02 together take less than 5 minutes.</div>
+
+  <ul class="checklist" style="margin-top:8px;">
+    <li>
+      <div class="check-box"></div>
+      <div>
+        <div>Change <code>data-[active=true]</code> classes in CVA base string</div>
+        <div class="check-file" style="margin-top:3px;">components/ui/sidebar/index.ts</div>
+      </div>
+    </li>
+    <li>
+      <div class="check-box"></div>
+      <div>
+        <div>Update CollapsibleTrigger and child SidebarMenuButton active classes</div>
+        <div class="check-file" style="margin-top:3px;">components/NavMain.vue</div>
+      </div>
+    </li>
+    <li>
+      <div class="check-box"></div>
+      <div>
+        <div>Remove glassmorphism wrapper from logo area</div>
+        <div class="check-file" style="margin-top:3px;">components/AppSidebar.vue</div>
+      </div>
+    </li>
+    <li>
+      <div class="check-box"></div>
+      <div>
+        <div>Replace floating pill header with flat topbar</div>
+        <div class="check-file" style="margin-top:3px;">components/AppSidebarHeader.vue</div>
+      </div>
+    </li>
+    <li>
+      <div class="check-box"></div>
+      <div>
+        <div>Add sidebar left-bar indicator CSS rule</div>
+        <div class="check-file" style="margin-top:3px;">resources/css/app.css</div>
+      </div>
+    </li>
+    <li>
+      <div class="check-box"></div>
+      <div>
+        <div>Visual QA — check both light mode and dark mode, collapsed sidebar state</div>
+        <div class="check-file" style="margin-top:3px;">Browser — all screens</div>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════ -->
+<div class="doc-footer">
+  <div class="doc-footer-left">Woosoo Nexus · Design Alignment Series · May 2026</div>
+  <div class="doc-footer-step">Step 1 of 4 — Look &amp; Feel</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Step 4 — Page by Page · Woosoo Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=Kanit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="series.css">
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="doc-eyebrow">Woosoo Nexus · Design Alignment</div>
+  <div class="doc-title">Step 4 — Page by Page</div>
+  <div class="doc-sub">The final step. With the shell and primitives aligned, three targeted fixes land on the highest-traffic pages — Dashboard, Orders, Devices — so their internal layouts match the established system. Visual-only; every prop, listener, and route stays put.</div>
+  <div class="doc-nav">
+    <a href="Design Alignment - Roadmap.html">Roadmap</a>
+    <a href="Step 1 - Look & Feel.html">Step 1 · Look &amp; Feel</a>
+    <a href="Step 2 - Layout & Navigation.html">Step 2 · Layout</a>
+    <a href="Step 3 - Component Theming.html">Step 3 · Components</a>
+    <a href="Step 4 - Page by Page.html" class="cur">Step 4 · Pages</a>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="section">
+  <div class="section-title">What changes, and where</div>
+  <div class="section-desc"><strong>Class strings &amp; template markup only.</strong> <strong>Prerequisite:</strong> Steps 1–3 must be applied first — Step 4 leans on the themed <code>Card.vue</code> and brand tokens established earlier.</div>
+
+  <table class="ov-table">
+    <thead>
+      <tr><th>#</th><th>Page</th><th>File</th><th>Impact</th></tr>
+    </thead>
+    <tbody>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">01</td><td class="label-cell">Dashboard — radius &amp; border unification</td><td class="file-cell">pages/Dashboard.vue</td><td><span class="badge-impact badge-medium">Medium</span></td></tr>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">02</td><td class="label-cell">Orders — status pills on brand tokens</td><td class="file-cell">pages/Orders/Index.vue</td><td><span class="badge-impact badge-high">High</span></td></tr>
+      <tr><td style="font-family:var(--font-m);font-size:12px;color:var(--fg3);">03</td><td class="label-cell">Devices — remove double-glass layout</td><td class="file-cell">pages/Devices/Index.vue</td><td><span class="badge-impact badge-high">High</span></td></tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:16px;" class="notice">
+    <span class="notice-icon">✓</span>
+    <div><strong>Rename on copy:</strong> <code>Orders_Index.vue</code> and <code>Devices_Index.vue</code> use underscores in the flat handoff folder — restore them to <code>Orders/Index.vue</code> and <code>Devices/Index.vue</code> at their destinations.</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 01 — DASHBOARD -->
+<div class="section">
+  <div class="section-num">Change 01 / 03</div>
+  <div class="section-title">Dashboard</div>
+  <span class="impact medium">● Medium impact</span>
+  <div class="section-desc">
+    The hero and inner cards carried slightly oversized radii, and stat-card icon containers were <code>rounded-2xl</code> — rounder than the <code>--radius</code> scale. Unify the corners and let the themed <code>Card.vue</code> from Step 3 supply the border.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — oversized icon container</div>
+      <div class="compare-body">
+        <div class="fake-kpi-card-flat" style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;height:44px;border-radius:18px;background:var(--accm);border:1px solid var(--accb);flex-shrink:0;"></div>
+          <div><div class="fake-kpi-label">Today's Revenue</div><div class="fake-kpi-val">$4,820</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — rounded-xl, sized down</div>
+      <div class="compare-body">
+        <div class="fake-kpi-card-flat" style="display:flex;align-items:center;gap:12px;">
+          <div style="width:40px;height:40px;border-radius:8px;background:var(--accm);border:1px solid var(--accb);flex-shrink:0;"></div>
+          <div><div class="fake-kpi-label">Today's Revenue</div><div class="fake-kpi-val">$4,820</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/pages/Dashboard.vue</div>
+<pre><span class="cm">// Hero card</span>
+<span class="del">- rounded-[28px]            bg-accent/15</span>
+<span class="add">+ rounded-[26px]            bg-accent/12   dark:border-white/10</span>
+
+<span class="cm">// Session / Open Tables inner cards</span>
+<span class="del">- rounded-[24px]   dark:bg-white/[0.08]   shadow-[0_22px_55px…]</span>
+<span class="add">+ rounded-[22px]   dark:bg-white/[0.06]</span>
+
+<span class="cm">// Stat-card icon containers</span>
+<span class="del">- h-11 w-11 rounded-2xl</span>
+<span class="add">+ h-10 w-10 rounded-xl</span>
+
+<span class="cm">// Card hover — drop redundant border (Card.vue supplies it post-Step 3)</span>
+<span class="del">- border-black/8</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 02 — ORDERS -->
+<div class="section">
+  <div class="section-num">Change 02 / 03</div>
+  <div class="section-title">Orders — live status pills</div>
+  <span class="impact high">● High impact</span>
+  <div class="section-desc">
+    The Echo / WebSocket status pill used raw Tailwind colors (<code>bg-emerald-50</code>, <code>bg-yellow-50</code>, <code>bg-rose-50</code>) and the Live Orders count badge was an off-brand <code>bg-blue-600</code>. Move them all onto brand tokens. <strong>WebSocket logic is untouched</strong> — only the class strings tied to each connection state change.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — raw Tailwind</div>
+      <div class="compare-body" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+        <span class="fake-pill" style="background:#ecfdf5;color:#047857;"><span class="d" style="background:#10b981;"></span>Live</span>
+        <span class="fake-pill" style="background:#fefce8;color:#a16207;"><span class="d" style="background:#eab308;"></span>Connecting…</span>
+        <span class="fake-badge-v" style="background:#2563EB;color:#fff;border-radius:99px;padding:4px 11px;">8 Live Orders</span>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — brand tokens</div>
+      <div class="compare-body" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+        <span class="fake-pill" style="background:rgba(110,168,104,0.12);color:var(--green);"><span class="d" style="background:var(--green);"></span>Live</span>
+        <span class="fake-pill" style="background:rgba(246,181,109,0.12);color:#B08047;"><span class="d" style="background:var(--accent);"></span>Connecting…</span>
+        <span class="fake-badge-v" style="background:var(--accent);color:var(--accfg);border-radius:99px;padding:4px 11px;">8 Live Orders</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/pages/Orders/Index.vue</div>
+<pre><span class="cm">// Echo status pill — by connection state</span>
+<span class="del">- connected:    bg-emerald-50 text-emerald-700   dot bg-emerald-500</span>
+<span class="add">+ connected:    bg-woosoo-green/10 text-woosoo-green        dot bg-woosoo-green</span>
+<span class="del">- connecting:   bg-yellow-50  text-yellow-700    dot bg-yellow-500</span>
+<span class="add">+ connecting:   bg-woosoo-accent/10 text-woosoo-primary-dark dot bg-woosoo-accent</span>
+<span class="del">- disconnected: bg-rose-50    text-rose-700      dot bg-rose-500</span>
+<span class="add">+ disconnected: bg-destructive/10 text-destructive          dot bg-destructive</span>
+
+<span class="cm">// Live Orders count badge</span>
+<span class="del">- bg-blue-600 text-white</span>
+<span class="add">+ bg-woosoo-accent text-woosoo-dark-gray</span>
+
+<span class="cm">// Remove stray padding from TabsContent (parent handles spacing)</span>
+<span class="del">- px-1 sm:px-2</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CHANGE 03 — DEVICES -->
+<div class="section">
+  <div class="section-num">Change 03 / 03</div>
+  <div class="section-title">Devices — un-nest the glass</div>
+  <span class="impact high">● High impact</span>
+  <div class="section-desc">
+    The Devices page wrapped its content in a max-width container <em>and</em> two inner glass cards, each with its own <code>rounded-[28px] backdrop-blur-xl</code> — double-wrapped against the layout from Step 2, which already provides the max-width container. Flatten to a single card layer matching Dashboard, and replace the 4-column <code>StatsCards</code> (rendering only 2 items) with an inline 2-column grid.
+  </div>
+
+  <div class="compare">
+    <div class="compare-col">
+      <div class="compare-label current">Current — card inside a card</div>
+      <div class="compare-body">
+        <div style="border-radius:18px;background:rgba(255,255,255,0.05);border:1px solid var(--bdr2);padding:10px;backdrop-filter:blur(4px);">
+          <div style="border-radius:14px;background:var(--bg2);border:1px solid var(--bdr1);padding:14px;">
+            <div class="fake-kpi-label" style="color:var(--fg2);">Devices</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;">
+              <div style="height:34px;border-radius:8px;background:var(--bg3);"></div>
+              <div style="height:34px;border-radius:8px;background:var(--bg3);"></div>
+              <div style="height:34px;border-radius:8px;background:var(--bg1);border:1px dashed var(--bdr2);"></div>
+              <div style="height:34px;border-radius:8px;background:var(--bg1);border:1px dashed var(--bdr2);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label target">Target — single card, 2-col stats</div>
+      <div class="compare-body">
+        <div style="border-radius:18px;background:var(--bg2);border:1px solid var(--bdr1);padding:14px;">
+          <div class="fake-badge-v" style="background:rgba(246,181,109,0.12);color:var(--accent);border:1px solid var(--accb);margin-bottom:10px;">Device management</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:60%;">
+            <div style="height:48px;border-radius:8px;background:var(--bg3);"></div>
+            <div style="height:48px;border-radius:8px;background:var(--bg3);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>resources/js/pages/Devices/Index.vue</div>
+<pre><span class="cm">// REMOVE the outer max-width wrapper — AppContentLayout already provides it</span>
+<span class="del">- &lt;div class="mx-auto flex w-full max-w-[1600px] flex-col gap-8</span>
+<span class="del">-             px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8"&gt;</span>
+
+<span class="cm">// Hero + table sections — match Dashboard pattern</span>
+<span class="del">- rounded-[28px] bg-card/95 shadow-sm backdrop-blur-xl</span>
+<span class="add">+ rounded-[26px] bg-card/92 backdrop-blur-sm</span>
+<span class="add">+ &lt;!-- add amber "Device management" label badge --&gt;</span>
+
+<span class="cm">// Stats — drop &lt;StatsCards&gt; (4-col grid, 2 items); inline 2-col</span>
+<span class="del">- &lt;StatsCards :items="…" /&gt;        // import removed too</span>
+<span class="add">+ &lt;div class="grid grid-cols-2 gap-3 lg:w-1/2"&gt;</span>
+<span class="add">+   &lt;div class="rounded-[18px] border-black/8 bg-white/72 …"&gt;…&lt;/div&gt;</span>
+<span class="add">+   &lt;div class="rounded-[18px] border-black/8 bg-white/72 …"&gt;…&lt;/div&gt;</span>
+<span class="add">+ &lt;/div&gt;</span></pre>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- WHAT STAYS THE SAME -->
+<div class="section">
+  <div class="section-title">What stays the same ✓</div>
+  <ul class="changes">
+    <li><span class="dot keep" style="background:var(--green);"></span><div>Dashboard props, computed values, and chart components — <span class="keep">unchanged</span>.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div>Orders WebSocket / Echo listeners and order-event handlers — <span class="keep">unchanged</span>.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div>Devices dialog, <code>revealedSecurityCode</code>, and <code>openDeviceDetail</code> — <span class="keep">unchanged</span>.</div></li>
+    <li><span class="dot keep" style="background:var(--green);"></span><div><code>StatsCards.vue</code> itself — still used on Orders; no edits. All PHP / Laravel backend — out of scope.</div></li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<!-- CHECKLIST -->
+<div class="section">
+  <div class="section-title">Implementation checklist</div>
+  <ul class="checklist" style="margin-top:8px;">
+    <li><div class="check-box"></div><div><div>Dashboard radii unified; icon containers <code>rounded-xl</code>; redundant border dropped</div><div class="check-file" style="margin-top:3px;">pages/Dashboard.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>Orders status pills + count badge on brand tokens</div><div class="check-file" style="margin-top:3px;">pages/Orders/Index.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>Devices double-glass removed; inline 2-col stats; <code>StatsCards</code> import removed</div><div class="check-file" style="margin-top:3px;">pages/Devices/Index.vue</div></div></li>
+    <li><div class="check-box"></div><div><div>QA — WebSocket events still fire; device row click + security-code dialog still work</div><div class="check-file" style="margin-top:3px;">Browser — Orders &amp; Devices</div></div></li>
+  </ul>
+</div>
+
+<!-- SERIES COMPLETE -->
+<div class="section">
+  <div class="notice" style="margin-bottom:0;">
+    <span class="notice-icon">✓</span>
+    <div><strong>Series complete.</strong> With Step 4 applied, the admin shell, shared primitives, and top three pages all align to the Woosoo brand system. Return to the <a href="Design Alignment - Roadmap.html" style="color:var(--accent);">Roadmap</a> for the quick-apply script.</div>
+  </div>
+</div>
+
+<div class="doc-footer">
+  <div class="doc-footer-left">Woosoo Nexus · Design Alignment Series · May 2026</div>
+  <div class="doc-footer-step">Step 4 of 4 — Page by Page</div>
+</div>
+
+</body>
+</html>

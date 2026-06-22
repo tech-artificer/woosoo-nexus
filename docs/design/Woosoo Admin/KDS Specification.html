@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Woosoo KDS · Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0: #0d0b09;
+  --bg1: #141210;
+  --bg2: #1b1815;
+  --bg3: #23201a;
+  --bg4: #2b2720;
+  --bdr1: #252220;
+  --bdr2: #352f26;
+  --bdr3: #463929;
+
+  --fg0: #f2ebe0;
+  --fg1: #c0b4a0;
+  --fg2: #7e7264;
+  --fg3: #524a3e;
+
+  --accent: #F6B56D;
+  --acch:   #f9c48a;
+  --accm:   #2a1e0c;
+  --accb:   #3d2c14;
+  --accfg:  #1a1208;
+
+  --green:  #6ea868;
+  --greenm: #182a17;
+  --amber:  #c99540;
+  --amberm: #2a1e0c;
+  --red:    #c94f40;
+  --redm:   #2a1210;
+  --blue:   #7a9bc4;
+  --bluem:  #141e2c;
+
+  --font-d: 'Raleway', sans-serif;
+  --font-s: 'Kanit', sans-serif;
+  --font-m: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; border: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg0);
+  color: var(--fg0);
+  font-family: var(--font-s);
+  font-size: 14.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-weight: 300;
+}
+.mono { font-family: var(--font-m); font-variant-numeric: tabular-nums; }
+
+/* ── LAYOUT ── */
+.shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  max-width: 1320px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+/* ── TOC ── */
+.toc {
+  position: sticky; top: 0;
+  height: 100vh;
+  padding: 40px 28px 40px 36px;
+  border-right: 1px solid var(--bdr1);
+  background: linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
+  overflow-y: auto;
+}
+.toc-brand {
+  display: flex; align-items: center; gap: 11px;
+  padding-bottom: 22px; margin-bottom: 22px;
+  border-bottom: 1px solid var(--bdr1);
+}
+.toc-mark {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--accent);
+  display: grid; place-items: center;
+  font-family: var(--font-d); font-weight: 800; font-size: 17px; color: var(--accfg);
+  letter-spacing: -0.02em;
+}
+.toc-brand-text { display: flex; flex-direction: column; gap: 2px; }
+.toc-brand-name { font-family: var(--font-d); font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg0); }
+.toc-brand-sub { font: 600 9.5px var(--font-d); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+
+.toc-doc-meta {
+  font-family: var(--font-m); font-size: 10px; color: var(--fg2);
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: 22px;
+}
+.toc-doc-meta b { color: var(--fg1); font-weight: 600; }
+
+.toc-section {
+  font: 700 9.5px var(--font-d); letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--fg3); padding: 14px 0 6px;
+}
+.toc a {
+  display: block;
+  padding: 5px 10px 5px 12px;
+  font-size: 13px; font-weight: 400; color: var(--fg2);
+  text-decoration: none; border-left: 1px solid transparent;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.toc a:hover { color: var(--fg1); }
+.toc a.lvl-2 { padding-left: 22px; font-size: 12px; color: var(--fg3); }
+.toc a.lvl-2:hover { color: var(--fg2); }
+
+/* ── DOC CONTENT ── */
+.doc {
+  padding: 56px 64px 120px;
+  max-width: 880px;
+}
+
+/* document header */
+.doc-eyebrow {
+  font: 700 10px var(--font-d); letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 14px;
+}
+.doc-eyebrow::after {
+  content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--accb), transparent);
+}
+.doc-title {
+  font-family: var(--font-d); font-weight: 800;
+  font-size: 56px; line-height: 1.02; letter-spacing: -0.025em;
+  color: var(--fg0);
+  margin-bottom: 18px;
+  text-wrap: balance;
+}
+.doc-deck {
+  font: 400 17px var(--font-s); line-height: 1.55; color: var(--fg1);
+  max-width: 640px;
+  text-wrap: pretty;
+  margin-bottom: 36px;
+}
+.doc-meta-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 18px 22px;
+  background: var(--bg1); border: 1px solid var(--bdr1); border-radius: 10px;
+  margin-bottom: 56px;
+}
+.doc-meta-cell { display: flex; flex-direction: column; gap: 4px; }
+.doc-meta-lbl { font: 700 9px var(--font-d); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg3); }
+.doc-meta-val { font: 500 13px var(--font-s); color: var(--fg0); }
+.doc-meta-val.mono { font-family: var(--font-m); font-size: 12px; font-weight: 500; }
+
+/* section headings */
+.sec { margin-bottom: 64px; scroll-margin-top: 24px; }
+.sec-num {
+  font: 700 11px var(--font-d); letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: flex; align-items: baseline; gap: 14px;
+}
+.sec-num-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); display: inline-block; }
+h1.sec-title {
+  font-family: var(--font-d); font-weight: 800;
+  font-size: 32px; line-height: 1.1; letter-spacing: -0.018em;
+  color: var(--fg0);
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--bdr1);
+}
+h2.sub-title {
+  font-family: var(--font-d); font-weight: 700;
+  font-size: 18px; letter-spacing: -0.005em;
+  color: var(--fg0);
+  margin: 36px 0 14px;
+  display: flex; align-items: baseline; gap: 10px;
+}
+h2.sub-title .sub-tag {
+  font: 600 10px var(--font-m); letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accm); border: 1px solid var(--accb);
+  padding: 2px 7px; border-radius: 4px;
+}
+
+p { margin-bottom: 14px; color: var(--fg1); }
+p.lede { color: var(--fg0); font-size: 16px; font-weight: 400; margin-bottom: 22px; text-wrap: pretty; }
+strong { color: var(--fg0); font-weight: 600; }
+em { color: var(--accent); font-style: normal; font-weight: 500; }
+
+ul, ol { padding-left: 0; list-style: none; margin-bottom: 18px; }
+ul li, ol li {
+  position: relative;
+  padding: 5px 0 5px 26px;
+  color: var(--fg1);
+  font-weight: 300;
+}
+ul li::before {
+  content: ''; position: absolute;
+  left: 6px; top: 13px; width: 6px; height: 6px;
+  background: var(--accent); border-radius: 50%;
+}
+ol { counter-reset: ol-counter; }
+ol li::before {
+  counter-increment: ol-counter;
+  content: counter(ol-counter, decimal-leading-zero);
+  position: absolute; left: 0; top: 5px;
+  font: 600 10.5px var(--font-m); color: var(--accent);
+  letter-spacing: 0.04em;
+}
+li strong { color: var(--fg0); font-weight: 600; }
+
+/* requirements table */
+.req-table {
+  width: 100%; border-collapse: collapse;
+  margin: 18px 0 30px;
+  font-size: 13.5px;
+}
+.req-table th {
+  text-align: left;
+  font: 700 9.5px var(--font-d); letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--fg2);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--bdr2);
+  background: var(--bg1);
+}
+.req-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--bdr1);
+  color: var(--fg1); vertical-align: top;
+}
+.req-table tr:last-child td { border-bottom: 0; }
+.req-table tr:hover td { background: var(--bg1); }
+.req-table .id { font-family: var(--font-m); font-size: 11.5px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+.req-table .pri-must  { color: var(--red); font: 700 10px var(--font-d); letter-spacing: 0.1em; }
+.req-table .pri-should { color: var(--amber); font: 700 10px var(--font-d); letter-spacing: 0.1em; }
+.req-table .pri-could { color: var(--blue); font: 700 10px var(--font-d); letter-spacing: 0.1em; }
+.req-table b { color: var(--fg0); font-weight: 600; }
+.req-table td:first-child { width: 72px; }
+.req-table td:nth-child(2) { width: 90px; }
+
+/* use case card */
+.uc {
+  background: var(--bg1);
+  border: 1px solid var(--bdr1);
+  border-radius: 12px;
+  padding: 22px 26px 24px;
+  margin: 14px 0 22px;
+}
+.uc-head {
+  display: flex; align-items: baseline; gap: 14px;
+  padding-bottom: 12px; margin-bottom: 14px;
+  border-bottom: 1px dashed var(--bdr2);
+}
+.uc-id { font: 600 11px var(--font-m); color: var(--accent); letter-spacing: 0.04em; }
+.uc-name { font-family: var(--font-d); font-weight: 700; font-size: 16px; color: var(--fg0); letter-spacing: -0.005em; }
+.uc-grid { display: grid; grid-template-columns: 110px 1fr; gap: 8px 22px; font-size: 13px; }
+.uc-grid dt { font: 700 9.5px var(--font-d); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg3); padding-top: 4px; }
+.uc-grid dd { color: var(--fg1); padding: 2px 0; }
+.uc-grid dd ol { padding-left: 0; margin: 0; }
+.uc-grid dd ol li { padding: 3px 0 3px 28px; font-size: 13px; }
+.uc-grid dd ol li::before { top: 3px; }
+.uc-grid dd ul { margin: 0; }
+.uc-grid dd ul li { padding: 3px 0 3px 18px; font-size: 13px; }
+.uc-grid dd ul li::before { left: 2px; top: 11px; width: 4px; height: 4px; background: var(--fg3); }
+
+/* schema */
+.schema-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin: 16px 0 26px;
+}
+.entity {
+  background: var(--bg1);
+  border: 1px solid var(--bdr1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.entity-head {
+  padding: 12px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--bdr1);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+}
+.entity-name { font: 800 13px var(--font-d); letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+.entity-tag  { font: 500 10px var(--font-m); color: var(--fg3); }
+.entity-body { padding: 6px 0; }
+.field {
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  padding: 6px 16px;
+  gap: 12px;
+  align-items: baseline;
+  border-bottom: 1px dashed var(--bdr1);
+}
+.field:last-child { border-bottom: 0; }
+.field-name { font-family: var(--font-m); font-size: 12px; color: var(--fg0); font-weight: 500; }
+.field-name.pk::before { content: '◆ '; color: var(--accent); }
+.field-name.fk::before { content: '→ '; color: var(--blue); }
+.field-type { font: 500 10.5px var(--font-m); color: var(--fg2); text-align: right; letter-spacing: 0.02em; }
+.field-note { grid-column: 1 / -1; font-size: 11.5px; color: var(--fg3); padding-left: 0; font-style: italic; }
+
+/* state machine */
+.flow {
+  background: var(--bg1);
+  border: 1px solid var(--bdr1);
+  border-radius: 10px;
+  padding: 26px 22px;
+  margin: 20px 0 28px;
+}
+.flow-row {
+  display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.flow-node {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+  padding: 14px 22px;
+  border-radius: 10px;
+  border: 1px solid;
+  min-width: 130px;
+}
+.flow-node .n-name { font: 800 12px var(--font-d); letter-spacing: 0.1em; text-transform: uppercase; }
+.flow-node .n-sub  { font: 500 10.5px var(--font-m); color: var(--fg2); }
+.flow-node.pending   { background: var(--bluem);  border-color: #1c2840; color: #8ea5c8; }
+.flow-node.preparing { background: var(--amberm); border-color: #3d2218; color: #e8884a; }
+.flow-node.served    { background: var(--greenm); border-color: #1f3422; color: #6ea868; }
+.flow-node.overdue   { background: var(--redm);   border-color: #3d1d16; color: var(--red); }
+.flow-arrow {
+  font: 600 11px var(--font-m); color: var(--accent);
+  letter-spacing: 0.1em;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.flow-arrow .arr  { font-size: 18px; line-height: 1; }
+.flow-arrow .lbl  { color: var(--fg2); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.flow-side {
+  margin-top: 18px; padding-top: 18px;
+  border-top: 1px dashed var(--bdr2);
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  font: 500 11.5px var(--font-s); color: var(--fg2);
+}
+.flow-side .tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 5px;
+  font: 700 10px var(--font-d); letter-spacing: 0.12em; text-transform: uppercase;
+}
+.flow-side .tag.over { background: var(--redm); color: var(--red); border: 1px solid #3d1d16; }
+.flow-side .tag .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* KPI grid (non-functional) */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  margin: 16px 0 22px;
+}
+.kpi {
+  background: var(--bg1); border: 1px solid var(--bdr1); border-radius: 10px;
+  padding: 18px 18px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.kpi-lbl { font: 700 9.5px var(--font-d); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg3); }
+.kpi-val { font: 700 22px var(--font-d); letter-spacing: -0.01em; color: var(--accent); font-feature-settings: 'ss01'; }
+.kpi-val .unit { font-size: 12px; color: var(--fg2); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
+.kpi-sub { font-size: 12px; color: var(--fg2); font-weight: 300; }
+
+/* callout */
+.callout {
+  border-left: 2px solid var(--accent);
+  background: linear-gradient(90deg, var(--accm) 0%, transparent 60%);
+  padding: 14px 18px;
+  margin: 18px 0 24px;
+  font-size: 13.5px; color: var(--fg1);
+  border-radius: 0 8px 8px 0;
+}
+.callout strong { color: var(--accent); font-weight: 600; }
+
+/* footer */
+.doc-foot {
+  margin-top: 100px;
+  padding-top: 22px;
+  border-top: 1px solid var(--bdr1);
+  display: flex; justify-content: space-between; align-items: baseline;
+  font: 500 11px var(--font-m); color: var(--fg3);
+  letter-spacing: 0.04em;
+}
+
+/* scrollbars */
+.toc::-webkit-scrollbar, .doc::-webkit-scrollbar { width: 6px; }
+.toc::-webkit-scrollbar-thumb, .doc::-webkit-scrollbar-thumb { background: var(--bdr2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ═════════ TABLE OF CONTENTS ═════════ -->
+  <aside class="toc">
+    <div class="toc-brand">
+      <div class="toc-mark">W</div>
+      <div class="toc-brand-text">
+        <div class="toc-brand-name">Woosoo</div>
+        <div class="toc-brand-sub">Spec · KDS</div>
+      </div>
+    </div>
+
+    <div class="toc-doc-meta">
+      <div><b>v1.0</b> · Released Build</div>
+      <div>26 May 2026</div>
+      <div>Owner: Floor Ops</div>
+    </div>
+
+    <div class="toc-section">Document</div>
+    <a href="#context">1 · Context</a>
+    <a href="#objective">2 · Objective</a>
+    <a href="#scope">3 · Scope</a>
+
+    <div class="toc-section">Requirements</div>
+    <a href="#functional">4 · Functional</a>
+    <a href="#functional" class="lvl-2">4.1 Queue & Tickets</a>
+    <a href="#functional" class="lvl-2">4.2 State Lifecycle</a>
+    <a href="#functional" class="lvl-2">4.3 Filtering & Sorting</a>
+    <a href="#functional" class="lvl-2">4.4 Item-level Actions</a>
+    <a href="#functional" class="lvl-2">4.5 Alerts & Flags</a>
+    <a href="#nonfunctional">5 · Non-functional</a>
+
+    <div class="toc-section">Behavior</div>
+    <a href="#statemachine">6 · State Machine</a>
+    <a href="#usecases">7 · Use Cases</a>
+
+    <div class="toc-section">Data</div>
+    <a href="#schema">8 · Ideal Schema</a>
+
+    <div class="toc-section">Notes</div>
+    <a href="#assumptions">9 · Assumptions</a>
+    <a href="#open">10 · Open Questions</a>
+  </aside>
+
+  <!-- ═════════ DOC CONTENT ═════════ -->
+  <main class="doc">
+
+    <!-- HEADER -->
+    <div class="doc-eyebrow">Woosoo Admin · Product Specification</div>
+    <h1 class="doc-title">Kitchen Display System</h1>
+    <p class="doc-deck">
+      A wall-mounted, kitchen-facing screen that surfaces the live order queue, lets cooks
+      acknowledge and bump tickets with a tap, and keeps every active table visible at a glance —
+      no router slips, no shouting across the line.
+    </p>
+    <div class="doc-meta-grid">
+      <div class="doc-meta-cell">
+        <span class="doc-meta-lbl">Module</span>
+        <span class="doc-meta-val">Woosoo Admin · KDS</span>
+      </div>
+      <div class="doc-meta-cell">
+        <span class="doc-meta-lbl">Surface</span>
+        <span class="doc-meta-val">Wall display · 1440×900+</span>
+      </div>
+      <div class="doc-meta-cell">
+        <span class="doc-meta-lbl">Audience</span>
+        <span class="doc-meta-val">Line cooks, KM</span>
+      </div>
+      <div class="doc-meta-cell">
+        <span class="doc-meta-lbl">Version</span>
+        <span class="doc-meta-val mono">1.0 · 2026-05-26</span>
+      </div>
+    </div>
+
+    <!-- ═════════ 1. CONTEXT ═════════ -->
+    <section class="sec" id="context">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 01</div>
+      <h1 class="sec-title">Context</h1>
+      <p class="lede">
+        Woosoo is a Korean BBQ restaurant that fires tickets from tablet-side ordering at each table.
+        At peak hours (Fri / Sat 7–10pm) the kitchen handles <strong>40+ concurrent tables</strong>,
+        each pacing through 2–3 courses with frequent banchan and meat refills.
+      </p>
+      <p>
+        Today, orders arrive as printer slips. Slips pile, get misread, and there is no shared
+        signal for elapsed time or table priority. When a refill is forgotten the floor finds out
+        from the guest, not the kitchen. The KDS replaces the slip printer with a single live view
+        of every active ticket.
+      </p>
+      <div class="callout">
+        <strong>Why now:</strong> ticketing was migrated to the new POS in Q1, which exposes a
+        firehose of order events. The KDS is the first screen that consumes that stream end-to-end.
+      </div>
+    </section>
+
+    <!-- ═════════ 2. OBJECTIVE ═════════ -->
+    <section class="sec" id="objective">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 02</div>
+      <h1 class="sec-title">Goal &amp; Objective</h1>
+      <p class="lede">
+        Give the line a calm, glanceable view of <em>what to cook next</em> and <em>what is running late</em>,
+        with one-tap acknowledgements that move tickets through the kitchen without ever needing
+        a keyboard or printer.
+      </p>
+
+      <h2 class="sub-title">Success Metrics <span class="sub-tag">v1.0</span></h2>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <span class="kpi-lbl">Ticket → Confirm</span>
+          <span class="kpi-val">&lt; 30<span class="unit">sec</span></span>
+          <span class="kpi-sub">From fire to cook acknowledgment</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Avg Prep Time</span>
+          <span class="kpi-val">≤ 14<span class="unit">min</span></span>
+          <span class="kpi-sub">Confirm → Bump · Served</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Overdue Rate</span>
+          <span class="kpi-val">&lt; 5<span class="unit">%</span></span>
+          <span class="kpi-sub">Tickets exceeding target time</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Printer Slips</span>
+          <span class="kpi-val">0<span class="unit">/shift</span></span>
+          <span class="kpi-sub">Fully replaces paper at the pass</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Kitchen Uptime</span>
+          <span class="kpi-val">99.9<span class="unit">%</span></span>
+          <span class="kpi-sub">Service hour availability</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lbl">Cook Onboarding</span>
+          <span class="kpi-val">&lt; 5<span class="unit">min</span></span>
+          <span class="kpi-sub">Trainee productive on first shift</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════ 3. SCOPE ═════════ -->
+    <section class="sec" id="scope">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 03</div>
+      <h1 class="sec-title">Scope</h1>
+
+      <h2 class="sub-title">In Scope</h2>
+      <ul>
+        <li>A single, read-and-act queue of kitchen tickets, sorted by urgency.</li>
+        <li>Three ticket states — <strong>Pending → Preparing → Served</strong> — plus a derived <strong>Overdue</strong> flag.</li>
+        <li>Status filter chips with live counters.</li>
+        <li>Per-item check-off and progress bar on each ticket.</li>
+        <li>Per-ticket flags: VIP, Rush, Refill, Allergy, Course-N.</li>
+        <li>Live elapsed-time counter, with warn/over thresholds.</li>
+        <li>Recall: served tickets can be reopened back to preparing.</li>
+        <li>Density toggle (Comfortable / Compact) for screen size.</li>
+      </ul>
+
+      <h2 class="sub-title">Out of Scope <span class="sub-tag">v1.0</span></h2>
+      <ul>
+        <li>Station routing (cold/hot/grill/bar) — single kitchen view only.</li>
+        <li>Refill ticker and announcement bar — moved to a future floor-facing screen.</li>
+        <li>Server messaging back to floor — handled in the FOH app.</li>
+        <li>Payment, comps, and check splitting — Admin module.</li>
+        <li>Inventory 86-ing — Admin module.</li>
+      </ul>
+    </section>
+
+    <!-- ═════════ 4. FUNCTIONAL ═════════ -->
+    <section class="sec" id="functional">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 04</div>
+      <h1 class="sec-title">Functional Requirements</h1>
+      <p class="lede">
+        Requirement priority follows MoSCoW. <strong>Must</strong> = blocking for v1.0; <strong>Should</strong> = expected;
+        <strong>Could</strong> = nice-to-have, deferred if needed.
+      </p>
+
+      <h2 class="sub-title">4.1 · Queue &amp; Tickets</h2>
+      <table class="req-table">
+        <thead><tr><th>ID</th><th>Priority</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td class="id">FR-Q-01</td><td class="pri-must">MUST</td><td><b>Display every active ticket</b> (any non-served state) on a single screen, with queue rank, table, ticket id, course, guest count, and issue time.</td></tr>
+          <tr><td class="id">FR-Q-02</td><td class="pri-must">MUST</td><td><b>Update the elapsed-time counter every second</b> for every visible ticket.</td></tr>
+          <tr><td class="id">FR-Q-03</td><td class="pri-must">MUST</td><td><b>Surface each line item</b> with quantity, name, and optional modifier (e.g. "no garlic — allergy").</td></tr>
+          <tr><td class="id">FR-Q-04</td><td class="pri-should">SHOULD</td><td>Show an <b>items-complete progress bar</b> on every preparing ticket (e.g. 3/6 items).</td></tr>
+          <tr><td class="id">FR-Q-05</td><td class="pri-should">SHOULD</td><td>Offer a <b>density toggle</b> (Comfortable = 3-col, Compact = 4-col) so a smaller wall TV still fits the load.</td></tr>
+          <tr><td class="id">FR-Q-06</td><td class="pri-could">COULD</td><td>Allow an operator to <b>collapse the served column</b> to free vertical space during rush.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="sub-title">4.2 · State Lifecycle</h2>
+      <table class="req-table">
+        <thead><tr><th>ID</th><th>Priority</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td class="id">FR-S-01</td><td class="pri-must">MUST</td><td>Every ticket arrives in <b>Pending</b>. A cook taps <em>Confirm · Start</em> to advance it to <b>Preparing</b>.</td></tr>
+          <tr><td class="id">FR-S-02</td><td class="pri-must">MUST</td><td>A cook taps <em>Bump · Served</em> on a preparing ticket to move it to <b>Served</b>. Marking served auto-checks all remaining items.</td></tr>
+          <tr><td class="id">FR-S-03</td><td class="pri-must">MUST</td><td>A served ticket exposes a <em>Recall</em> action that returns it to <b>Preparing</b> with all items reset to un-checked.</td></tr>
+          <tr><td class="id">FR-S-04</td><td class="pri-should">SHOULD</td><td>An active ticket whose elapsed time crosses the <b>prep target</b> (default 14 min) is flagged <b>Overdue</b> and re-sorted to the top of the queue.</td></tr>
+          <tr><td class="id">FR-S-05</td><td class="pri-should">SHOULD</td><td>An active ticket may be <b>voided</b>. Voids require a reason code (FR-A-04) and remove the ticket from the queue.</td></tr>
+          <tr><td class="id">FR-S-06</td><td class="pri-must">MUST</td><td>State transitions write an immutable <b>event log entry</b> (ticket id, from, to, actor, timestamp).</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="sub-title">4.3 · Filtering &amp; Sorting</h2>
+      <table class="req-table">
+        <thead><tr><th>ID</th><th>Priority</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td class="id">FR-F-01</td><td class="pri-must">MUST</td><td>Provide a filter chip strip with: <b>All Active · Overdue · Pending · Preparing · Served</b>, each showing a live count.</td></tr>
+          <tr><td class="id">FR-F-02</td><td class="pri-must">MUST</td><td>Default sort: <b>Overdue first, then Preparing, then Pending, then Served</b>, breaking ties by descending elapsed time.</td></tr>
+          <tr><td class="id">FR-F-03</td><td class="pri-could">COULD</td><td>Allow operators to <b>pin a ticket</b> so it stays at rank #1 regardless of state.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="sub-title">4.4 · Item-level Actions</h2>
+      <table class="req-table">
+        <thead><tr><th>ID</th><th>Priority</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td class="id">FR-I-01</td><td class="pri-must">MUST</td><td>A cook can <b>tap any item</b> to toggle its <em>done</em> state. The progress bar and bump button update immediately.</td></tr>
+          <tr><td class="id">FR-I-02</td><td class="pri-should">SHOULD</td><td>Per-item modifiers must be visually distinguishable — standard mods in amber, <b>allergy / safety mods in pink</b>.</td></tr>
+          <tr><td class="id">FR-I-03</td><td class="pri-could">COULD</td><td>Bulk action: <b>Mark all items done</b> on a single ticket from the ticket header.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="sub-title">4.5 · Alerts &amp; Flags</h2>
+      <table class="req-table">
+        <thead><tr><th>ID</th><th>Priority</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td class="id">FR-A-01</td><td class="pri-must">MUST</td><td>Render flags as colored badges on each ticket: <b>VIP, Rush, Refill, Allergy, Course-N</b>.</td></tr>
+          <tr><td class="id">FR-A-02</td><td class="pri-must">MUST</td><td><b>Allergy tickets are visually elevated</b>: red side-rail, persistent allergy note, mods highlighted.</td></tr>
+          <tr><td class="id">FR-A-03</td><td class="pri-should">SHOULD</td><td>An overdue ticket pulses its left edge until acknowledged (i.e. bumped or recalled).</td></tr>
+          <tr><td class="id">FR-A-04</td><td class="pri-should">SHOULD</td><td>Void action presents a dialog with reason codes: <em>guest cancelled, allergy conflict, wrong table, kitchen error, other.</em></td></tr>
+          <tr><td class="id">FR-A-05</td><td class="pri-could">COULD</td><td>An ambient audio chime announces every <b>newly fired</b> ticket; mute-by-shift in the Tweaks panel.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ═════════ 5. NON-FUNCTIONAL ═════════ -->
+    <section class="sec" id="nonfunctional">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 05</div>
+      <h1 class="sec-title">Non-functional Requirements</h1>
+
+      <table class="req-table">
+        <thead><tr><th>ID</th><th>Category</th><th>Requirement</th></tr></thead>
+        <tbody>
+          <tr><td class="id">NFR-P-01</td><td><b>Performance</b></td><td>UI input → visual response <b>under 100ms</b> for all tap actions (confirm, bump, item check).</td></tr>
+          <tr><td class="id">NFR-P-02</td><td><b>Performance</b></td><td>End-to-end <b>fire → display under 2s</b> from the POS event being emitted.</td></tr>
+          <tr><td class="id">NFR-P-03</td><td><b>Performance</b></td><td>Maintain <b>60fps</b> while running 50 active tickets with per-second timers.</td></tr>
+          <tr><td class="id">NFR-R-01</td><td><b>Reliability</b></td><td><b>Offline-tolerant</b>: last-known queue cached on device, syncs on reconnect. No data loss across reconnects of ≤30 min.</td></tr>
+          <tr><td class="id">NFR-R-02</td><td><b>Reliability</b></td><td>Auto-recover from network disconnects within <b>10s</b> using exponential backoff.</td></tr>
+          <tr><td class="id">NFR-R-03</td><td><b>Reliability</b></td><td>Service-hour availability of <b>99.9%</b> measured monthly.</td></tr>
+          <tr><td class="id">NFR-U-01</td><td><b>Usability</b></td><td>All actionable controls must hit <b>≥ 44 × 44 px</b> for greasy-finger operation.</td></tr>
+          <tr><td class="id">NFR-U-02</td><td><b>Usability</b></td><td>Text must be <b>readable from 2.5 metres</b>: minimum 14px body, 22px+ for timer / table number.</td></tr>
+          <tr><td class="id">NFR-U-03</td><td><b>Usability</b></td><td><b>No login</b> on the kitchen device — opens straight into the queue. Device-level pairing handled in Admin.</td></tr>
+          <tr><td class="id">NFR-A-01</td><td><b>Accessibility</b></td><td>Status is never communicated by <b>color alone</b> — every state pairs a color with a label.</td></tr>
+          <tr><td class="id">NFR-A-02</td><td><b>Accessibility</b></td><td>WCAG <b>AA contrast (≥ 4.5:1)</b> for all body text and labels.</td></tr>
+          <tr><td class="id">NFR-S-01</td><td><b>Security</b></td><td>All ticket events transmitted over <b>TLS 1.3</b>; device tokens rotate every 24h.</td></tr>
+          <tr><td class="id">NFR-S-02</td><td><b>Security</b></td><td>Action audit log (FR-S-06) is <b>append-only, 90-day retention</b> at minimum.</td></tr>
+          <tr><td class="id">NFR-C-01</td><td><b>Compatibility</b></td><td>Target: <b>Chrome 110+</b> on a 1080p/4K wall display; iPad Pro 12.9" as portable fallback.</td></tr>
+          <tr><td class="id">NFR-O-01</td><td><b>Operability</b></td><td>App must <b>self-recover</b> from a stale tab after 5min of inactivity (live reload).</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ═════════ 6. STATE MACHINE ═════════ -->
+    <section class="sec" id="statemachine">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 06</div>
+      <h1 class="sec-title">State Machine</h1>
+      <p class="lede">
+        Three primary states plus a derived <em>Overdue</em> flag. The kitchen only ever moves a
+        ticket forward by tapping the primary action button on its card.
+      </p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-node pending">
+            <span class="n-name">Pending</span>
+            <span class="n-sub">Just fired</span>
+          </div>
+          <div class="flow-arrow">
+            <span class="lbl">Confirm</span>
+            <span class="arr">→</span>
+          </div>
+          <div class="flow-node preparing">
+            <span class="n-name">Preparing</span>
+            <span class="n-sub">On the line</span>
+          </div>
+          <div class="flow-arrow">
+            <span class="lbl">Bump</span>
+            <span class="arr">→</span>
+          </div>
+          <div class="flow-node served">
+            <span class="n-name">Served</span>
+            <span class="n-sub">Plated · recallable</span>
+          </div>
+        </div>
+        <div class="flow-side">
+          <span>Derived flag:</span>
+          <span class="tag over"><span class="dot"></span>Overdue</span>
+          <span>— elapsed ≥ <b style="color:var(--fg0)">14 min</b>, applies to Pending &amp; Preparing.</span>
+        </div>
+        <div class="flow-side" style="border-top:0; margin-top: 4px; padding-top: 6px;">
+          <span>Reverse transition: Served → Preparing via <em style="color:var(--accent);font-style:normal;">Recall</em>.</span>
+        </div>
+      </div>
+
+      <h2 class="sub-title">Transition Rules</h2>
+      <ol>
+        <li><strong>Pending → Preparing</strong> · Triggered by Confirm tap. All item.done remain false.</li>
+        <li><strong>Preparing → Served</strong> · Triggered by Bump tap. All items auto-marked done. ServedAt timestamp set.</li>
+        <li><strong>Served → Preparing</strong> · Triggered by Recall. Items reset; ServedAt cleared.</li>
+        <li><strong>Any → Void</strong> · Triggered by Void with reason code. Ticket removed from active queue but retained in audit log.</li>
+        <li><strong>Overdue flag</strong> · Recomputed every tick from <code style="color:var(--accent);font-family:var(--font-m);font-size:12px;">elapsed ≥ PREP_TARGET</code>. Not a stored state.</li>
+      </ol>
+    </section>
+
+    <!-- ═════════ 7. USE CASES ═════════ -->
+    <section class="sec" id="usecases">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 07</div>
+      <h1 class="sec-title">Use Cases</h1>
+      <p class="lede">
+        The primary actor in every case is <em>Cook</em>, working at the kitchen display. The
+        secondary actor is <em>Kitchen Manager</em>, who supervises and intervenes for voids &amp; recalls.
+      </p>
+
+      <!-- UC-01 -->
+      <div class="uc">
+        <div class="uc-head">
+          <span class="uc-id">UC-01</span>
+          <span class="uc-name">Confirm a freshly fired ticket</span>
+        </div>
+        <dl class="uc-grid">
+          <dt>Actor</dt><dd>Cook</dd>
+          <dt>Pre-condition</dt><dd>A new ticket has arrived from POS and is rendered in the queue in <em>Pending</em> state.</dd>
+          <dt>Main flow</dt>
+          <dd>
+            <ol>
+              <li>Cook scans the queue and identifies the next ticket to start.</li>
+              <li>Cook taps <strong>Confirm · Start</strong> on the ticket card.</li>
+              <li>The ticket transitions to <em>Preparing</em>; the badge color, action button, and queue position update immediately.</li>
+              <li>Elapsed timer continues from the original fire time (not reset).</li>
+            </ol>
+          </dd>
+          <dt>Post-condition</dt><dd>Ticket state = Preparing. An audit entry is appended.</dd>
+          <dt>Alt: refused</dt><dd>If allergy info is missing, cook taps the allergy badge to request floor confirmation before starting.</dd>
+        </dl>
+      </div>
+
+      <!-- UC-02 -->
+      <div class="uc">
+        <div class="uc-head">
+          <span class="uc-id">UC-02</span>
+          <span class="uc-name">Check items off during prep</span>
+        </div>
+        <dl class="uc-grid">
+          <dt>Actor</dt><dd>Cook</dd>
+          <dt>Pre-condition</dt><dd>Ticket is in <em>Preparing</em>.</dd>
+          <dt>Main flow</dt>
+          <dd>
+            <ol>
+              <li>As each dish leaves the line, cook taps that line item.</li>
+              <li>Item flips to <em>done</em> — strikethrough, green checkbox.</li>
+              <li>Progress bar fills; the bump button label updates to <code style="color:var(--accent);font-family:var(--font-m);">Bump · 5/6</code>.</li>
+            </ol>
+          </dd>
+          <dt>Post-condition</dt><dd>Item progress reflects line state in real time.</dd>
+        </dl>
+      </div>
+
+      <!-- UC-03 -->
+      <div class="uc">
+        <div class="uc-head">
+          <span class="uc-id">UC-03</span>
+          <span class="uc-name">Bump a complete ticket</span>
+        </div>
+        <dl class="uc-grid">
+          <dt>Actor</dt><dd>Cook</dd>
+          <dt>Pre-condition</dt><dd>All items on the ticket are checked done (or KM authorises early bump).</dd>
+          <dt>Main flow</dt>
+          <dd>
+            <ol>
+              <li>Cook taps <strong>Bump · Served</strong>.</li>
+              <li>Ticket transitions to <em>Served</em>, all items mark done, ServedAt timestamp recorded.</li>
+              <li>Card drops from active filters; visible in Served filter.</li>
+            </ol>
+          </dd>
+          <dt>Post-condition</dt><dd>Ticket retired from active sort; can be recalled.</dd>
+        </dl>
+      </div>
+
+      <!-- UC-04 -->
+      <div class="uc">
+        <div class="uc-head">
+          <span class="uc-id">UC-04</span>
+          <span class="uc-name">React to an overdue ticket</span>
+        </div>
+        <dl class="uc-grid">
+          <dt>Actor</dt><dd>Cook · Kitchen Manager</dd>
+          <dt>Pre-condition</dt><dd>A ticket has crossed the 14-minute prep target.</dd>
+          <dt>Main flow</dt>
+          <dd>
+            <ol>
+              <li>The ticket's left edge pulses red and an <em>Overdue</em> badge appears.</li>
+              <li>Ticket auto-sorts to rank #1 regardless of state.</li>
+              <li>KM glances at the screen, identifies the bottleneck, and re-prioritises the line.</li>
+            </ol>
+          </dd>
+          <dt>Post-condition</dt><dd>Overdue flag clears automatically once ticket is bumped.</dd>
+        </dl>
+      </div>
+
+      <!-- UC-05 -->
+      <div class="uc">
+        <div class="uc-head">
+          <span class="uc-id">UC-05</span>
+          <span class="uc-name">Recall a served ticket</span>
+        </div>
+        <dl class="uc-grid">
+          <dt>Actor</dt><dd>Kitchen Manager</dd>
+          <dt>Pre-condition</dt><dd>A guest reports an issue with a recently served ticket.</dd>
+          <dt>Main flow</dt>
+          <dd>
+            <ol>
+              <li>KM filters to <em>Served</em>.</li>
+              <li>Locates the ticket by table number; taps <strong>Recall</strong>.</li>
+              <li>Ticket returns to <em>Preparing</em>, items cleared, queue re-sorts.</li>
+            </ol>
+          </dd>
+          <dt>Post-condition</dt><dd>Audit log records the recall; original ServedAt preserved in event history.</dd>
+        </dl>
+      </div>
+
+      <!-- UC-06 -->
+      <div class="uc">
+        <div class="uc-head">
+          <span class="uc-id">UC-06</span>
+          <span class="uc-name">Void a ticket</span>
+        </div>
+        <dl class="uc-grid">
+          <dt>Actor</dt><dd>Kitchen Manager</dd>
+          <dt>Pre-condition</dt><dd>Ticket needs to be removed (allergy conflict, wrong table, etc.).</dd>
+          <dt>Main flow</dt>
+          <dd>
+            <ol>
+              <li>KM taps <strong>Void</strong> on the affected ticket.</li>
+              <li>Dialog prompts for a reason code (FR-A-04).</li>
+              <li>KM selects reason; ticket is removed from the active queue and persisted to the audit log.</li>
+            </ol>
+          </dd>
+          <dt>Post-condition</dt><dd>FOH app receives a void event so the server can communicate with the guest.</dd>
+        </dl>
+      </div>
+
+    </section>
+
+    <!-- ═════════ 8. SCHEMA ═════════ -->
+    <section class="sec" id="schema">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 08</div>
+      <h1 class="sec-title">Ideal Schema</h1>
+      <p class="lede">
+        Three core entities. Tickets are the unit of work; items live under tickets; events are the
+        immutable audit trail. Tables and menu items are referenced by id only (owned by other modules).
+      </p>
+
+      <div class="schema-grid">
+        <!-- TICKET -->
+        <div class="entity">
+          <div class="entity-head">
+            <span class="entity-name">Ticket</span>
+            <span class="entity-tag">aggregate root</span>
+          </div>
+          <div class="entity-body">
+            <div class="field"><span class="field-name pk">id</span><span class="field-type">string · K-####</span></div>
+            <div class="field"><span class="field-name fk">tableId</span><span class="field-type">string · T-##</span></div>
+            <div class="field"><span class="field-name">guests</span><span class="field-type">int</span></div>
+            <div class="field"><span class="field-name">course</span><span class="field-type">int · 1–N</span></div>
+            <div class="field"><span class="field-name">state</span><span class="field-type">enum</span>
+              <span class="field-note">pending | preparing | served</span></div>
+            <div class="field"><span class="field-name">flags</span><span class="field-type">string[]</span>
+              <span class="field-note">VIP, Rush, Refill, Allergy, Course-N</span></div>
+            <div class="field"><span class="field-name">note</span><span class="field-type">string · nullable</span></div>
+            <div class="field"><span class="field-name">allergy</span><span class="field-type">boolean</span></div>
+            <div class="field"><span class="field-name">issuedAt</span><span class="field-type">timestamp</span></div>
+            <div class="field"><span class="field-name">confirmedAt</span><span class="field-type">timestamp · nullable</span></div>
+            <div class="field"><span class="field-name">servedAt</span><span class="field-type">timestamp · nullable</span></div>
+            <div class="field"><span class="field-name">voidedAt</span><span class="field-type">timestamp · nullable</span></div>
+            <div class="field"><span class="field-name">voidReason</span><span class="field-type">enum · nullable</span></div>
+          </div>
+        </div>
+
+        <!-- TICKET ITEM -->
+        <div class="entity">
+          <div class="entity-head">
+            <span class="entity-name">TicketItem</span>
+            <span class="entity-tag">owned by Ticket</span>
+          </div>
+          <div class="entity-body">
+            <div class="field"><span class="field-name pk">id</span><span class="field-type">uuid</span></div>
+            <div class="field"><span class="field-name fk">ticketId</span><span class="field-type">→ Ticket.id</span></div>
+            <div class="field"><span class="field-name fk">menuItemId</span><span class="field-type">string</span></div>
+            <div class="field"><span class="field-name">name</span><span class="field-type">string</span>
+              <span class="field-note">denormalised for display</span></div>
+            <div class="field"><span class="field-name">qty</span><span class="field-type">int · ≥1</span></div>
+            <div class="field"><span class="field-name">modifier</span><span class="field-type">string · nullable</span></div>
+            <div class="field"><span class="field-name">isSafetyMod</span><span class="field-type">boolean</span>
+              <span class="field-note">allergy / dietary — renders pink</span></div>
+            <div class="field"><span class="field-name">done</span><span class="field-type">boolean</span></div>
+            <div class="field"><span class="field-name">doneAt</span><span class="field-type">timestamp · nullable</span></div>
+            <div class="field"><span class="field-name">position</span><span class="field-type">int</span>
+              <span class="field-note">display order within ticket</span></div>
+          </div>
+        </div>
+
+        <!-- EVENT -->
+        <div class="entity">
+          <div class="entity-head">
+            <span class="entity-name">TicketEvent</span>
+            <span class="entity-tag">append-only · 90d retention</span>
+          </div>
+          <div class="entity-body">
+            <div class="field"><span class="field-name pk">id</span><span class="field-type">uuid</span></div>
+            <div class="field"><span class="field-name fk">ticketId</span><span class="field-type">→ Ticket.id</span></div>
+            <div class="field"><span class="field-name">type</span><span class="field-type">enum</span>
+              <span class="field-note">fired | confirmed | itemToggled | bumped | recalled | voided</span></div>
+            <div class="field"><span class="field-name">fromState</span><span class="field-type">enum · nullable</span></div>
+            <div class="field"><span class="field-name">toState</span><span class="field-type">enum · nullable</span></div>
+            <div class="field"><span class="field-name">payload</span><span class="field-type">json</span>
+              <span class="field-note">e.g. {itemId, done} or {voidReason}</span></div>
+            <div class="field"><span class="field-name">actorId</span><span class="field-type">string</span>
+              <span class="field-note">device id or staff id</span></div>
+            <div class="field"><span class="field-name">at</span><span class="field-type">timestamp</span></div>
+          </div>
+        </div>
+
+        <!-- CONFIG -->
+        <div class="entity">
+          <div class="entity-head">
+            <span class="entity-name">KdsConfig</span>
+            <span class="entity-tag">singleton · per device</span>
+          </div>
+          <div class="entity-body">
+            <div class="field"><span class="field-name pk">deviceId</span><span class="field-type">uuid</span></div>
+            <div class="field"><span class="field-name">prepTargetSec</span><span class="field-type">int · default 840</span>
+              <span class="field-note">overdue threshold (14 min)</span></div>
+            <div class="field"><span class="field-name">density</span><span class="field-type">enum · 'comfy' | 'compact'</span></div>
+            <div class="field"><span class="field-name">audioOnFire</span><span class="field-type">boolean</span></div>
+            <div class="field"><span class="field-name">defaultFilter</span><span class="field-type">enum</span></div>
+            <div class="field"><span class="field-name">lastSyncedAt</span><span class="field-type">timestamp</span></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="sub-title">Derived &amp; Computed Fields</h2>
+      <ul>
+        <li><strong>elapsedSec</strong> · <code style="color:var(--accent);font-family:var(--font-m);font-size:12px;">now − issuedAt</code> while not served; frozen at <code style="color:var(--accent);font-family:var(--font-m);font-size:12px;">servedAt − issuedAt</code> once served.</li>
+        <li><strong>urgency</strong> · <code style="color:var(--accent);font-family:var(--font-m);font-size:12px;">ok | warn | over</code> derived from <code style="color:var(--accent);font-family:var(--font-m);font-size:12px;">elapsedSec / prepTargetSec</code> at 0.75 and 1.0.</li>
+        <li><strong>itemsDone / itemsTotal</strong> · sum of <code style="color:var(--accent);font-family:var(--font-m);font-size:12px;">qty</code> over completed items.</li>
+        <li><strong>queueRank</strong> · 1-indexed position after sort; transient (recomputed every render).</li>
+      </ul>
+    </section>
+
+    <!-- ═════════ 9. ASSUMPTIONS ═════════ -->
+    <section class="sec" id="assumptions">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 09</div>
+      <h1 class="sec-title">Assumptions</h1>
+      <ul>
+        <li>A single kitchen — no station routing in v1.0.</li>
+        <li>POS already emits an order-fired event with all items resolved (no draft tickets).</li>
+        <li>Wall display has touch input or is paired with a single floor tablet for action input.</li>
+        <li>Network is mostly stable on-prem; offline tolerance is required but not the primary mode.</li>
+        <li>Refills and floor-side announcements live in a separate FOH surface, not the KDS.</li>
+        <li>Cooks are not authenticated per-action; device-level pairing is enough.</li>
+      </ul>
+    </section>
+
+    <!-- ═════════ 10. OPEN QUESTIONS ═════════ -->
+    <section class="sec" id="open">
+      <div class="sec-num"><span class="sec-num-dot"></span>Section 10</div>
+      <h1 class="sec-title">Open Questions</h1>
+      <ol>
+        <li><strong>Sound design.</strong> Do we ship audible alerts in v1.0, or rely on visual pulse only? KM preference is split.</li>
+        <li><strong>Course gating.</strong> Should Course-2 only become visible once Course-1 is served, or always visible?</li>
+        <li><strong>Auto-confirm.</strong> Should a pending ticket auto-confirm after N seconds to avoid forgotten acknowledgements?</li>
+        <li><strong>Prep target per item.</strong> Per-dish prep times instead of a flat 14-minute target — viable for v1.1?</li>
+        <li><strong>Recall window.</strong> How long after served should a ticket remain recallable — full shift or 30 minutes?</li>
+      </ol>
+    </section>
+
+    <div class="doc-foot">
+      <span>Woosoo Admin · KDS Specification · v1.0</span>
+      <span>26 May 2026 — Floor Ops</span>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

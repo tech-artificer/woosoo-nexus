@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-vue-next';
 import type { Config } from 'ziggy-js';
-import type { User } from '@/types/models';
+import type { Branch, User } from '@/types/models';
 
 export interface Auth {
     user: User;
@@ -35,7 +35,7 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
     ziggy: Config & { location: string };
     sidebarOpen: boolean;
     navBadges?: Record<string, number>;
+    branch?: Branch | null;
 };
-
 
 export type BreadcrumbItemType = BreadcrumbItem;
