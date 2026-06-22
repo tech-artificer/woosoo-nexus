@@ -1,9 +1,16 @@
-# Woosoo Nexus — Project Conventions (repo-local)
+# Woosoo Nexus — repo-local conventions
 
-> Scope: **woosoo-nexus only.** Authoritative *within this repo* for the conventions below;
-> **overrides** the Laravel Boost "Test Enforcement" rule when they conflict. For ecosystem-wide
-> rules and the topic→authority map, defer to the platform repo's `AGENTS.md`
-> (`woosoo-platform/AGENTS.md`).
+> **Docs live in the platform repo.** Ecosystem rules → `woosoo-platform/AGENTS.md`; cross-app
+> authority → `woosoo-platform/docs/CONTRACTS.md`; this app's spec/status/config →
+> `woosoo-platform/docs/woosoo-nexus/`. This file holds only nexus-local conventions and **overrides**
+> the Laravel Boost "Test Enforcement" rule when they conflict.
+
+## Hard rules (nexus)
+- Do not modify `tablet-ordering-pwa` files from this repo (one app per commit).
+- No hardcoded LAN IPs / API / Reverb hosts.
+- Do not change POS stored-procedure order without explicit approval (POS-first; CONTRACTS §5).
+- Order state = the `OrderStatus` enum; voided is terminal (CONTRACTS §1) — never invent states.
+- Do not merge dependency PRs into fix PRs.
 
 ## Testing policy — test what matters, not everything
 
