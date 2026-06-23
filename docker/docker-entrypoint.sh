@@ -29,6 +29,18 @@ php artisan storage:link --quiet 2>/dev/null || true
 # A plain container restart (crash/OOM/reboot) with current assets already
 # present SKIPS the build, so recovery is fast instead of a ~1-minute rebuild.
 if [ "${1:-}" = "php-fpm" ]; then
+  # Immutable-asset sync (fix for recurring blank page after login):
+  # copy the Vite bundle baked into THIS image into the shared public/build
+  # volume (nginx mounts the same volume read-only). Deterministic — nginx always
+  # serves the exact assets this image was built with, independent of bind-mount
+  # drift, named-volume seeding state, or mtime heuristics.
+  if [ -d /opt/vite-build-dist ] && [ -n "$(ls -A /opt/vite-build-dist 2>/dev/null)" ]; then
+    echo "[entrypoint] Syncing image-baked Vite assets into public/build ..."
+    mkdir -p public/build
+    rm -rf public/build/* public/build/.[!.]* 2>/dev/null || true
+    cp -a /opt/vite-build-dist/. public/build/
+  fi
+
   vite_manifest="public/build/manifest.json"
   vite_sources_changed=false
 

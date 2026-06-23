@@ -51,6 +51,12 @@ ENV VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
 COPY . .
 RUN npm ci && npm run build
 
+# Stash the freshly-built Vite bundle outside /var/www/html so the runtime
+# entrypoint can deterministically seed the shared public/build volume from it.
+# (public/build is a named volume at runtime, so the baked copy there is shadowed;
+# this pristine copy is not, and is the source of truth nginx ends up serving.)
+RUN mkdir -p /opt/vite-build-dist && cp -a public/build/. /opt/vite-build-dist/
+
 # PHP-FPM pool — listen on TCP 9000 for inter-container FastCGI (nginx → app)
 COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
 COPY docker/php/zzz-app.conf /usr/local/etc/php-fpm.d/zzz-app.conf
