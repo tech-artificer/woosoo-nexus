@@ -151,6 +151,12 @@ class TabletCategoryController extends Controller
      */
     public function attachMenus(Request $request, TabletCategory $tabletCategory)
     {
+        Log::debug('attachMenus payload', [
+            'all' => $request->all(),
+            'content_type' => $request->header('Content-Type'),
+            'is_json' => $request->isJson(),
+        ]);
+
         $validated = $request->validate([
             'menu_ids' => ['required', 'array', 'min:1'],
             'menu_ids.*' => ['integer', 'min:1', 'distinct'],
