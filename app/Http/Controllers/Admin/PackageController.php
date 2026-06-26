@@ -13,7 +13,7 @@ use App\Models\Krypton\Menu;
 use App\Models\Package;
 use App\Models\PackageAllowedMenu;
 use Illuminate\Database\QueryException;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -163,7 +163,7 @@ class PackageController extends Controller
         return redirect()->route('packages.index')->with('success', 'Package deleted successfully.');
     }
 
-    public function syncAllowedMenus(Request $request, Package $package): JsonResponse
+    public function syncAllowedMenus(Request $request, Package $package): RedirectResponse
     {
         $validated = $request->validate([
             'allowed_menus' => ['nullable', 'array'],
@@ -182,7 +182,7 @@ class PackageController extends Controller
 
         $this->broadcastPackageUpdated();
 
-        return response()->json(['success' => true]);
+        return redirect()->route('packages.index')->with('success', 'Meats saved.');
     }
 
     /**

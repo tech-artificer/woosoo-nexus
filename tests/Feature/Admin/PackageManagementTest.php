@@ -145,13 +145,13 @@ class PackageManagementTest extends TestCase
         ]);
 
         /** @var Authenticatable $admin */
-        $response = $this->actingAs($admin)->postJson(route('packages.sync-menus', $package), [
+        $response = $this->actingAs($admin)->post(route('packages.sync-menus', $package), [
             'allowed_menus' => [
                 ['krypton_menu_id' => 201, 'menu_type' => 'side', 'sort_order' => 0, 'quantity_limit' => 3],
             ],
         ]);
 
-        $response->assertOk()->assertJsonPath('success', true);
+        $response->assertRedirect(route('packages.index'));
 
         $this->assertDatabaseMissing('package_allowed_menus', ['package_id' => $package->id, 'krypton_menu_id' => 101]);
         $this->assertDatabaseHas('package_allowed_menus', [
