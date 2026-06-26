@@ -2,29 +2,36 @@
 
 namespace App\Models\Krypton;
 
+use App\Http\Resources\MenuModifierResource;
+use App\Http\Resources\MenuResource;
+use App\Models\MenuImage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Models\MenuImage;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Http\Resources\MenuModifierResource;
 
 class Menu extends Model
 {
     use HasFactory;
 
     protected $connection = 'pos';
+
     protected $table = 'menus';
+
     protected $primaryKey = 'id';
+
     protected $guarded = [];
+
     protected $appends = ['computed_modifiers'];
+
     public $timestamps = false;
+
     protected bool $uploadedImagesAttached = false;
 
     protected $casts = [
@@ -46,21 +53,47 @@ class Menu extends Model
         'modified_on',
     ];
 
+    public const MEAT_ORDER_GROUP_NAME = 'Meat Order';
+
     public function modifiers()
     {
         return $this->hasMany(Menu::class, 'id')->whereRaw('1 = 0');
     }
-    public function category() : BelongsTo
+
+    /**
+     * Set-meal parent rows in krypton_woosoo.menus (order storage uses this id).
+     */
+    public function scopePackageAnchors(Builder $query): Builder
+    {
+        return $query
+            ->where('is_modifier_only', false)
+            ->where('is_available', true);
+    }
+
+    /**
+     * Meat modifier rows for package allowed-menus (is_modifier_only + Meat Order group).
+     */
+    public function scopeMeatModifiers(Builder $query): Builder
+    {
+        return $query
+            ->where('is_modifier_only', true)
+            ->where('is_available', true)
+            ->whereHas('group', function (Builder $q): void {
+                $q->where('name', self::MEAT_ORDER_GROUP_NAME);
+            });
+    }
+
+    public function category(): BelongsTo
     {
         return $this->belongsTo(MenuCategory::class, 'menu_category_id');
     }
 
-    public function group() : BelongsTo
+    public function group(): BelongsTo
     {
         return $this->belongsTo(MenuGroup::class, 'menu_group_id');
     }
 
-    public function course() : BelongsTo
+    public function course(): BelongsTo
     {
         return $this->belongsTo(MenuCourse::class, 'menu_course_type_id', 'id');
     }
@@ -75,25 +108,25 @@ class Menu extends Model
         return $this->hasOne(MenuImage::class, 'menu_id');
     }
 
-
-    public function orderedMenus() : HasMany
+    public function orderedMenus(): HasMany
     {
         return $this->hasMany(OrderedMenu::class, 'menu_id');
     }
 
-    public function tax() : BelongsTo
+    public function tax(): BelongsTo
     {
         return $this->belongsTo(Tax::class, 'menu_tax_type_id');
     }
 
-    public function taxComputation($quantity) {
+    public function taxComputation($quantity)
+    {
 
-        if ( !$this->is_taxable || $quantity == 0 || !$this->tax ) {
+        if (! $this->is_taxable || $quantity == 0 || ! $this->tax) {
             return 0;
         }
 
         $percentage = $this->tax->percentage ?? 0;
-        $decimals = (int)$this->tax->rounding ?? 0;
+        $decimals = (int) $this->tax->rounding ?? 0;
         $taxAmount = ($this->price * $quantity) * ($percentage / 100);
 
         return number_format((float) $taxAmount, $decimals, '.', ',');
@@ -126,12 +159,12 @@ class Menu extends Model
         }
 
         if ($imgPath) {
-            return url('storage/' . $imgPath);
+            return url('storage/'.$imgPath);
         }
 
         $brandImageFile = $this->resolveBrandFoodAssetFile();
         if ($brandImageFile) {
-            return asset('images/food-assets/' . $brandImageFile);
+            return asset('images/food-assets/'.$brandImageFile);
         }
 
         // 2.webp is the newer/lighter placeholder; 1.jpg is the legacy one.
@@ -260,13 +293,12 @@ class Menu extends Model
      * Works with SQLite (testing) and MySQL (production).
      * Preserves the defined code order while maintaining database portability.
      *
-     * @param array $codeList The ordered list of codes (e.g., ['P1', 'P2', 'P3'])
+     * @param  array  $codeList  The ordered list of codes (e.g., ['P1', 'P2', 'P3'])
      * @return string The CASE WHEN clause for orderByRaw()
      */
-
     public function getComputedModifiersAttribute()
     {
-        if (!in_array($this->id, [46, 47, 48])) {
+        if (! in_array($this->id, [46, 47, 48])) {
             return collect(); // Return empty collection if not a "package" menu
         }
         $codes = [
@@ -302,9 +334,7 @@ class Menu extends Model
      * Uses a CASE expression for portability (SQLite test DB + MySQL runtime)
      * while preserving the exact incoming codeList order.
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param array<int, string> $codeList
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  array<int, string>  $codeList
      */
     protected static function orderByReceiptCodeList(Builder $query, array $codeList): Builder
     {
@@ -331,8 +361,8 @@ class Menu extends Model
      * provided rows, preserving the defined code order and falling back to local
      * menu records when the raw rows are missing.
      *
-     * @param array|\Illuminate\Support\Collection $menuRows
-     * @return \Illuminate\Support\Collection
+     * @param  array|Collection  $menuRows
+     * @return Collection
      */
     public static function getPackagesWithModifiers($menuRows = [])
     {
@@ -391,7 +421,7 @@ class Menu extends Model
 
             // Use MenuResource shape for package summary when possible so the
             // structure matches API responses elsewhere.
-            $pkgArr = $pkgModel ? \App\Http\Resources\MenuResource::make($pkgModel)->resolve() : ['id' => $pkgId];
+            $pkgArr = $pkgModel ? MenuResource::make($pkgModel)->resolve() : ['id' => $pkgId];
             $pkgArr['modifiers'] = [];
 
             foreach ($codeList as $code) {
@@ -401,6 +431,7 @@ class Menu extends Model
                 // contains the correct modifiers for packages).
                 if ($modifierModels->has($codeUpper)) {
                     $pkgArr['modifiers'][] = MenuModifierResource::make($modifierModels->get($codeUpper))->resolve();
+
                     continue;
                 }
 
@@ -410,6 +441,7 @@ class Menu extends Model
                 if ($rowsByReceipt->has($codeUpper)) {
                     $row = $rowsByReceipt->get($codeUpper);
                     $pkgArr['modifiers'][] = is_object($row) ? (array) $row : $row;
+
                     continue;
                 }
 
@@ -422,12 +454,13 @@ class Menu extends Model
         return $result;
     }
 
-    public function loadModifiers() {
-    
+    public function loadModifiers()
+    {
+
         $modifiers = $this->getComputedModifiersAttribute();
 
-        if( $modifiers->isEmpty() ) {
-            $modifiers = $this->modifiers;
+        if ($modifiers->isEmpty()) {
+            $modifiers = $this->modifiers()->get();
         }
 
         return $modifiers ?? [];
