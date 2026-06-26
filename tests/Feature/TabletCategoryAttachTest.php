@@ -84,3 +84,22 @@ test('attach menus rejects non-integer ids', function () {
         ])
         ->assertSessionHasErrors('menu_ids.0');
 });
+
+test('attach rejects zero-padded string ids from POS (regression)', function () {
+    $this->withoutVite();
+
+    $admin = User::factory()->admin()->create();
+    $category = TabletCategory::create(['name' => 'Test Category', 'sort_order' => 0]);
+
+    // POS returns IDs like "00000126" — these must not reach validation as strings.
+    // The fix is a (int) cast in index(); here we verify the raw string still fails
+    // so any regression where the cast is removed is caught immediately.
+    $this
+        ->actingAs($admin)
+        ->postJson(route('tablet-categories.menus.attach', $category), [
+            'menu_ids' => ['00000126'],
+        ])
+        ->assertUnprocessable();
+
+    expect(TabletCategoryMenu::where('tablet_category_id', $category->id)->count())->toBe(0);
+});

@@ -20,7 +20,7 @@ class TabletCategoryController extends Controller
                 ->table('menus')
                 ->select('id', 'name', 'receipt_name')
                 ->get()
-                ->keyBy('id');
+                ->keyBy(fn ($m) => (int) $m->id);
         } catch (\Throwable) {
             // POS offline — menu names will fall back to ID labels.
         }
@@ -67,7 +67,7 @@ class TabletCategoryController extends Controller
                 ->limit(2000)
                 ->get()
                 ->map(fn ($m) => [
-                    'id' => $m->id,
+                    'id' => (int) $m->id,
                     'name' => $m->name ?: $m->receipt_name ?: "Menu #{$m->id}",
                 ]);
         } catch (\Throwable $e) {
@@ -151,12 +151,6 @@ class TabletCategoryController extends Controller
      */
     public function attachMenus(Request $request, TabletCategory $tabletCategory)
     {
-        Log::debug('attachMenus payload', [
-            'all' => $request->all(),
-            'content_type' => $request->header('Content-Type'),
-            'is_json' => $request->isJson(),
-        ]);
-
         $validated = $request->validate([
             'menu_ids' => ['required', 'array', 'min:1'],
             'menu_ids.*' => ['integer', 'min:1', 'distinct'],
