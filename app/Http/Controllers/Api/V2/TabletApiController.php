@@ -70,24 +70,29 @@ class TabletApiController extends Controller
                     return [];
                 }
 
-                $kryptonMenuIds = $dbPackages->flatMap(fn ($p) => $p->allowedMenus->pluck('krypton_menu_id'))
-                    ->filter()->unique()->values()->toArray();
+                $kryptonMenuIds = $dbPackages
+                    ->flatMap(fn (Package $p) => collect([$p->krypton_menu_id])->merge($p->allowedMenus->pluck('krypton_menu_id')))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->toArray();
 
                 $kryptonMenus = collect([]);
                 if (! empty($kryptonMenuIds)) {
                     try {
-                        $kryptonMenus = Menu::with(['image'])
+                        $kryptonMenus = Menu::query()
+                            ->select('id', 'name', 'receipt_name', 'price', 'is_discountable', 'is_taxable')
                             ->whereIn('id', $kryptonMenuIds)
                             ->get()
                             ->keyBy('id');
-
-                        Menu::attachUploadedImages($kryptonMenus);
                     } catch (\Exception $e) {
                         Log::warning('V2 Tablet API - POS menus unavailable: '.$e->getMessage());
                     }
                 }
 
                 return $dbPackages->map(function (Package $pkg) use ($kryptonMenus): array {
+                    $anchorMenu = $pkg->krypton_menu_id ? $kryptonMenus->get((int) $pkg->krypton_menu_id) : null;
+
                     $allowedMenus = $pkg->allowedMenus->sortBy('sort_order')->map(
                         function (PackageAllowedMenu $am) use ($kryptonMenus): array {
                             $kMenu = $kryptonMenus->get($am->krypton_menu_id);
@@ -110,9 +115,10 @@ class TabletApiController extends Controller
 
                     return [
                         'id' => $pkg->id,
+                        'krypton_menu_id' => $pkg->krypton_menu_id === null ? null : (int) $pkg->krypton_menu_id,
                         'name' => $pkg->name,
                         'description' => $pkg->description,
-                        'base_price' => (float) $pkg->base_price,
+                        'base_price' => $this->resolvePackageBasePrice($pkg, $anchorMenu),
                         'min_meat' => (int) $pkg->min_meat,
                         'max_meat' => (int) $pkg->max_meat,
                         'is_active' => (bool) $pkg->is_active,
@@ -241,7 +247,12 @@ class TabletApiController extends Controller
                 return ApiResponse::error('Package not found', null, 404);
             }
 
-            $kryptonMenuIds = $dbPackage->allowedMenus->pluck('krypton_menu_id')->filter()->unique()->toArray();
+            $kryptonMenuIds = collect([$dbPackage->krypton_menu_id])
+                ->merge($dbPackage->allowedMenus->pluck('krypton_menu_id'))
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
 
             $kryptonMenus = collect([]);
             if (! empty($kryptonMenuIds)) {
@@ -256,6 +267,8 @@ class TabletApiController extends Controller
                     Log::warning("V2 Tablet API - POS menus unavailable for package {$id}: ".$e->getMessage());
                 }
             }
+
+            $anchorMenu = $dbPackage->krypton_menu_id ? $kryptonMenus->get((int) $dbPackage->krypton_menu_id) : null;
 
             $allowedMenusByType = $dbPackage->allowedMenus->sortBy('sort_order')
                 ->groupBy('menu_type')
@@ -280,9 +293,10 @@ class TabletApiController extends Controller
             $response = [
                 'package' => [
                     'id' => $dbPackage->id,
+                    'krypton_menu_id' => $dbPackage->krypton_menu_id === null ? null : (int) $dbPackage->krypton_menu_id,
                     'name' => $dbPackage->name,
                     'description' => $dbPackage->description,
-                    'base_price' => (float) $dbPackage->base_price,
+                    'base_price' => $this->resolvePackageBasePrice($dbPackage, $anchorMenu),
                     'is_most_popular' => (bool) $dbPackage->is_most_popular,
                     'limits' => [
                         'meat' => ['min' => $dbPackage->min_meat, 'max' => $dbPackage->max_meat],
@@ -355,5 +369,14 @@ class TabletApiController extends Controller
 
             return ApiResponse::error('Failed to retrieve category menus', null, 500);
         }
+    }
+
+    private function resolvePackageBasePrice(Package $package, ?Menu $anchorMenu): float
+    {
+        if ($anchorMenu && $anchorMenu->price !== null) {
+            return (float) $anchorMenu->price;
+        }
+
+        return (float) ($package->base_price ?? 0);
     }
 }

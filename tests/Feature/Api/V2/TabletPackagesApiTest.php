@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Api\V2;
 
+use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Models\Device;
 use App\Models\Package;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TabletPackagesApiTest extends TestCase
@@ -37,8 +40,8 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        Package::factory()->create(['name' => 'Active Package', 'is_active' => true, 'sort_order' => 0, 'base_price' => 449]);
-        Package::factory()->create(['name' => 'Inactive Package', 'is_active' => false, 'sort_order' => 1]);
+        Package::factory()->create(['name' => 'Active Package', 'krypton_menu_id' => 46, 'is_active' => true, 'sort_order' => 0, 'base_price' => 449]);
+        Package::factory()->create(['name' => 'Inactive Package', 'krypton_menu_id' => 47, 'is_active' => false, 'sort_order' => 1]);
 
         $response = $this->withToken($this->deviceToken($device), 'Bearer')
             ->getJson('/api/v2/tablet/packages');
@@ -47,7 +50,39 @@ class TabletPackagesApiTest extends TestCase
         $response->assertJsonPath('success', true);
         $this->assertCount(1, $response->json('data'));
         $this->assertEquals('Active Package', $response->json('data.0.name'));
+        $this->assertEquals(46, $response->json('data.0.krypton_menu_id'));
         $this->assertEquals(449.0, $response->json('data.0.base_price'));
+    }
+
+    public function test_packages_endpoint_resolves_base_price_from_pos_menu(): void
+    {
+        $device = $this->authenticatedDevice();
+
+        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
+
+        DB::connection('pos')->table('menus')->insert([
+            'id' => 54,
+            'name' => 'Noble Selection',
+            'receipt_name' => 'PKG54',
+            'price' => 499,
+            'menu_group_id' => 1,
+            'is_modifier_only' => false,
+            'is_available' => true,
+        ]);
+
+        Package::factory()->create([
+            'name' => 'Noble Selection',
+            'krypton_menu_id' => 54,
+            'is_active' => true,
+            'base_price' => 449,
+        ]);
+
+        $response = $this->withToken($this->deviceToken($device), 'Bearer')
+            ->getJson('/api/v2/tablet/packages');
+
+        $response->assertOk();
+        $this->assertEquals(54, $response->json('data.0.krypton_menu_id'));
+        $this->assertEquals(499.0, $response->json('data.0.base_price'));
     }
 
     public function test_packages_endpoint_includes_allowed_menus(): void

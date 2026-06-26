@@ -163,6 +163,10 @@ abstract class TestCase extends BaseTestCase
                     $table->string('receipt_name')->nullable();
                     $table->decimal('price', 8, 2)->default(0);
                     $table->integer('menu_group_id')->nullable();
+                    $table->boolean('is_modifier_only')->default(false);
+                    $table->boolean('is_available')->default(true);
+                    $table->boolean('is_discountable')->default(false);
+                    $table->boolean('is_taxable')->default(true);
                 });
             }
 

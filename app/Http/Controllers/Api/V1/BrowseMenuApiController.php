@@ -3,38 +3,40 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Repositories\Krypton\MenuRepository;
-use App\Http\Resources\MenuResource;
 use App\Http\Resources\MenuModifierResource;
+use App\Http\Resources\MenuResource;
 use App\Models\Krypton\Menu;
+use App\Repositories\Krypton\MenuRepository;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class BrowseMenuApiController extends Controller
-{   
-
+{
     protected $menuRepository;
 
-    public function __construct(MenuRepository $menuRepository) {
+    public function __construct(MenuRepository $menuRepository)
+    {
         $this->menuRepository = $menuRepository;
     }
 
     /**
      * Get all menus
-     * 
+     *
      * @example menus
+     *
      * @return array
-     * 
      */
     public function getMenus(Request $request)
-    {   
+    {
         $request->validate([
             /**
              * @example 1
-            */
+             */
             'menu_id' => ['nullable', 'integer'],
         ]);
 
-        if(  $request->has('menu_id') ) {
+        if ($request->has('menu_id')) {
             $menu = Menu::with(['modifiers', 'image', 'group', 'category', 'course', 'tax'])
                 ->where('id', $request->menu_id)
                 ->where('is_available', true)
@@ -44,6 +46,7 @@ class BrowseMenuApiController extends Controller
             if ($menu) {
                 Menu::attachUploadedImages($menu->getRelation('modifiers'));
             }
+
             return new MenuResource($menu);
         }
 
@@ -55,25 +58,24 @@ class BrowseMenuApiController extends Controller
 
         return MenuResource::collection($menus) ?? [];
     }
-    
+
     /**
      * Get all modifier groups
-     * 
-     * Returns all modifier groups. Adding a query param of modifiers = 1 will include the modifiers in the response 
-     * 
-     * @param Request $request modifiers = 1
-     * 
+     *
+     * Returns all modifier groups. Adding a query param of modifiers = 1 will include the modifiers in the response
+     *
+     * @param  Request  $request  modifiers = 1
+     *
      * @description Get all modifier groups
-     * 
+     *
      * @queryParam modifiers boolean Whether to include modifiers in the response. Defaults to false.
-     * 
      */
     public function getAllModifierGroups(Request $request)
-    {   
+    {
         $request->validate([
             /**
              * @example 1
-            */
+             */
             'modifiers' => ['nullable', 'boolean'],
         ]);
 
@@ -88,14 +90,15 @@ class BrowseMenuApiController extends Controller
                 if (is_object($m) && method_exists($m, 'load')) {
                     $m->load(['image', 'group', 'category', 'course', 'tax']);
                 }
+
                 return $m;
             })->unique('id')->values();
         }
 
         // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
         Menu::attachUploadedImages($menus);
-      
-        if ( $request->has('modifiers') && $request->modifiers == true ) {
+
+        if ($request->has('modifiers') && $request->modifiers == true) {
             $modifierGroupIds = $menus->pluck('id')->filter()->unique()->values()->all();
             $modifiersByGroupId = collect($this->menuRepository->getMenuModifiersByGroupIds($modifierGroupIds))
                 ->groupBy('menu_group_id');
@@ -111,23 +114,17 @@ class BrowseMenuApiController extends Controller
         return MenuResource::collection($menus) ?? [];
     }
 
-   
     /**
      * Get all menu modifiers.
      *
      * List of all menu modifiers like P1, P2, P3, P4, P5.
-     * 
+     *
      * @example P1, P2, P3, P4, P5, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, C1
-     * 
      */
-    public function getMenuModifiers() 
+    public function getMenuModifiers()
     {
-        $groupName = 'Meat Order';
-
-        $menus = Menu::with(['image', 'group', 'category'])
-            ->whereHas('group', function ($q) use ($groupName) {
-                $q->where('name', $groupName);
-            })
+        $menus = Menu::meatModifiers()
+            ->with(['image', 'group', 'category'])
             ->get();
 
         // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
@@ -138,25 +135,24 @@ class BrowseMenuApiController extends Controller
 
     /**
      * Get menu with modifiers [Set Meal].
-     * 
-     * @return \Illuminate\Http\JsonResponse
-     * 
+     *
+     * @return JsonResponse
+     *
      * @example P1, P2, P3, P4, P5
-     * 
      */
-    public function getMenusWithModifiers(Request $request) 
-    {   
+    public function getMenusWithModifiers(Request $request)
+    {
         $request->validate([
             /**
              * @example 1
-            */
+             */
             'menu_id' => ['nullable', 'integer'],
         ]);
 
         $menus = collect($this->menuRepository->getMenusWithModifiers());
         $packageParents = [46, 47, 48];
 
-        if( $request->has('menu_id') ) {
+        if ($request->has('menu_id')) {
 
             $menu = Menu::with(['modifiers', 'image', 'group', 'category', 'course', 'tax'])->where('id', $request->menu_id)->first();
             // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
@@ -164,10 +160,11 @@ class BrowseMenuApiController extends Controller
             if ($menu) {
                 Menu::attachUploadedImages($menu->getRelation('modifiers'));
             }
+
             return new MenuResource($menu);
         }
 
-        if( $menus->isEmpty() ) {
+        if ($menus->isEmpty()) {
             $packages = Menu::with(['modifiers', 'image', 'group', 'category', 'course', 'tax'])
                 ->whereIn('id', $packageParents)
                 ->where('is_available', true)
@@ -262,10 +259,12 @@ class BrowseMenuApiController extends Controller
             if ($computed->isNotEmpty()) {
                 $ordered = $computed->map(function ($cm) use ($computedModifierModels) {
                     $id = $cm['id'] ?? $cm->id ?? null;
+
                     return $computedModifierModels->get($id);
                 })->filter();
 
                 $menu->setRelation('modifiers', $ordered->values());
+
                 continue;
             }
 
@@ -275,9 +274,10 @@ class BrowseMenuApiController extends Controller
             $ids = $groupRows->pluck('id')->filter()->unique()->values()->all();
             $intersection = array_values(array_intersect($ids, $packageParents));
 
-            if (!empty($intersection)) {
+            if (! empty($intersection)) {
                 $parentRows = $groupRows->filter(function ($gr) use ($intersection) {
                     $id = is_object($gr) ? ($gr->id ?? null) : ($gr['id'] ?? null);
+
                     return in_array($id, $intersection, true);
                 })->values();
 
@@ -291,11 +291,13 @@ class BrowseMenuApiController extends Controller
                 }
 
                 $menu->setRelation('modifiers', $mods->values());
+
                 continue;
             }
 
             $ordered = $groupRows->map(function ($gr) use ($groupModifierModels) {
                 $id = is_object($gr) ? ($gr->id ?? null) : ($gr['id'] ?? null);
+
                 return $groupModifierModels->get($id);
             })->filter();
 
@@ -320,25 +322,26 @@ class BrowseMenuApiController extends Controller
 
     /**
      * Get all menus for the given course.
-     * 
+     *
      * @queryParam course string The course name
-     * 
-     * @param Request $request course = starter
-     * 
+     *
+     * @param  Request  $request  course = starter
+     *
      * @example starter, main course, salad and soup, dessert
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
-    public function getMenusByCourse(Request $request) 
-    {   
+    public function getMenusByCourse(Request $request)
+    {
         $request->validate([
             /**
              * @queryParam course string The course name
+             *
              * @example starter
-            */
-            'course' => ['required','string'],
+             */
+            'course' => ['required', 'string'],
         ]);
-        
+
         $menusByCourse = collect($this->menuRepository->getMenusByCourse($request->course))->pluck('id') ?? [];
 
         $query = Menu::with(['image', 'group', 'category', 'course', 'tax'])->whereIn('id', $menusByCourse);
@@ -358,19 +361,19 @@ class BrowseMenuApiController extends Controller
     /**
      * Get all menus for the given category.
      *
-     * @param Request $request category = beverage
-     * 
+     * @param  Request  $request  category = beverage
+     *
      * @example category = beverage
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
-    public function getMenusByCategory(Request $request) 
-    {   
+    public function getMenusByCategory(Request $request)
+    {
         $request->validate([
             /**
              * @example beverage
-            */
-            'category' => ['required','string'],
+             */
+            'category' => ['required', 'string'],
         ]);
 
         $menusByCategory = collect($this->menuRepository->getMenusByCategory($request->category))->pluck('id') ?? [];
@@ -389,19 +392,19 @@ class BrowseMenuApiController extends Controller
     /**
      * Get all menus for the given group.
      *
-     * @param Request $request group = Sides
-     * 
+     * @param  Request  $request  group = Sides
+     *
      * @example group = Sides
-     * 
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
-    public function getMenusByGroup(Request $request) 
-    {   
+    public function getMenusByGroup(Request $request)
+    {
         $request->validate([
             /**
              * @example Sides
-            */
-            'group' => ['required','string'],
+             */
+            'group' => ['required', 'string'],
         ]);
 
         $menusByGroup = collect($this->menuRepository->getMenusByGroup($request->group))->pluck('id') ?? [];
@@ -442,7 +445,7 @@ class BrowseMenuApiController extends Controller
             // For non-package ids, return an empty collection with 422 status to
             // indicate the package id is not supported for this exact-modifiers route.
             return response()->json([
-                'message' => 'package_id must be one of: ' . implode(',', $packageParents),
+                'message' => 'package_id must be one of: '.implode(',', $packageParents),
             ], 422);
         }
 
@@ -481,7 +484,7 @@ class BrowseMenuApiController extends Controller
         // Load parent rows to find receipt_name prefixes
         $parents = [];
         if (! empty($ids)) {
-            $parents = Menu::whereIn('id', $ids)->get(['id','name','receipt_name']);
+            $parents = Menu::whereIn('id', $ids)->get(['id', 'name', 'receipt_name']);
         }
 
         $prefixes = collect($parents)->pluck('receipt_name')->filter()->map(function ($r) {
@@ -498,11 +501,12 @@ class BrowseMenuApiController extends Controller
         foreach ($labelMap as $prefix => $label) {
             if (! in_array($prefix, $prefixes)) {
                 $result[$label] = [];
+
                 continue;
             }
 
             $mods = Menu::with(['image', 'group', 'category'])
-                ->where('receipt_name', 'like', $prefix . '%')
+                ->where('receipt_name', 'like', $prefix.'%')
                 ->where('is_modifier_only', true)
                 ->get();
             Menu::attachUploadedImages($mods);
@@ -581,7 +585,7 @@ class BrowseMenuApiController extends Controller
                 // arrays so JSON serialization doesn't include PHP internal props.
                 $augmentedRows = collect($rows)->map(function ($r) use ($menusById, $codeToPackages) {
                     // Normalize the row to an array first
-                    if ($r instanceof \Illuminate\Database\Eloquent\Model) {
+                    if ($r instanceof Model) {
                         $rowArr = $r->toArray();
                     } elseif (is_object($r)) {
                         $rowArr = (array) $r;
@@ -629,5 +633,4 @@ class BrowseMenuApiController extends Controller
             ], 500);
         }
     }
-  
 }
