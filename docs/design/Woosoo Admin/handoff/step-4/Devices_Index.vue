@@ -32,7 +32,7 @@ const props = defineProps<{
     stats?: any;
 }>()
 
-const { devices, stats } = toRefs(props)
+const { devices } = toRefs(props)
 
 const selectedDevice = ref<Device | null>(null)
 const isDeviceDetailOpen = ref(false)
