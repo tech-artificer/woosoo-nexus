@@ -109,7 +109,9 @@ test('guests cannot attach menus to a tablet category', function () {
     $category = TabletCategory::create(['name' => 'Test Category', 'sort_order' => 0]);
 
     $this->post(route('tablet-categories.menus.attach', $category), ['menu_ids' => [101]])
-        ->assertRedirect();
+        ->assertRedirect(route('login'));
+
+    expect(TabletCategoryMenu::where('tablet_category_id', $category->id)->count())->toBe(0);
 });
 
 test('non-admin user cannot attach menus to a tablet category', function () {
