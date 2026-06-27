@@ -282,7 +282,7 @@ class PackageController extends Controller
      * @param  array<int>  $menuIds
      * @return Collection<int, Menu>
      */
-    private function loadPosMenusById(array $menuIds)
+    private function loadPosMenusById(array $menuIds): Collection
     {
         if ($menuIds === []) {
             return collect();

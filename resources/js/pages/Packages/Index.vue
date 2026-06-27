@@ -57,7 +57,7 @@ interface PackageVm {
     krypton_menu_id?: number | null
     name: string
     description?: string | null
-    base_price: number
+    base_price: number | null
     pos_menu?: PosMenuSnapshot | null
     min_meat: number
     max_meat: number

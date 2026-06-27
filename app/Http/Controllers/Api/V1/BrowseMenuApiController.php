@@ -98,7 +98,7 @@ class BrowseMenuApiController extends Controller
         // Cross-connection MenuImage patch — see Menu::attachUploadedImages docblock.
         Menu::attachUploadedImages($menus);
 
-        if ($request->has('modifiers') && $request->modifiers == true) {
+        if ($request->boolean('modifiers')) {
             $modifierGroupIds = $menus->pluck('id')->filter()->unique()->values()->all();
             $modifiersByGroupId = collect($this->menuRepository->getMenuModifiersByGroupIds($modifierGroupIds))
                 ->groupBy('menu_group_id');
