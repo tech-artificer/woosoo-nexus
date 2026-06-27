@@ -40,6 +40,18 @@ interface CategoryVm {
 interface UnattachedMenu {
     id: number
     name: string
+    receipt_name?: string | null
+    group_id: number
+    group_name: string
+    category_name: string
+    course_name?: string | null
+}
+
+interface KryptonMenuGroup {
+    key: string
+    label: string
+    categoryName: string
+    items: UnattachedMenu[]
 }
 
 const props = defineProps<{
@@ -193,12 +205,47 @@ const showAttach = ref(false)
 const attachSearch = ref('')
 const selectedAttachIds = ref<number[]>([])
 
-const filteredUnattached = computed(() => {
+const groupedUnattached = computed((): KryptonMenuGroup[] => {
     const needle = attachSearch.value.trim().toLowerCase()
-    return (props.unattachedMenus ?? []).filter((m) =>
-        !needle || m.name.toLowerCase().includes(needle),
+    const filtered = (props.unattachedMenus ?? []).filter(
+        (m) =>
+            !needle ||
+            m.name.toLowerCase().includes(needle) ||
+            (m.receipt_name ?? '').toLowerCase().includes(needle) ||
+            m.group_name.toLowerCase().includes(needle) ||
+            m.category_name.toLowerCase().includes(needle),
     )
+
+    const map = new Map<string, KryptonMenuGroup>()
+    for (const menu of filtered) {
+        const key = `${menu.category_name}||${menu.group_name}`
+        if (!map.has(key)) {
+            map.set(key, { key, label: menu.group_name, categoryName: menu.category_name, items: [] })
+        }
+        map.get(key)!.items.push(menu)
+    }
+    return Array.from(map.values())
 })
+
+function isGroupAllSelected(group: KryptonMenuGroup): boolean {
+    return group.items.length > 0 && group.items.every((m) => selectedAttachIds.value.includes(m.id))
+}
+
+function isGroupPartialSelected(group: KryptonMenuGroup): boolean {
+    return group.items.some((m) => selectedAttachIds.value.includes(m.id)) && !isGroupAllSelected(group)
+}
+
+function toggleGroupSelection(group: KryptonMenuGroup): void {
+    if (isGroupAllSelected(group)) {
+        selectedAttachIds.value = selectedAttachIds.value.filter((id) => !group.items.some((m) => m.id === id))
+    } else {
+        for (const m of group.items) {
+            if (!selectedAttachIds.value.includes(m.id)) {
+                selectedAttachIds.value.push(m.id)
+            }
+        }
+    }
+}
 
 function toggleAttachSelection(id: number) {
     const idx = selectedAttachIds.value.indexOf(id)
@@ -459,32 +506,65 @@ function submitAttach() {
 
         <!-- Attach menus dialog -->
         <Dialog :open="showAttach" @update:open="(val) => { if (!val) { showAttach = false; selectedAttachIds = []; attachSearch = '' } }">
-            <DialogContent class="max-w-md">
+            <DialogContent class="max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Attach Menu Items</DialogTitle>
+                    <DialogTitle>Attach Menu Items — {{ selectedCategory?.name }}</DialogTitle>
                 </DialogHeader>
                 <div class="flex flex-col gap-3">
                     <div class="relative">
                         <Search class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input v-model="attachSearch" placeholder="Search menus…" class="pl-8" />
+                        <Input v-model="attachSearch" placeholder="Search by name, code, group, or category…" class="pl-8" />
                     </div>
-                    <div class="max-h-64 overflow-y-auto rounded-md border">
-                        <div
-                            v-for="m in filteredUnattached"
-                            :key="m.id"
-                            class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50"
-                            :class="{ 'bg-woosoo-accent/10': selectedAttachIds.includes(m.id) }"
-                            @click="toggleAttachSelection(m.id)"
-                        >
-                            <div class="h-3.5 w-3.5 shrink-0 rounded border"
-                                :class="selectedAttachIds.includes(m.id) ? 'border-woosoo-accent bg-woosoo-accent' : 'border-border'"
-                            />
-                            <span class="text-sm">{{ m.name }}</span>
-                        </div>
-                        <p v-if="filteredUnattached.length === 0" class="py-6 text-center text-xs text-muted-foreground">
-                            No unattached menus found.
+
+                    <!-- Grouped menu list -->
+                    <div class="max-h-[400px] overflow-y-auto rounded-md border">
+                        <template v-if="groupedUnattached.length > 0">
+                            <div v-for="group in groupedUnattached" :key="group.key">
+                                <!-- Group header with select-all -->
+                                <div class="sticky top-0 z-10 flex items-center gap-2 border-b border-border/50 bg-muted/80 px-3 py-1.5 backdrop-blur-sm">
+                                    <Checkbox
+                                        :id="`grp-${group.key}`"
+                                        :model-value="isGroupPartialSelected(group) ? 'indeterminate' : isGroupAllSelected(group)"
+                                        @update:model-value="toggleGroupSelection(group)"
+                                    />
+                                    <Label :for="`grp-${group.key}`" class="flex flex-1 cursor-pointer items-center gap-2">
+                                        <span class="text-[10px] font-semibold tracking-[0.18em] text-foreground uppercase">{{ group.label }}</span>
+                                        <span class="text-[9px] text-muted-foreground">{{ group.categoryName }}</span>
+                                        <span class="ml-auto text-[9px] text-muted-foreground">
+                                            {{ group.items.filter(m => selectedAttachIds.includes(m.id)).length }}/{{ group.items.length }}
+                                        </span>
+                                    </Label>
+                                </div>
+
+                                <!-- Items within group -->
+                                <div
+                                    v-for="m in group.items"
+                                    :key="m.id"
+                                    class="flex cursor-pointer items-center gap-2 border-b border-border/25 pl-8 pr-3 py-2 last:border-0 hover:bg-muted/40"
+                                    :class="{ 'bg-woosoo-accent/6': selectedAttachIds.includes(m.id) }"
+                                    @click="toggleAttachSelection(m.id)"
+                                >
+                                    <Checkbox
+                                        :id="`attach-${m.id}`"
+                                        :model-value="selectedAttachIds.includes(m.id)"
+                                        @update:model-value="(v: boolean | 'indeterminate') => v ? (!selectedAttachIds.includes(m.id) && selectedAttachIds.push(m.id)) : (selectedAttachIds = selectedAttachIds.filter(id => id !== m.id))"
+                                        @click.stop
+                                    />
+                                    <Label :for="`attach-${m.id}`" class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-sm" @click.stop>
+                                        <span v-if="m.receipt_name" class="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] font-medium text-woosoo-accent">
+                                            {{ m.receipt_name }}
+                                        </span>
+                                        <span class="truncate">{{ m.name }}</span>
+                                        <span v-if="m.course_name" class="ml-auto shrink-0 text-[9px] text-muted-foreground">{{ m.course_name }}</span>
+                                    </Label>
+                                </div>
+                            </div>
+                        </template>
+                        <p v-else class="py-8 text-center text-xs text-muted-foreground">
+                            {{ attachSearch ? 'No menus matched the search.' : 'No unattached menus available.' }}
                         </p>
                     </div>
+
                     <p class="text-xs text-muted-foreground">{{ selectedAttachIds.length }} selected</p>
                 </div>
                 <DialogFooter>
