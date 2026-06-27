@@ -32,7 +32,7 @@ class SessionOrderValidationTest extends TestCase
             'price' => 1.00,
         ]);
 
-        // create-order resolves package_id via Package (krypton_menu_id|id) + is_active.
+        // create-order resolves package_id (= krypton_menu_id) via Package + is_active.
         // Tests post package_id=1; seed a matching active package.
         Package::create([
             'krypton_menu_id' => 1,

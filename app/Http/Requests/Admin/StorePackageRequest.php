@@ -17,7 +17,7 @@ class StorePackageRequest extends FormRequest
         return [
             'krypton_menu_id' => ['required', 'integer', 'min:1', Rule::unique('packages', 'krypton_menu_id')],
             'description' => ['nullable', 'string', 'max:1000'],
-            'min_meat' => ['nullable', 'integer', 'min:1'],
+            'min_meat' => ['nullable', 'integer', 'min:1', 'max:5'],
             'max_meat' => ['nullable', 'integer', 'min:1', 'max:5', 'gte:min_meat'],
             'banner_media_id' => ['nullable', 'integer'],
             'is_active' => ['nullable', 'boolean'],
