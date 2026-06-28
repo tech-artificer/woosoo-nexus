@@ -179,6 +179,27 @@ class DeviceTokenLifecycleTest extends TestCase
     }
 
     /**
+     * Test: Logout success returns {success, message} envelope
+     * Purpose: Contract: every device-auth endpoint returns {success, ...}
+     */
+    public function test_logout_success_returns_envelope(): void
+    {
+        $device = Device::factory()->create(['is_active' => true]);
+        $token = $device->createToken('device-auth', expiresAt: now()->addDays(30))->plainTextToken;
+
+        $tokenId = PersonalAccessToken::where('tokenable_id', $device->id)->first()->id;
+
+        $response = $this->withToken($token)
+            ->postJson('/api/devices/logout');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Successfully logged out');
+
+        $this->assertNull(PersonalAccessToken::find($tokenId));
+    }
+
+    /**
      * Test: Logout returns 401 (not 500) when called from a web session
      * Purpose: Guard against TransientToken::$id crash for admin callers
      */

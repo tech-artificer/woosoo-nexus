@@ -328,11 +328,11 @@ class DeviceAuthApiController extends Controller
         $expiresAt = now()->addDays(7);
 
         return response()->json([
-            'success'      => true,
-            'token'        => $newToken,
-            'device'       => $device,
-            'table'        => $this->safeLoadDeviceTable($device),
-            'expires_at'   => $expiresAt->toDateTimeString(),
+            'success' => true,
+            'token' => $newToken,
+            'device' => $device,
+            'table' => $this->safeLoadDeviceTable($device),
+            'expires_at' => $expiresAt->toDateTimeString(),
             'broadcasting' => BroadcastConfig::clientPayload(),
         ]);
     }
@@ -354,7 +354,7 @@ class DeviceAuthApiController extends Controller
             $device->tokens()->where('id', $current->id)->delete();
         }
 
-        return response()->json(['message' => 'Successfully logged out']);
+        return response()->json(['success' => true, 'message' => 'Successfully logged out']);
     }
 
     /**
