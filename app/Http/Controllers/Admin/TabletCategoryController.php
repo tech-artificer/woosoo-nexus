@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Controller;
 use App\Models\TabletCategory;
 use App\Models\TabletCategoryMenu;
@@ -93,6 +94,8 @@ class TabletCategoryController extends Controller
 
         TabletCategory::create($validated);
 
+        TabletApiController::forgetCategoriesCache();
+
         return redirect()->back()->with('success', 'Category created.');
     }
 
@@ -109,13 +112,18 @@ class TabletCategoryController extends Controller
 
         $tabletCategory->update($validated);
 
+        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+
         return redirect()->back()->with('success', 'Category updated.');
     }
 
     public function destroy(TabletCategory $tabletCategory)
     {
+        $slug = $tabletCategory->slug;
         $tabletCategory->menuPivots()->delete();
         $tabletCategory->delete();
+
+        TabletApiController::forgetCategoriesCache($slug);
 
         return redirect()->back()->with('success', 'Category deleted.');
     }
@@ -141,6 +149,8 @@ class TabletCategoryController extends Controller
                 ]);
             }
         });
+
+        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Category menus synced.');
     }
@@ -170,6 +180,8 @@ class TabletCategoryController extends Controller
             ]);
         }
 
+        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+
         return redirect()->back()->with('success', 'Menu(s) attached.');
     }
 
@@ -179,6 +191,8 @@ class TabletCategoryController extends Controller
     public function detachMenu(TabletCategory $tabletCategory, int $menuId)
     {
         $tabletCategory->menuPivots()->where('krypton_menu_id', $menuId)->delete();
+
+        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Menu detached.');
     }
@@ -190,6 +204,8 @@ class TabletCategoryController extends Controller
     {
         $pivot = $tabletCategory->menuPivots()->where('krypton_menu_id', $menuId)->firstOrFail();
         $pivot->update(['is_featured' => ! $pivot->is_featured]);
+
+        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Featured status updated.');
     }
@@ -211,6 +227,8 @@ class TabletCategoryController extends Controller
                 ->update(['sort_order' => $index]);
         }
 
+        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+
         return redirect()->back()->with('success', 'Menu order updated.');
     }
 
@@ -228,6 +246,8 @@ class TabletCategoryController extends Controller
         foreach ($validated['ids'] as $index => $id) {
             TabletCategory::where('id', $id)->update(['sort_order' => $index]);
         }
+
+        TabletApiController::forgetCategoriesCache();
 
         return redirect()->back()->with('success', 'Category order updated.');
     }
