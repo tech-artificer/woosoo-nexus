@@ -220,13 +220,16 @@ class PackageController extends Controller
             ->values()
             ->all();
 
+        $kryptonMenuMap = collect();
         if ($menuIds !== []) {
             try {
-                $validIds = Menu::meatModifiers()
+                $kryptonMenus = Menu::meatModifiers()
+                    ->select('id', 'receipt_name')
                     ->whereIn('id', $menuIds)
-                    ->pluck('id')
-                    ->map(fn ($id) => (int) $id)
-                    ->all();
+                    ->get();
+
+                $validIds = $kryptonMenus->pluck('id')->map(fn ($id) => (int) $id)->all();
+                $kryptonMenuMap = $kryptonMenus->keyBy('id');
             } catch (QueryException) {
                 throw ValidationException::withMessages([
                     'allowed_menus' => 'Unable to validate meat menus — POS connection unavailable.',
@@ -244,11 +247,14 @@ class PackageController extends Controller
         $package->allowedMenus()->delete();
 
         foreach (array_values($menus) as $index => $menu) {
+            $kMenu = $kryptonMenuMap->get((int) $menu['krypton_menu_id']);
+            $categoryCode = $menu['meat_category_code'] ?? $this->deriveMeatCategoryCode($kMenu?->receipt_name);
+
             PackageAllowedMenu::create([
                 'package_id' => $package->id,
                 'krypton_menu_id' => (int) $menu['krypton_menu_id'],
                 'menu_type' => 'meat',
-                'meat_category_code' => $menu['meat_category_code'] ?? null,
+                'meat_category_code' => $categoryCode,
                 'extra_price' => $menu['extra_price'] ?? 0,
                 'quantity_limit' => 1,
                 'is_required' => (bool) ($menu['is_required'] ?? false),
@@ -257,6 +263,18 @@ class PackageController extends Controller
                 'sort_order' => (int) ($menu['sort_order'] ?? $index),
             ]);
         }
+    }
+
+    /** Derive P/B/C from the receipt_name prefix (e.g. "P001 Samgyupsal" → "P"). */
+    private function deriveMeatCategoryCode(?string $receiptName): ?string
+    {
+        if (! $receiptName) {
+            return null;
+        }
+
+        $prefix = strtoupper(substr(trim($receiptName), 0, 1));
+
+        return in_array($prefix, ['P', 'B', 'C'], true) ? $prefix : null;
     }
 
     private function resolvePackageAnchorOrFail(int $kryptonMenuId): Menu
