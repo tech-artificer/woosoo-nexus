@@ -217,6 +217,7 @@ function executeDelete(): void {
 
 interface SyncEntry {
     krypton_menu_id: number
+    menu_name: string
     extra_price: number
     quantity_limit: number
     is_required: boolean
@@ -246,12 +247,6 @@ const filteredSyncOptions = computed(() => {
     )
 })
 
-function meatLabelById(menuId: number): string {
-    const match = (props.meatOptions ?? []).find((m) => m.krypton_menu_id === menuId)
-    if (!match) return `Menu #${menuId}`
-    return match.receipt_name ? `${match.name} (${match.receipt_name})` : match.name
-}
-
 function isMenuSelected(menuId: number): boolean {
     return syncForm.allowed_menus.some((m) => m.krypton_menu_id === menuId)
 }
@@ -259,10 +254,14 @@ function isMenuSelected(menuId: number): boolean {
 function toggleSyncMenu(menuId: number, checked: boolean): void {
     if (checked) {
         if (!isMenuSelected(menuId)) {
+            const match = (props.meatOptions ?? []).find((m) => m.krypton_menu_id === menuId)
+            const menuName = match ? (match.receipt_name ? `${match.name} (${match.receipt_name})` : match.name) : `Menu #${menuId}`
+
             syncForm.allowed_menus = [
                 ...syncForm.allowed_menus,
                 {
                     krypton_menu_id: menuId,
+                    menu_name: menuName,
                     extra_price: 0,
                     quantity_limit: 1,
                     is_required: false,
@@ -281,6 +280,7 @@ function openManageMenus(item: PackageVm): void {
     managingPackage.value = item
     syncForm.allowed_menus = (item.allowed_menus ?? []).map((am, idx) => ({
         krypton_menu_id: am.krypton_menu_id,
+        menu_name: am.menu_name,
         extra_price: am.extra_price ?? 0,
         quantity_limit: am.quantity_limit,
         is_required: am.is_required ?? false,

@@ -8,9 +8,10 @@ const props = defineProps<{
 </script>
 
 <template>
+  <!-- WOOSOO STEP 5: subtle header surface tint -->
   <thead
     data-slot="table-header"
-    :class="cn('[&_tr]:border-b', props.class)"
+    :class="cn('[&_tr]:border-b bg-black/[0.03] dark:bg-white/[0.03]', props.class)"
   >
     <slot />
   </thead>

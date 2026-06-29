@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Branch;
 use App\Services\Admin\AdminShellBadgeService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
@@ -47,6 +48,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Single-branch deployment: surface the one registered branch so the shell
+            // can show its name where the static "HQ" label used to sit.
+            'branch' => fn () => Branch::query()->first()?->only(['id', 'name', 'location']),
             'ziggy' => [
                 ...(new Ziggy)->toArray(),
                 // Override url with the actual request host (set via URL::forceRootUrl in

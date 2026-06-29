@@ -32,14 +32,14 @@ class PackageSeeder extends Seeder
             'krypton_menu_id' => 46,
             'sort_order' => 0,
             'description' => 'Our essential Korean BBQ experience — five signature pork samgyupsal cuts grilled fresh at your table, served with unlimited classic sides. The perfect introduction to authentic Korean barbecue.',
-            'codes' => ['P1', 'P2', 'P3', 'P4', 'P5'],
+            'codes' => ['P1', 'P2', 'P3', 'P4', 'P5', 'C1'],
         ],
         [
             'name' => 'Noble Selection',
             'krypton_menu_id' => 47,
             'sort_order' => 1,
             'description' => 'A step up for the adventurous — all five classic pork samgyupsal cuts plus premium beef woosamgyup and beef bulgogi, with unlimited sides. The best of pork and beef in one feast.',
-            'codes' => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3'],
+            'codes' => ['P1', 'P2', 'P3', 'P4', 'P5', 'B1', 'B2', 'B3', 'C1'],
         ],
         [
             'name' => 'Royal Banquet',

@@ -63,15 +63,25 @@ class TabletCategoryController extends Controller
         try {
             $attachedIds = TabletCategoryMenu::pluck('krypton_menu_id')->unique()->all();
             $unattachedMenus = DB::connection('pos')
-                ->table('menus')
-                ->whereNotIn('id', $attachedIds)
-                ->select('id', 'name', 'receipt_name')
-                ->orderBy('name')
+                ->table('menus as m')
+                ->leftJoin('menu_groups as mg', 'm.menu_group_id', '=', 'mg.id')
+                ->leftJoin('menu_categories as mc', 'm.menu_category_id', '=', 'mc.id')
+                ->leftJoin('menu_course_types as mct', 'm.menu_course_type_id', '=', 'mct.id')
+                ->whereNotIn('m.id', $attachedIds)
+                ->select('m.id', 'm.name', 'm.receipt_name', 'mg.id as group_id', 'mg.name as group_name', 'mc.name as category_name', 'mct.name as course_name')
+                ->orderByRaw('COALESCE(mc.name, ?) ASC', ['Other'])
+                ->orderByRaw('COALESCE(mg.name, ?) ASC', ['Uncategorized'])
+                ->orderBy('m.name')
                 ->limit(2000)
                 ->get()
                 ->map(fn ($m) => [
                     'id' => (int) $m->id,
                     'name' => $m->name ?: $m->receipt_name ?: "Menu #{$m->id}",
+                    'receipt_name' => $m->receipt_name,
+                    'group_id' => (int) ($m->group_id ?? 0),
+                    'group_name' => $m->group_name ?? 'Uncategorized',
+                    'category_name' => $m->category_name ?? 'Other',
+                    'course_name' => $m->course_name,
                 ]);
         } catch (\Throwable $e) {
             Log::warning('tablet-categories: could not load unattached menus from POS', ['error' => $e->getMessage()]);
