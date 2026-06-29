@@ -566,12 +566,12 @@ function submitSyncMenus(): void {
                                 class="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-muted/30 py-1 pl-3 pr-1"
                             >
                                 <span class="min-w-0 truncate text-sm font-medium">
-                                    {{ meatLabelById(entry.krypton_menu_id) }}
+                                    {{ entry.menu_name }}
                                 </span>
                                 <button
                                     type="button"
                                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                    :aria-label="`Remove ${meatLabelById(entry.krypton_menu_id)}`"
+                                    :aria-label="`Remove ${entry.menu_name}`"
                                     @click="toggleSyncMenu(entry.krypton_menu_id, false)"
                                 >
                                     ×

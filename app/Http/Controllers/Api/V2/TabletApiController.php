@@ -229,12 +229,11 @@ class TabletApiController extends Controller
                     ])->values()->all();
                 }
 
-                // Hardcoded fallback — original four categories (bootstrap only).
+                // Hardcoded fallback — three legacy categories that resolveLegacyCategoryMenus() can serve.
                 return [
                     ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides'],
                     ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert'],
                     ['id' => 3, 'name' => 'Beverage', 'slug' => 'beverage', 'pos_category' => 'drinks'],
-                    ['id' => 4, 'name' => 'Alacarte', 'slug' => 'alacarte', 'pos_category' => 'alacarte'],
                 ];
             });
 
@@ -434,7 +433,10 @@ class TabletApiController extends Controller
 
     private function hasActiveDbCategories(): bool
     {
-        return TabletCategory::query()->where('is_active', true)->exists();
+        return TabletCategory::query()
+            ->where('is_active', true)
+            ->where('slug', '!=', self::MEATS_SLUG)
+            ->exists();
     }
 
     /**
