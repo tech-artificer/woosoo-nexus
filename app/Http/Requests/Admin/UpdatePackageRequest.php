@@ -24,7 +24,7 @@ class UpdatePackageRequest extends FormRequest
                 Rule::unique('packages', 'krypton_menu_id')->ignore($package?->id),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
-            'min_meat' => ['nullable', 'integer', 'min:1'],
+            'min_meat' => ['nullable', 'integer', 'min:1', 'max:5'],
             'max_meat' => ['nullable', 'integer', 'min:1', 'max:5', 'gte:min_meat'],
             'banner_media_id' => ['nullable', 'integer'],
             'is_active' => ['nullable', 'boolean'],

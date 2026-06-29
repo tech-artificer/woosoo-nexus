@@ -57,7 +57,7 @@ interface PackageVm {
     krypton_menu_id?: number | null
     name: string
     description?: string | null
-    base_price: number
+    base_price: number | null
     pos_menu?: PosMenuSnapshot | null
     min_meat: number
     max_meat: number
@@ -217,6 +217,7 @@ function executeDelete(): void {
 
 interface SyncEntry {
     krypton_menu_id: number
+    menu_name: string
     extra_price: number
     quantity_limit: number
     is_required: boolean
@@ -246,12 +247,6 @@ const filteredSyncOptions = computed(() => {
     )
 })
 
-function meatLabelById(menuId: number): string {
-    const match = (props.meatOptions ?? []).find((m) => m.krypton_menu_id === menuId)
-    if (!match) return `Menu #${menuId}`
-    return match.receipt_name ? `${match.name} (${match.receipt_name})` : match.name
-}
-
 function isMenuSelected(menuId: number): boolean {
     return syncForm.allowed_menus.some((m) => m.krypton_menu_id === menuId)
 }
@@ -259,10 +254,14 @@ function isMenuSelected(menuId: number): boolean {
 function toggleSyncMenu(menuId: number, checked: boolean): void {
     if (checked) {
         if (!isMenuSelected(menuId)) {
+            const match = (props.meatOptions ?? []).find((m) => m.krypton_menu_id === menuId)
+            const menuName = match ? (match.receipt_name ? `${match.name} (${match.receipt_name})` : match.name) : `Menu #${menuId}`
+
             syncForm.allowed_menus = [
                 ...syncForm.allowed_menus,
                 {
                     krypton_menu_id: menuId,
+                    menu_name: menuName,
                     extra_price: 0,
                     quantity_limit: 1,
                     is_required: false,
@@ -281,6 +280,7 @@ function openManageMenus(item: PackageVm): void {
     managingPackage.value = item
     syncForm.allowed_menus = (item.allowed_menus ?? []).map((am, idx) => ({
         krypton_menu_id: am.krypton_menu_id,
+        menu_name: am.menu_name,
         extra_price: am.extra_price ?? 0,
         quantity_limit: am.quantity_limit,
         is_required: am.is_required ?? false,
@@ -566,12 +566,12 @@ function submitSyncMenus(): void {
                                 class="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-muted/30 py-1 pl-3 pr-1"
                             >
                                 <span class="min-w-0 truncate text-sm font-medium">
-                                    {{ meatLabelById(entry.krypton_menu_id) }}
+                                    {{ entry.menu_name }}
                                 </span>
                                 <button
                                     type="button"
                                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                    :aria-label="`Remove ${meatLabelById(entry.krypton_menu_id)}`"
+                                    :aria-label="`Remove ${entry.menu_name}`"
                                     @click="toggleSyncMenu(entry.krypton_menu_id, false)"
                                 >
                                     ×

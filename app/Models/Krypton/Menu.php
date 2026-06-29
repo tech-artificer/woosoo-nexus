@@ -76,7 +76,6 @@ class Menu extends Model
     public function scopeMeatModifiers(Builder $query): Builder
     {
         return $query
-            ->where('is_modifier_only', true)
             ->where('is_available', true)
             ->whereHas('group', function (Builder $q): void {
                 $q->where('name', self::MEAT_ORDER_GROUP_NAME);

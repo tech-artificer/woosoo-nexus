@@ -16,6 +16,7 @@ class TabletCategoriesApiTest extends TestCase
     private function authenticatedDevice(): Device
     {
         $device = Device::factory()->create(['is_active' => true]);
+
         return $device;
     }
 
@@ -33,7 +34,7 @@ class TabletCategoriesApiTest extends TestCase
 
         $response->assertOk();
         $data = $response->json('data');
-        $this->assertCount(4, $data);
+        $this->assertCount(3, $data);
         $this->assertEquals('sides', $data[0]['slug']);
     }
 

@@ -103,3 +103,23 @@ test('attach rejects zero-padded string ids from POS (regression)', function () 
 
     expect(TabletCategoryMenu::where('tablet_category_id', $category->id)->count())->toBe(0);
 });
+
+test('guests cannot attach menus to a tablet category', function () {
+    $this->withoutVite();
+    $category = TabletCategory::create(['name' => 'Test Category', 'sort_order' => 0]);
+
+    $this->post(route('tablet-categories.menus.attach', $category), ['menu_ids' => [101]])
+        ->assertRedirect(route('login'));
+
+    expect(TabletCategoryMenu::where('tablet_category_id', $category->id)->count())->toBe(0);
+});
+
+test('non-admin user cannot attach menus to a tablet category', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+    $category = TabletCategory::create(['name' => 'Test Category', 'sort_order' => 0]);
+
+    $this->actingAs($user)
+        ->post(route('tablet-categories.menus.attach', $category), ['menu_ids' => [101]])
+        ->assertForbidden();
+});

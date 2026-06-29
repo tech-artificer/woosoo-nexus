@@ -285,4 +285,20 @@ class PackageManagementTest extends TestCase
         $response->assertSessionHasErrors('max_meat');
         $this->assertDatabaseMissing('packages', ['krypton_menu_id' => 46]);
     }
+
+    public function test_store_rejects_min_meat_above_cap(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->seedPosPackageAnchor(46);
+
+        /** @var Authenticatable $admin */
+        $response = $this->actingAs($admin)->post(route('packages.store'), [
+            'krypton_menu_id' => 46,
+            'min_meat' => 8,
+            'is_active' => true,
+        ]);
+
+        $response->assertSessionHasErrors('min_meat');
+        $this->assertDatabaseMissing('packages', ['krypton_menu_id' => 46]);
+    }
 }
