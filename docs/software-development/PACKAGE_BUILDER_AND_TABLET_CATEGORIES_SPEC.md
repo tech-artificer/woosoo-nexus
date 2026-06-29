@@ -1,17 +1,18 @@
 ---
 status: draft-pending-team-review
-last_reviewed: 2026-06-28
+last_reviewed: 2026-06-29
 scope: woosoo-nexus, tablet-ordering-pwa, krypton-pos
 ---
 
 # Spec: Nexus Package Builder + Tablet Category System
 
-> **Status: draft-pending-team-review** — Two unresolved product decisions prevent canonical
-> status: (1) `TabletApiController`'s docblock labels these endpoints "legacy," so confirm
-> whether this API surface will be replaced before treating this spec as long-term authoritative.
-> (2) The category-menu endpoint does not yet use the admin-curated pivot — see §3 Known Gap.
-> All other content reflects the **currently shipped architecture** as of 2026-06-28 and is
-> grounded in cited source files.
+> **Status: draft-pending-team-review** — One unresolved product decision prevents canonical
+> status: `TabletApiController`'s docblock labels these endpoints "legacy," so confirm whether
+> this API surface will be replaced before treating this spec as long-term authoritative.
+> The category-menu pivot gap and the `meat_category_code` derivation gap described in earlier
+> drafts of this document were **fixed in `e75f617` and `d96fd8a`** (2026-06-28) — see the
+> corrected §2.3 and §3.3 below. All other content reflects the **currently shipped
+> architecture** as of 2026-06-29 and is grounded in cited source files.
 
 ---
 
@@ -74,7 +75,7 @@ list.
 | `package_id` | FK → `packages.id` | Cascade delete |
 | `krypton_menu_id` | int | References `krypton_woosoo.menus.id` (no DB-level FK across connections) |
 | `menu_type` | string(20) | Currently always `"meat"` in practice (default) |
-| `meat_category_code` | string(50) nullable | Admin-entered code (`P`, `B`, or `C`) used by the PWA to group items — see §2.3 |
+| `meat_category_code` | string(50) nullable | Code (`P`, `B`, or `C`) used by the PWA to group items — auto-derived from `receipt_name` if not explicitly supplied; see §2.3 |
 | `extra_price` | decimal(10,2) | **Display/cache value only** — see §4 |
 | `quantity_limit` | tinyint | Max quantity selectable for this item |
 | `is_required` | boolean | |
@@ -103,18 +104,30 @@ prefix convention on `krypton_woosoo.menus` rows:
 | `B` (e.g. `B1`, `B2`) | BEEF |
 | `C` (e.g. `C1`, `C2`) | CHICKEN |
 
-This is currently implemented client-side only in
-`tablet-ordering-pwa/utils/packageModifierGroups.ts` (`classifyPackageModifier` function),
-which first checks `receipt_name` prefix, then falls back to `groupName`/`name` keyword
-matching.
+This rule is implemented client-side in `tablet-ordering-pwa/utils/packageModifierGroups.ts`
+(`classifyPackageModifier` function), which first checks `receipt_name` prefix, then falls back
+to `groupName`/`name` keyword matching. Note that this client-side classifier is **not** the
+function actually wired into the live UI (`PackageCard.vue`, `packageSelection.vue` use
+`groupAllowedMenusByCategoryCode`/`displayMeatGroupLabel`, which read `meat_category_code`
+directly) — it is exercised only by its own unit test. This PWA-side dead-code gap is unchanged
+by the server-side fix below and remains a named follow-up (see §11).
 
-**Known gap — `meat_category_code` drift:** `package_allowed_menus.meat_category_code` is a
-free-text field entered by the admin in `StorePackageRequest`/`UpdatePackageRequest`
-(`app/Http/Controllers/Admin/PackageController.php`). It is not derived from `receipt_name`.
-The PWA's `groupAllowedMenusByCategoryCode` function reads this field directly (v2 API path).
-If an admin enters a code that does not match the `receipt_name` prefix for the same POS menu,
-the two sources diverge. The `receipt_name` prefix is authoritative; `meat_category_code`
-should agree with it. No server-side validation enforces this today.
+**Fixed (2026-06-28, `d96fd8a`):** `package_allowed_menus.meat_category_code` was previously a
+free-text field that the admin UI never actually populated (`SyncEntry` never sent it), so it
+was always stored `null` — causing the PWA's `groupAllowedMenusByCategoryCode` to silently drop
+every meat item, since it only recognizes `P`/`B`/`C`. `PackageController::replaceAllowedMenus()`
+now fetches `receipt_name` alongside the POS validation query and derives the code from the
+first character (`P`→`PORK`, `B`→`BEEF`, `C`→`CHICKEN`) via a new `deriveMeatCategoryCode()`
+helper whenever the request payload does not supply an explicit code — an explicit value in the
+payload still wins, preserving backwards compatibility. `StorePackageRequest`/
+`UpdatePackageRequest` continue to validate `allowed_menus.*.meat_category_code` as `nullable`,
+since the derivation now backfills the null case server-side.
+
+**Residual gap — existing rows are not backfilled.** The fix only applies at the next
+`replaceAllowedMenus()` write (i.e. admin Packages → Manage Meats → Save). Rows created before
+2026-06-28 retain whatever `meat_category_code` value (including `null`) they already had until
+an admin re-syncs that package's meat list. There is no migration or backfill command for
+existing rows — this is called out explicitly in the fixing commit's own message.
 
 ### 2.4 `ModifierDescription` entity
 
@@ -125,7 +138,7 @@ future admin "modifier descriptions" management page.
 
 ---
 
-## 3. Tablet Category System: Data Model and Known Gap
+## 3. Tablet Category System: Data Model and Resolution Behaviour
 
 ### 3.1 Category entity (`tablet_categories` table)
 
@@ -156,34 +169,41 @@ bypass (see §3.3) and excludes it from `GET /categories` DB results and from th
 The admin UI (`TabletCategoryController`) uses this pivot to let operators manually select
 which Krypton POS menus appear in each category and in what order.
 
-### 3.3 Known gap — `categoryMenus` does not use the pivot
+### 3.3 `categoryMenus` resolution — fixed for admin-curated categories, `meats` remains a permanent special case
 
-`GET /api/v2/tablet/categories/{slug}/menus` (`TabletApiController::categoryMenus`) does
-**not** read from `tablet_category_menu`. Instead it uses a hardcoded Krypton POS group-ID
-map for a fixed set of four slugs:
+**Fixed (2026-06-28, `e75f617`):** `GET /api/v2/tablet/categories/{slug}/menus`
+(`TabletApiController::categoryMenus`) previously bypassed `tablet_category_menu` entirely in
+favour of a hardcoded Krypton POS group-ID map for four fixed slugs. It now resolves menus
+differently depending on the slug and whether any admin-curated categories exist:
 
-| Slug | Resolution |
+| Case | Resolution |
 |---|---|
-| `meats` | `menuRepository->getMenusByGroupId(34)` (POS group "Meat Order") |
-| `sides` | `menuRepository->getMenusByGroupId(29)` |
-| `beverage` | `menuRepository->getMenusByGroupId(30)` (mapped via `beverage → drinks`) |
-| `dessert` | `menuRepository->getMenusByCourse('dessert')` (mapped via `dessert → desserts`) |
+| Slug is `meats` | **Always** `menuRepository->getMenusByGroupId(34)` (POS group "Meat Order") — see below, this is permanent by design, not a residual gap. |
+| Slug is not `meats`, and at least one active non-meats row exists in `tablet_categories` (`hasActiveDbCategories()`) | Resolved from the `tablet_category_menu` pivot: `TabletCategory::menuPivots` ordered by `sort_order`, mapped to live Krypton `menus` rows. Unknown/inactive slugs return 404. Empty pivot returns `200` with `data: []`. |
+| Slug is not `meats`, and **no** active non-meats `tablet_categories` rows exist at all | Falls through to `resolveLegacyCategoryMenus()` — the original hardcoded map (`sides`→POS group 29, `beverage`→drinks group 30, `dessert`→course `'dessert'`). This is a **bootstrap fallback only**, active before any admin has created a tablet category. |
 
-Any other slug that reaches this endpoint returns 404 (when DB categories exist) or passes
-through to `resolveLegacyCategoryMenus()` which also only handles the four slugs above.
+So the admin-curated pivot **does** now drive tablet content for any admin-managed category
+(sides, beverage, dessert, or a custom category an admin creates), as long as at least one such
+category exists in the database. The previous "Known gap" language describing all four slugs as
+permanently hardcoded is **no longer accurate** and is corrected here.
 
-**Product-decision context:** The CHANGELOG entry "Strict tablet contract — no legacy
-fallback, fixed POS category mapping" predates the admin-curation build. At the time it was a
-deliberate design decision; subsequent work added the admin pivot. The user's stated current
-intent is that "administrators manually select the items per menu category," which the pivot
-model supports for metadata but the endpoint does not yet honour for content delivery. This is
-a **product decision to revisit**, not just a bug. Until the endpoint is wired to the pivot,
-the admin-curated menu selection has no effect on what the tablet receives.
+**Permanent design decision — `meats` is not pivot-driven.** Unlike the other three legacy
+slugs, `meats` is excluded from `hasActiveDbCategories()` and from `GET /categories` DB results
+(`TabletApiController::MEATS_SLUG`), and `categoryMenus` always resolves it via the hardcoded
+POS group 34 regardless of any `tablet_categories` row with that slug. The code comment on the
+`MEATS_SLUG` constant states the rationale: "meats tab is PWA-injected; catalog via POS group."
+This is intentional, not an oversight — do not treat it as the same class of gap as the
+now-fixed sides/beverage/dessert case.
 
-**Fallback behaviour (no DB categories):** When no active non-meats rows exist in
-`tablet_categories`, `categories()` returns a three-item hardcoded list
-(`sides`/`dessert`/`beverage`) and `categoryMenus` uses `resolveLegacyCategoryMenus`. This
-is a bootstrap fallback only.
+**Results caching:** both the pivot-driven and legacy-fallback paths are now cached under
+`tablet.category_menus.v2.{slug}` (300s TTL; see §5.1), busted by
+`TabletApiController::forgetCategoriesCache()` on any category or pivot mutation.
+
+**Residual gap — `is_featured` still unused by the API.** The pivot's `is_featured` column
+(§3.2) is settable in the admin UI (`toggleFeatured()`) but `categoryMenus()`'s response does
+not surface it — the endpoint returns the resolved `Menu`/`MenuResource` rows only, with no
+featured flag merged in. A tablet client cannot currently distinguish a featured item from a
+regular one via this endpoint.
 
 ---
 
@@ -312,11 +332,14 @@ excluded; the PWA injects the Meats tab independently.
 
 ### 6.4 `GET /api/v2/tablet/categories/{slug}/menus`
 
-Returns menus for a category slug. **Currently uses hardcoded POS group-ID resolution (§3.3),
-not the admin-curated pivot.** Passes through `MenuResource` which includes: `id`, `name`,
+Returns menus for a category slug. **Resolves from the admin-curated `tablet_category_menu`
+pivot when an active admin category with that slug exists** (fixed 2026-06-28, `e75f617` —
+see §3.3); falls back to the legacy hardcoded POS group-ID map only as a bootstrap path before
+any admin category exists. Passes through `MenuResource` which includes: `id`, `name`,
 `receipt_name`, `price`, `is_taxable`, `is_modifier`, `img_url`, and related resource fields.
 
-The `meats` slug always resolves via POS group 34 regardless of DB category state.
+The `meats` slug always resolves via POS group 34 regardless of DB category state — this is a
+permanent special case, not a fallback (§3.3).
 
 ### 6.5 `GET /api/v2/tablet/meat-categories`
 
@@ -407,8 +430,9 @@ package/meat picker dropdowns.
 
 The admin UI allows operators to: assign a user-facing category name, choose sort order and
 active state, and manually select Krypton POS menus per category (managing `tablet_category_menu`
-rows). The `is_featured` flag on pivot rows is set in the admin but not yet consumed by the
-tablet endpoint (which uses the hardcoded POS-group-ID path — §3.3).
+rows) — this curation now drives the tablet's `categoryMenus` response directly (§3.3). The
+`is_featured` flag on pivot rows is set in the admin but is still not surfaced by the tablet
+endpoint's response shape (§3.3 residual gap).
 
 ### 8.3 `ModifierDescription` (shipped model, no admin surface yet)
 
@@ -421,16 +445,19 @@ schema but no admin controller or UI has been built for it. It is available for 
 
 ## 9. Known Gaps (Formal Record)
 
-The following gaps are on record as of 2026-06-28. Each is a product decision, not an
-unplanned defect.
+The following gaps are on record as of 2026-06-29. G1 and G2 below were fixed on 2026-06-28
+(`e75f617`, `d96fd8a`) after an earlier draft of this document had recorded them as open —
+retained here with corrected status so the fix is on record, not silently dropped.
 
-| # | Gap | Location | Impact |
-|---|---|---|---|
-| G1 | `categoryMenus` endpoint bypasses `tablet_category_menu` pivot; uses hardcoded POS group-ID map | `TabletApiController::categoryMenus`, `resolveLegacyCategoryMenus` | Admin curation of per-category menus has no effect on what the tablet receives |
-| G2 | `meat_category_code` (admin-entered) can drift from `receipt_name` prefix (authoritative) | `package_allowed_menus.meat_category_code`, `StorePackageRequest`, `UpdatePackageRequest` | PWA's `groupAllowedMenusByCategoryCode` may disagree with `classifyPackageModifier` heuristic |
-| G3 | Stale `krypton_menu_id` references produce silent fallback display text, no admin warning | `TabletApiController::packages` (`"Menu #{id}"`), `TabletApiController::categoryMenus` (item silently dropped) | Admin has no visibility into orphaned POS references |
-| G4 | `TabletApiController` docblock calls endpoints "legacy" — no team decision on replacement | `TabletApiController` class docblock | Spec may become obsolete if API surface is retired |
-| G5 | Category mutations do not broadcast a Reverb event | `TabletCategoryController` | Tablets pick up category changes only on next page load or cache TTL expiry (max 5 min lag) |
+| # | Gap | Location | Impact | Status |
+|---|---|---|---|---|
+| G1 | `categoryMenus` endpoint bypassed `tablet_category_menu` pivot; used hardcoded POS group-ID map for all four legacy slugs | `TabletApiController::categoryMenus` | Admin curation of per-category menus had no effect on what the tablet received | **Fixed `e75f617`** — pivot now drives `sides`/`beverage`/`dessert`/custom slugs when an active admin category exists; hardcoded map survives only as a bootstrap fallback. `meats` remains permanently hardcoded by design (§3.3), not a residual gap. |
+| G2 | `meat_category_code` (admin-entered) could drift from `receipt_name` prefix (authoritative); admin UI never actually populated the field | `package_allowed_menus.meat_category_code`, `PackageController::replaceAllowedMenus` | PWA's `groupAllowedMenusByCategoryCode` silently dropped meat items with no/invalid code | **Fixed `d96fd8a`** — auto-derived from `receipt_name` prefix at write time when not explicitly supplied. Residual: rows written before 2026-06-28 are not backfilled; require a manual re-sync per package. |
+| G3 | Stale `krypton_menu_id` references produce silent fallback display text, no admin warning | `TabletApiController::packages` (`"Menu #{id}"`), `TabletApiController::categoryMenus` (item silently dropped) | Admin has no visibility into orphaned POS references | Open |
+| G4 | `TabletApiController` docblock calls endpoints "legacy" — no team decision on replacement | `TabletApiController` class docblock | Spec may become obsolete if API surface is retired | Open |
+| G5 | Category mutations do not broadcast a Reverb event | `TabletCategoryController` | Tablets pick up category changes only on next page load or cache TTL expiry (max 5 min lag) | Open |
+| G6 | `tablet_category_menu.is_featured` is admin-settable but not surfaced in `categoryMenus()`'s response shape | `TabletApiController::categoryMenus` | Tablet cannot distinguish a featured item via this endpoint | Open |
+| G7 | PWA's `receipt_name`-prefix classifier (`classifyPackageModifier` et al., `packageModifierGroups.ts`) is dead code — the live UI path (`groupAllowedMenusByCategoryCode`) reads `meat_category_code` instead | `tablet-ordering-pwa/utils/packageModifierGroups.ts`, `PackageCard.vue`, `packageSelection.vue` | The user-confirmed-canonical classification rule is unused in production; G2's fix improves `meat_category_code` accuracy but does not make the PWA consume `receipt_name` directly | Open — PWA edit, out of scope for this nexus-only pass |
 
 ---
 
@@ -438,8 +465,8 @@ unplanned defect.
 
 - **Only `meats` active in `tablet_categories`:** `hasActiveDbCategories()` excludes the
   `meats` slug, so a meats-only DB configuration correctly falls through to the legacy
-  fallback in `categories()` and `categoryMenus()`. (Fixed 2026-06-28; see
-  `TabletApiController::hasActiveDbCategories`.)
+  fallback in `categories()` and `categoryMenus()` for the remaining slugs (shipped 2026-06-28
+  as part of `e75f617`; see `TabletApiController::hasActiveDbCategories`).
 - **`alacarte` slug:** Previously present in the hardcoded fallback but removed because
   `resolveLegacyCategoryMenus` has no branch for it. Client requests for `/alacarte/menus`
   return 404 in both DB and legacy paths.
@@ -472,3 +499,246 @@ follow-up items.
 **Recommended follow-up task:** Update `tablet-ordering-pwa/docs/DATA_MODEL.md` and
 `tablet-ordering-pwa/types/index.d.ts` to reflect the v2 Package shape, and remove the
 orphaned changelog command reference.
+
+---
+
+## Appendix A: Tablet PWA ↔ Nexus API Alignment Audit
+
+Cross-checked every PWA call site against `woosoo-nexus/routes/api.php` and the controller
+each route resolves to, reading controller source directly rather than inferring shapes.
+
+### Matched table: PWA call → route → controller → response shape
+
+| PWA call site | Method + URL | Route name | Controller·method | Response shape (200/201) | Status |
+|---|---|---|---|---|---|
+| `Device.ts:406` register | `POST /api/devices/register` | `api.devices.register` | `DeviceAuthApiController::register` | `{success, token, device, table, expires_at, ip_used, broadcasting}` | ✅ aligned |
+| `Device.ts:298` authenticate | `GET\|POST /api/devices/login` | `api.devices.login` | `DeviceAuthApiController::authenticate` | same shape as register | ✅ aligned |
+| `Device.ts:269` refresh | `POST /api/devices/refresh` | `api.devices.refresh` | `DeviceAuthApiController::refresh` | same shape, **omits `ip_used`** | ✅ aligned (field is optional-read in `applyAuthPayload`) |
+| `Device.ts` logout | `POST /api/devices/logout` | `api.devices.logout` | `DeviceAuthApiController::logout` | `{message}` only — **no `success` key** | ⚠️ inconsistent shape, but no caller reads `.success` on logout |
+| print-bridge | `GET /api/device/lookup-by-ip` | `api.device.lookup-by-ip` | `DeviceAuthApiController::lookupByIp` | `{found, device:{device_id,auth_token,printer_name,bluetooth_address}, ip_used, broadcasting}` | ✅ aligned (not called by PWA itself) |
+| `settings.vue:375` verifyToken | `GET /api/token/verify` | inline closure, `api.php:140-172` | n/a (closure, duplicates dead `DeviceAuthApiController::verifyToken()`) | `{valid, message?, device?, created_at?, expires_at?}` — **no `success` key, ever** | ❌ **misaligned** — see Finding A below |
+| `settings.vue:509` update | `PUT /api/devices/{id}` | `api.devices.update` | `DeviceApiController::update` | bare `DeviceResource` (no envelope) | ✅ aligned (resource auto-wraps) |
+| `settings.vue:281,296` table | `GET\|POST /api/device/table` | `device.table` | `DeviceApiController::getTableByIp` | `{success, device, table, ip_used}` via `ApiResponse::success` | ✅ aligned |
+| `Order.ts:506` submitOrder | `POST /api/devices/create-order` | `api.devices.create.order` | `DeviceOrderApiController::__invoke` | 201 `{success, order: DeviceOrderResource}`; 409 `{success:false, message, order}`; 422/503/500 `{success:false, message, code?}` | ✅ aligned |
+| `Order.ts:685` / `usePollingFallback.ts:51` status check | `GET /api/device-order/by-order-id/{orderId}` | (unnamed) | `OrderApiController::showByExternalId` | `{success, order: DeviceOrderResource}` | ✅ aligned |
+| `Order.ts:729` submitRefill | `POST /api/order/{orderId}/refill` | `api.order.refill` | `OrderApiController::refill` | 200 `{success, order: DeviceOrderResource, created}`; errors `{success:false, message, error?, code?}` | ✅ aligned — payload sends only `{menu_id, quantity}` per item; controller's `name`-based fallback lookup is dead code |
+| (not called by PWA) | `POST /api/order/{orderId}/printed` | `api.order.printed` | `OrderApiController::markPrinted` | `{success, message?, data?}` | n/a — print-bridge only |
+| (not called by PWA) | `GET /api/order/{orderId}/print` | (unnamed) | `OrderApiController::print` | `{order:{...}, tablename, items}` — **no `success` envelope at all** | ⚠️ print-bridge only, third distinct envelope style in one controller |
+| `useDeviceAuth.ts` (unused?) | n/a | n/a | `DeviceAuthApiController::verifyToken()` | same `{valid,...}` shape as the closure | ❌ dead controller method — route never points here (closure at `api.php:140` wins) |
+| `packages()` callers (PWA package browsing) | `GET /api/v2/tablet/packages` | `api.v2.tablet.packages` | `TabletApiController::packages` | `{success, message, data:[Package...]}` | ⚠️ structurally aligned, data-incomplete — see §2/§9 (Package Builder field gap vs. `MenuResource`) |
+| `categoryMenus()` callers | `GET /api/v2/tablet/categories/{slug}/menus` | `api.v2.tablet.category.menus` | `TabletApiController::categoryMenus` | `{success, message, data: MenuResource[]}` | ✅ shape aligned; **as of `e75f617` (2026-06-28) content is pivot-driven for admin-curated categories** (§3.3) — corrects this audit's original note, which described the pre-fix bypass |
+
+### Finding A (code-confirmed): `settings.vue:380` checks a field that can never exist
+
+`settings.vue:379-385`:
+```js
+// Check if backend returned success: false (authentication failed)
+if (response.data?.success === false) {
+    tokenStatus.value = "invalid"
+    tokenMessage.value = response.data?.debug?.message || "Authentication failed on server"
+```
+The backend's `/token/verify` (the inline closure at `routes/api.php:140-172`, which actually
+serves this route — `DeviceAuthApiController::verifyToken()` is dead code, never wired to a
+route) only ever returns `{valid: bool, ...}`. It has no `success` key in any code path.
+Failure cases return HTTP 400/401, which axios throws on and which are caught by the separate
+`catch` block (lines 393-403), not this branch. So `response.data?.success === false` is never
+true on a 200 response — unreachable dead code, not an active bug, but a real naming-convention
+drift (`success` vs `valid`).
+
+### Other shape inconsistencies inside `DeviceAuthApiController` (not PWA-caused)
+- `logout()` returns `{message}` only — breaks the `{success, ...}` convention every sibling
+  method follows.
+- `refresh()` omits `ip_used`, present in `register()`/`authenticate()`.
+- `OrderApiController::print()` (print-bridge endpoint) returns no `success`/`message`
+  envelope at all — a third, distinct convention inside one app.
+- `DeviceAuthApiController::verifyToken()` (the class method) is unreferenced — the route table
+  points at an inline closure with the same shape instead.
+
+### Net assessment
+
+The vast majority of PWA↔Nexus API calls are correctly wired — every device-auth,
+order-creation, refill, and status-polling call site matches its backend response shape
+field-for-field, including edge cases (409 resumable order, 503 no-POS-session, terminal-status
+rejection). The concrete, demonstrable misalignments are narrower than a blanket "misaligned
+data" framing would suggest:
+- **Finding A** (`settings.vue:380` checking `.success` on a `/token/verify` response that only
+  ever has `.valid`) — cosmetic/dead-code, not user-facing breakage.
+- **Convention drift inside the backend itself** (`logout()`'s missing `success` key,
+  `print()`'s missing envelope entirely, dead `verifyToken()` controller method) — not
+  PWA-caused.
+- **The remaining higher-impact gap is the Package Builder data-completeness gap** (§2/§9):
+  `packages()`/`packageDetails()` return a thin shape missing most `MenuResource` fields
+  (`img_url`, `price`, `tax`, `receipt_name`, etc.) that `categoryMenus()` already returns via
+  the same resource. The `categoryMenus()` pivot-bypass gap that this audit originally flagged
+  alongside it has since been fixed (`e75f617`) and is corrected above.
+
+This audit is read-only — no code changes made in this pass.
+
+---
+
+## Appendix B: End-to-End Order Transaction Sweep (registration → completion)
+
+A full-cycle sweep of every feature, workflow, and API call from device registration through
+order completion — what data is required at each step, every broadcast/event, and the exact
+money calculation formula. Every claim below is sourced from a directly-read file.
+
+### 1. Registration → Auth → Table Assignment
+- `POST /api/devices/register` → `DeviceAuthApiController::register` — DB transaction, claims
+  a `security_code`, issues a 30-day Sanctum token, resolves `branch_id`/table. Returns
+  `{success, token, device, table, expires_at, ip_used, broadcasting}` (`broadcasting` is
+  `BroadcastConfig::clientPayload()`).
+- `Device` model: `device_uuid` is immutable after creation — `booted()` hooks assign it once
+  on `creating` and throw if a later `updating` call tries to change it. `deleting` cascades
+  token deletion.
+- `GET/POST /api/devices/login` → `authenticate()` — IP-based device lookup, rejects devices
+  that still carry an unclaimed `security_code`.
+- `GET /api/device/table` / `POST /api/device/table` → `DeviceApiController::getTableByIp` →
+  `{success, device, table, ip_used}`.
+- `BroadcastConfig::clientPayload()`: returns `{driver:'reverb', key, host, port, scheme,
+  auth_endpoint:'/broadcasting/auth'}`; explicit code comment "NEVER include: secret, app_id
+  (server-only values)"; returns `[]` if no Reverb key configured.
+
+### 2. Session (POS-shared, not per-device)
+- `KryptonSession` (`pos` DB connection, table `sessions`): open = `date_time_closed IS NULL`.
+  **One session is shared across every tablet in a branch** — device isolation happens at the
+  order level (`device_id` on `DeviceOrder`), not at the session level.
+- `session.pos` middleware (`CheckSessionIsOpened`) gates order-sensitive routes only; returns
+  HTTP 503 if `KryptonContextService::getData()['session_id']` is empty or a
+  `SessionNotFoundException` is thrown. Not applied to login/health/config/token/heartbeat/
+  print-bridge/session routes.
+- `GET /api/session/latest` → `SessionApiController::current`. `SessionApiController::forceEnd()`
+  cross-checks open orders against `DB::connection('pos')->table('orders')` before allowing
+  finalization (blocks unless `force=true` and POS genuinely shows orders still open), then
+  dispatches `OrderCompleted`/`OrderVoided`/`OrderStatusUpdated` per affected order before
+  `doSessionReset()`.
+- `KryptonContextService::getData()` sources `session_id`/`employee_log_id`/`tax_set_id`/
+  `price_level_id` from POS tables (`sessions`, `employee_logs`, `revenues`,
+  `terminal_sessions`) — never from Nexus's own tables.
+
+### 3. Menu / Package Browsing
+- `GET /api/v2/tablet/packages`, `GET /api/v2/tablet/packages/{id}`, `GET
+  /api/v2/tablet/categories`, `GET /api/v2/tablet/categories/{slug}/menus`, `GET
+  /api/v2/tablet/meat-categories` — all via `TabletApiController`, all wrapped in
+  `ApiResponse::success()`'s `{success, message, data}` envelope. Exact shapes are documented
+  in §6 above; the package-field-completeness gap is documented in §9 (G-series) rather than
+  repeated here.
+
+### 4. Order Creation (with full calculation trace)
+- `POST /api/devices/create-order` → `DeviceOrderApiController::__invoke`. Tablet sends
+  intent-only: `{guest_count, package_id, items:[{menu_id, quantity}]}` (CLAUDE.md hard rule).
+  `expandIntentPayload()` is the sole translator from this intent shape into the internal
+  package+modifier structure the backend persists.
+- Idempotency: client sends `X-Idempotency-Key` (persisted client-side in `sessionStorage` as
+  `woosoo_order_idem_key`). Server: `Cache::add()` creates a 30-second in-flight lock, plus a
+  24-hour response-replay cache — a retried request with the same key returns the original
+  response rather than double-creating an order.
+- Guards: rejects if the device already has a PENDING/CONFIRMED order (409, includes the
+  existing `order` in the body so the PWA can resume); requires an open POS session
+  (`session.pos` middleware, 503 `SESSION_NOT_FOUND` otherwise).
+- Persistence: `OrderService::processOrder()` and `CreateOrderedMenu::handle()` confirm the
+  package+modifier expansion (top-level package item + nested modifier rows from
+  `items[].modifiers[]`) and call the POS stored procedure `CALL create_ordered_menu(...)`
+  (stubbed in test environments).
+- **Calculation formula** (identical at every money-touching call site):
+  - `itemTotal = round(unitPrice * quantity, 2)`
+  - `taxAmount = round(itemTotal * taxRate, 2)`, `taxRate = config('api.krypton.tax_rate', 0.10)`
+  - `subTotal = itemTotal + taxAmount`
+  - Order-level `subtotal`/`tax` = sums of the per-item values; `total = subtotal + tax`
+  - `unitPrice` is always read from `KryptonMenu::find($menuId)->price` — POS-authoritative,
+    never client-supplied.
+- **Server-side totals enforcement**: if the client submits its own `subtotal`/`tax`/
+  `total_amount`, the server always overwrites them with its own calculation. A mismatch only
+  triggers `Log::warning('Client totals drift detected...')` — the request is **not** rejected.
+- `DeviceOrder` model: `$guarded = ['items','meta']` blocks the legacy JSON columns from
+  mass-assignment; `setStatusAttribute()` enforces `OrderStatus::canTransitionTo()` on existing
+  models (throws on an invalid transition) but skips validation during `creating`; `boot()`
+  auto-resolves `branch_id` and generates `order_uuid`/`order_number`
+  (`'ORD-{YYYYMMDD}-{UUID last 6 chars}'`).
+- `OrderStatus` enum: 9 values — `pending, confirmed, in_progress, ready, served`
+  (non-terminal, all must be covered by tablet active-order recovery per CLAUDE.md) plus
+  `completed, cancelled, voided, archived` (terminal). **`archived` is defined and checked
+  against in scopes/comparisons but never actually assigned by any live code path** (confirmed
+  via exhaustive grep). The frontend's narrower terminal-status checks are therefore currently
+  harmless — a latent inconsistency against `Order.ts`'s `TERMINAL_ORDER_STATUSES` constant
+  (which does include `archived`), not an active bug.
+- Success: 201 `{success, order: DeviceOrderResource}`, broadcasts `OrderCreated`.
+
+### 5. Refill
+- `POST /api/order/{orderId}/refill`, body `{items:[{menu_id, quantity}], client_submission_id}`.
+- `OrderApiController::refill` runs a durable 5-state machine — `PROCESSING → POS_CREATED →
+  MIRRORED → PRINT_EVENT_CREATED → COMPLETED` — via `DurableRefillGuard`, replay-safe
+  (dispatches `PrintRefill`/`OrderStatusUpdated` only on first submission of a given
+  `client_submission_id`). Rejects terminal-status orders with 409 `ORDER_NOT_ACTIVE`.
+- Same `unitPrice`/tax/subtotal formula as order creation, sourced the same way.
+- `DeviceOrderItems` model: pricing fields (`price`,`subtotal`,`tax`,`discount`,`total`) all
+  `decimal:4`; `status` cast to `ItemStatus` enum.
+
+### 6. Service Requests — confirmed data-integrity gap
+- `POST` to the service-request endpoint → `ServiceRequestApiController::store()` — validates
+  via `StoreServiceRequest`, checks device ownership of the order (403 on mismatch), creates
+  inside `DB::transaction`, broadcasts `ServiceRequestNotification` inside
+  `DB::afterCommit(fn () => broadcast(new ServiceRequestNotification($serviceRequest))->toOthers())`.
+  All other CRUD methods on this controller are empty stubs.
+- `StoreServiceRequest::rules()`:
+  ```php
+  return [
+      'table_service_id' => ['required', 'integer'],
+      'order_id' => ['required', 'exists:device_orders,order_id', 'integer'],
+  ];
+  ```
+  `table_service_id` has **no `exists:table_services,id` check.** `menu.vue`'s
+  `getServiceTypeId()` hardcodes a client-side map (`{clean:1, water:2, billing:3, support:4}`)
+  and is never cross-checked against real `table_services` rows, despite
+  `TableServiceApiController::index()` existing and able to supply them. A wrong client-side
+  guess would silently create a service request with a mismatched/nonexistent service type —
+  no validation error surfaced anywhere.
+
+### 7. Broadcast Channels — full cross-check
+- `routes/channels.php`: exactly 5 registered channels — `device.{deviceId}`,
+  `orders.{orderId}`, `service-requests.{orderId}`, `admin.orders`, `admin.service-requests`.
+  Each has a closure-based authorization check (device-ownership query, or `$user->is_admin`
+  for the two admin channels).
+- **Confirmed dispatched somewhere in `app/`**: `OrderCreated`, `OrderStatusUpdated`,
+  `OrderCompleted`, `OrderCancelled`, `OrderVoided`, `PaymentCompleted`, `PrintOrder`,
+  `PrintRefill`, `SessionReset`, `AppControlEvent`, `PackageUpdated` (from
+  `PackageController::broadcastPackageUpdated()`), `ServiceRequestNotification` (via
+  `broadcast(new X())->toOthers()`, not `::dispatch()`).
+  **No dispatch call site found anywhere in `app/`** (dead/defined-but-unused):
+  `Kds\ItemToggled`, `Menu\MenuUpdated`, `Menu\PackageUpdated` (distinct from the dispatched
+  `Order\...`-namespace `PackageUpdated` — two different classes share the tail name),
+  `Order\OrderDetailsUpdated`.
+- `Order\OrderDetailsUpdated` is broadcast-defined **and** frontend-listened
+  (`useBroadcasts.ts` subscribes to `.order.details.updated`) but has zero backend dispatch
+  sites — a dead listener on the frontend, not a missing-listener bug.
+- `NEX-CASE-013`: a code comment in `OrderStatusUpdated::broadcastOn()` documents a
+  previously-fixed bug where the event only broadcast on `device.{device_id}`, silently
+  dropping status updates for tablets subscribed only to `orders.{orderId}`. Now broadcasts on
+  both channels — historical evidence of this exact channel-mismatch bug class recurring.
+
+### 8. KDS State Machine
+- `KdsController::advance()` auto-promotes `pending→confirmed`, then `confirmed→in_progress`,
+  and treats `in_progress→ready→served` as one atomic action gated on every item having
+  `done=true`. `recall()` allows `served→in_progress` only, capped at `MAX_RECALLS=5`. `void()`
+  allows any non-terminal status → `voided`, with a best-effort (non-blocking) POS void call.
+  All transitions wrapped in `DB::transaction()` + `lockForUpdate()` to prevent
+  concurrent-write races; broadcasts dispatched via `app(OrderBroadcaster::class)` after
+  relations are refreshed/reloaded.
+
+### 9. Money / Calculation — single source of truth
+- Identical formula at every money-touching call site: `itemTotal = round(unitPrice*qty,2)` →
+  `taxAmount = round(itemTotal*taxRate,2)` → `subTotal = itemTotal+taxAmount` → order totals
+  are sums of item-level values. `unitPrice` is always `KryptonMenu::find($menuId)->price` —
+  POS is the only source for price; Nexus never originates a price used in a real calculation.
+  Client-submitted totals are logged-but-overridden, never trusted, never rejected outright.
+
+### Net findings carried forward
+1. `archived` `OrderStatus` is dead-but-defined — a known latent gap, not a bug to fix in this
+   task.
+2. Service-request `table_service_id` has no FK-style validation against `table_services` —
+   confirmed, real, currently silent-failure-only.
+3. `Order\OrderDetailsUpdated` is a dead broadcast (defined + frontend-subscribed, never
+   dispatched).
+4. `ServiceRequestNotification` IS dispatched (via `broadcast(new X())->toOthers()`), correcting
+   any grep-based check that searches only for `::dispatch()` syntax.
+
+This sweep is read-only — no code changes made in this pass.
