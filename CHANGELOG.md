@@ -5,6 +5,7 @@ Format: Keep a Changelog; commits follow Conventional Commits.
 
 ### Bug Fixes
 
+- Remove stale woosoo:sync-package-modifiers reference (command was removed during the package_modifiers → package_allowed_menus consolidation)
 - Same-origin URL generation across multi-host access
 - Address remaining CodeRabbit review threads
 - SaveQuietly for PENDING→CONFIRMED; unbind pusher handlers on unmount

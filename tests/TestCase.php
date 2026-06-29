@@ -163,10 +163,20 @@ abstract class TestCase extends BaseTestCase
                     $table->string('receipt_name')->nullable();
                     $table->decimal('price', 8, 2)->default(0);
                     $table->integer('menu_group_id')->nullable();
+                    $table->integer('menu_tax_type_id')->nullable();
                     $table->boolean('is_modifier_only')->default(false);
                     $table->boolean('is_available')->default(true);
                     $table->boolean('is_discountable')->default(false);
                     $table->boolean('is_taxable')->default(true);
+                });
+            }
+
+            if (! $schema->hasTable('taxes')) {
+                $schema->create('taxes', function (Blueprint $table) {
+                    $table->increments('id');
+                    $table->string('name')->nullable();
+                    $table->decimal('percentage', 5, 2)->default(0);
+                    $table->integer('rounding')->default(0);
                 });
             }
 

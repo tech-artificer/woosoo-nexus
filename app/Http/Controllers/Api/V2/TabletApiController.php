@@ -12,6 +12,7 @@ use App\Models\TabletCategory;
 use App\Repositories\Krypton\MenuRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -109,11 +110,12 @@ class TabletApiController extends Controller
                 $kryptonMenus = collect([]);
                 if (! empty($kryptonMenuIds)) {
                     try {
-                        $kryptonMenus = Menu::query()
-                            ->select('id', 'name', 'receipt_name', 'price', 'is_discountable', 'is_taxable')
+                        $kryptonMenus = Menu::with(['tax'])
                             ->whereIn('id', $kryptonMenuIds)
                             ->get()
                             ->keyBy('id');
+
+                        Menu::attachUploadedImages($kryptonMenus);
                     } catch (\Exception $e) {
                         Log::warning('V2 Tablet API - POS menus unavailable: '.$e->getMessage());
                     }
@@ -123,23 +125,7 @@ class TabletApiController extends Controller
                     $anchorMenu = $pkg->krypton_menu_id ? $kryptonMenus->get((int) $pkg->krypton_menu_id) : null;
 
                     $allowedMenus = $pkg->allowedMenus->sortBy('sort_order')->map(
-                        function (PackageAllowedMenu $am) use ($kryptonMenus): array {
-                            $kMenu = $kryptonMenus->get($am->krypton_menu_id);
-
-                            return [
-                                'id' => $am->id,
-                                'krypton_menu_id' => $am->krypton_menu_id,
-                                'menu_name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$am->krypton_menu_id}",
-                                'menu_type' => $am->menu_type,
-                                'meat_category_code' => $am->meat_category_code,
-                                'extra_price' => (float) $am->extra_price,
-                                'quantity_limit' => (int) $am->quantity_limit,
-                                'is_required' => (bool) $am->is_required,
-                                'is_default' => (bool) $am->is_default,
-                                'is_active' => (bool) $am->is_active,
-                                'sort_order' => (int) $am->sort_order,
-                            ];
-                        }
+                        fn (PackageAllowedMenu $am) => $this->buildAllowedMenuEntry($am, $kryptonMenus)
                     )->values()->all();
 
                     return [
@@ -153,6 +139,7 @@ class TabletApiController extends Controller
                         'is_active' => (bool) $pkg->is_active,
                         'is_most_popular' => (bool) $pkg->is_most_popular,
                         'sort_order' => (int) $pkg->sort_order,
+                        'menu_item' => $anchorMenu ? (new MenuResource($anchorMenu))->resolve() : null,
                         'allowed_menus' => $allowedMenus,
                     ];
                 })->values()->all();
@@ -290,7 +277,7 @@ class TabletApiController extends Controller
             $kryptonMenus = collect([]);
             if (! empty($kryptonMenuIds)) {
                 try {
-                    $kryptonMenus = Menu::with(['image'])
+                    $kryptonMenus = Menu::with(['tax'])
                         ->whereIn('id', $kryptonMenuIds)
                         ->get()
                         ->keyBy('id');
@@ -305,23 +292,9 @@ class TabletApiController extends Controller
 
             $allowedMenusByType = $dbPackage->allowedMenus->sortBy('sort_order')
                 ->groupBy('menu_type')
-                ->map(fn ($items) => $items->map(function (PackageAllowedMenu $am) use ($kryptonMenus): array {
-                    $kMenu = $kryptonMenus->get($am->krypton_menu_id);
-
-                    return [
-                        'id' => $am->id,
-                        'krypton_menu_id' => $am->krypton_menu_id,
-                        'menu_name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$am->krypton_menu_id}",
-                        'menu_type' => $am->menu_type,
-                        'meat_category_code' => $am->meat_category_code,
-                        'extra_price' => (float) $am->extra_price,
-                        'quantity_limit' => (int) $am->quantity_limit,
-                        'is_required' => (bool) $am->is_required,
-                        'is_default' => (bool) $am->is_default,
-                        'is_active' => (bool) $am->is_active,
-                        'sort_order' => (int) $am->sort_order,
-                    ];
-                })->values()->all());
+                ->map(fn ($items) => $items->map(
+                    fn (PackageAllowedMenu $am) => $this->buildAllowedMenuEntry($am, $kryptonMenus)
+                )->values()->all());
 
             $response = [
                 'package' => [
@@ -331,6 +304,7 @@ class TabletApiController extends Controller
                     'description' => $dbPackage->description,
                     'base_price' => $this->resolvePackageBasePrice($dbPackage, $anchorMenu),
                     'is_most_popular' => (bool) $dbPackage->is_most_popular,
+                    'menu_item' => $anchorMenu ? (new MenuResource($anchorMenu))->resolve() : null,
                     'limits' => [
                         'meat' => ['min' => $dbPackage->min_meat, 'max' => $dbPackage->max_meat],
                     ],
@@ -386,13 +360,13 @@ class TabletApiController extends Controller
 
             $cacheKey = self::categoryMenusCacheKey($normalizedSlug);
 
-            $menus = Cache::remember($cacheKey, self::CATEGORIES_CACHE_TTL, function () use ($normalizedSlug) {
+            $result = Cache::remember($cacheKey, self::CATEGORIES_CACHE_TTL, function () use ($normalizedSlug) {
                 if ($normalizedSlug === self::MEATS_SLUG) {
-                    return $this->menuRepository->getMenusByGroupId(self::MEATS_GROUP_ID);
+                    return ['menus' => $this->menuRepository->getMenusByGroupId(self::MEATS_GROUP_ID), 'featured' => []];
                 }
 
                 if (! $this->hasActiveDbCategories()) {
-                    return $this->resolveLegacyCategoryMenus($normalizedSlug) ?? Menu::hydrate([]);
+                    return ['menus' => $this->resolveLegacyCategoryMenus($normalizedSlug) ?? Menu::hydrate([]), 'featured' => []];
                 }
 
                 $category = TabletCategory::query()
@@ -402,9 +376,10 @@ class TabletApiController extends Controller
                     ->firstOrFail();
 
                 $menuIds = $category->menuPivots->pluck('krypton_menu_id')->filter()->values();
+                $featured = $category->menuPivots->pluck('is_featured', 'krypton_menu_id')->all();
 
                 if ($menuIds->isEmpty()) {
-                    return Menu::hydrate([]);
+                    return ['menus' => Menu::hydrate([]), 'featured' => []];
                 }
 
                 try {
@@ -415,21 +390,39 @@ class TabletApiController extends Controller
                 } catch (\Exception $e) {
                     Log::warning("V2 Tablet API - POS menus unavailable for category {$normalizedSlug}: ".$e->getMessage());
 
-                    return Menu::hydrate([]);
+                    return ['menus' => Menu::hydrate([]), 'featured' => []];
                 }
 
-                return $menuIds
+                $missingIds = $menuIds->reject(fn (int $id) => $kryptonMenus->has($id))->values();
+                if ($missingIds->isNotEmpty()) {
+                    Log::warning('V2 Tablet API - category menu krypton_menu_id(s) not found', [
+                        'category' => $normalizedSlug,
+                        'krypton_menu_ids' => $missingIds->all(),
+                    ]);
+                }
+
+                $menus = $menuIds
                     ->map(fn (int $id) => $kryptonMenus->get($id))
                     ->filter()
                     ->values();
+
+                return ['menus' => $menus, 'featured' => $featured];
             });
+
+            $menus = $result['menus'];
+            $featured = $result['featured'];
 
             if ($menus->isNotEmpty()) {
                 Menu::attachUploadedImages($menus);
             }
 
+            $data = $menus->map(fn (Menu $menu) => array_merge(
+                (new MenuResource($menu))->resolve(),
+                ['is_featured' => (bool) ($featured[$menu->id] ?? false)]
+            ))->values()->all();
+
             return ApiResponse::success(
-                MenuResource::collection($menus),
+                $data,
                 "Category '$normalizedSlug' menus retrieved successfully"
             );
         } catch (\Exception $e) {
@@ -444,10 +437,10 @@ class TabletApiController extends Controller
         return TabletCategory::query()->where('is_active', true)->exists();
     }
 
-  /**
+    /**
      * Bootstrap fallback when no admin categories exist — legacy POS group mapping.
      */
-    private function resolveLegacyCategoryMenus(string $normalizedSlug): ?\Illuminate\Support\Collection
+    private function resolveLegacyCategoryMenus(string $normalizedSlug): ?Collection
     {
         $legacySlug = match ($normalizedSlug) {
             'dessert' => 'desserts',
@@ -476,5 +469,37 @@ class TabletApiController extends Controller
         }
 
         return (float) ($package->base_price ?? 0);
+    }
+
+    /**
+     * @param  Collection<int, Menu>  $kryptonMenus
+     * @return array<string, mixed>
+     */
+    private function buildAllowedMenuEntry(PackageAllowedMenu $am, Collection $kryptonMenus): array
+    {
+        $kMenu = $kryptonMenus->get($am->krypton_menu_id);
+
+        if (! $kMenu) {
+            Log::warning('V2 Tablet API - allowed menu krypton_menu_id not found', [
+                'krypton_menu_id' => $am->krypton_menu_id,
+                'package_allowed_menu_id' => $am->id,
+            ]);
+        }
+
+        $menuFields = $kMenu ? (new MenuResource($kMenu))->resolve() : [];
+
+        return array_merge($menuFields, [
+            'id' => $am->id,
+            'krypton_menu_id' => $am->krypton_menu_id,
+            'menu_name' => $kMenu?->name ?? $kMenu?->receipt_name ?? "Menu #{$am->krypton_menu_id}",
+            'menu_type' => $am->menu_type,
+            'meat_category_code' => $am->meat_category_code,
+            'extra_price' => (float) $am->extra_price,
+            'quantity_limit' => (int) $am->quantity_limit,
+            'is_required' => (bool) $am->is_required,
+            'is_default' => (bool) $am->is_default,
+            'is_active' => (bool) $am->is_active,
+            'sort_order' => (int) $am->sort_order,
+        ]);
     }
 }

@@ -106,6 +106,50 @@ class TabletPackagesApiTest extends TestCase
         $this->assertEquals('meat', $response->json('data.0.allowed_menus.0.menu_type'));
     }
 
+    public function test_packages_endpoint_allowed_menus_include_rich_menu_fields(): void
+    {
+        $device = $this->authenticatedDevice();
+
+        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
+
+        DB::connection('pos')->table('taxes')->insert([
+            'id' => 1,
+            'name' => 'VAT',
+            'percentage' => 12,
+            'rounding' => 2,
+        ]);
+
+        DB::connection('pos')->table('menus')->insert([
+            'id' => 401,
+            'name' => 'Pork Belly',
+            'receipt_name' => 'P001 Pork Belly',
+            'price' => 120,
+            'menu_group_id' => 34,
+            'menu_tax_type_id' => 1,
+            'is_modifier_only' => true,
+            'is_available' => true,
+            'is_taxable' => true,
+        ]);
+
+        $package = Package::factory()->create(['name' => 'Set Meal D', 'is_active' => true]);
+        $package->allowedMenus()->create([
+            'krypton_menu_id' => 401,
+            'menu_type' => 'meat',
+            'sort_order' => 0,
+            'quantity_limit' => 1,
+        ]);
+
+        $response = $this->withToken($this->deviceToken($device), 'Bearer')
+            ->getJson('/api/v2/tablet/packages');
+
+        $response->assertOk();
+        $entry = $response->json('data.0.allowed_menus.0');
+        $this->assertEquals('P001 Pork Belly', $entry['receipt_name']);
+        $this->assertArrayHasKey('img_url', $entry);
+        $this->assertArrayHasKey('price', $entry);
+        $this->assertEquals('VAT', $entry['tax']['name']);
+    }
+
     public function test_packages_response_includes_meat_limits_and_most_popular(): void
     {
         $device = $this->authenticatedDevice();
