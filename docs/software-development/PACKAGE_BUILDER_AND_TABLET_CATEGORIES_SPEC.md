@@ -103,18 +103,21 @@ prefix convention on `krypton_woosoo.menus` rows:
 | `B` (e.g. `B1`, `B2`) | BEEF |
 | `C` (e.g. `C1`, `C2`) | CHICKEN |
 
-This is currently implemented client-side only in
-`tablet-ordering-pwa/utils/packageModifierGroups.ts` (`classifyPackageModifier` function),
-which first checks `receipt_name` prefix, then falls back to `groupName`/`name` keyword
-matching.
+**What the running app uses:** `groupAllowedMenusByCategoryCode` and `groupAllowedMenuPreviews`
+in `tablet-ordering-pwa/utils/packageModifierGroups.ts` (lines ~109/~130), imported by
+`tablet-ordering-pwa/components/PackageCard.vue:5` and
+`tablet-ordering-pwa/pages/order/packageSelection.vue:8`. Both read
+`package_allowed_menus.meat_category_code`, not `receipt_name`.
 
-**Known gap — `meat_category_code` drift:** `package_allowed_menus.meat_category_code` is a
-free-text field entered by the admin in `StorePackageRequest`/`UpdatePackageRequest`
-(`app/Http/Controllers/Admin/PackageController.php`). It is not derived from `receipt_name`.
-The PWA's `groupAllowedMenusByCategoryCode` function reads this field directly (v2 API path).
-If an admin enters a code that does not match the `receipt_name` prefix for the same POS menu,
-the two sources diverge. The `receipt_name` prefix is authoritative; `meat_category_code`
-should agree with it. No server-side validation enforces this today.
+`classifyPackageModifier`, `groupPackageModifiers`, and `groupPackageModifierPreviews`
+(same file, lines ~1–79) implement the `receipt_name`-prefix rule but are **dead code** —
+referenced only by their unit test, never by any live component.
+
+**`meat_category_code` is now auto-derived** (commit `d96fd8a`):
+`PackageController::replaceAllowedMenus` fetches `receipt_name` alongside the validation
+query and derives the code from its first character (`P`→PORK, `B`→BEEF, `C`→CHICKEN).
+Explicit codes in the payload still win for backwards-compatibility. Existing rows need a
+one-time re-sync via admin Packages → Manage Meats to backfill the code. See G2 in §9.
 
 ### 2.4 `ModifierDescription` entity
 
@@ -156,34 +159,26 @@ bypass (see §3.3) and excludes it from `GET /categories` DB results and from th
 The admin UI (`TabletCategoryController`) uses this pivot to let operators manually select
 which Krypton POS menus appear in each category and in what order.
 
-### 3.3 Known gap — `categoryMenus` does not use the pivot
+### 3.3 Category menu resolution (pivot wired as of `e75f617`)
 
-`GET /api/v2/tablet/categories/{slug}/menus` (`TabletApiController::categoryMenus`) does
-**not** read from `tablet_category_menu`. Instead it uses a hardcoded Krypton POS group-ID
-map for a fixed set of four slugs:
+`GET /api/v2/tablet/categories/{slug}/menus` (`TabletApiController::categoryMenus`) now
+reads from the `tablet_category_menu` pivot for DB-backed non-meats slugs when active
+categories exist (`hasActiveDbCategories` guard). Admin-curated menu selection is honoured
+for content delivery.
+
+The `meats` slug always bypasses the pivot and resolves via POS group 34 directly:
 
 | Slug | Resolution |
 |---|---|
-| `meats` | `menuRepository->getMenusByGroupId(34)` (POS group "Meat Order") |
-| `sides` | `menuRepository->getMenusByGroupId(29)` |
-| `beverage` | `menuRepository->getMenusByGroupId(30)` (mapped via `beverage → drinks`) |
-| `dessert` | `menuRepository->getMenusByCourse('dessert')` (mapped via `dessert → desserts`) |
+| `meats` | `menuRepository->getMenusByGroupId(34)` — always hardcoded, bypasses pivot |
+| any other active DB slug | `tablet_category_menu` pivot rows → `MenuResource` |
 
-Any other slug that reaches this endpoint returns 404 (when DB categories exist) or passes
-through to `resolveLegacyCategoryMenus()` which also only handles the four slugs above.
-
-**Product-decision context:** The CHANGELOG entry "Strict tablet contract — no legacy
-fallback, fixed POS category mapping" predates the admin-curation build. At the time it was a
-deliberate design decision; subsequent work added the admin pivot. The user's stated current
-intent is that "administrators manually select the items per menu category," which the pivot
-model supports for metadata but the endpoint does not yet honour for content delivery. This is
-a **product decision to revisit**, not just a bug. Until the endpoint is wired to the pivot,
-the admin-curated menu selection has no effect on what the tablet receives.
+Any slug not found in the pivot (and not `meats`) returns 404.
 
 **Fallback behaviour (no DB categories):** When no active non-meats rows exist in
 `tablet_categories`, `categories()` returns a three-item hardcoded list
-(`sides`/`dessert`/`beverage`) and `categoryMenus` uses `resolveLegacyCategoryMenus`. This
-is a bootstrap fallback only.
+(`sides`/`dessert`/`beverage`) and `categoryMenus` falls back to the legacy hardcoded
+POS-group-ID map. This is a bootstrap fallback only.
 
 ---
 
@@ -426,11 +421,12 @@ unplanned defect.
 
 | # | Gap | Location | Impact |
 |---|---|---|---|
-| G1 | `categoryMenus` endpoint bypasses `tablet_category_menu` pivot; uses hardcoded POS group-ID map | `TabletApiController::categoryMenus`, `resolveLegacyCategoryMenus` | Admin curation of per-category menus has no effect on what the tablet receives |
-| G2 | `meat_category_code` (admin-entered) can drift from `receipt_name` prefix (authoritative) | `package_allowed_menus.meat_category_code`, `StorePackageRequest`, `UpdatePackageRequest` | PWA's `groupAllowedMenusByCategoryCode` may disagree with `classifyPackageModifier` heuristic |
+| G1 | **Resolved** (`e75f617`): `categoryMenus` now reads from the `tablet_category_menu` pivot for DB-backed non-meats slugs. The `meats` slug still resolves via POS group 34 directly. Bootstrap fallback (hardcoded group IDs) applies only when no active DB categories exist. | `TabletApiController::categoryMenus`, `::hasActiveDbCategories`, `tablet_category_menu` | Admin curation is now respected for non-meats DB categories. |
+| G2 | **Partially resolved** (`d96fd8a`): `meat_category_code` is now auto-derived from `receipt_name` prefix by `replaceAllowedMenus`. Existing rows without a code need a one-time re-sync via admin Packages → Manage Meats. Explicit payload codes still override derivation (backwards-compat). | `PackageController::replaceAllowedMenus`, `package_allowed_menus.meat_category_code` | New saves are correct; legacy rows may still carry null or mismatched codes until backfilled. |
 | G3 | Stale `krypton_menu_id` references produce silent fallback display text, no admin warning | `TabletApiController::packages` (`"Menu #{id}"`), `TabletApiController::categoryMenus` (item silently dropped) | Admin has no visibility into orphaned POS references |
 | G4 | `TabletApiController` docblock calls endpoints "legacy" — no team decision on replacement | `TabletApiController` class docblock | Spec may become obsolete if API surface is retired |
 | G5 | Category mutations do not broadcast a Reverb event | `TabletCategoryController` | Tablets pick up category changes only on next page load or cache TTL expiry (max 5 min lag) |
+| G6 | `GET /api/v2/tablet/packages` and `/packages/{id}` return a thin hand-built shape for `allowed_menus[]` entries, omitting `img_url`, `price`, `cost`, `receipt_name`, `is_taxable`, `is_modifier`, `is_modifier_only`, `isMod`, `isModOnly`, `is_discountable`, and `tax{}` — all fields `MenuResource` already exposes and `categoryMenus()` already uses. `packageDetails()` loads `Menu::with(['image'])` but discards the Krypton row except for the display name. | `TabletApiController::packages`, `::packageDetails`, `app/Http/Resources/MenuResource.php` | `PackageCard.vue` and `packageSelection.vue`'s modifier inspector always render a `UtensilsCrossed` icon placeholder (no `img_url` reaches the client); `featuredDescription` is synthesized boilerplate. Fix: thread each `$kMenu` through `MenuResource` in both endpoints. |
 
 ---
 
