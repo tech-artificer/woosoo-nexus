@@ -246,12 +246,6 @@ const filteredSyncOptions = computed(() => {
     )
 })
 
-function meatLabelById(menuId: number): string {
-    const match = (props.meatOptions ?? []).find((m) => m.krypton_menu_id === menuId)
-    if (!match) return `Menu #${menuId}`
-    return match.receipt_name ? `${match.name} (${match.receipt_name})` : match.name
-}
-
 function isMenuSelected(menuId: number): boolean {
     return syncForm.allowed_menus.some((m) => m.krypton_menu_id === menuId)
 }
