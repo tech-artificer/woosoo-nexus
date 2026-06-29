@@ -11,6 +11,7 @@ class PackageResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'krypton_menu_id' => $this->krypton_menu_id === null ? null : (int) $this->krypton_menu_id,
             'name' => $this->name,
             'description' => $this->description,
             'base_price' => $this->base_price === null ? null : (float) $this->base_price,

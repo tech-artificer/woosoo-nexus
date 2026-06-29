@@ -693,6 +693,7 @@ class OrderApiController extends Controller
         $items = $order->items()->with('menu')->orderBy('index')->get();
 
         return response()->json([
+            'success' => true,
             'order' => $order->only([
                 'id',
                 'order_id',

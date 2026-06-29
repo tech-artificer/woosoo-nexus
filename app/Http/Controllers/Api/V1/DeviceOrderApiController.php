@@ -14,12 +14,12 @@ use App\Models\DeviceOrder;
 use App\Models\Package;
 use App\Services\AuditLogService;
 use App\Services\Krypton\OrderService;
-use InvalidArgumentException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -251,11 +251,8 @@ class DeviceOrderApiController extends Controller
      * Internal form: { guest_count, items: [{ menu_id: package_id, quantity: guest_count,
      *                   is_package: true, modifiers: [{menu_id, quantity}] }] }
      *
-     * IMPORTANT: package_id must be resolved to krypton_menu_id for POS integration.
-     * The package_id submitted by the tablet can be either:
-     *   - The krypton_menu_id (preferred)
-     *   - The local packages.id (backward compatibility)
-     * We always normalize to krypton_menu_id for the POS ordered_menus insert.
+     * package_id in the tablet intent is always krypton_menu_id (krypton_woosoo.menus.id).
+     * Resolves the active Package row, then expands to POS internal shape.
      */
     private function expandIntentPayload(array $data): array
     {
@@ -277,13 +274,7 @@ class DeviceOrderApiController extends Controller
         $submittedPackageId = (int) $packageIdRaw;
         $guestCount = (int) $guestCountRaw;
 
-        // Resolve submitted package_id to krypton_menu_id
-        // First try to find by krypton_menu_id (preferred), then fall back to local id
-        $package = Package::query()
-            ->where(function ($query) use ($submittedPackageId) {
-                $query->where('krypton_menu_id', $submittedPackageId)
-                      ->orWhere('id', $submittedPackageId);
-            })
+        $package = Package::where('krypton_menu_id', $submittedPackageId)
             ->where('is_active', true)
             ->first();
 
@@ -293,7 +284,7 @@ class DeviceOrderApiController extends Controller
 
         $kryptonMenuId = $package->krypton_menu_id;
         if (! $kryptonMenuId || $kryptonMenuId <= 0) {
-            throw new InvalidArgumentException("Invalid order payload: package has no valid krypton_menu_id.", 422);
+            throw new InvalidArgumentException('Invalid order payload: package has no valid krypton_menu_id.', 422);
         }
 
         $modifiers = [];
@@ -322,10 +313,10 @@ class DeviceOrderApiController extends Controller
 
         $data['items'] = [
             [
-                'menu_id'    => $kryptonMenuId,
-                'quantity'   => $guestCount,
+                'menu_id' => $kryptonMenuId,
+                'quantity' => $guestCount,
                 'is_package' => true,
-                'modifiers'  => $modifiers,
+                'modifiers' => $modifiers,
             ],
         ];
 

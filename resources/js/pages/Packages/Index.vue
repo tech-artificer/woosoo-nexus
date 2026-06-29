@@ -30,10 +30,20 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 
+interface PosMenuSnapshot {
+    krypton_menu_id: number
+    name: string
+    receipt_name?: string | null
+    price: number
+    is_discountable?: boolean
+    is_taxable?: boolean
+}
+
 interface AllowedMenuVm {
     id?: number
     krypton_menu_id: number
     menu_name: string
+    receipt_name?: string | null
     extra_price?: number
     quantity_limit: number
     is_required?: boolean
@@ -44,9 +54,11 @@ interface AllowedMenuVm {
 
 interface PackageVm {
     id: number
+    krypton_menu_id?: number | null
     name: string
     description?: string | null
-    base_price: number
+    base_price: number | null
+    pos_menu?: PosMenuSnapshot | null
     min_meat: number
     max_meat: number
     is_active: boolean
@@ -55,18 +67,12 @@ interface PackageVm {
     allowed_menus: AllowedMenuVm[]
 }
 
-interface MenuOption {
-    id: number
-    name: string
-    receipt_name?: string | null
-    is_modifier_only: boolean
-}
-
 interface PackagesPageProps {
     title: string
     description: string
     packages: PackageVm[]
-    menuOptions: MenuOption[]
+    packageOptions: PosMenuSnapshot[]
+    meatOptions: PosMenuSnapshot[]
 }
 
 const props = defineProps<PackagesPageProps>()
@@ -80,15 +86,16 @@ const editingId = ref<number | null>(null)
 const pendingDelete = ref<PackageVm | null>(null)
 
 const form = useForm({
-    name: '',
+    krypton_menu_id: null as number | null,
     description: '',
-    base_price: 0,
     min_meat: 1,
-    max_meat: 3,
+    max_meat: 5,
     is_active: true,
     is_most_popular: false,
     sort_order: 0,
 })
+
+const packageAnchorSearch = ref('')
 
 const dialogOpen = computed(() => showCreate.value || editingId.value !== null)
 
@@ -108,14 +115,32 @@ function meatList(item: PackageVm): AllowedMenuVm[] {
     return [...(item.allowed_menus ?? [])].sort((a, b) => a.sort_order - b.sort_order)
 }
 
+const selectedPackageAnchor = computed(() => {
+    if (!form.krypton_menu_id) return null
+    return (props.packageOptions ?? []).find((m) => m.krypton_menu_id === form.krypton_menu_id) ?? null
+})
+
+const filteredPackageOptions = computed(() => {
+    const needle = packageAnchorSearch.value.trim().toLowerCase()
+    const options = props.packageOptions ?? []
+    if (!needle) return options
+    return options.filter(
+        (m) =>
+            m.name.toLowerCase().includes(needle) ||
+            String(m.krypton_menu_id).includes(needle) ||
+            (m.receipt_name ?? '').toLowerCase().includes(needle),
+    )
+})
+
 function resetForm(): void {
     showCreate.value = false
     editingId.value = null
+    packageAnchorSearch.value = ''
     form.reset()
     form.clearErrors()
-    form.base_price = 0
+    form.krypton_menu_id = null
     form.min_meat = 1
-    form.max_meat = 3
+    form.max_meat = 5
     form.is_active = true
     form.is_most_popular = false
     form.sort_order = 0
@@ -129,9 +154,8 @@ function openCreate(): void {
 function openEdit(item: PackageVm): void {
     resetForm()
     editingId.value = item.id
-    form.name = item.name
+    form.krypton_menu_id = item.krypton_menu_id ?? null
     form.description = item.description ?? ''
-    form.base_price = item.base_price ?? 0
     form.min_meat = item.min_meat
     form.max_meat = item.max_meat
     form.is_active = item.is_active
@@ -212,25 +236,24 @@ const syncDialogOpen = computed(() => managingPackage.value !== null)
 
 const filteredSyncOptions = computed(() => {
     const needle = menuSyncSearch.value.trim().toLowerCase()
-    if (!needle) return props.menuOptions ?? []
-    return (props.menuOptions ?? []).filter(
+    const options = props.meatOptions ?? []
+    if (!needle) return options
+    return options.filter(
         (m) =>
             m.name.toLowerCase().includes(needle) ||
-            String(m.id).includes(needle) ||
+            String(m.krypton_menu_id).includes(needle) ||
             (m.receipt_name ?? '').toLowerCase().includes(needle),
     )
 })
 
-function menuNameById(menuId: number): string {
-    return (props.menuOptions ?? []).find((m) => m.id === menuId)?.name ?? `Menu #${menuId}`
+function meatLabelById(menuId: number): string {
+    const match = (props.meatOptions ?? []).find((m) => m.krypton_menu_id === menuId)
+    if (!match) return `Menu #${menuId}`
+    return match.receipt_name ? `${match.name} (${match.receipt_name})` : match.name
 }
 
 function isMenuSelected(menuId: number): boolean {
     return syncForm.allowed_menus.some((m) => m.krypton_menu_id === menuId)
-}
-
-function getSyncEntry(menuId: number): SyncEntry | undefined {
-    return syncForm.allowed_menus.find((m) => m.krypton_menu_id === menuId)
 }
 
 function toggleSyncMenu(menuId: number, checked: boolean): void {
@@ -251,13 +274,6 @@ function toggleSyncMenu(menuId: number, checked: boolean): void {
         }
     } else {
         syncForm.allowed_menus = syncForm.allowed_menus.filter((m) => m.krypton_menu_id !== menuId)
-    }
-}
-
-function setSyncEntryQty(menuId: number, qty: number): void {
-    const entry = getSyncEntry(menuId)
-    if (entry) {
-        entry.quantity_limit = Number.isFinite(qty) && qty > 0 ? qty : 1
     }
 }
 
@@ -433,9 +449,45 @@ function submitSyncMenus(): void {
                 </DialogHeader>
                 <form class="flex flex-col gap-4" @submit.prevent="submit">
                     <div class="grid gap-1.5">
-                        <Label for="pkg_name">Name</Label>
-                        <Input id="pkg_name" v-model="form.name" placeholder="e.g. Classic Feast" required />
-                        <p v-if="form.errors.name" class="text-xs text-destructive">{{ form.errors.name }}</p>
+                        <Label for="pkg_pos_menu">POS menu (order storage id)</Label>
+                        <Input
+                            v-model="packageAnchorSearch"
+                            placeholder="Search POS menus by name, receipt code, or ID"
+                            class="mb-2"
+                        />
+                        <div class="max-h-40 overflow-y-auto rounded-md border">
+                            <button
+                                v-for="menu in filteredPackageOptions"
+                                :key="menu.krypton_menu_id"
+                                type="button"
+                                class="flex w-full items-center justify-between gap-2 border-b border-border/40 px-3 py-2.5 text-left text-sm last:border-0 hover:bg-muted/40"
+                                :class="form.krypton_menu_id === menu.krypton_menu_id ? 'bg-woosoo-accent/10' : ''"
+                                @click="form.krypton_menu_id = menu.krypton_menu_id"
+                            >
+                                <span class="min-w-0 truncate font-medium">{{ menu.name }}</span>
+                                <span class="shrink-0 text-xs text-muted-foreground">
+                                    #{{ menu.krypton_menu_id }}
+                                    <span v-if="menu.receipt_name"> · {{ menu.receipt_name }}</span>
+                                </span>
+                            </button>
+                            <p v-if="filteredPackageOptions.length === 0" class="py-4 text-center text-xs text-muted-foreground">
+                                No POS package menus matched.
+                            </p>
+                        </div>
+                        <p v-if="form.errors.krypton_menu_id" class="text-xs text-destructive">{{ form.errors.krypton_menu_id }}</p>
+                    </div>
+
+                    <div
+                        v-if="selectedPackageAnchor"
+                        class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm"
+                    >
+                        <p class="font-medium text-foreground">{{ selectedPackageAnchor.name }}</p>
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            ₱{{ formatPrice(selectedPackageAnchor.price) }} / guest
+                            <span v-if="selectedPackageAnchor.is_discountable"> · discountable</span>
+                            <span v-if="selectedPackageAnchor.is_taxable"> · taxable</span>
+                        </p>
+                        <p class="mt-1 text-[11px] text-muted-foreground">Price and name sync from POS on save.</p>
                     </div>
 
                     <div class="grid gap-1.5">
@@ -444,25 +496,21 @@ function submitSyncMenus(): void {
                         <p v-if="form.errors.description" class="text-xs text-destructive">{{ form.errors.description }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="grid gap-1.5">
-                            <Label for="pkg_price">Base Price (₱)</Label>
-                            <Input id="pkg_price" v-model.number="form.base_price" type="number" min="0" step="0.01" placeholder="449.00" />
-                            <p v-if="form.errors.base_price" class="text-xs text-destructive">{{ form.errors.base_price }}</p>
-                        </div>
-                        <div class="grid gap-1.5">
-                            <Label for="pkg_sort">Display Order</Label>
-                            <Input id="pkg_sort" v-model.number="form.sort_order" type="number" min="0" />
-                        </div>
+                    <div class="grid gap-1.5">
+                        <Label for="pkg_sort">Display Order</Label>
+                        <Input id="pkg_sort" v-model.number="form.sort_order" type="number" min="0" />
                     </div>
 
                     <fieldset class="rounded-md border border-border/60 p-3">
                         <legend class="px-1 text-xs font-semibold text-muted-foreground">Meats per guest (min – max)</legend>
                         <div class="mt-2 flex items-center gap-2">
-                            <Input v-model.number="form.min_meat" type="number" min="0" class="h-8 text-xs" />
+                            <Input v-model.number="form.min_meat" type="number" min="1" max="5" class="h-8 text-xs" />
                             <span class="text-muted-foreground">–</span>
-                            <Input v-model.number="form.max_meat" type="number" min="0" class="h-8 text-xs" />
+                            <Input v-model.number="form.max_meat" type="number" min="1" max="5" class="h-8 text-xs" />
                         </div>
+                        <p v-if="form.errors.min_meat || form.errors.max_meat" class="mt-1 text-xs text-destructive">
+                            {{ form.errors.min_meat || form.errors.max_meat }}
+                        </p>
                         <p class="mt-2 text-[11px] text-muted-foreground">
                             Sides, desserts &amp; drinks are shared across packages — manage them in Tablet Categories.
                         </p>
@@ -504,59 +552,53 @@ function submitSyncMenus(): void {
                 </DialogHeader>
 
                 <div class="flex flex-col gap-4">
+                    <p class="text-xs text-muted-foreground">Meat modifiers only (P/B/C codes). Guest pick count is set on the package.</p>
                     <Input v-model="menuSyncSearch" placeholder="Search by name, receipt code, or ID" />
 
-                    <!-- Selected meats with qty -->
                     <div v-if="syncForm.allowed_menus.length > 0" class="space-y-2">
                         <p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                             Selected ({{ syncForm.allowed_menus.length }})
                         </p>
-                        <div
-                            v-for="entry in syncForm.allowed_menus"
-                            :key="entry.krypton_menu_id"
-                            class="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2"
-                        >
-                            <span class="min-w-0 flex-1 truncate text-sm font-medium">
-                                {{ menuNameById(entry.krypton_menu_id) }}
-                            </span>
-                            <Label class="text-[11px] text-muted-foreground">qty</Label>
-                            <Input
-                                type="number"
-                                min="1"
-                                :model-value="entry.quantity_limit"
-                                class="h-7 w-14 text-xs"
-                                @input="(e: Event) => setSyncEntryQty(entry.krypton_menu_id, Number((e.target as HTMLInputElement).value))"
-                            />
-                            <button
-                                type="button"
-                                class="text-muted-foreground hover:text-destructive"
-                                aria-label="Remove"
-                                @click="toggleSyncMenu(entry.krypton_menu_id, false)"
+                        <div class="flex flex-wrap gap-2">
+                            <div
+                                v-for="entry in syncForm.allowed_menus"
+                                :key="entry.krypton_menu_id"
+                                class="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-muted/30 py-1 pl-3 pr-1"
                             >
-                                ×
-                            </button>
+                                <span class="min-w-0 truncate text-sm font-medium">
+                                    {{ meatLabelById(entry.krypton_menu_id) }}
+                                </span>
+                                <button
+                                    type="button"
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                    :aria-label="`Remove ${meatLabelById(entry.krypton_menu_id)}`"
+                                    @click="toggleSyncMenu(entry.krypton_menu_id, false)"
+                                >
+                                    ×
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Available menus checklist -->
                     <div class="max-h-56 overflow-y-auto rounded-md border">
                         <div
                             v-for="menu in filteredSyncOptions"
-                            :key="menu.id"
+                            :key="menu.krypton_menu_id"
                             class="flex items-center gap-2 border-b border-border/40 px-3 py-2 last:border-0 hover:bg-muted/40"
                         >
                             <Checkbox
-                                :id="`sync-${menu.id}`"
-                                :model-value="isMenuSelected(menu.id)"
-                                @update:model-value="(v) => toggleSyncMenu(menu.id, v === true)"
+                                :id="`sync-${menu.krypton_menu_id}`"
+                                :model-value="isMenuSelected(menu.krypton_menu_id)"
+                                @update:model-value="(v) => toggleSyncMenu(menu.krypton_menu_id, v === true)"
                             />
-                            <Label :for="`sync-${menu.id}`" class="flex-1 cursor-pointer text-sm">
+                            <Label :for="`sync-${menu.krypton_menu_id}`" class="flex-1 cursor-pointer text-sm">
                                 {{ menu.name }}
-                                <span class="ml-1 text-xs text-muted-foreground">#{{ menu.id }}</span>
+                                <span v-if="menu.receipt_name" class="ml-1 font-mono text-xs text-woosoo-accent">{{ menu.receipt_name }}</span>
+                                <span class="ml-1 text-xs text-muted-foreground">#{{ menu.krypton_menu_id }}</span>
                             </Label>
                         </div>
                         <p v-if="filteredSyncOptions.length === 0" class="py-6 text-center text-xs text-muted-foreground">
-                            No menu items matched.
+                            No meat modifiers matched.
                         </p>
                     </div>
                 </div>

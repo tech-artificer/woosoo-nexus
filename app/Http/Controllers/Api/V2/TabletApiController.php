@@ -12,6 +12,7 @@ use App\Models\TabletCategory;
 use App\Repositories\Krypton\MenuRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -54,8 +55,37 @@ class TabletApiController extends Controller
     /** Cache key for the resolved packages payload. Busted on admin save/update/delete. */
     public const PACKAGES_CACHE_KEY = 'tablet.packages.v2';
 
+    /** Cache key for the tablet categories list. Busted on admin category/menu mutations. */
+    public const CATEGORIES_CACHE_KEY = 'tablet.categories.v2';
+
+    /** Slug excluded from the categories list — meats tab is PWA-injected; catalog via POS group. */
+    private const MEATS_SLUG = 'meats';
+
     /** TTL in seconds — 5 minutes. Short enough to pick up changes if cache flush is missed. */
     private const PACKAGES_CACHE_TTL = 300;
+
+    private const CATEGORIES_CACHE_TTL = 300;
+
+    public static function categoryMenusCacheKey(string $slug): string
+    {
+        return 'tablet.category_menus.v2.'.Str::lower(trim($slug));
+    }
+
+    public static function forgetCategoriesCache(?string $slug = null): void
+    {
+        Cache::forget(self::CATEGORIES_CACHE_KEY);
+        Cache::forget(self::categoryMenusCacheKey(self::MEATS_SLUG));
+
+        if ($slug !== null) {
+            Cache::forget(self::categoryMenusCacheKey($slug));
+
+            return;
+        }
+
+        TabletCategory::query()->pluck('slug')->each(function (string $categorySlug): void {
+            Cache::forget(self::categoryMenusCacheKey($categorySlug));
+        });
+    }
 
     public function packages(Request $request)
     {
@@ -70,24 +100,29 @@ class TabletApiController extends Controller
                     return [];
                 }
 
-                $kryptonMenuIds = $dbPackages->flatMap(fn ($p) => $p->allowedMenus->pluck('krypton_menu_id'))
-                    ->filter()->unique()->values()->toArray();
+                $kryptonMenuIds = $dbPackages
+                    ->flatMap(fn (Package $p) => collect([$p->krypton_menu_id])->merge($p->allowedMenus->pluck('krypton_menu_id')))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->toArray();
 
                 $kryptonMenus = collect([]);
                 if (! empty($kryptonMenuIds)) {
                     try {
-                        $kryptonMenus = Menu::with(['image'])
+                        $kryptonMenus = Menu::query()
+                            ->select('id', 'name', 'receipt_name', 'price', 'is_discountable', 'is_taxable')
                             ->whereIn('id', $kryptonMenuIds)
                             ->get()
                             ->keyBy('id');
-
-                        Menu::attachUploadedImages($kryptonMenus);
                     } catch (\Exception $e) {
                         Log::warning('V2 Tablet API - POS menus unavailable: '.$e->getMessage());
                     }
                 }
 
                 return $dbPackages->map(function (Package $pkg) use ($kryptonMenus): array {
+                    $anchorMenu = $pkg->krypton_menu_id ? $kryptonMenus->get((int) $pkg->krypton_menu_id) : null;
+
                     $allowedMenus = $pkg->allowedMenus->sortBy('sort_order')->map(
                         function (PackageAllowedMenu $am) use ($kryptonMenus): array {
                             $kMenu = $kryptonMenus->get($am->krypton_menu_id);
@@ -110,9 +145,10 @@ class TabletApiController extends Controller
 
                     return [
                         'id' => $pkg->id,
+                        'krypton_menu_id' => $pkg->krypton_menu_id === null ? null : (int) $pkg->krypton_menu_id,
                         'name' => $pkg->name,
                         'description' => $pkg->description,
-                        'base_price' => (float) $pkg->base_price,
+                        'base_price' => $this->resolvePackageBasePrice($pkg, $anchorMenu),
                         'min_meat' => (int) $pkg->min_meat,
                         'max_meat' => (int) $pkg->max_meat,
                         'is_active' => (bool) $pkg->is_active,
@@ -187,32 +223,37 @@ class TabletApiController extends Controller
     public function categories(Request $request)
     {
         try {
-            $dbCategories = TabletCategory::where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get();
+            $payload = Cache::remember(self::CATEGORIES_CACHE_KEY, self::CATEGORIES_CACHE_TTL, function () {
+                $dbCategories = TabletCategory::query()
+                    ->where('is_active', true)
+                    ->where('slug', '!=', self::MEATS_SLUG)
+                    ->withCount('menuPivots')
+                    ->orderBy('sort_order')
+                    ->orderBy('name')
+                    ->get();
 
-            if ($dbCategories->isNotEmpty()) {
-                $payload = $dbCategories->map(fn ($cat) => [
-                    'id' => $cat->id,
-                    'name' => $cat->name,
-                    'slug' => $cat->slug,
-                    'icon' => $cat->icon,
-                    'color' => $cat->color,
-                ])->values();
+                if ($dbCategories->isNotEmpty()) {
+                    return $dbCategories->map(fn (TabletCategory $cat) => [
+                        'id' => $cat->id,
+                        'name' => $cat->name,
+                        'slug' => $cat->slug,
+                        'icon' => $cat->icon,
+                        'color' => $cat->color,
+                        'menu_count' => (int) $cat->menu_pivots_count,
+                    ])->values()->all();
+                }
 
-                return ApiResponse::success($payload, 'Categories retrieved successfully');
-            }
+                // Hardcoded fallback — only tabs resolveLegacyCategoryMenus() can serve
+                // (bootstrap only). 'alacarte' is intentionally omitted: it has no legacy
+                // POS group mapping, so advertising it would 404 on its menus tab.
+                return [
+                    ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides'],
+                    ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert'],
+                    ['id' => 3, 'name' => 'Beverage', 'slug' => 'beverage', 'pos_category' => 'drinks'],
+                ];
+            });
 
-            // Hardcoded fallback — original four categories.
-            $categories = [
-                ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides'],
-                ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert'],
-                ['id' => 3, 'name' => 'Beverage', 'slug' => 'beverage', 'pos_category' => 'drinks'],
-                ['id' => 4, 'name' => 'Alacarte', 'slug' => 'alacarte', 'pos_category' => 'alacarte'],
-            ];
-
-            return ApiResponse::success($categories, 'Categories retrieved successfully');
+            return ApiResponse::success($payload, 'Categories retrieved successfully');
         } catch (\Exception $e) {
             Log::error('V2 Tablet API - categories error: '.$e->getMessage());
 
@@ -241,7 +282,12 @@ class TabletApiController extends Controller
                 return ApiResponse::error('Package not found', null, 404);
             }
 
-            $kryptonMenuIds = $dbPackage->allowedMenus->pluck('krypton_menu_id')->filter()->unique()->toArray();
+            $kryptonMenuIds = collect([$dbPackage->krypton_menu_id])
+                ->merge($dbPackage->allowedMenus->pluck('krypton_menu_id'))
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
 
             $kryptonMenus = collect([]);
             if (! empty($kryptonMenuIds)) {
@@ -256,6 +302,8 @@ class TabletApiController extends Controller
                     Log::warning("V2 Tablet API - POS menus unavailable for package {$id}: ".$e->getMessage());
                 }
             }
+
+            $anchorMenu = $dbPackage->krypton_menu_id ? $kryptonMenus->get((int) $dbPackage->krypton_menu_id) : null;
 
             $allowedMenusByType = $dbPackage->allowedMenus->sortBy('sort_order')
                 ->groupBy('menu_type')
@@ -280,9 +328,10 @@ class TabletApiController extends Controller
             $response = [
                 'package' => [
                     'id' => $dbPackage->id,
+                    'krypton_menu_id' => $dbPackage->krypton_menu_id === null ? null : (int) $dbPackage->krypton_menu_id,
                     'name' => $dbPackage->name,
                     'description' => $dbPackage->description,
-                    'base_price' => (float) $dbPackage->base_price,
+                    'base_price' => $this->resolvePackageBasePrice($dbPackage, $anchorMenu),
                     'is_most_popular' => (bool) $dbPackage->is_most_popular,
                     'limits' => [
                         'meat' => ['min' => $dbPackage->min_meat, 'max' => $dbPackage->max_meat],
@@ -321,27 +370,62 @@ class TabletApiController extends Controller
         try {
             $normalizedSlug = Str::lower(trim($slug));
 
-            // Fixed category map: slug => method to fetch menus
-            $categoryMap = [
-                'meats' => fn () => $this->menuRepository->getMenusByGroupId(self::MEATS_GROUP_ID),
-                'sides' => fn () => $this->menuRepository->getMenusByGroupId(self::SIDES_GROUP_ID),
-                'drinks' => fn () => $this->menuRepository->getMenusByGroupId(self::DRINKS_GROUP_ID),
-                'desserts' => fn () => $this->menuRepository->getMenusByCourse(self::DESSERT_COURSE),
-            ];
+            if ($normalizedSlug !== self::MEATS_SLUG && $this->hasActiveDbCategories()) {
+                $categoryExists = TabletCategory::query()
+                    ->where('slug', $normalizedSlug)
+                    ->where('is_active', true)
+                    ->exists();
 
-            if (! array_key_exists($normalizedSlug, $categoryMap)) {
-                return ApiResponse::error(
-                    'Invalid category slug. Must be one of: '.implode(', ', array_keys($categoryMap)),
-                    null,
-                    422
-                );
+                if (! $categoryExists) {
+                    return ApiResponse::error('Category not found', null, 404);
+                }
+            } elseif ($normalizedSlug !== self::MEATS_SLUG && ! $this->hasActiveDbCategories()) {
+                $legacyMenus = $this->resolveLegacyCategoryMenus($normalizedSlug);
+                if ($legacyMenus === null) {
+                    return ApiResponse::error('Category not found', null, 404);
+                }
             }
 
-            // Fetch menus using the mapped method
-            $menus = ($categoryMap[$normalizedSlug])();
+            $cacheKey = self::categoryMenusCacheKey($normalizedSlug);
 
-            // Cross-connection patch — $menus->load(['image']) silently fails because
-            // MenuImage lives on a different DB connection. Use the bulk helper instead.
+            $menus = Cache::remember($cacheKey, self::CATEGORIES_CACHE_TTL, function () use ($normalizedSlug) {
+                if ($normalizedSlug === self::MEATS_SLUG) {
+                    return $this->menuRepository->getMenusByGroupId(self::MEATS_GROUP_ID);
+                }
+
+                if (! $this->hasActiveDbCategories()) {
+                    return $this->resolveLegacyCategoryMenus($normalizedSlug) ?? Menu::hydrate([]);
+                }
+
+                $category = TabletCategory::query()
+                    ->where('slug', $normalizedSlug)
+                    ->where('is_active', true)
+                    ->with(['menuPivots' => fn ($q) => $q->orderBy('sort_order')])
+                    ->firstOrFail();
+
+                $menuIds = $category->menuPivots->pluck('krypton_menu_id')->filter()->values();
+
+                if ($menuIds->isEmpty()) {
+                    return Menu::hydrate([]);
+                }
+
+                try {
+                    $kryptonMenus = Menu::query()
+                        ->whereIn('id', $menuIds->all())
+                        ->get()
+                        ->keyBy('id');
+                } catch (\Exception $e) {
+                    Log::warning("V2 Tablet API - POS menus unavailable for category {$normalizedSlug}: ".$e->getMessage());
+
+                    return Menu::hydrate([]);
+                }
+
+                return $menuIds
+                    ->map(fn (int $id) => $kryptonMenus->get($id))
+                    ->filter()
+                    ->values();
+            });
+
             if ($menus->isNotEmpty()) {
                 Menu::attachUploadedImages($menus);
             }
@@ -355,5 +439,50 @@ class TabletApiController extends Controller
 
             return ApiResponse::error('Failed to retrieve category menus', null, 500);
         }
+    }
+
+    private function hasActiveDbCategories(): bool
+    {
+        // Mirror categories(): the 'meats' row is served via its own dedicated path,
+        // never through the admin-category list. Counting it here would suppress the
+        // legacy fallback for the bootstrap tabs that categories() actually returns.
+        return TabletCategory::query()
+            ->where('is_active', true)
+            ->where('slug', '!=', self::MEATS_SLUG)
+            ->exists();
+    }
+
+    /**
+     * Bootstrap fallback when no admin categories exist — legacy POS group mapping.
+     */
+    private function resolveLegacyCategoryMenus(string $normalizedSlug): ?Collection
+    {
+        $legacySlug = match ($normalizedSlug) {
+            'dessert' => 'desserts',
+            'beverage' => 'drinks',
+            default => $normalizedSlug,
+        };
+
+        $categoryMap = [
+            'meats' => fn () => $this->menuRepository->getMenusByGroupId(self::MEATS_GROUP_ID),
+            'sides' => fn () => $this->menuRepository->getMenusByGroupId(self::SIDES_GROUP_ID),
+            'drinks' => fn () => $this->menuRepository->getMenusByGroupId(self::DRINKS_GROUP_ID),
+            'desserts' => fn () => $this->menuRepository->getMenusByCourse(self::DESSERT_COURSE),
+        ];
+
+        if (! array_key_exists($legacySlug, $categoryMap)) {
+            return null;
+        }
+
+        return ($categoryMap[$legacySlug])();
+    }
+
+    private function resolvePackageBasePrice(Package $package, ?Menu $anchorMenu): float
+    {
+        if ($anchorMenu && $anchorMenu->price !== null) {
+            return (float) $anchorMenu->price;
+        }
+
+        return (float) ($package->base_price ?? 0);
     }
 }

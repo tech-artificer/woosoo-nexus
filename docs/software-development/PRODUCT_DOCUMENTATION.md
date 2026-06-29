@@ -47,7 +47,7 @@ Core contract phrase: **Tablet sends intent only.** Nexus owns pricing, totals, 
 
 ### 3.3 Admins and managers
 
-- Must manage devices, users, menus, packages, tablet categories, and reports.
+- Must manage devices, users, menus, packages, tablet categories, and reports. (See [Package Builder + Tablet Category Spec](PACKAGE_BUILDER_AND_TABLET_CATEGORIES_SPEC.md) for the data model and API contract.)
 - Must monitor active sessions, orders, print latency, print audit, and device health.
 - Must reset or force-end sessions when operationally required.
 - Must audit failed print events and POS connection issues.
