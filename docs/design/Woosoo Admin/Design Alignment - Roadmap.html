@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Design Alignment — Roadmap · Woosoo Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=Kanit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="series.css">
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="doc-eyebrow">Woosoo Nexus · Design Alignment Series</div>
+  <div class="doc-title">Alignment Roadmap</div>
+  <div class="doc-sub">A four-step, low-risk path to bring the real Laravel&nbsp;12 + Vue&nbsp;3 admin into pixel alignment with the approved Woosoo brand system. Each step is self-contained, visual-only, and applies in order — no business logic, API, or data-model changes in any step.</div>
+  <div class="doc-nav">
+    <a href="Design Alignment - Roadmap.html" class="cur">Roadmap</a>
+    <a href="Step 1 - Look & Feel.html">Step 1 · Look &amp; Feel</a>
+    <a href="Step 2 - Layout & Navigation.html">Step 2 · Layout</a>
+    <a href="Step 3 - Component Theming.html">Step 3 · Components</a>
+    <a href="Step 4 - Page by Page.html">Step 4 · Pages</a>
+  </div>
+</div>
+
+<!-- HOW TO READ -->
+<div class="section">
+  <div class="section-title">How the series works</div>
+  <div class="section-desc">Work <strong>outside-in</strong>: fix the shell first, then the shared primitives, then individual pages. Each step ships as a folder under <code>handoff/</code> with replacement files plus an <code>AGENT_INSTRUCTIONS.md</code> — paste those to your dev or coding agent and rebuild.</div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-title">Visual-only <span class="tag">guarantee</span></div>
+      <p>Every change is a CSS class string, CVA variant, or template-markup edit. Props, computed values, WebSocket logic, routes, and data flow are untouched in all four steps.</p>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">Tokens already correct <span class="tag">no work</span></div>
+      <p>Brand tokens — amber <code>#F6B56D</code>, Raleway / Kanit / JetBrains&nbsp;Mono, dark sidebar, light &amp; dark themes — are already defined in <code>app.css</code>. The series consumes them; it doesn't redefine them.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ROADMAP CARDS -->
+<div class="section">
+  <div class="section-title">The four steps</div>
+  <div class="section-desc">Roughly 5–10 minutes each, including build and QA. Click any step to open its spec.</div>
+
+  <div class="road">
+    <a class="road-card" href="Step 1 - Look & Feel.html">
+      <div class="road-num">1<span class="of">/ 04</span></div>
+      <div class="road-body">
+        <div class="road-eyebrow">Shell · Look &amp; Feel</div>
+        <div class="road-title">Sidebar &amp; topbar shell</div>
+        <div class="road-desc">Active nav items flip white&nbsp;→&nbsp;amber with a 2px left bar. Logo glassmorphism pill becomes a flat logo row. Floating frosted topbar becomes a flush 52px bar.</div>
+        <div class="road-files"><span>sidebar/index.ts</span><span>NavMain.vue</span><span>AppSidebar.vue</span><span>AppSidebarHeader.vue</span><span>app.css</span></div>
+      </div>
+      <div class="road-meta"><span class="badge-impact badge-low">Low risk</span><span class="road-arrow">→</span></div>
+    </a>
+
+    <a class="road-card" href="Step 2 - Layout & Navigation.html">
+      <div class="road-num">2<span class="of">/ 04</span></div>
+      <div class="road-body">
+        <div class="road-eyebrow">Shell · Layout</div>
+        <div class="road-title">Layout &amp; navigation</div>
+        <div class="road-desc">Adds a persistent sun / moon dark-mode toggle to the topbar. Refines the content wrapper — tighter radius, lighter blur, softer shadow, subtler amber gradient strip.</div>
+        <div class="road-files"><span>AppSidebarHeader.vue</span><span>AppContentLayout.vue</span></div>
+      </div>
+      <div class="road-meta"><span class="badge-impact badge-low">Low risk</span><span class="road-arrow">→</span></div>
+    </a>
+
+    <a class="road-card" href="Step 3 - Component Theming.html">
+      <div class="road-num">3<span class="of">/ 04</span></div>
+      <div class="road-body">
+        <div class="road-eyebrow">Primitives · Theming</div>
+        <div class="road-title">shadcn/ui component theming</div>
+        <div class="road-desc">Brings the shared primitives into brand alignment so every page benefits at once — Badge gets a warning variant + dark fixes, Button radius, Card border, Tabs treatment.</div>
+        <div class="road-files"><span>badge/index.ts</span><span>button/index.ts</span><span>Card.vue</span><span>TabsList.vue</span><span>TabsTrigger.vue</span></div>
+      </div>
+      <div class="road-meta"><span class="badge-impact badge-low">Low risk</span><span class="road-arrow">→</span></div>
+    </a>
+
+    <a class="road-card" href="Step 4 - Page by Page.html">
+      <div class="road-num">4<span class="of">/ 04</span></div>
+      <div class="road-body">
+        <div class="road-eyebrow">Pages · Page-by-page</div>
+        <div class="road-title">Dashboard, Orders &amp; Devices</div>
+        <div class="road-desc">Targeted fixes on the three highest-traffic pages — Dashboard radius unification, Orders status pills on brand tokens, Devices double-glass layout removed.</div>
+        <div class="road-files"><span>Dashboard.vue</span><span>Orders/Index.vue</span><span>Devices/Index.vue</span></div>
+      </div>
+      <div class="road-meta"><span class="badge-impact badge-low">Low risk</span><span class="road-arrow">→</span></div>
+    </a>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- QUICK APPLY -->
+<div class="section">
+  <div class="section-title">Quick-apply all steps</div>
+  <div class="section-desc">From the project root, copy each step's files into place and rebuild once at the end.</div>
+
+  <div class="file-patch">
+    <div class="file-path"><span class="file-path-icon"></span>terminal · from project root</div>
+<pre><span class="cm"># Step 1 — shell</span>
+cp handoff/step-1/app.css              resources/css/app.css
+cp handoff/step-1/index.ts             resources/js/components/ui/sidebar/index.ts
+cp handoff/step-1/NavMain.vue          resources/js/components/NavMain.vue
+cp handoff/step-1/AppSidebar.vue       resources/js/components/AppSidebar.vue
+cp handoff/step-1/AppSidebarHeader.vue resources/js/components/AppSidebarHeader.vue
+
+<span class="cm"># Step 2 — layout</span>
+cp handoff/step-2/AppSidebarHeader.vue resources/js/components/AppSidebarHeader.vue
+cp handoff/step-2/AppContentLayout.vue resources/js/layouts/AppContentLayout.vue
+
+<span class="cm"># Step 3 — primitives  (rename *-index.ts → index.ts)</span>
+cp handoff/step-3/badge-index.ts       resources/js/components/ui/badge/index.ts
+cp handoff/step-3/button-index.ts      resources/js/components/ui/button/index.ts
+cp handoff/step-3/Card.vue             resources/js/components/ui/card/Card.vue
+cp handoff/step-3/TabsList.vue         resources/js/components/ui/tabs/TabsList.vue
+cp handoff/step-3/TabsTrigger.vue      resources/js/components/ui/tabs/TabsTrigger.vue
+
+<span class="cm"># Step 4 — pages  (rename *_Index.vue → Index.vue)</span>
+cp handoff/step-4/Dashboard.vue        resources/js/pages/Dashboard.vue
+cp handoff/step-4/Orders_Index.vue     resources/js/pages/Orders/Index.vue
+cp handoff/step-4/Devices_Index.vue    resources/js/pages/Devices/Index.vue
+
+<span class="cm"># Rebuild &amp; clear caches</span>
+<span class="add">npm run build</span>
+<span class="add">php artisan view:clear &amp;&amp; php artisan cache:clear</span></pre>
+  </div>
+
+  <div class="notice">
+    <span class="notice-icon">✓</span>
+    <div><strong>Apply in order.</strong> Steps 2–4 assume the prior steps are in place — e.g. Step 4 drops a redundant <code>border-black/8</code> because Step 3's <code>Card.vue</code> already supplies it.</div>
+  </div>
+</div>
+
+<div class="doc-footer">
+  <div class="doc-footer-left">Woosoo Nexus · Design Alignment Series · May 2026</div>
+  <div class="doc-footer-step">Roadmap — 4 steps</div>
+</div>
+
+</body>
+</html>
