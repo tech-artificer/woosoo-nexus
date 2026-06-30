@@ -9,8 +9,8 @@ use App\Models\Branch;
 use App\Models\Device;
 use App\Http\Resources\DeviceResource;
 use App\Http\Responses\ApiResponse;
+use App\Http\Requests\Api\UpdateDeviceApiRequest;
 use App\Http\Requests\StoreDeviceRequest;
-use App\Http\Requests\UpdateDeviceRequest;
 use App\Support\DeviceSecurityCode;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -131,7 +131,7 @@ class DeviceApiController extends Controller
     /**
      * Update the specified device.
      */
-    public function update(UpdateDeviceRequest $request, Device $device)
+    public function update(UpdateDeviceApiRequest $request, Device $device)
     {
         $device->update($request->validated());
 
