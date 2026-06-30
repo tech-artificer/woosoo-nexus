@@ -4,7 +4,6 @@ namespace Tests\Feature\Api\V2;
 
 use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Models\Device;
-use App\Models\Krypton\Menu;
 use App\Models\TabletCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -23,6 +22,21 @@ class TabletCategoryMenusApiTest extends TestCase
     private function deviceToken(Device $device): string
     {
         return $device->createToken('test')->plainTextToken;
+    }
+
+    /**
+     * Seed a POS menu row so the controller can resolve attached pivots to real
+     * menus (the `pos` connection is mapped to in-memory sqlite by TestCase).
+     */
+    private function seedPosMenu(int $id, string $name): void
+    {
+        DB::connection('pos')->table('menus')->insert([
+            'id' => $id,
+            'name' => $name,
+            'price' => 10.00,
+            'is_available' => true,
+            'is_modifier_only' => false,
+        ]);
     }
 
     protected function setUp(): void
@@ -53,33 +67,22 @@ class TabletCategoryMenusApiTest extends TestCase
         $this->assertSame([], $response->json('data'));
     }
 
-    public function test_pivot_menus_endpoint_returns_success_with_attached_ids(): void
+    public function test_pivot_menus_endpoint_returns_attached_ids_in_pivot_order(): void
     {
         $device = $this->authenticatedDevice();
-        $menu1 = Menu::factory()->create();
-        $menu2 = Menu::factory()->create();
         $category = TabletCategory::create(['name' => 'Sides', 'slug' => 'sides', 'is_active' => true]);
-        $category->menuPivots()->create(['krypton_menu_id' => $menu1->id, 'sort_order' => 0]);
-        $category->menuPivots()->create(['krypton_menu_id' => $menu2->id, 'sort_order' => 1]);
+        // sort_order is deliberately reversed vs. id to prove ordering is by pivot.
+        $category->menuPivots()->create(['krypton_menu_id' => 202, 'sort_order' => 0]);
+        $category->menuPivots()->create(['krypton_menu_id' => 201, 'sort_order' => 1]);
+        $this->seedPosMenu(201, 'Steamed Rice');
+        $this->seedPosMenu(202, 'Garlic Rice');
 
         $response = $this->withToken($this->deviceToken($device), 'Bearer')
             ->getJson('/api/v2/tablet/categories/sides/menus');
 
         $response->assertOk();
-        $data = $response->json('data');
-        $this->assertCount(2, $data);
-        $this->assertSame($menu1->id, $data[0]['id']);
-        $this->assertSame($menu2->id, $data[1]['id']);
-    }
-
-    public function test_meats_only_in_db_does_not_suppress_legacy_fallback_for_other_slugs(): void
-    {
-        $device = $this->authenticatedDevice();
-        TabletCategory::create(['name' => 'Meats', 'slug' => 'meats', 'is_active' => true]);
-
-        $this->withToken($this->deviceToken($device), 'Bearer')
-            ->getJson('/api/v2/tablet/categories/sides/menus')
-            ->assertOk();
+        // Must return exactly the attached menus, ordered by pivot sort_order, not dropped.
+        $this->assertSame([202, 201], array_column($response->json('data'), 'id'));
     }
 
     public function test_featured_pivot_surfaces_is_featured_flag(): void
@@ -87,14 +90,7 @@ class TabletCategoryMenusApiTest extends TestCase
         $device = $this->authenticatedDevice();
         $category = TabletCategory::create(['name' => 'Sides', 'slug' => 'sides', 'is_active' => true]);
 
-        DB::connection('pos')->table('menus')->insert([
-            'id' => 301,
-            'name' => 'Kimchi',
-            'receipt_name' => 'Kimchi',
-            'price' => 0,
-            'is_modifier_only' => false,
-            'is_available' => true,
-        ]);
+        $this->seedPosMenu(301, 'Kimchi');
 
         $category->menuPivots()->create(['krypton_menu_id' => 301, 'sort_order' => 0, 'is_featured' => true]);
         $category->menuPivots()->create(['krypton_menu_id' => 302, 'sort_order' => 1, 'is_featured' => false]);
@@ -131,7 +127,6 @@ class TabletCategoryMenusApiTest extends TestCase
     public function test_cache_is_busted_after_forget_categories_cache(): void
     {
         $device = $this->authenticatedDevice();
-        $menu = Menu::factory()->create();
         $category = TabletCategory::create(['name' => 'Sides', 'slug' => 'sides', 'is_active' => true]);
 
         $this->withToken($this->deviceToken($device), 'Bearer')
@@ -144,14 +139,46 @@ class TabletCategoryMenusApiTest extends TestCase
 
         $this->assertFalse(Cache::has(TabletApiController::categoryMenusCacheKey('sides')));
 
-        $category->menuPivots()->create(['krypton_menu_id' => $menu->id, 'sort_order' => 0]);
+        $category->menuPivots()->create(['krypton_menu_id' => 301, 'sort_order' => 0]);
+        $this->seedPosMenu(301, 'Kimchi');
 
-        $refetch = $this->withToken($this->deviceToken($device), 'Bearer')
+        // After the cache bust the refetched payload must reflect the new pivot,
+        // not a stale (empty) cached response.
+        $response = $this->withToken($this->deviceToken($device), 'Bearer')
+            ->getJson('/api/v2/tablet/categories/sides/menus');
+
+        $response->assertOk();
+        $this->assertSame([301], array_column($response->json('data'), 'id'));
+    }
+
+    public function test_legacy_fallback_serves_mapped_tabs_and_404s_alacarte(): void
+    {
+        $device = $this->authenticatedDevice();
+
+        // No DB categories → legacy POS-group fallback. Mapped tabs resolve (200,
+        // possibly empty); 'alacarte' has no mapping and must 404 rather than appear broken.
+        foreach (['sides', 'dessert', 'beverage'] as $slug) {
+            $this->withToken($this->deviceToken($device), 'Bearer')
+                ->getJson("/api/v2/tablet/categories/{$slug}/menus")
+                ->assertOk();
+        }
+
+        $this->withToken($this->deviceToken($device), 'Bearer')
+            ->getJson('/api/v2/tablet/categories/alacarte/menus')
+            ->assertNotFound();
+    }
+
+    public function test_only_meats_db_category_still_serves_legacy_fallback_tabs(): void
+    {
+        $device = $this->authenticatedDevice();
+
+        // A lone active 'meats' row must not flip categoryMenus() onto the DB path
+        // for the bootstrap tabs; 'sides' should still resolve via legacy fallback.
+        TabletCategory::create(['name' => 'Meats', 'slug' => 'meats', 'is_active' => true]);
+
+        $this->withToken($this->deviceToken($device), 'Bearer')
             ->getJson('/api/v2/tablet/categories/sides/menus')
             ->assertOk();
-
-        $this->assertCount(1, $refetch->json('data'));
-        $this->assertSame($menu->id, $refetch->json('data.0.id'));
     }
 
     public function test_unauthenticated_request_rejected(): void

@@ -229,7 +229,9 @@ class TabletApiController extends Controller
                     ])->values()->all();
                 }
 
-                // Hardcoded fallback — three legacy categories that resolveLegacyCategoryMenus() can serve.
+                // Hardcoded fallback — only tabs resolveLegacyCategoryMenus() can serve
+                // (bootstrap only). 'alacarte' is intentionally omitted: it has no legacy
+                // POS group mapping, so advertising it would 404 on its menus tab.
                 return [
                     ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides'],
                     ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert'],
@@ -433,6 +435,9 @@ class TabletApiController extends Controller
 
     private function hasActiveDbCategories(): bool
     {
+        // Mirror categories(): the 'meats' row is served via its own dedicated path,
+        // never through the admin-category list. Counting it here would suppress the
+        // legacy fallback for the bootstrap tabs that categories() actually returns.
         return TabletCategory::query()
             ->where('is_active', true)
             ->where('slug', '!=', self::MEATS_SLUG)
