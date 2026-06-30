@@ -85,6 +85,24 @@ class TabletCategoryMenusApiTest extends TestCase
         $this->assertSame([202, 201], array_column($response->json('data'), 'id'));
     }
 
+    public function test_featured_pivot_surfaces_is_featured_flag(): void
+    {
+        $device = $this->authenticatedDevice();
+        $category = TabletCategory::create(['name' => 'Sides', 'slug' => 'sides', 'is_active' => true]);
+
+        $this->seedPosMenu(301, 'Kimchi');
+
+        $category->menuPivots()->create(['krypton_menu_id' => 301, 'sort_order' => 0, 'is_featured' => true]);
+        $category->menuPivots()->create(['krypton_menu_id' => 302, 'sort_order' => 1, 'is_featured' => false]);
+
+        $response = $this->withToken($this->deviceToken($device), 'Bearer')
+            ->getJson('/api/v2/tablet/categories/sides/menus');
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('data'));
+        $this->assertTrue($response->json('data.0.is_featured'));
+    }
+
     public function test_inactive_category_returns_404(): void
     {
         $device = $this->authenticatedDevice();

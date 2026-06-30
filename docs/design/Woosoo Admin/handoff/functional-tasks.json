@@ -1,0 +1,140 @@
+{
+  "project": "Woosoo Nexus Admin",
+  "source_of_truth": "Woosoo Nexus - Functional Guide.html",
+  "app_entry": "Woosoo Admin.html",
+  "source_files": ["admin-app.jsx", "admin-core.jsx", "admin-screens.jsx"],
+  "generated": "2026-06-13",
+  "legend": {
+    "status": { "working": "behaves as expected", "partial": "responds but cosmetic / not persisted", "missing": "control present but dead, or feature absent" },
+    "priority": { "hi": "High — core to running service", "med": "Medium — important but not blocking", "low": "Low — nice to have" }
+  },
+  "totals": { "areas": 13 },
+  "areas": [
+    {
+      "area": "Orders",
+      "screen": "02 · Kitchen Dispatch",
+      "note": "Highest operational impact.",
+      "tasks": [
+        { "id": "orders-status", "priority": "hi", "status": "missing", "task": "Wire Void / Cancel / Mark Complete in the order drawer to mutate session status and move the card between columns.", "verify": "Open a session, click Mark Complete: card moves to the Completed column and the drawer reflects the new status." },
+        { "id": "orders-print-receipt", "priority": "hi", "status": "missing", "task": "Implement Print Receipt on completed orders (trigger print job + toast).", "verify": "On a completed order, click Print Receipt: a success toast appears." },
+        { "id": "orders-retry", "priority": "hi", "status": "missing", "task": "Implement Retry on failed print jobs (re-queue + status update).", "verify": "On a failed print job, click Retry: the job status changes from Failed to queued/printed." },
+        { "id": "orders-filter", "priority": "med", "status": "missing", "task": "Build the toolbar Filter panel (status, table, time range).", "verify": "Click Filter: a panel opens; applying a filter narrows the board." },
+        { "id": "orders-refresh", "priority": "med", "status": "partial", "task": "Make Refresh reload order data, not just play the chime.", "verify": "Click Refresh: order data visibly re-reads (timestamps/order set update)." }
+      ]
+    },
+    {
+      "area": "POS",
+      "screen": "03 · Live Table View",
+      "note": "Live floor view used during service.",
+      "tasks": [
+        { "id": "pos-terminal", "priority": "hi", "status": "missing", "task": "Make the Krypton Main / Krypton Bar terminal selector switch the table set.", "verify": "Switch terminal: the table grid changes to that terminal's tables." },
+        { "id": "pos-close-table", "priority": "hi", "status": "missing", "task": "Wire Void Session and Mark Paid in the table drawer.", "verify": "Open a table, click Mark Paid: the table returns to Available and the drawer closes." },
+        { "id": "pos-new-order", "priority": "med", "status": "missing", "task": "Implement New Order and Sync POS.", "verify": "Click New Order: an order-entry flow opens. Click Sync POS: a sync toast appears." }
+      ]
+    },
+    {
+      "area": "Roles & Permissions",
+      "screen": "11 · Access Control / 12 · Guards & Abilities",
+      "note": "Access control — currently static.",
+      "tasks": [
+        { "id": "roles-crud", "priority": "hi", "status": "missing", "task": "Build Create / Edit / Delete Role with a permission-assignment UI.", "verify": "Create a role, assign permissions, save: it appears in the roles table with the right counts." },
+        { "id": "roles-permissions-action", "priority": "hi", "status": "missing", "task": "Wire the role Permissions action to manage granted abilities.", "verify": "Click Permissions on a role: a UI opens to toggle that role's abilities and saves." },
+        { "id": "permissions-crud", "priority": "hi", "status": "missing", "task": "Build Add / Edit / Delete Permission on the Permissions registry.", "verify": "Add a permission: it appears in the registry list." }
+      ]
+    },
+    {
+      "area": "Users",
+      "screen": "10 · Staff & Permissions",
+      "note": "Staff management.",
+      "tasks": [
+        { "id": "users-invite", "priority": "hi", "status": "missing", "task": "Implement Invite User (form + create).", "verify": "Click Invite User, fill the form, submit: the new member appears in the roster." },
+        { "id": "users-save-remove", "priority": "hi", "status": "missing", "task": "Wire Save Changes so permission toggles persist; implement Remove.", "verify": "Toggle a permission, Save, reselect the user: the toggle holds. Remove deletes the row." },
+        { "id": "users-search", "priority": "med", "status": "missing", "task": "Make the roster Search box filter the list.", "verify": "Type a name: the roster narrows to matches." }
+      ]
+    },
+    {
+      "area": "Packages",
+      "screen": "07 · Dining Tiers",
+      "note": "Currently read-only.",
+      "tasks": [
+        { "id": "packages-crud", "priority": "hi", "status": "missing", "task": "Build New Package / Edit / Preview for tiers.", "verify": "Create/edit a tier: changes reflect on the tier cards." },
+        { "id": "packages-config", "priority": "med", "status": "missing", "task": "Build New Config and row editing on the Configs tab.", "verify": "Add a config: it appears in the Configs table." }
+      ]
+    },
+    {
+      "area": "Tablet Categories",
+      "screen": "08 · Menu Sync",
+      "note": "Guest tablet menu sync.",
+      "tasks": [
+        { "id": "tabcat-reorder", "priority": "hi", "status": "missing", "task": "Implement drag-to-reorder with persistence — the advertised core feature.", "verify": "Drag a category by its grip handle to a new position: the order changes and survives reselect." },
+        { "id": "tabcat-crud", "priority": "med", "status": "missing", "task": "Wire New Category / Edit and Attach / Detach Menu.", "verify": "Attach a menu to a category: it appears in that category's attached-menus list." }
+      ]
+    },
+    {
+      "area": "Devices",
+      "screen": "09 · Tablet Management",
+      "note": "Monitoring-only today.",
+      "tasks": [
+        { "id": "devices-fleet-actions", "priority": "med", "status": "missing", "task": "Implement Add Device, Sync All and APK Download.", "verify": "Click Add Device: a device-add flow opens. Sync All shows a sync toast." },
+        { "id": "devices-per-device", "priority": "med", "status": "missing", "task": "Wire per-device View (detail) and Restart.", "verify": "Click View on a card: device detail opens. Restart shows a restart toast/state." }
+      ]
+    },
+    {
+      "area": "Monitoring",
+      "screen": "04 · System Health",
+      "note": "System health & ops.",
+      "tasks": [
+        { "id": "monitoring-actions", "priority": "med", "status": "missing", "task": "Wire Refresh, View Jobs, Purge Failed and Print Audit.", "verify": "Each button performs its action or opens its panel." },
+        { "id": "monitoring-purge", "priority": "med", "status": "partial", "task": "Make the Purge All confirm actually clear print events.", "verify": "Confirm Purge All: print-event counters reset to zero." }
+      ]
+    },
+    {
+      "area": "Reports",
+      "screen": "13 · Analytics",
+      "note": "Analytics.",
+      "tasks": [
+        { "id": "reports-export", "priority": "med", "status": "missing", "task": "Add CSV / PDF export.", "verify": "Click Export: a file downloads with the current report data." },
+        { "id": "reports-daterange", "priority": "med", "status": "partial", "task": "Add a custom date-range picker beyond week/month presets.", "verify": "Pick a custom range: the chart and totals update for that range." }
+      ]
+    },
+    {
+      "area": "Settings",
+      "screen": "15 · App Preferences",
+      "note": "App preferences.",
+      "tasks": [
+        { "id": "settings-persist-all", "priority": "med", "status": "partial", "task": "Persist all settings fields (not just theme & sound).", "verify": "Change items-per-page and integration URLs, Save, reload: values hold." },
+        { "id": "settings-reset", "priority": "low", "status": "missing", "task": "Implement Reset to Defaults.", "verify": "Click Reset to Defaults: all fields return to default values." }
+      ]
+    },
+    {
+      "area": "Menus",
+      "screen": "06 · Items & Availability",
+      "note": "Mostly functional — minor gaps.",
+      "tasks": [
+        { "id": "menus-delete", "priority": "med", "status": "missing", "task": "Wire Delete inside the item editor.", "verify": "Open an item, click Delete: the card is removed from the grid." },
+        { "id": "menus-image-upload", "priority": "low", "status": "partial", "task": "Replace the image filename field with a real upload / picker.", "verify": "Pick/drop an image in the editor: a preview shows and saves with the item." },
+        { "id": "menus-persist", "priority": "low", "status": "partial", "task": "Persist added / edited items (currently session-only).", "verify": "Add an item, reload: it is still present." }
+      ]
+    },
+    {
+      "area": "Dashboard",
+      "screen": "01 · Operations Overview",
+      "note": "Overview screen.",
+      "tasks": [
+        { "id": "dashboard-range-toggle", "priority": "med", "status": "missing", "task": "Make the Today / Week / Month revenue toggle change the chart.", "verify": "Switch to Week: the revenue chart and total update." },
+        { "id": "dashboard-view-all", "priority": "low", "status": "missing", "task": "Wire 'View all' on Recent Sessions.", "verify": "Click View all: navigates to the full sessions list." }
+      ]
+    },
+    {
+      "area": "Global chrome",
+      "screen": "00 · Sidebar / Topbar",
+      "note": "Affects every screen.",
+      "tasks": [
+        { "id": "global-search", "priority": "med", "status": "missing", "task": "Wire global search + ⌘K shortcut.", "verify": "Press ⌘K: search focuses; typing returns matching results." },
+        { "id": "global-topbar-icons", "priority": "low", "status": "missing", "task": "Implement the topbar refresh and notification bell.", "verify": "Refresh reloads the active screen's data; the bell opens a notifications dropdown." },
+        { "id": "global-branch-switcher", "priority": "med", "status": "missing", "task": "Add a real branch switcher (and enable the Branches page).", "verify": "Switch branch: data context changes; the Branches page opens instead of being disabled." },
+        { "id": "global-sidebar-collapse", "priority": "low", "status": "missing", "task": "Render a sidebar collapse toggle.", "verify": "Click the collapse control: the rail collapses to icons and re-expands." }
+      ]
+    }
+  ]
+}

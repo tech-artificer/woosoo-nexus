@@ -55,6 +55,7 @@ const footerSections = computed(() =>
         </div>
 
         <!-- Scrollable nav -->
+        <!-- WOOSOO STEP 1 (gap): active nav items get amber-tinted bg + border (applied to both main and footer bindings) -->
         <nav class="flex-1 overflow-y-auto px-2 py-3">
             <div v-for="section in mainSections" :key="section.key" class="mb-4">
                 <p class="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--shell-dim)]">
@@ -67,7 +68,7 @@ const footerSections = computed(() =>
                             class="group relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors"
                             :class="[
                                 isActive(item.routeName)
-                                    ? 'text-[var(--shell-active)]'
+                                    ? 'bg-[#2a1e0c] border border-[#3d2c14] text-[var(--shell-active)]'
                                     : item.dim
                                       ? 'text-[var(--shell-dim)] hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]'
                                       : 'text-[var(--shell-fg)] hover:bg-[var(--shell-hover)]',
@@ -108,7 +109,7 @@ const footerSections = computed(() =>
                             class="group relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors"
                             :class="[
                                 isActive(item.routeName)
-                                    ? 'text-[var(--shell-active)]'
+                                    ? 'bg-[#2a1e0c] border border-[#3d2c14] text-[var(--shell-active)]'
                                     : item.dim
                                       ? 'text-[var(--shell-dim)] hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]'
                                       : 'text-[var(--shell-fg)] hover:bg-[var(--shell-hover)]',

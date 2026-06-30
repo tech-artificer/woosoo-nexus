@@ -76,7 +76,6 @@ class Menu extends Model
     public function scopeMeatModifiers(Builder $query): Builder
     {
         return $query
-            ->where('is_modifier_only', true)
             ->where('is_available', true)
             ->whereHas('group', function (Builder $q): void {
                 $q->where('name', self::MEAT_ORDER_GROUP_NAME);
@@ -323,7 +322,7 @@ class Menu extends Model
         // the defined code order across both MySQL and SQLite.
         $query = Menu::with(['image', 'group', 'category'])
             ->whereIn('receipt_name', $codeList)
-            ->where('is_modifier_only', true);
+            ->where('is_available', true);
 
         return self::orderByReceiptCodeList($query, $codeList)->get();
     }
@@ -397,7 +396,6 @@ class Menu extends Model
                 $q->where('name', 'Meat Order');
             })
             ->whereIn(DB::raw('UPPER(receipt_name)'), $allCodes)
-            ->where('is_modifier_only', true)
             ->where('is_available', true)
             ->get()
             ->keyBy(function ($m) {

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\Menu\TabletCategoryUpdated;
 use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Controller;
+use App\Models\Device;
 use App\Models\TabletCategory;
 use App\Models\TabletCategoryMenu;
 use Illuminate\Http\Request;
@@ -61,15 +63,25 @@ class TabletCategoryController extends Controller
         try {
             $attachedIds = TabletCategoryMenu::pluck('krypton_menu_id')->unique()->all();
             $unattachedMenus = DB::connection('pos')
-                ->table('menus')
-                ->whereNotIn('id', $attachedIds)
-                ->select('id', 'name', 'receipt_name')
-                ->orderBy('name')
+                ->table('menus as m')
+                ->leftJoin('menu_groups as mg', 'm.menu_group_id', '=', 'mg.id')
+                ->leftJoin('menu_categories as mc', 'm.menu_category_id', '=', 'mc.id')
+                ->leftJoin('menu_course_types as mct', 'm.menu_course_type_id', '=', 'mct.id')
+                ->whereNotIn('m.id', $attachedIds)
+                ->select('m.id', 'm.name', 'm.receipt_name', 'mg.id as group_id', 'mg.name as group_name', 'mc.name as category_name', 'mct.name as course_name')
+                ->orderByRaw('COALESCE(mc.name, ?) ASC', ['Other'])
+                ->orderByRaw('COALESCE(mg.name, ?) ASC', ['Uncategorized'])
+                ->orderBy('m.name')
                 ->limit(2000)
                 ->get()
                 ->map(fn ($m) => [
                     'id' => (int) $m->id,
                     'name' => $m->name ?: $m->receipt_name ?: "Menu #{$m->id}",
+                    'receipt_name' => $m->receipt_name,
+                    'group_id' => (int) ($m->group_id ?? 0),
+                    'group_name' => $m->group_name ?? 'Uncategorized',
+                    'category_name' => $m->category_name ?? 'Other',
+                    'course_name' => $m->course_name,
                 ]);
         } catch (\Throwable $e) {
             Log::warning('tablet-categories: could not load unattached menus from POS', ['error' => $e->getMessage()]);
@@ -94,7 +106,7 @@ class TabletCategoryController extends Controller
 
         TabletCategory::create($validated);
 
-        TabletApiController::forgetCategoriesCache();
+        $this->broadcastTabletCategoryUpdated();
 
         return redirect()->back()->with('success', 'Category created.');
     }
@@ -112,7 +124,7 @@ class TabletCategoryController extends Controller
 
         $tabletCategory->update($validated);
 
-        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+        $this->broadcastTabletCategoryUpdated($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Category updated.');
     }
@@ -123,7 +135,7 @@ class TabletCategoryController extends Controller
         $tabletCategory->menuPivots()->delete();
         $tabletCategory->delete();
 
-        TabletApiController::forgetCategoriesCache($slug);
+        $this->broadcastTabletCategoryUpdated($slug);
 
         return redirect()->back()->with('success', 'Category deleted.');
     }
@@ -150,7 +162,7 @@ class TabletCategoryController extends Controller
             }
         });
 
-        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+        $this->broadcastTabletCategoryUpdated($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Category menus synced.');
     }
@@ -180,7 +192,7 @@ class TabletCategoryController extends Controller
             ]);
         }
 
-        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+        $this->broadcastTabletCategoryUpdated($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Menu(s) attached.');
     }
@@ -192,7 +204,7 @@ class TabletCategoryController extends Controller
     {
         $tabletCategory->menuPivots()->where('krypton_menu_id', $menuId)->delete();
 
-        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+        $this->broadcastTabletCategoryUpdated($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Menu detached.');
     }
@@ -205,7 +217,7 @@ class TabletCategoryController extends Controller
         $pivot = $tabletCategory->menuPivots()->where('krypton_menu_id', $menuId)->firstOrFail();
         $pivot->update(['is_featured' => ! $pivot->is_featured]);
 
-        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+        $this->broadcastTabletCategoryUpdated($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Featured status updated.');
     }
@@ -227,7 +239,7 @@ class TabletCategoryController extends Controller
                 ->update(['sort_order' => $index]);
         }
 
-        TabletApiController::forgetCategoriesCache($tabletCategory->slug);
+        $this->broadcastTabletCategoryUpdated($tabletCategory->slug);
 
         return redirect()->back()->with('success', 'Menu order updated.');
     }
@@ -247,8 +259,18 @@ class TabletCategoryController extends Controller
             TabletCategory::where('id', $id)->update(['sort_order' => $index]);
         }
 
-        TabletApiController::forgetCategoriesCache();
+        $this->broadcastTabletCategoryUpdated();
 
         return redirect()->back()->with('success', 'Category order updated.');
+    }
+
+    private function broadcastTabletCategoryUpdated(?string $slug = null): void
+    {
+        TabletApiController::forgetCategoriesCache($slug);
+
+        $activeDevices = Device::where('is_active', true)->pluck('id');
+        foreach ($activeDevices as $deviceId) {
+            broadcast(new TabletCategoryUpdated($deviceId));
+        }
     }
 }
