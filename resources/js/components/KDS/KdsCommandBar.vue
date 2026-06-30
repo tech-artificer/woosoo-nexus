@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bell, BellOff, ChefHat, Clock3, Flame, Wifi, WifiOff } from 'lucide-vue-next'
+import { Bell, BellOff, ChefHat, Clock3, Flame, Maximize2, Minimize2, Wifi, WifiOff } from 'lucide-vue-next'
 
 withDefaults(
   defineProps<{
@@ -11,12 +11,14 @@ withDefaults(
     dateLabel: string
     online?: boolean
     chimeMuted?: boolean
+    isFullscreen?: boolean
   }>(),
-  { online: true, chimeMuted: false },
+  { online: true, chimeMuted: false, isFullscreen: false },
 )
 
 defineEmits<{
   toggleChime: []
+  toggleFullscreen: []
 }>()
 </script>
 
@@ -61,6 +63,16 @@ defineEmits<{
       >
         <BellOff v-if="chimeMuted" aria-hidden="true" />
         <Bell v-else aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        class="kds-chime-toggle"
+        :aria-pressed="isFullscreen"
+        :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+        @click="$emit('toggleFullscreen')"
+      >
+        <Minimize2 v-if="isFullscreen" aria-hidden="true" />
+        <Maximize2 v-else aria-hidden="true" />
       </button>
       <span class="kds-online" :class="{ 'is-offline': !online }">
         <Wifi v-if="online" aria-hidden="true" />

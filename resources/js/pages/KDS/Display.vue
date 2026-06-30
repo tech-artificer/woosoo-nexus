@@ -15,6 +15,7 @@ import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
 import { useKdsChime } from '@/components/KDS/useKdsChime'
 import { useKdsEcho } from '@/components/KDS/useKdsEcho'
+import { useKdsFullscreen } from '@/components/KDS/useKdsFullscreen'
 
 const props = defineProps<{
   title: string
@@ -33,6 +34,7 @@ function seedTickets(source: KdsTicket[]): KdsTicket[] {
 const board = useKdsBoard(seedTickets(props.initialTickets))
 const { muted: chimeMuted, play: playChime, toggleMuted: toggleChime } = useKdsChime()
 const { connected } = useKdsEcho(board, { onOrderCreated: playChime })
+const { isFullscreen, wantsFullscreen, toggleFullscreen, onFullscreenChange, enterFullscreen } = useKdsFullscreen()
 
 const tickets = board.tickets
 const { clockOffset, setClockOffset } = board
@@ -229,6 +231,12 @@ onMounted(() => {
     // Storage is optional for kiosk browsers.
   }
 
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+
+  if (wantsFullscreen.value) {
+    void enterFullscreen()
+  }
+
   timer = setInterval(() => {
     now.value = Date.now()
   }, 1000)
@@ -236,6 +244,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.body.classList.remove('kds-active')
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
 
   if (timer) {
     clearInterval(timer)
@@ -258,7 +267,9 @@ onBeforeUnmount(() => {
           :date-label="dateLabel"
           :online="connected"
           :chime-muted="chimeMuted"
+          :is-fullscreen="isFullscreen"
           @toggle-chime="toggleChime"
+          @toggle-fullscreen="toggleFullscreen"
         />
 
         <div class="kds-subbar">
