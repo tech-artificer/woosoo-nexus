@@ -41,7 +41,7 @@ test('admin can load edit form', function () {
             ->where('device.id', $this->device->id)
             ->where('device.name', 'Tablet A')
             ->where('device.ip_address', '192.168.100.51')
-            ->where('device.port', 3000)
+            ->where('device.port', '3000')
         );
 });
 
