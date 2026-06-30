@@ -191,7 +191,7 @@ async function verifyDevice(device: Device) {
     try {
         const response = await axios.get(route('api.v2.devices.health', device.id))
         deviceVerifyStatus.value[device.id] = response.data?.online === true ? 'online' : 'offline'
-    } catch (error) {
+    } catch (_) {
         deviceVerifyStatus.value[device.id] = 'offline'
     } finally {
         verifyingDevice.value = null
