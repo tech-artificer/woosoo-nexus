@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { toast } from 'vue-sonner'
+import axios from 'axios'
 import {
     MonitorSmartphone, RotateCcw, Plus, Eye, Download, RefreshCw,
-    AlertTriangle,
+    AlertTriangle, Pencil, Activity,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
@@ -59,6 +60,8 @@ const isDeviceDetailOpen = ref(false)
 const restartTarget = ref<Device | null>(null)
 const isRestarting = ref<number | null>(null)
 const isSyncingAll = ref(false)
+const verifyingDevice = ref<number | null>(null)
+const deviceVerifyStatus = ref<Record<number, 'online' | 'offline' | null>>({})
 
 const activeDevices = computed(() => props.devices.filter((d) => !d.deleted_at))
 
@@ -180,6 +183,22 @@ function syncAll() {
         onSuccess: () => toast.success('Fleet synced.'),
         onFinish: () => { isSyncingAll.value = false },
     })
+}
+
+async function verifyDevice(device: Device) {
+    verifyingDevice.value = device.id
+    deviceVerifyStatus.value[device.id] = null
+    try {
+        const response = await axios.get(route('api.v2.devices.health', device.id))
+        deviceVerifyStatus.value[device.id] = response.data?.online === true ? 'online' : 'offline'
+    } catch (_) {
+        deviceVerifyStatus.value[device.id] = 'offline'
+    } finally {
+        verifyingDevice.value = null
+        setTimeout(() => {
+            deviceVerifyStatus.value[device.id] = null
+        }, 3000)
+    }
 }
 </script>
 
@@ -369,6 +388,37 @@ function syncAll() {
                                 <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openDeviceDetail(device)">
                                     <Eye class="mr-1 h-3 w-3" />
                                     View
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-2 text-xs"
+                                    :disabled="verifyingDevice === device.id"
+                                    @click="verifyDevice(device)"
+                                >
+                                    <Activity
+                                        class="mr-1 h-3 w-3"
+                                        :class="[
+                                            { 'animate-spin': verifyingDevice === device.id },
+                                            deviceVerifyStatus[device.id] === 'online' ? 'text-woosoo-green' : '',
+                                            deviceVerifyStatus[device.id] === 'offline' ? 'text-woosoo-red' : '',
+                                        ]"
+                                    />
+                                    {{
+                                        verifyingDevice === device.id
+                                            ? 'Checking...'
+                                            : deviceVerifyStatus[device.id] === 'online'
+                                                ? 'Online'
+                                                : deviceVerifyStatus[device.id] === 'offline'
+                                                    ? 'Offline'
+                                                    : 'Verify'
+                                    }}
+                                </Button>
+                                <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" as-child>
+                                    <Link :href="route('devices.edit', device.id)">
+                                        <Pencil class="mr-1 h-3 w-3" />
+                                        Edit
+                                    </Link>
                                 </Button>
                                 <Button
                                     variant="ghost"

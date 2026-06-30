@@ -7,12 +7,12 @@ use Illuminate\Validation\Rule;
 
 class UpdateDeviceRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -26,6 +26,7 @@ class UpdateDeviceRequest extends FormRequest
             'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'table_id' => ['nullable', 'integer', Rule::exists('pos.tables', 'id')],
             'type' => ['nullable', Rule::in(['tablet', 'printer_relay'])],
+            'last_ip_address' => ['nullable', 'ip'],
         ];
     }
 }
