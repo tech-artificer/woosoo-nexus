@@ -9,7 +9,7 @@ class UpdateDeviceRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) ($this->user()?->is_admin ?? false);
+        return true;
     }
 
     public function rules(): array
