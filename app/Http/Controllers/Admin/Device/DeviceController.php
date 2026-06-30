@@ -426,11 +426,12 @@ class DeviceController extends Controller
         $newTableId = $data['table_id'] ?? null;
 
         $device->update([
-            'name' => $data['name'],
-            'ip_address' => $ipAddress,
-            'port' => $data['port'] ?? null,
-            'table_id' => $newTableId,
-            'type' => $data['type'] ?? null,
+            'name'            => $data['name'],
+            'ip_address'      => $ipAddress,
+            'port'            => $data['port'] ?? null,
+            'table_id'        => $newTableId,
+            'type'            => $data['type'] ?? null,
+            'last_ip_address' => $data['last_ip_address'] ?? null,
         ]);
 
         // Broadcast table change to tablet so it refreshes its table assignment
