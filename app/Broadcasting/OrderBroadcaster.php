@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Broadcasting;
 
 use App\Events\Kds\ItemToggled;
+use App\Events\Order\DiscountApplied;
 use App\Events\Order\OrderCancelled;
 use App\Events\Order\OrderCompleted;
 use App\Events\Order\OrderCreated;
 use App\Events\Order\OrderDetailsUpdated;
+use App\Events\Order\OrderStartedFromPos;
 use App\Events\Order\OrderStatusUpdated;
 use App\Events\Order\OrderVoided;
 use App\Models\DeviceOrder;
@@ -49,6 +51,16 @@ class OrderBroadcaster
     public function detailsUpdated(DeviceOrder $order): void
     {
         $this->broadcastService->safeBroadcast(new OrderDetailsUpdated($order));
+    }
+
+    public function discountApplied(DeviceOrder $order): void
+    {
+        $this->broadcastService->safeBroadcast(new DiscountApplied($order));
+    }
+
+    public function startedFromPos(DeviceOrder $order): void
+    {
+        $this->broadcastService->safeBroadcast(new OrderStartedFromPos($order));
     }
 
     public function itemToggled(DeviceOrderItems $item): void

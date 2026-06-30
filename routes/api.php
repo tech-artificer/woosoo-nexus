@@ -233,6 +233,7 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
         Route::get('/tablet/meat-categories', [TabletApiController::class, 'meatCategories'])->name('api.v2.tablet.meat-categories');
         Route::get('/tablet/categories', [TabletApiController::class, 'categories'])->name('api.v2.tablet.categories');
         Route::get('/tablet/categories/{slug}/menus', [TabletApiController::class, 'categoryMenus'])->name('api.v2.tablet.category.menus');
+        Route::get('/tablet/table/{tableId}/active-order', [TabletApiController::class, 'activeOrder'])->name('api.v2.tablet.table.active-order');
     });
 
     // Device management API v2 — admin/sanctum endpoints
