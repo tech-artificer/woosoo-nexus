@@ -34,8 +34,28 @@ class TabletCategoriesApiTest extends TestCase
 
         $response->assertOk();
         $data = $response->json('data');
-        $this->assertCount(3, $data);
-        $this->assertEquals('sides', $data[0]['slug']);
+
+        // Fallback advertises only tabs the legacy resolver can serve. 'alacarte'
+        // has no legacy POS mapping, so it must NOT appear (it would 404 on menus).
+        $slugs = array_column($data, 'slug');
+        $this->assertSame(['sides', 'dessert', 'beverage'], $slugs);
+        $this->assertNotContains('alacarte', $slugs);
+    }
+
+    public function test_fallback_returned_when_only_meats_db_category_active(): void
+    {
+        $device = $this->authenticatedDevice();
+        Cache::forget(TabletApiController::CATEGORIES_CACHE_KEY);
+
+        // A lone active 'meats' row must not suppress the bootstrap fallback:
+        // categories() excludes meats, so the payload should still be the 3 legacy tabs.
+        TabletCategory::create(['name' => 'Meats', 'slug' => 'meats', 'is_active' => true]);
+
+        $response = $this->withToken($this->deviceToken($device), 'Bearer')
+            ->getJson('/api/v2/tablet/categories');
+
+        $response->assertOk();
+        $this->assertSame(['sides', 'dessert', 'beverage'], array_column($response->json('data'), 'slug'));
     }
 
     public function test_returns_db_categories_when_present(): void
