@@ -84,9 +84,13 @@ class ConsumePosOrderDetailEvents extends Command
                 // POS `order_checks`. Without this, OrderBroadcastPayload would
                 // serialize the stale local columns and the detail update the
                 // trigger fired for would be silently lost.
-                $this->refreshDetailFromPos($deviceOrder, $posOrderId);
+                $discountTransitioned = $this->refreshDetailFromPos($deviceOrder, $posOrderId);
 
                 $broadcaster->detailsUpdated($deviceOrder);
+
+                if ($discountTransitioned) {
+                    $broadcaster->discountApplied($deviceOrder);
+                }
 
                 DB::connection('pos')
                     ->table(self::DetailOutboxTable)
@@ -123,9 +127,14 @@ class ConsumePosOrderDetailEvents extends Command
      * read-only and never recomputes pricing. The POS connection is already
      * proven reachable (the outbox read above succeeded), so a missing row
      * simply returns null and is skipped rather than treated as an error.
+     *
+     * Returns true when the discount transitioned from zero to a positive value
+     * so the caller can emit a dedicated `discount.applied` broadcast.
      */
-    private function refreshDetailFromPos(DeviceOrder $deviceOrder, int $posOrderId): void
+    private function refreshDetailFromPos(DeviceOrder $deviceOrder, int $posOrderId): bool
     {
+        $previousDiscount = (float) ($deviceOrder->getOriginal('discount') ?? 0);
+
         $pos = DB::connection('pos');
 
         $guestCount = $pos->table('orders')->where('id', $posOrderId)->value('guest_count');
@@ -155,6 +164,10 @@ class ConsumePosOrderDetailEvents extends Command
         if ($deviceOrder->isDirty()) {
             $deviceOrder->save();
         }
+
+        $newDiscount = (float) ($deviceOrder->discount ?? 0);
+
+        return $previousDiscount == 0 && $newDiscount > 0;
     }
 
     private function recordFailure(object $row, \Throwable $e): void

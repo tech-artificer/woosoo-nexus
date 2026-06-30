@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V2;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MenuResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\DeviceOrder;
 use App\Models\Krypton\Menu;
 use App\Models\Package;
 use App\Models\PackageAllowedMenu;
@@ -431,6 +432,116 @@ class TabletApiController extends Controller
 
             return ApiResponse::error('Failed to retrieve category menus', null, 500);
         }
+    }
+
+    /**
+     * GET /api/v2/tablet/table/{tableId}/active-order
+     *
+     * Returns an ActiveOrderSnapshot for the active POS-originated order on the
+     * given table, or 204 if no such order exists. Used by the tablet boot-time
+     * active-order recovery plugin to detect walk-in orders started by cashiers.
+     *
+     * Auth: device must own the requested table (device.table_id === $tableId).
+     *
+     * @return JsonResponse
+     */
+    public function activeOrder(Request $request, int $tableId): JsonResponse
+    {
+        /** @var \App\Models\Device $device */
+        $device = $request->user();
+
+        if (! $device) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if ((int) $device->table_id !== $tableId) {
+            return response()->json(['message' => 'This device is not assigned to the requested table.'], 403);
+        }
+
+        $order = DeviceOrder::activeOrder()
+            ->where('table_id', $tableId)
+            ->with(['items'])
+            ->latest()
+            ->first();
+
+        if ($order === null) {
+            return response()->json(null, 204);
+        }
+
+        $initialItems = $order->items
+            ->where('is_refill', false)
+            ->map(fn ($it) => [
+                'id' => $it->menu_id,
+                'menu_id' => $it->menu_id,
+                'name' => $it->menu?->name ?? $it->menu?->receipt_name ?? "Menu #{$it->menu_id}",
+                'quantity' => (int) $it->quantity,
+                'price' => (float) $it->price,
+                'isUnlimited' => false,
+                'category' => null,
+                'img_url' => null,
+            ])
+            ->values()
+            ->all();
+
+        $refillItems = $order->items
+            ->where('is_refill', true)
+            ->map(fn ($it) => [
+                'id' => $it->menu_id,
+                'menu_id' => $it->menu_id,
+                'name' => $it->menu?->name ?? $it->menu?->receipt_name ?? "Menu #{$it->menu_id}",
+                'quantity' => (int) $it->quantity,
+                'price' => (float) $it->price,
+                'isUnlimited' => false,
+                'category' => null,
+                'img_url' => null,
+            ])
+            ->values()
+            ->all();
+
+        $rounds = [];
+
+        if (! empty($initialItems)) {
+            $rounds[] = [
+                'kind' => 'initial',
+                'number' => 1,
+                'submittedAt' => $order->created_at?->toIso8601String() ?? now()->toIso8601String(),
+                'items' => $initialItems,
+                'serverOrderId' => $order->order_id,
+                'serverRefillId' => null,
+                'serverTotal' => (float) ($order->total ?? 0),
+                'pos_originated' => true,
+            ];
+        }
+
+        if (! empty($refillItems)) {
+            $rounds[] = [
+                'kind' => 'refill',
+                'number' => 2,
+                'submittedAt' => $order->updated_at?->toIso8601String() ?? now()->toIso8601String(),
+                'items' => $refillItems,
+                'serverOrderId' => $order->order_id,
+                'serverRefillId' => null,
+                'serverTotal' => 0,
+                'pos_originated' => true,
+            ];
+        }
+
+        $snapshot = [
+            'order_id' => $order->order_id,
+            'order_number' => $order->order_number,
+            'table_id' => $order->table_id,
+            'session_id' => $order->session_id,
+            'guest_count' => (int) ($order->guest_count ?? 0),
+            'status' => $order->status->value ?? $order->status,
+            'rounds' => $rounds,
+            'discounts' => [],
+            'subtotal' => (float) ($order->subtotal ?? $order->sub_total ?? 0),
+            'discount_total' => (float) ($order->discount ?? 0),
+            'total' => (float) ($order->total ?? 0),
+            'started_at' => $order->created_at?->toIso8601String() ?? now()->toIso8601String(),
+        ];
+
+        return ApiResponse::success($snapshot, 'Active order retrieved successfully');
     }
 
     private function hasActiveDbCategories(): bool

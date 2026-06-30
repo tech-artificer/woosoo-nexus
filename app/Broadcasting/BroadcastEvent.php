@@ -23,6 +23,8 @@ enum BroadcastEvent: string
     case OrderVoided = 'order.voided';
     case OrderCancelled = 'order.cancelled';
     case OrderDetailsUpdated = 'order.details.updated';
+    case DiscountApplied = 'discount.applied';
+    case OrderStartedFromPos = 'order.started-from-pos';
     case PrintRequested = 'order.print.requested';
     case ItemToggled = 'item.toggled';
     case SessionReset = 'session.reset';

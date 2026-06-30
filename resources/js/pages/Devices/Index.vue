@@ -5,7 +5,7 @@ import { toast } from 'vue-sonner'
 import axios from 'axios'
 import {
     MonitorSmartphone, RotateCcw, Plus, Eye, Download, RefreshCw,
-    AlertTriangle, Pencil, Activity,
+    AlertTriangle, Pencil, Activity, Loader2,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import DeviceDetailSheet from '@/components/Devices/DeviceDetailSheet.vue'
@@ -62,6 +62,7 @@ const isRestarting = ref<number | null>(null)
 const isSyncingAll = ref(false)
 const verifyingDevice = ref<number | null>(null)
 const deviceVerifyStatus = ref<Record<number, 'online' | 'offline' | null>>({})
+const deviceVerifyTimers = ref<Record<number, ReturnType<typeof setTimeout>>>({})
 
 const activeDevices = computed(() => props.devices.filter((d) => !d.deleted_at))
 
@@ -186,16 +187,25 @@ function syncAll() {
 }
 
 async function verifyDevice(device: Device) {
+    // Cancel any pending auto-clear for this device so a quick double-click
+    // doesn't erase the fresh result with the stale timer.
+    clearTimeout(deviceVerifyTimers.value[device.id])
+
     verifyingDevice.value = device.id
     deviceVerifyStatus.value[device.id] = null
     try {
         const response = await axios.get(route('api.v2.devices.health', device.id))
         deviceVerifyStatus.value[device.id] = response.data?.online === true ? 'online' : 'offline'
-    } catch (_) {
+    } catch (error: any) {
+        const status = error?.response?.status
+        if (status && status !== 0) {
+            // Server responded (403, 500, …) — not a genuine connectivity failure.
+            toast.error(`Verify failed (${status}). Check server logs.`)
+        }
         deviceVerifyStatus.value[device.id] = 'offline'
     } finally {
         verifyingDevice.value = null
-        setTimeout(() => {
+        deviceVerifyTimers.value[device.id] = setTimeout(() => {
             deviceVerifyStatus.value[device.id] = null
         }, 3000)
     }
@@ -396,10 +406,11 @@ async function verifyDevice(device: Device) {
                                     :disabled="verifyingDevice === device.id"
                                     @click="verifyDevice(device)"
                                 >
+                                    <Loader2 v-if="verifyingDevice === device.id" class="mr-1 h-3 w-3 animate-spin" />
                                     <Activity
+                                        v-else
                                         class="mr-1 h-3 w-3"
                                         :class="[
-                                            { 'animate-spin': verifyingDevice === device.id },
                                             deviceVerifyStatus[device.id] === 'online' ? 'text-woosoo-green' : '',
                                             deviceVerifyStatus[device.id] === 'offline' ? 'text-woosoo-red' : '',
                                         ]"

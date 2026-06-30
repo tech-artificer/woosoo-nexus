@@ -27,5 +27,9 @@ Broadcast::channel('service-requests.{orderId}', function (Device $device, int $
     return $device->orders()->where('order_id', $orderId)->exists();
 });
 
+Broadcast::channel('table.{tableId}', function (Device $device, int $tableId) {
+    return (int) $device->table_id === $tableId;
+});
+
 Broadcast::channel('admin.orders', fn ($user) => $user->is_admin);
 Broadcast::channel('admin.service-requests', fn ($user) => $user->is_admin);
