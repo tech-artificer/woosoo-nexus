@@ -84,7 +84,8 @@ class PackageController extends Controller
                 ->get()
                 ->map(fn (Menu $menu) => $this->formatPosMenuSnapshot($menu))
                 ->values();
-        } catch (QueryException) {
+        } catch (QueryException $e) {
+            \Log::warning('PackageController: POS query failed', ['error' => $e->getMessage()]);
             $packageOptions = collect([]);
             $meatOptions = collect([]);
         }

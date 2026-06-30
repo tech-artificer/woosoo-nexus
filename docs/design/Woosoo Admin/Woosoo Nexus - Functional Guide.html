@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Woosoo Nexus — Functional Handoff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f7f2ea; --card:#fffdfa; --ink:#2a2520; --ink2:#5c5246; --ink3:#8a7d6c;
+  --line:#e6ddd0; --line2:#d8cdbd;
+  --amber:#a9712f; --amberbg:#f6ecdc; --amberbd:#e7d3b3;
+  --ok:#3f7d4e; --okbg:#eaf3ea; --okbd:#cbe2cd;
+  --warn:#b07d23; --warnbg:#f7eed8; --warnbd:#ecdcb4;
+  --miss:#b4483a; --missbg:#f8e9e6; --missbd:#eccfc9;
+  --d:'Raleway',sans-serif; --m:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--d);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:940px;margin:0 auto;padding:0 28px}
+
+/* ── COVER ── */
+.cover{padding:84px 0 52px;border-bottom:2px solid var(--ink)}
+.brandrow{display:flex;align-items:center;gap:14px;margin-bottom:38px}
+.logo-icon{width:46px;height:46px;border-radius:9px;overflow:hidden;background:#1b1815;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.logo-icon img{width:100%;height:100%;object-fit:contain}
+.brandtxt{display:flex;flex-direction:column;line-height:1.1}
+.brandtxt b{font-size:18px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.brandtxt span{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);font-weight:700}
+.cover h1{font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1.05;margin-bottom:18px}
+.cover h1 em{font-style:normal;color:var(--amber)}
+.cover .lede{font-size:18px;color:var(--ink2);max-width:690px;line-height:1.6}
+.cover-meta{display:flex;gap:36px;margin-top:36px;flex-wrap:wrap}
+.cover-meta div{display:flex;flex-direction:column;gap:3px}
+.cover-meta .k{font-family:var(--m);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.cover-meta .v{font-size:15px;font-weight:600}
+
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:38px}
+.lg{display:flex;align-items:flex-start;gap:9px;padding:12px 15px;border:1px solid var(--line);border-radius:10px;background:var(--card);flex:1;min-width:200px}
+.lg .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.lg b{display:block;font-size:13.5px;font-weight:700;margin-bottom:1px}
+.lg span{font-size:12.5px;color:var(--ink2);line-height:1.45}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.miss{background:var(--miss)}
+
+/* how-to-use */
+.usebox{margin-top:30px;border:1px solid var(--line2);border-radius:12px;background:var(--card);padding:20px 22px}
+.usebox h3{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:12px}
+.usebox ol{list-style:none;counter-reset:u;display:flex;flex-direction:column;gap:9px}
+.usebox li{counter-increment:u;display:flex;gap:11px;font-size:14px;color:var(--ink2);line-height:1.5}
+.usebox li::before{content:counter(u);font-family:var(--m);font-size:11px;font-weight:600;color:#fff;background:var(--amber);width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.usebox li b{color:var(--ink);font-weight:700}
+
+/* ── TOC ── */
+.toc{margin:50px 0 10px}
+.toc h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);font-weight:700;margin-bottom:18px}
+.toc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 30px}
+.toc-item{display:flex;align-items:baseline;gap:11px;padding:8px 4px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.toc-item:hover{color:var(--amber)}
+.toc-item .n{font-family:var(--m);font-size:12px;color:var(--amber);font-weight:600;width:22px;flex-shrink:0}
+.toc-item .t{font-weight:600;font-size:14.5px}
+.toc-item .s{margin-left:auto;display:flex;gap:3px}
+.toc-item .s i{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+/* ── SECTION ── */
+section.page{padding:54px 0 8px;border-top:1px solid var(--line);margin-top:6px}
+.ph{display:flex;align-items:flex-start;gap:16px;margin-bottom:8px}
+.ph .num{font-family:var(--m);font-size:13px;font-weight:600;color:#fff;background:var(--amber);border-radius:7px;padding:5px 9px;flex-shrink:0;margin-top:4px}
+.ph h2{font-size:30px;font-weight:800;letter-spacing:-.01em;line-height:1.1}
+.ph .crumb{font-family:var(--m);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);font-weight:600;margin-top:3px}
+.purpose{font-size:16px;color:var(--ink2);margin:14px 0 22px;line-height:1.6;max-width:760px}
+
+.shot{border:1px solid var(--line2);border-radius:12px;overflow:hidden;margin:0 0 8px;background:#1b1815;box-shadow:0 8px 30px -14px rgba(60,42,20,.4)}
+.shot img{width:100%;display:block}
+.shotcap{font-family:var(--m);font-size:11.5px;color:var(--ink3);margin:0 0 26px;padding-left:2px}
+.shotcap b{color:var(--ink2);font-weight:600}
+.shots2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.shots2 .shotcap{margin-bottom:0}
+
+h3.block{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:700;margin:8px 0 14px;display:flex;align-items:center;gap:9px}
+h3.block::before{content:'';width:18px;height:2px;background:var(--amber);border-radius:2px}
+
+/* function steps */
+ol.steps{list-style:none;counter-reset:s;margin-bottom:26px}
+ol.steps li{counter-increment:s;display:flex;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+ol.steps li::before{content:counter(s,decimal-leading-zero);font-family:var(--m);font-size:12px;color:var(--ink3);font-weight:600;flex-shrink:0;width:24px;padding-top:2px}
+ol.steps .body{flex:1}
+ol.steps .body p.act{font-size:14.5px;line-height:1.55}
+ol.steps .body p.act b{font-weight:700}
+.verify{display:flex;gap:8px;align-items:flex-start;margin-top:7px;font-size:13px;color:var(--ink2);line-height:1.5;background:var(--okbg);border:1px solid var(--okbd);border-radius:8px;padding:7px 11px}
+.verify .vk{font-family:var(--m);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--ok);flex-shrink:0;margin-top:2px}
+.verify.miss{background:var(--missbg);border-color:var(--missbd)}
+.verify.miss .vk{color:var(--miss)}
+.verify.warn{background:var(--warnbg);border-color:var(--warnbd)}
+.verify.warn .vk{color:var(--warn)}
+.tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--m);font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding:3px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0;margin-top:1px;height:fit-content}
+.tag .d{width:6px;height:6px;border-radius:50%}
+.tag.ok{background:var(--okbg);color:var(--ok);border:1px solid var(--okbd)} .tag.ok .d{background:var(--ok)}
+.tag.warn{background:var(--warnbg);color:var(--warn);border:1px solid var(--warnbd)} .tag.warn .d{background:var(--warn)}
+.tag.miss{background:var(--missbg);color:var(--miss);border:1px solid var(--missbd)} .tag.miss .d{background:var(--miss)}
+ol.steps li .top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+
+/* gaps callout */
+.gaps{background:var(--missbg);border:1px solid var(--missbd);border-radius:12px;padding:18px 20px;margin-bottom:8px}
+.gaps.clean{background:var(--okbg);border-color:var(--okbd)}
+.gaps h4{font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--miss);margin-bottom:11px;display:flex;align-items:center;gap:8px}
+.gaps.clean h4{color:var(--ok)}
+.gaps ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.gaps li{display:flex;gap:10px;font-size:14px;line-height:1.5;color:var(--ink)}
+.gaps li .tag{margin-top:1px}
+.gaps li b{font-weight:700}
+
+/* summary */
+.summary{padding:58px 0 30px;border-top:2px solid var(--ink);margin-top:40px}
+.summary h2{font-size:34px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+.summary .purpose{margin-bottom:26px}
+table.audit{width:100%;border-collapse:collapse;font-size:13.5px}
+table.audit th{text-align:left;font-family:var(--m);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:0 12px 10px;border-bottom:2px solid var(--line2)}
+table.audit td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+table.audit td.area{font-weight:700;white-space:nowrap}
+table.audit tr:hover td{background:var(--card)}
+.prio{font-family:var(--m);font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.prio.hi{background:var(--missbg);color:var(--miss);border:1px solid var(--missbd)}
+.prio.med{background:var(--warnbg);color:var(--warn);border:1px solid var(--warnbd)}
+.statcount{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:30px}
+.statcount .c{border:1px solid var(--line);border-radius:11px;padding:16px 22px;background:var(--card);flex:1;min-width:150px}
+.statcount .c .big{font-family:var(--m);font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.statcount .c .lab{font-size:12px;color:var(--ink2);margin-top:6px;font-weight:600}
+.statcount .c.ok .big{color:var(--ok)} .statcount .c.warn .big{color:var(--warn)} .statcount .c.miss .big{color:var(--miss)}
+
+/* ── CHECKLIST ── */
+.checklist{padding:58px 0 30px;border-top:2px solid var(--ink);margin-top:40px}
+.checklist h2{font-size:34px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+.cl-progwrap{position:sticky;top:0;background:var(--paper);padding:16px 0 14px;z-index:5;border-bottom:1px solid var(--line)}
+.cl-progrow{display:flex;align-items:center;gap:16px}
+.cl-bar{flex:1;height:10px;background:var(--line);border-radius:99px;overflow:hidden}
+.cl-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ok),#5a9a68);border-radius:99px;transition:width .35s ease}
+.cl-pct{font-family:var(--m);font-size:14px;font-weight:600;color:var(--ink);min-width:128px;text-align:right}
+.cl-actions{display:flex;gap:8px;margin:14px 0 4px}
+.cl-btn{font-family:var(--m);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:7px 13px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--ink2);cursor:pointer}
+.cl-btn:hover{border-color:var(--amber);color:var(--amber)}
+.cl-group{margin-top:26px}
+.cl-group h3{font-size:14px;font-weight:800;letter-spacing:.01em;margin-bottom:3px;display:flex;align-items:center;gap:10px}
+.cl-group .ct{font-family:var(--m);font-size:10.5px;font-weight:600;color:var(--ink3);background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:2px 8px}
+.cl-group .gp{font-size:13px;color:var(--ink3);margin-bottom:12px}
+.cl-item{display:flex;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);margin-bottom:7px;cursor:pointer;transition:background .15s,border-color .15s}
+.cl-item:hover{border-color:var(--line2)}
+.cl-item.done{background:var(--okbg);border-color:var(--okbd)}
+.cl-cb{width:20px;height:20px;border:2px solid var(--line2);border-radius:6px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.cl-item.done .cl-cb{background:var(--ok);border-color:var(--ok)}
+.cl-cb svg{width:12px;height:12px;opacity:0;transition:.15s}
+.cl-item.done .cl-cb svg{opacity:1}
+.cl-txt{flex:1;font-size:14px;line-height:1.5}
+.cl-txt b{font-weight:700}
+.cl-item.done .cl-txt{color:var(--ink3);text-decoration:line-through;text-decoration-color:var(--okbd)}
+.cl-meta{display:flex;gap:7px;align-items:center;flex-shrink:0}
+.cl-prio{font-family:var(--m);font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:99px;white-space:nowrap;margin-top:2px}
+.cl-prio.hi{background:var(--missbg);color:var(--miss);border:1px solid var(--missbd)}
+.cl-prio.med{background:var(--warnbg);color:var(--warn);border:1px solid var(--warnbd)}
+.cl-prio.low{background:var(--paper);color:var(--ink3);border:1px solid var(--line2)}
+
+footer{padding:40px 0 60px;color:var(--ink3);font-size:12.5px;font-family:var(--m);text-align:center}
+
+@media (max-width:680px){
+  .cover h1{font-size:36px} .toc-grid{grid-template-columns:1fr} .shots2{grid-template-columns:1fr}
+  ol.steps li .top{flex-direction:column;gap:6px}
+}
+@media print{
+  body{background:#fff}
+  section.page{break-inside:avoid;page-break-inside:avoid}
+  .shot{box-shadow:none} .cover{padding-top:20px}
+  .cl-progwrap{position:static} .cl-actions{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="cover">
+    <div class="brandrow">
+      <div class="logo-icon"><img src="images/woosoo-icon.png" alt="Woosoo"></div>
+      <div class="brandtxt"><b>Woosoo</b><span>Nexus</span></div>
+    </div>
+    <h1>Functional Handoff<br><em>Guide · Verifications · Checklist</em></h1>
+    <p class="lede">A page-by-page walkthrough of the Woosoo Nexus admin console: what every screen does, the exact steps to operate it, how to <em>verify</em> each function with your own eyes, and a tracked checklist of the functionality still missing.</p>
+    <div class="cover-meta">
+      <div><span class="k">Product</span><span class="v">Woosoo Nexus Admin</span></div>
+      <div><span class="k">Scope</span><span class="v">15 screens · global chrome</span></div>
+      <div><span class="k">Build</span><span class="v">Prototype / mock data</span></div>
+      <div><span class="k">Date</span><span class="v">June 2026</span></div>
+    </div>
+
+    <div class="legend">
+      <div class="lg"><span class="dot ok"></span><div><b>Working</b><span>Behaves as expected — the verification passes.</span></div></div>
+      <div class="lg"><span class="dot warn"></span><div><b>Partial</b><span>UI responds but the action is cosmetic or doesn't persist.</span></div></div>
+      <div class="lg"><span class="dot miss"></span><div><b>Missing</b><span>Control is present but dead — or a required feature is absent.</span></div></div>
+    </div>
+
+    <div class="usebox">
+      <h3>How to use this document</h3>
+      <ol>
+        <li><b>Read the screen.</b> Each section opens with the page's purpose and an annotated screenshot.</li>
+        <li><b>Follow "How it works".</b> Numbered steps walk the operator through every function.</li>
+        <li><b>Run the verification.</b> The green <b>Verify</b> line under each step tells you exactly what to click and what you should observe — use it to confirm the build matches this spec.</li>
+        <li><b>Note the gaps.</b> The amber/red box lists controls that do nothing yet.</li>
+        <li><b>Work the checklist.</b> The final section is a tracked, tickable backlog of every missing feature — your progress is saved in this browser.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h2>Contents</h2>
+    <div class="toc-grid" id="toc"></div>
+  </div>
+
+  <div id="pages"></div>
+
+  <!-- AUDIT SUMMARY -->
+  <div class="summary">
+    <h2>Audit summary</h2>
+    <p class="purpose">The prototype is visually complete and many flows are genuinely interactive. The gaps below are the controls a user can click that don't yet do anything, grouped by how essential they are to running the restaurant.</p>
+    <div class="statcount">
+      <div class="c ok"><div class="big" id="cOk">0</div><div class="lab">Functions verified working</div></div>
+      <div class="c warn"><div class="big" id="cWarn">0</div><div class="lab">Partial / cosmetic</div></div>
+      <div class="c miss"><div class="big" id="cMiss">0</div><div class="lab">Missing / dead controls</div></div>
+    </div>
+    <table class="audit">
+      <thead><tr><th style="width:150px">Area</th><th>Missing or incomplete functionality</th><th style="width:90px">Priority</th></tr></thead>
+      <tbody id="auditBody"></tbody>
+    </table>
+  </div>
+
+  <!-- IMPLEMENTATION CHECKLIST -->
+  <div class="checklist" id="checklist">
+    <h2>Implementation checklist</h2>
+    <p class="purpose">Every missing or partial function from the audit, written as an actionable build task. Tick items as you complete them — progress is saved in this browser and survives a refresh.</p>
+    <div class="cl-progwrap">
+      <div class="cl-progrow">
+        <div class="cl-bar"><i id="clBar"></i></div>
+        <div class="cl-pct" id="clPct">0 / 0 complete</div>
+      </div>
+      <div class="cl-actions">
+        <button class="cl-btn" id="clReset">Reset all</button>
+        <button class="cl-btn" id="clPrint">Print / Save PDF</button>
+      </div>
+    </div>
+    <div id="clGroups"></div>
+  </div>
+
+  <footer>Woosoo Nexus · Functional Handoff · generated from the prototype source · June 2026</footer>
+</div>
+
+<script>
+const OK={s:'ok',l:'Working'}, WARN={s:'warn',l:'Partial'}, MISS={s:'miss',l:'Missing'};
+function tag(o){return `<span class="tag ${o.s}"><span class="d"></span>${o.l}</span>`;}
+const SHOT='screenshots/guide/';
+
+const GLOBAL = {
+  id:'global', num:'00', title:'Global chrome', crumb:'Sidebar · Topbar',
+  purpose:'The persistent frame around every screen: the left navigation rail and the top bar. These are always visible, so their gaps affect the whole app.',
+  shots:[],
+  funcs:[
+    {t:'<b>Navigate</b> — click any item in the left sidebar to switch screens.',v:'Click "Orders": the rail item gains an amber highlight + left bar, and the topbar title changes to "Orders".',st:OK},
+    {t:'<b>Switch theme</b> — the sun / moon button in the topbar toggles light and dark mode.',v:'Click the sun/moon icon: the whole UI flips light↔dark. Refresh the page — the chosen theme persists.',st:OK},
+    {t:'<b>Section badges</b> — Orders and Devices show a count badge in the rail.',v:'Confirm an amber "7" sits on Orders and "1" on Devices. (Static — the number never changes.)',st:WARN},
+  ],
+  gaps:[
+    {t:'<b>Global search</b> (topbar) accepts no input and the <b>⌘K</b> shortcut is not wired — purely decorative.',st:MISS},
+    {t:'<b>Refresh</b> and <b>notification bell</b> icons in the topbar do nothing.',st:MISS},
+    {t:'<b>HQ Branch</b> is a static label — no branch switcher; the Branches page is intentionally disabled.',st:MISS},
+    {t:'<b>Sidebar collapse</b> is styled in CSS but no toggle is rendered, so the rail can never collapse.',st:MISS},
+  ]
+};
+
+const PAGES = [
+  {
+    id:'dashboard', num:'01', title:'Dashboard', crumb:'Operations Overview',
+    purpose:'The landing screen — a real-time-style overview of devices, orders, revenue and system health for the current branch.',
+    shots:[{src:'dashboard.png',cap:'Dashboard — KPI cards, hourly revenue, live kitchen queue and recent sessions.'}],
+    funcs:[
+      {t:'<b>Read the KPI row</b> — Active Devices, Open Orders, Queue Depth, Print Failures.',v:'Confirm four cards across the top, each with a value and a trend note (e.g. "7 / 8", "1 offline").',st:OK},
+      {t:'<b>Scan the Hourly Revenue chart</b> for the current trading day.',v:'A bar chart renders under a ₱ total, with the current hour highlighted amber.',st:OK},
+      {t:'<b>Check the Live Queue</b> — Incoming, Grilling, Ready, Served — and System Health chips.',v:'Four counted rows plus green service chips (MySQL, Redis, POS DB, Queue) appear at right.',st:OK},
+      {t:'<b>Review Recent Sessions</b> in the bottom table.',v:'A table of recent sessions with table, package and status is visible.',st:OK},
+    ],
+    gaps:[
+      {t:'The <b>Today / Week / Month</b> toggle on the revenue chart is cosmetic — the chart never changes.',st:MISS},
+      {t:'<b>"View all"</b> on Recent Sessions does nothing.',st:MISS},
+      {t:'All figures are <b>static</b> — there is no live polling or refresh.',st:WARN},
+    ]
+  },
+  {
+    id:'orders', num:'02', title:'Orders', crumb:'Kitchen Dispatch',
+    purpose:'The kitchen-facing view of every dining session and the individual print jobs (initial orders and refills) that flow to the grill station.',
+    shots:[{src:'orders.png',cap:'Sessions board — four status columns; cards over 90 minutes get a red urgent accent.'},{src:'order-drawer.png',cap:'Order drawer — package summary plus each print job with type and print status.'}],
+    funcs:[
+      {t:'<b>Switch tabs</b> — toggle between the <b>Sessions</b> kanban and the <b>Order Events</b> print-job log.',v:'Click "Order Events": the kanban is replaced by a chronological list of print jobs.',st:OK},
+      {t:'<b>Read the board</b> — sessions sit in Confirmed / Completed / Voided / Cancelled columns.',v:'Cards appear under their status column; sessions older than 90 min show a red left accent.',st:OK},
+      {t:'<b>Open a session</b> — click any card to open the detail drawer.',v:'A right-hand drawer slides in with the package summary and a print-job timeline.',st:OK},
+      {t:'<b>Filter events</b> — on Order Events, filter by All / Initial / Refill / Failed.',v:'Click "Failed": the list narrows to only failed print jobs.',st:OK},
+      {t:'<b>Refresh</b> — plays the new-order chime when Sound Alerts are on.',v:'With sound on, click Refresh: the chime plays. (Order data does not actually reload.)',st:WARN},
+    ],
+    gaps:[
+      {t:'In the drawer, <b>Void</b>, <b>Cancel</b> and <b>Mark Complete</b> do not change the order\u2019s status.',st:MISS},
+      {t:'<b>Print Receipt</b> (completed orders) does nothing.',st:MISS},
+      {t:'<b>Retry</b> on a failed print job does nothing.',st:MISS},
+      {t:'The toolbar <b>Filter</b> button opens no filter panel.',st:MISS},
+    ]
+  },
+  {
+    id:'pos', num:'03', title:'POS', crumb:'Live Table View',
+    purpose:'A live floor plan of every table on the Krypton POS — who is seated, on which package, and how long they have been dining.',
+    shots:[{src:'pos.png',cap:'Table grid — open tables show package, pax and an elapsed-time bar that turns amber near the limit.'},{src:'pos-drawer.png',cap:'Table drawer — session details and the batch orders recorded against that table.'}],
+    funcs:[
+      {t:'<b>Read the floor</b> — each open table shows package, guest count, minutes elapsed and a progress bar.',v:'Open tables are filled cards; the elapsed bar turns amber as a table nears the 90-minute limit.',st:OK},
+      {t:'<b>Open a table</b> — click an open table to see its session total and batch orders.',v:'A drawer opens listing the table\u2019s batch orders and running total.',st:OK},
+      {t:'<b>Closed tables</b> show "Available" and are not clickable.',v:'Click an "Available" table: nothing happens — correct behaviour.',st:OK},
+    ],
+    gaps:[
+      {t:'The <b>Krypton Main / Krypton Bar</b> terminal selector is not interactive.',st:MISS},
+      {t:'<b>Sync POS</b> and <b>New Order</b> do nothing.',st:MISS},
+      {t:'In the drawer, <b>Void Session</b> and <b>Mark Paid</b> do nothing.',st:MISS},
+    ]
+  },
+  {
+    id:'monitoring', num:'04', title:'Monitoring', crumb:'System Health',
+    purpose:'The operations health dashboard — database latency, the background job queue, print-event status and device anomalies.',
+    shots:[{src:'monitoring.png',cap:'Monitoring — service health, queue and print-event counters, device anomalies and failed-job log.'}],
+    funcs:[
+      {t:'<b>Check services</b> — MySQL, Redis, POS DB and Reverb cards show status and latency.',v:'Four service cards show a status dot and a latency figure in ms.',st:OK},
+      {t:'<b>Read counters</b> — Queue Stats and Print Events tiles.',v:'Tiles show numeric counts for pending/processed jobs and print events.',st:OK},
+      {t:'<b>Purge All</b> print events opens a confirmation modal.',v:'Click "Purge All": a confirm modal appears. (Confirming closes it but performs no real purge.)',st:WARN},
+      {t:'<b>Review anomalies</b> and the recent failed-jobs panel.',v:'Anomaly rows and a failed-jobs list render at the bottom.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>Refresh</b>, <b>View Jobs</b>, <b>Purge Failed</b>, <b>Print Audit</b> and the anomaly <b>View</b> buttons do nothing.',st:MISS},
+      {t:'The Purge confirmation <b>closes without performing a real purge</b>.',st:WARN},
+    ]
+  },
+  {
+    id:'reverb', num:'05', title:'Reverb', crumb:'WebSocket Service',
+    purpose:'Control panel for the Reverb real-time server that pushes live updates to the tablets. This is the most fully interactive screen.',
+    shots:[{src:'reverb.png',cap:'Reverb — server status with process stats and a live event log.'}],
+    funcs:[
+      {t:'<b>Read status</b> — Running / Stopped plus PID, uptime, connected clients and active channels.',v:'A status pill plus four stat tiles (PID, uptime, clients, channels) are shown.',st:OK},
+      {t:'<b>Stop</b> the server — confirm in the modal.',v:'Click Stop → confirm: the pill flips to "Stopped" and a warning toast appears.',st:OK},
+      {t:'<b>Start</b> the server.',v:'Click Start: the pill flips to "Running" and a success toast appears.',st:OK},
+      {t:'<b>Restart</b> — confirm in the modal.',v:'Click Restart → confirm: a success toast appears and status stays Running.',st:OK},
+      {t:'<b>Read the server log</b> of recent connections and broadcasts.',v:'A monospace log panel lists recent events.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>View Full Log</b> does nothing.',st:MISS},
+      {t:'The log is a <b>static sample</b> — it does not stream live events.',st:WARN},
+    ]
+  },
+  {
+    id:'menus', num:'06', title:'Menus', crumb:'Items &amp; Availability',
+    purpose:'The catalog of grill items and side dishes — search, filter, toggle availability, and add or edit items. One of the most functional screens.',
+    shots:[{src:'menus.png',cap:'Menu grid — category rail with live counts and per-item availability toggles.'},{src:'menu-modal.png',cap:'Item editor — name, add-on price, description, category, availability and image filename.'}],
+    funcs:[
+      {t:'<b>Search</b> items by name.',v:'Type "beef": the grid narrows to matching items as you type.',st:OK},
+      {t:'<b>Filter by category</b> — All / Meats / Sides / Extras, each with a live count.',v:'Click "Sides": only side items show, and the count matches the visible cards.',st:OK},
+      {t:'<b>Toggle availability</b> — flip an item On / Off on its card.',v:'Click a card\u2019s toggle: it switches state and the card dims/undims accordingly.',st:OK},
+      {t:'<b>Add an item</b> — "Add Item" opens the editor; fill fields and Save.',v:'Save a new item: the modal closes and the new card appears in the grid.',st:OK},
+      {t:'<b>Edit an item</b> — click the pencil, change fields, Save.',v:'Edit a name and Save: the card updates to the new name.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>Delete</b> inside the edit modal does nothing.',st:MISS},
+      {t:'The image is a <b>filename text field</b> — no upload or picker.',st:WARN},
+      {t:'Added / edited items are <b>session-only</b> and reset on reload.',st:WARN},
+    ]
+  },
+  {
+    id:'packages', num:'07', title:'Packages', crumb:'Dining Tiers',
+    purpose:'The eat-all-you-can package tiers (Classic Feast, Noble Selection, Royal Banquet) and the per-room tablet configs that map to them.',
+    shots:[{src:'packages.png',cap:'Package tiers — meats, included add-ons and per-pax price, with a Configs tab alongside.'}],
+    funcs:[
+      {t:'<b>Switch tabs</b> — between the Packages tier cards and the Package Configs table.',v:'Click "Configs": the tier cards are replaced by a table of room configs.',st:OK},
+      {t:'<b>Review tiers</b> — each card lists its meats, included add-ons and price.',v:'Three tier cards render with their meat lists and per-pax prices.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>New Package</b>, <b>Edit</b> and <b>Preview</b> all do nothing.',st:MISS},
+      {t:'On Configs, <b>New Config</b> and row edit do nothing.',st:MISS},
+      {t:'The entire screen is currently <b>read-only</b>.',st:MISS},
+    ]
+  },
+  {
+    id:'tablet-cats', num:'08', title:'Tablet Categories', crumb:'Menu Sync',
+    purpose:'Controls how menu categories are grouped and ordered on the guest-facing tablets, and which menus are attached to each.',
+    shots:[{src:'tablet-cats.png',cap:'Categories list with drag handles, beside the detail panel of attached menus.'}],
+    funcs:[
+      {t:'<b>Select a category</b> — view its slug, sort order, item count and attached menus.',v:'Click a category row: the right panel updates with that category\u2019s details and menus.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>Drag to reorder</b> is advertised in the header and shows grip handles, but reordering is <b>not implemented</b> — a core promised feature.',st:MISS},
+      {t:'<b>New Category</b>, <b>Edit</b>, <b>Attach Menu</b> and <b>Detach</b> all do nothing.',st:MISS},
+    ]
+  },
+  {
+    id:'devices', num:'09', title:'Devices', crumb:'Tablet Management',
+    purpose:'The tablet fleet — per-device status, zone, battery, app version, network and license health across the floor.',
+    shots:[{src:'devices.png',cap:'Device fleet — summary stats bar and a card per tablet with battery and security status.'}],
+    funcs:[
+      {t:'<b>Read the fleet</b> — online / warning / offline pills and the aggregate stats bar.',v:'A stats bar tallies the fleet; each tablet card shows a coloured status pill.',st:OK},
+      {t:'<b>Inspect a tablet</b> — each card shows zone, table, ping, version, IP, battery, license.',v:'Every card lists those fields with live-looking values.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>APK Download</b>, <b>Sync All</b> and <b>Add Device</b> do nothing.',st:MISS},
+      {t:'Per-device <b>View</b> and <b>Restart</b> do nothing.',st:MISS},
+      {t:'The screen is <b>monitoring-only</b> — no device can actually be managed.',st:MISS},
+    ]
+  },
+  {
+    id:'users', num:'10', title:'Users', crumb:'Staff &amp; Permissions',
+    purpose:'The staff roster with a per-person permission panel for the five core capability flags.',
+    shots:[{src:'users.png',cap:'Team roster on the left; the selected member\u2019s profile and permission switches on the right.'}],
+    funcs:[
+      {t:'<b>Select a member</b> — click a row to load their profile and permissions.',v:'Click a roster row: the right panel loads that person\u2019s profile and toggle set.',st:OK},
+      {t:'<b>Toggle permissions</b> — View Reports, Edit Menu, Manage Staff, Process Refunds, Manage Devices.',v:'Flip a switch: it changes state visually. (It does not persist on reload.)',st:OK},
+    ],
+    gaps:[
+      {t:'<b>Invite User</b> does nothing.',st:MISS},
+      {t:'<b>Remove</b> and <b>Save Changes</b> do nothing — permission edits are not persisted.',st:MISS},
+      {t:'The <b>Search</b> box over the roster does not filter.',st:MISS},
+    ]
+  },
+  {
+    id:'roles', num:'11', title:'Roles', crumb:'Access Control',
+    purpose:'The role definitions (Manager, Server, Kitchen, System Operator) with their guard, permission count and assigned users.',
+    shots:[{src:'roles.png',cap:'Roles table — guard, permission count and user count per role.'}],
+    funcs:[
+      {t:'<b>Review roles</b> — read the table of roles and their permission / user counts.',v:'A table lists each role with its guard, permission count and user count.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>Create Role</b>, <b>Permissions</b>, <b>Edit</b> and <b>Delete</b> all do nothing — the screen is <b>entirely static</b>.',st:MISS},
+    ]
+  },
+  {
+    id:'permissions', num:'12', title:'Permissions', crumb:'Guards &amp; Abilities',
+    purpose:'The full permission registry and which roles each ability is granted to.',
+    shots:[{src:'permissions.png',cap:'Permission registry — searchable list with assigned-role chips.'}],
+    funcs:[
+      {t:'<b>Search</b> permissions by name — the list filters live.',v:'Type in the search box: the registry narrows to matching permissions.',st:OK},
+      {t:'<b>Review assignments</b> — each row shows its guard and the roles that hold it.',v:'Each row displays role chips for the roles granted that permission.',st:OK},
+    ],
+    gaps:[
+      {t:'<b>Add Permission</b>, <b>Edit</b> and <b>Delete</b> do nothing.',st:MISS},
+    ]
+  },
+  {
+    id:'reports', num:'13', title:'Reports', crumb:'Analytics',
+    purpose:'Revenue and sales analytics — trend chart, top-selling meats and package mix.',
+    shots:[{src:'reports.png',cap:'Reports — KPI row, revenue trend with week/month toggle, top meats and package-mix donut.'}],
+    funcs:[
+      {t:'<b>Read the KPIs</b> — revenue, sessions and average session revenue.',v:'Three KPI tiles render across the top with currency / count values.',st:OK},
+      {t:'<b>Toggle the trend</b> — switch the revenue chart between This Week and This Month.',v:'Click "This Month": the chart and its total both update.',st:OK},
+      {t:'<b>Review breakdowns</b> — Top Meats ranking and the Package Mix donut.',v:'A ranked meat list and a donut chart render below the trend.',st:OK},
+    ],
+    gaps:[
+      {t:'There is <b>no export</b> (CSV / PDF) — a common reporting requirement.',st:MISS},
+      {t:'Only week / month <b>presets</b> are available — no custom date range.',st:WARN},
+      {t:'Figures are <b>static sample data</b>.',st:WARN},
+    ]
+  },
+  {
+    id:'configuration', num:'14', title:'Configuration', crumb:'System Hub',
+    purpose:'A launcher hub of tiles that jump to the various system-configuration areas.',
+    shots:[{src:'configuration.png',cap:'Configuration hub — six tiles routing to POS, settings, packages, categories, branches and health.'}],
+    funcs:[
+      {t:'<b>Open an area</b> — click any tile to jump straight to that screen.',v:'Click the "Settings" tile: the app navigates to the Settings screen.',st:OK},
+    ],
+    gaps:[
+      {t:'The <b>Branches</b> tile routes to a page that is intentionally disabled / unbuilt.',st:MISS},
+      {t:'<b>POS Connection</b> routes to the POS floor view rather than a connection-test screen.',st:WARN},
+    ]
+  },
+  {
+    id:'settings', num:'15', title:'Settings', crumb:'App Preferences',
+    purpose:'Interface, notification and integration preferences for the console.',
+    shots:[{src:'settings.png',cap:'Settings — theme, items-per-page, notification toggles and integration URLs.'}],
+    funcs:[
+      {t:'<b>Set the theme</b> — Light / Dark / System.',v:'Pick "Dark": the UI flips immediately and stays dark after a refresh.',st:OK},
+      {t:'<b>Set items-per-page</b> — 10 / 25 / 50 / 100.',v:'Select a value: the control reflects the new choice.',st:OK},
+      {t:'<b>Toggle alerts</b> — Email, Order and Sound; "Test" plays the chime.',v:'Click "Test" next to Sound: the chime plays; the sound setting persists on reload.',st:OK},
+      {t:'<b>Edit integration fields</b> — POS name, API URL and WebSocket URL.',v:'Type into a URL field: the text updates.',st:OK},
+      {t:'<b>Save Settings</b> — shows a success toast.',v:'Click Save: a success toast appears. (Only theme & sound actually persist.)',st:WARN},
+    ],
+    gaps:[
+      {t:'<b>Save Settings</b> only persists theme and sound — other fields reset on reload.',st:WARN},
+      {t:'<b>Reset to Defaults</b> does nothing.',st:MISS},
+    ]
+  },
+];
+
+const AUDIT = [
+  {area:'Orders', txt:'Order status actions (Void / Cancel / Mark Complete), print-job Retry, and Print Receipt are all dead. Operators cannot progress an order.', prio:'hi'},
+  {area:'POS', txt:'Cannot switch terminals, create a New Order, or close out a table (Void Session / Mark Paid). Live view only.', prio:'hi'},
+  {area:'Roles', txt:'Entire screen is static — no create, edit, delete, or permission assignment.', prio:'hi'},
+  {area:'Permissions', txt:'Add / Edit / Delete are non-functional.', prio:'hi'},
+  {area:'Users', txt:'Invite, Remove and Save Changes are dead; permission edits never persist; roster search does not filter.', prio:'hi'},
+  {area:'Packages', txt:'Read-only — New Package, Edit, Preview and Config management all do nothing.', prio:'hi'},
+  {area:'Tablet Categories', txt:'Advertised drag-to-reorder is not implemented; category and menu CRUD is dead.', prio:'hi'},
+  {area:'Devices', txt:'No device can be managed — Add, Sync All, APK Download, View and Restart are dead.', prio:'med'},
+  {area:'Settings', txt:'Save persists only theme & sound; Reset to Defaults does nothing.', prio:'med'},
+  {area:'Reports', txt:'No export (CSV / PDF) and no custom date range.', prio:'med'},
+  {area:'Monitoring', txt:'Refresh, View Jobs, Purge actions and Print Audit are dead; purge confirm does not purge.', prio:'med'},
+  {area:'Dashboard', txt:'Revenue range toggle and "View all" are cosmetic; no live refresh.', prio:'med'},
+  {area:'Global', txt:'Search box, ⌘K, topbar refresh and notification bell are non-functional; sidebar cannot collapse; no real branch switching.', prio:'med'},
+];
+
+// CHECKLIST — actionable build tasks grouped by area
+const CHECK = [
+  {area:'Orders', note:'Kitchen dispatch — highest operational impact.', items:[
+    {t:'Wire <b>Void / Cancel / Mark Complete</b> in the order drawer to actually mutate the session status and move the card between columns.',p:'hi'},
+    {t:'Implement <b>Print Receipt</b> on completed orders (trigger print job + toast).',p:'hi'},
+    {t:'Implement <b>Retry</b> on failed print jobs (re-queue + status update).',p:'hi'},
+    {t:'Build the toolbar <b>Filter</b> panel (status, table, time range).',p:'med'},
+    {t:'Make <b>Refresh</b> reload order data (not just play the chime).',p:'med'},
+  ]},
+  {area:'POS', note:'Live floor view used during service.', items:[
+    {t:'Make the <b>Krypton Main / Krypton Bar</b> terminal selector switch the table set.',p:'hi'},
+    {t:'Wire <b>Void Session</b> and <b>Mark Paid</b> in the table drawer.',p:'hi'},
+    {t:'Implement <b>New Order</b> and <b>Sync POS</b>.',p:'med'},
+  ]},
+  {area:'Roles &amp; Permissions', note:'Access control — currently static.', items:[
+    {t:'Build <b>Create / Edit / Delete Role</b> with a permission-assignment UI.',p:'hi'},
+    {t:'Wire the role <b>Permissions</b> action to manage granted abilities.',p:'hi'},
+    {t:'Build <b>Add / Edit / Delete Permission</b> on the Permissions registry.',p:'hi'},
+  ]},
+  {area:'Users', note:'Staff management.', items:[
+    {t:'Implement <b>Invite User</b> (form + create).',p:'hi'},
+    {t:'Wire <b>Save Changes</b> so permission toggles persist; implement <b>Remove</b>.',p:'hi'},
+    {t:'Make the roster <b>Search</b> box filter the list.',p:'med'},
+  ]},
+  {area:'Packages', note:'Dining tiers — currently read-only.', items:[
+    {t:'Build <b>New Package / Edit / Preview</b> for tiers.',p:'hi'},
+    {t:'Build <b>New Config</b> and row editing on the Configs tab.',p:'med'},
+  ]},
+  {area:'Tablet Categories', note:'Guest tablet menu sync.', items:[
+    {t:'Implement <b>drag-to-reorder</b> with persistence — the advertised core feature.',p:'hi'},
+    {t:'Wire <b>New Category / Edit</b> and <b>Attach / Detach Menu</b>.',p:'med'},
+  ]},
+  {area:'Devices', note:'Tablet fleet — monitoring-only today.', items:[
+    {t:'Implement <b>Add Device</b>, <b>Sync All</b> and <b>APK Download</b>.',p:'med'},
+    {t:'Wire per-device <b>View</b> (detail) and <b>Restart</b>.',p:'med'},
+  ]},
+  {area:'Monitoring', note:'System health & ops.', items:[
+    {t:'Wire <b>Refresh</b>, <b>View Jobs</b>, <b>Purge Failed</b> and <b>Print Audit</b>.',p:'med'},
+    {t:'Make the <b>Purge All</b> confirm actually clear print events.',p:'med'},
+  ]},
+  {area:'Reports', note:'Analytics.', items:[
+    {t:'Add <b>CSV / PDF export</b>.',p:'med'},
+    {t:'Add a <b>custom date-range</b> picker beyond week/month presets.',p:'med'},
+  ]},
+  {area:'Settings', note:'App preferences.', items:[
+    {t:'Persist <b>all</b> settings fields (not just theme & sound).',p:'med'},
+    {t:'Implement <b>Reset to Defaults</b>.',p:'low'},
+  ]},
+  {area:'Menus', note:'Mostly functional — minor gaps.', items:[
+    {t:'Wire <b>Delete</b> inside the item editor.',p:'med'},
+    {t:'Replace the image <b>filename field</b> with a real upload / picker.',p:'low'},
+    {t:'Persist added / edited items (currently session-only).',p:'low'},
+  ]},
+  {area:'Dashboard', note:'Overview screen.', items:[
+    {t:'Make the <b>Today / Week / Month</b> revenue toggle change the chart.',p:'med'},
+    {t:'Wire <b>"View all"</b> on Recent Sessions.',p:'low'},
+  ]},
+  {area:'Global chrome', note:'Affects every screen.', items:[
+    {t:'Wire <b>global search</b> + <b>⌘K</b> shortcut.',p:'med'},
+    {t:'Implement the topbar <b>refresh</b> and <b>notification bell</b>.',p:'low'},
+    {t:'Add a real <b>branch switcher</b> (and enable the Branches page).',p:'med'},
+    {t:'Render a <b>sidebar collapse</b> toggle.',p:'low'},
+  ]},
+];
+
+// ── render guide ──
+const ALL=[GLOBAL,...PAGES];
+let ok=0,warn=0,miss=0;
+ALL.forEach(p=>{(p.funcs||[]).forEach(f=>{if(f.st.s==='ok')ok++;else if(f.st.s==='warn')warn++;else miss++;});(p.gaps||[]).forEach(g=>{if(g.st.s==='warn')warn++;else if(g.st.s==='miss')miss++;});});
+
+document.getElementById('toc').innerHTML = ALL.map(p=>{
+  let o=0,w=0,m=0;(p.funcs||[]).forEach(f=>f.st.s==='ok'?o++:f.st.s==='warn'?w++:m++);(p.gaps||[]).forEach(g=>g.st.s==='miss'?m++:w++);
+  const dots=[o&&`<i style="background:var(--ok)"></i>`,w&&`<i style="background:var(--warn)"></i>`,m&&`<i style="background:var(--miss)"></i>`].filter(Boolean).join('');
+  return `<a class="toc-item" href="#${p.id}"><span class="n">${p.num}</span><span class="t">${p.title}</span><span class="s">${dots}</span></a>`;
+}).join('') + `<a class="toc-item" href="#checklist"><span class="n">✓</span><span class="t">Implementation checklist</span><span class="s"></span></a>`;
+
+document.getElementById('pages').innerHTML = ALL.map(p=>{
+  const shots = (p.shots&&p.shots.length)
+    ? (p.shots.length>1
+        ? `<div class="shots2">${p.shots.map(s=>`<div><div class="shot"><img src="${SHOT+s.src}" alt=""></div><div class="shotcap">${s.cap}</div></div>`).join('')}</div>`
+        : p.shots.map(s=>`<div class="shot"><img src="${SHOT+s.src}" alt=""></div><div class="shotcap">${s.cap}</div>`).join('')
+      )
+    : '';
+  const funcs = `<h3 class="block">How it works &amp; how to verify</h3><ol class="steps">${p.funcs.map(f=>{
+    const vcls = f.st.s==='ok'?'':(f.st.s==='warn'?'warn':'miss');
+    return `<li><div class="body"><div class="top"><p class="act">${f.t}</p>${tag(f.st)}</div><div class="verify ${vcls}"><span class="vk">Verify</span><span>${f.v}</span></div></div></li>`;
+  }).join('')}</ol>`;
+  const gaps = (p.gaps&&p.gaps.length)
+    ? `<div class="gaps"><h4>⚠ Gaps &amp; missing functionality</h4><ul>${p.gaps.map(g=>`<li>${tag(g.st)}<span>${g.t}</span></li>`).join('')}</ul></div>`
+    : `<div class="gaps clean"><h4>✓ No gaps found</h4><ul><li><span>Every control on this screen behaves as expected.</span></li></ul></div>`;
+  return `<section class="page" id="${p.id}" data-screen-label="${p.num}">
+    <div class="ph"><span class="num">${p.num}</span><div><h2>${p.title}</h2><div class="crumb">${p.crumb}</div></div></div>
+    <p class="purpose">${p.purpose}</p>
+    ${shots}${funcs}${gaps}
+  </section>`;
+}).join('');
+
+document.getElementById('cOk').textContent=ok;
+document.getElementById('cWarn').textContent=warn;
+document.getElementById('cMiss').textContent=miss;
+document.getElementById('auditBody').innerHTML = AUDIT.map(a=>`<tr><td class="area">${a.area}</td><td>${a.txt}</td><td><span class="prio ${a.prio}">${a.prio==='hi'?'High':'Medium'}</span></td></tr>`).join('');
+
+// ── checklist ──
+const CHECK_KEY='woosoo_func_checklist_v1';
+let state={};
+try{state=JSON.parse(localStorage.getItem(CHECK_KEY)||'{}')}catch(e){state={}}
+const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const plab={hi:'High',med:'Med',low:'Low'};
+let idc=0;
+const groupsEl=document.getElementById('clGroups');
+groupsEl.innerHTML = CHECK.map(g=>{
+  const items = g.items.map(it=>{
+    const id='c'+(idc++);
+    const done=state[id]?' done':'';
+    return `<div class="cl-item${done}" data-id="${id}"><div class="cl-cb">${CHK}</div><div class="cl-txt">${it.t}</div><div class="cl-meta"><span class="cl-prio ${it.p}">${plab[it.p]}</span></div></div>`;
+  }).join('');
+  return `<div class="cl-group"><h3>${g.area} <span class="ct">${g.items.length}</span></h3><p class="gp">${g.note}</p>${items}</div>`;
+}).join('');
+
+const allItems=[...document.querySelectorAll('.cl-item')];
+function refresh(){
+  const total=allItems.length;
+  const done=allItems.filter(x=>x.classList.contains('done')).length;
+  document.getElementById('clBar').style.width=(total?Math.round(done/total*100):0)+'%';
+  document.getElementById('clPct').textContent=`${done} / ${total} complete`;
+}
+allItems.forEach(it=>it.addEventListener('click',()=>{
+  it.classList.toggle('done');
+  state[it.dataset.id]=it.classList.contains('done');
+  localStorage.setItem(CHECK_KEY,JSON.stringify(state));
+  refresh();
+}));
+document.getElementById('clReset').addEventListener('click',()=>{
+  allItems.forEach(it=>it.classList.remove('done'));
+  state={};localStorage.setItem(CHECK_KEY,'{}');refresh();
+});
+document.getElementById('clPrint').addEventListener('click',()=>window.print());
+refresh();
+</script>
+</body>
+</html>

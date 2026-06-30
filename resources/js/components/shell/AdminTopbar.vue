@@ -7,7 +7,7 @@ import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, C
 import { useNexusTheme } from '@/composables/useNexusTheme';
 import { useInitials } from '@/composables/useInitials';
 import type { BreadcrumbItemType } from '@/types';
-import { type User } from '@/types/models';
+import { type Branch, type User } from '@/types/models';
 import { Bell, Building2, Menu, Moon, RefreshCw, Search, Sun } from 'lucide-vue-next';
 
 const props = withDefaults(defineProps<{ breadcrumbs?: BreadcrumbItemType[] }>(), {
@@ -73,6 +73,8 @@ function navigate(href: string) {
 
 const currentTitle = computed(() => props.breadcrumbs.at(-1)?.title ?? 'Workspace');
 const showAvatar = computed(() => Boolean(user.value?.avatar));
+const branch = computed(() => page.props.branch as Branch | null | undefined);
+const branchLabel = computed(() => branch.value?.name ?? 'HQ');
 </script>
 
 <template>
@@ -104,13 +106,13 @@ const showAvatar = computed(() => Boolean(user.value?.avatar));
 
         <!-- Right cluster: HQ → Search → theme → refresh → bell → avatar -->
         <div class="flex shrink-0 items-center gap-1">
-            <!-- HQ -->
             <Link
                 :href="route('monitoring.index')"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                aria-label="HQ Console"
+                class="inline-flex h-8 max-w-[12rem] items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                :aria-label="branchLabel"
             >
-                <Building2 class="size-4" />
+                <Building2 class="size-4 shrink-0" />
+                <span class="truncate">{{ branchLabel }}</span>
             </Link>
 
             <!-- Search -->
