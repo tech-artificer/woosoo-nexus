@@ -14,6 +14,7 @@ use App\Support\DeviceSecurityCode;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -426,11 +427,11 @@ class DeviceController extends Controller
         $newTableId = $data['table_id'] ?? null;
 
         $device->update([
-            'name'            => $data['name'],
-            'ip_address'      => $ipAddress,
-            'port'            => $data['port'] ?? null,
-            'table_id'        => $newTableId,
-            'type'            => $data['type'] ?? null,
+            'name' => $data['name'],
+            'ip_address' => $ipAddress,
+            'port' => $data['port'] ?? null,
+            'table_id' => $newTableId,
+            'type' => $data['type'] ?? null,
             'last_ip_address' => $data['last_ip_address'] ?? null,
         ]);
 
@@ -626,5 +627,30 @@ class DeviceController extends Controller
         }
 
         return response()->json(['message' => 'Unable to generate a unique security code.'], 409);
+    }
+
+    /**
+     * Send a device-control command (message / restart / reload) to a tablet
+     * over the existing `device.{id}` broadcast channel. AJAX-only, admin-only.
+     */
+    public function sendControl(Request $request, Device $device): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user || ! ($user->is_admin ?? false)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'action' => ['required', 'string', 'in:message,restart,reload'],
+            'message' => ['required_if:action,message', 'string', 'max:280'],
+        ]);
+
+        AppControlEvent::dispatch(
+            $device->id,
+            $data['action'],
+            $data['action'] === 'message' ? ['message' => $data['message']] : []
+        );
+
+        return response()->json(['success' => true]);
     }
 }
