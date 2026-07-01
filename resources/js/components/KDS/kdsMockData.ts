@@ -18,7 +18,7 @@ export const kdsMockTickets: KdsTicket[] = [
     items: [
       { id: '1182-1', qty: 3, name: 'Woosamgyup', done: true },
       { id: '1182-2', qty: 2, name: 'Hyangcho Woosamgyup', done: true },
-      { id: '1182-3', qty: 2, name: 'Beef Bulgogi - no garlic', done: false, safety: true },
+      { id: '1182-3', qty: 2, name: 'Beef Bulgogi - no garlic', done: false },
       { id: '1182-4', qty: 1, name: 'Banchan Set', done: false },
       { id: '1182-5', qty: 1, name: 'Gyeran Jjim', done: false },
       { id: '1182-6', qty: 2, name: 'Soju - Chamisul', done: false },

@@ -113,4 +113,49 @@ describe('useKdsBoard.applyOrderUpdate', () => {
 
     expect(board.tickets.value).toEqual([])
   })
+
+  it('uses device name as fallback when table is null', () => {
+    const board = useKdsBoard([])
+    const payload = {
+      id: 'K-3',
+      status: 'confirmed',
+      table: null,
+      device: { name: 'POS-3' },
+      items: [],
+    }
+
+    board.applyOrderUpdate(payload)
+
+    expect(board.tickets.value[0].table).toBe('POS-3')
+  })
+
+  it('falls back to em-dash when both table and device are null', () => {
+    const board = useKdsBoard([])
+    const payload = {
+      id: 'K-4',
+      status: 'confirmed',
+      table: null,
+      device: null,
+      items: [],
+    }
+
+    board.applyOrderUpdate(payload)
+
+    expect(board.tickets.value[0].table).toBe('—')
+  })
+
+  it('prefers table name over device name', () => {
+    const board = useKdsBoard([])
+    const payload = {
+      id: 'K-5',
+      status: 'confirmed',
+      table: { name: 'T-1' },
+      device: { name: 'POS-5' },
+      items: [],
+    }
+
+    board.applyOrderUpdate(payload)
+
+    expect(board.tickets.value[0].table).toBe('T-1')
+  })
 })

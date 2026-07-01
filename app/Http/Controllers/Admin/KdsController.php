@@ -10,8 +10,6 @@ use App\Helpers\OrderBroadcastPayload;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
-use App\Services\AuditLogService;
-use App\Services\Pos\PosOrderService;
 use App\Services\PosConnectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +22,6 @@ class KdsController extends Controller
 {
     public function __construct(
         private readonly PosConnectionService $posConnection,
-        private readonly PosOrderService $orderService,
     ) {}
 
     private const MAX_RECALLS = 5;
@@ -265,71 +262,6 @@ class KdsController extends Controller
         ]);
     }
 
-    public function void(Request $request, DeviceOrder $order): JsonResponse
-    {
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'max:255'],
-        ]);
-
-        $gateMessage = null;
-
-        DB::transaction(function () use ($order, $validated, &$gateMessage) {
-            $locked = DeviceOrder::lockForUpdate()->findOrFail($order->id);
-
-            // Terminal-state pre-check MUST run before assigning status: DeviceOrder::setStatusAttribute
-            // runs canTransitionTo() and throws on a terminal→VOIDED set. Guard here so a
-            // concurrent finalisation returns a clean 422 instead of a 500.
-            if (! $locked->status->canTransitionTo(OrderStatus::VOIDED)) {
-                $gateMessage = 'Order cannot be voided from its current state.';
-
-                return;
-            }
-
-            $locked->status = OrderStatus::VOIDED;
-            $locked->void_reason = $validated['reason'];
-            // saveQuietly() — we broadcast the terminal event explicitly below.
-            $locked->saveQuietly();
-        });
-
-        if ($gateMessage !== null) {
-            return response()->json(['message' => $gateMessage], 422);
-        }
-
-        // Best-effort POS void: PosOrderService::voidOrder() takes the Krypton order id
-        // (order_id), not the local PK, and has no internal POS-down guard. A failure must
-        // not roll back the local VOID, so wrap it and continue on error.
-        try {
-            if (! empty($order->order_id)) {
-                $this->orderService->voidOrder((string) $order->order_id);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('[KDS] POS void failed; local order voided regardless', [
-                'order_id' => $order->id,
-                'krypton_order_id' => $order->order_id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        AuditLogService::adminAction($request, 'kds.order_voided', (int) $request->user()->id, [
-            'order_id' => $order->id,
-            'krypton_order_id' => $order->order_id,
-            'reason' => $validated['reason'],
-        ]);
-
-        Log::info('[KDS] void', ['order_id' => $order->id, 'admin_id' => auth()->id()]);
-
-        $order->refresh();
-        $order->loadMissing(['items', 'device', 'serviceRequests']);
-        app(OrderBroadcaster::class)->finalized($order, 'voided');
-
-        // See advance(): full board payload for optimistic client apply.
-        return response()->json([
-            'status' => OrderStatus::VOIDED->value,
-            'order' => OrderBroadcastPayload::make($order),
-            'server_now' => (int) (microtime(true) * 1000),
-        ]);
-    }
-
     private function toTicket(DeviceOrder $order, bool $posReachable): array
     {
         // Only access POS-backed relations if POS is reachable; prevent lazy-load 500s when POS is down.
@@ -348,7 +280,7 @@ class KdsController extends Controller
 
         return [
             'id' => (string) $order->id,
-            'table' => $table?->name ?? '—',
+            'table' => $table?->name ?? ($posReachable ? $order->device?->name : null) ?? '—',
             'type' => $isRefill ? 'refill' : 'initial',
             'issued' => $createdAt?->format('g:i A') ?? '',
             'issuedAt' => $issuedAtMs,

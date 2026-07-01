@@ -10,7 +10,6 @@ export interface KdsItem {
   name: string
   done: boolean
   notes?: string
-  safety?: boolean
 }
 
 export interface KdsTicket {
