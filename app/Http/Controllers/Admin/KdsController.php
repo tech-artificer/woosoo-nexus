@@ -90,8 +90,14 @@ class KdsController extends Controller
             }
 
             if ($current === OrderStatus::IN_PROGRESS) {
+                // Exclude package anchor rows (menu_id = the package's own krypton_menu_id):
+                // toTicket() never exposes them as checkable items, so the kitchen can never
+                // toggle them done — the gate must ignore them the same way.
+                $packageMenuIds = Package::pluck('krypton_menu_id')->filter()->all();
+
                 $hasUndone = DeviceOrderItems::where('order_id', $order->id)
                     ->where('done', false)
+                    ->when($packageMenuIds !== [], fn ($q) => $q->whereNotIn('menu_id', $packageMenuIds))
                     ->lockForUpdate()
                     ->exists();
 

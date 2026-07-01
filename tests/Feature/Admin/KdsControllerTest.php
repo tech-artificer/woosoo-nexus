@@ -4,6 +4,7 @@ use App\Enums\OrderStatus;
 use App\Events\Order\OrderStatusUpdated;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
+use App\Models\Package;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\Fluent\AssertableJson;
@@ -34,6 +35,27 @@ test('mark ready is gated when items are not all done', function () {
 test('mark ready advances when all items are done', function () {
     $admin = User::factory()->admin()->create();
     $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk()
+        ->assertJson(['status' => 'served']);
+
+    expect($order->fresh()->status)->toBe(OrderStatus::SERVED);
+});
+
+test('mark ready advances when all visible items are done but the package anchor row is not', function () {
+    $admin = User::factory()->admin()->create();
+    $package = Package::factory()->create(['krypton_menu_id' => 9001]);
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    // Package anchor row: never toggled by the kitchen UI, done stays false.
+    DeviceOrderItems::factory()->for($order, 'device_order')->create([
+        'menu_id' => $package->krypton_menu_id,
+        'done' => false,
+    ]);
+    // Visible/preparable item: kitchen has checked it.
     DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
 
     $this->actingAs($admin)
