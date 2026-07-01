@@ -41,6 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 
 import { usePage } from '@inertiajs/vue3'
 
@@ -69,6 +70,48 @@ const showSecurityCodeDialog = ref(false)
 const rotatedSecurityCode = ref('')
 const openDialog = () => {
   showDialog.value = true
+}
+
+// Send Message dialog state
+const showMessageDialog = ref(false)
+const messageText = ref('')
+const isSendingMessage = ref(false)
+const openMessageDialog = () => {
+  messageText.value = ''
+  showMessageDialog.value = true
+}
+
+const sendMessage = async (device: Device) => {
+  isSendingMessage.value = true
+  try {
+    await axios.post(route('devices.control', device.id), {
+      action: 'message',
+      message: messageText.value,
+    })
+    toast.success('Message sent to device')
+    showMessageDialog.value = false
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message ?? 'Failed to send message')
+  } finally {
+    isSendingMessage.value = false
+  }
+}
+
+// Restart App confirm dialog state
+const showRestartDialog = ref(false)
+const openRestartDialog = () => {
+  showRestartDialog.value = true
+}
+
+const restartApp = async (device: Device) => {
+  try {
+    await axios.post(route('devices.control', device.id), {
+      action: 'restart',
+    })
+    toast.success('Restart command sent to device')
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message ?? 'Failed to send restart command')
+  }
 }
 
 const rotateSecurityCode = async (device: Device) => {
@@ -137,9 +180,11 @@ const restore = (computedDevice: Device) => {
 
       <DropdownMenuItem class="cursor-pointer" @click="openSheet">Edit Device</DropdownMenuItem>
       <DropdownMenuItem class="cursor-pointer" @click="rotateSecurityCode(computedDevice)">Regenerate Security Code</DropdownMenuItem>
-      
-        
-      <DropdownMenuItem 
+      <DropdownMenuItem class="cursor-pointer" @click="openMessageDialog">Send Message</DropdownMenuItem>
+      <DropdownMenuItem class="cursor-pointer" @click="openRestartDialog">Restart App</DropdownMenuItem>
+
+
+      <DropdownMenuItem
         @click="openDialog"
         v-if="!computedDevice.deleted_at" 
         class="text-orange cursor-pointer"
@@ -208,6 +253,46 @@ const restore = (computedDevice: Device) => {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <Dialog v-model:open="showMessageDialog">
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Send Message</DialogTitle>
+        <DialogDescription>
+          Send a message to this device. It will be shown immediately on the tablet.
+        </DialogDescription>
+      </DialogHeader>
+
+      <Input v-model="messageText" maxlength="280" placeholder="Message" />
+
+      <DialogFooter>
+        <Button type="button" variant="outline" @click="showMessageDialog = false">Cancel</Button>
+        <Button
+          type="button"
+          :disabled="!messageText || isSendingMessage"
+          @click="sendMessage(computedDevice)"
+        >
+          Send
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <AlertDialog v-model:open="showRestartDialog">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Restart app on this device?</AlertDialogTitle>
+        <AlertDialogDescription>
+          This will tell the tablet to reload its app immediately. Any in-progress input on the
+          tablet may be lost.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction @click="restartApp(computedDevice)">Restart</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 
   </div>
 

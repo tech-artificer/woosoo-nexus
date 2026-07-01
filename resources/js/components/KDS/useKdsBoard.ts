@@ -88,6 +88,10 @@ export function useKdsBoard(initialTickets: KdsTicket[]) {
     clockOffset.value = serverNow - Date.now()
   }
 
+  function replaceAll(newTickets: KdsTicket[]): void {
+    tickets.value = newTickets.map((t) => ({ ...t, items: t.items.map((i) => ({ ...i })) }))
+  }
+
   function applyOrderUpdate(payload: OrderPayload): void {
     const id = String(payload.id)
 
@@ -124,5 +128,5 @@ export function useKdsBoard(initialTickets: KdsTicket[]) {
     })
   }
 
-  return { tickets, applyOrderUpdate, applyItemToggle, clockOffset, setClockOffset }
+  return { tickets, applyOrderUpdate, applyItemToggle, clockOffset, setClockOffset, replaceAll }
 }

@@ -731,7 +731,7 @@ onUnmounted(() => {
                           @click="openOrderDetail(order)"
                         >
                           <div class="flex items-start justify-between gap-2">
-                            <span class="text-sm font-bold text-foreground">ORD-{{ order.order_number }}</span>
+                            <span class="text-sm font-bold text-foreground">{{ order.order_id ? '#' + order.order_id : order.order_number }}</span>
                             <OrderStatusBadge :status="orderStatusKey(order)" class="shrink-0 text-[10px]" />
                           </div>
                           <p class="mt-1.5 truncate text-xs text-muted-foreground">

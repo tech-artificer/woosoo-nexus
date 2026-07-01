@@ -181,3 +181,22 @@ describe('useKdsBoard.applyOrderUpdate', () => {
     expect(board.tickets.value[0].guestCount).toBe(4)
   })
 })
+
+describe('useKdsBoard.replaceAll', () => {
+  it('fully replaces the ticket list rather than merging with the previous one', () => {
+    const board = useKdsBoard([ticketWithItems([false]), ticketWithItems([true])])
+    board.tickets.value[0].id = 'K-1'
+    board.tickets.value[1].id = 'K-2'
+
+    const nextTickets: KdsTicket[] = [
+      { ...ticketWithItems([false]), id: 'K-9' },
+      { ...ticketWithItems([false]), id: 'K-10' },
+      { ...ticketWithItems([false]), id: 'K-11' },
+    ]
+
+    board.replaceAll(nextTickets)
+
+    expect(board.tickets.value).toHaveLength(3)
+    expect(board.tickets.value.map((t) => t.id)).toEqual(['K-9', 'K-10', 'K-11'])
+  })
+})
