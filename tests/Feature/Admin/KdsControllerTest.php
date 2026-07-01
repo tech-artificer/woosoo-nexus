@@ -176,6 +176,22 @@ test('recall increments the recalled counter each time', function () {
     expect($order->fresh()->recalled)->toBe(3);
 });
 
+test('recalling an order resets item done flags so the kitchen must re-verify them', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 0]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create([
+        'done' => true,
+        'done_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertOk();
+
+    expect($item->fresh()->done)->toBeFalse();
+    expect($item->fresh()->done_at)->toBeNull();
+});
+
 test('recall returns 422 for a voided order', function () {
     $admin = User::factory()->admin()->create();
     $order = DeviceOrder::factory()->create(['status' => OrderStatus::VOIDED]);

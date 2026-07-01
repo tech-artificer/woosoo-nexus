@@ -249,6 +249,8 @@ class KdsController extends Controller
             $fresh->status = OrderStatus::IN_PROGRESS;
             $fresh->recalled = ($fresh->recalled ?? 0) + 1;
             $fresh->saveQuietly();
+
+            DeviceOrderItems::where('order_id', $fresh->id)->update(['done' => false, 'done_at' => null]);
         });
 
         if ($gateMessage !== null) {
