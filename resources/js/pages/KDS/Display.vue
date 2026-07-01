@@ -793,6 +793,14 @@ body.kds-active {
   padding: 10px 16px;
 }
 
+:deep(.kds-package-info) {
+  color: rgb(255 255 255 / 0.72);
+  font-size: 14px;
+  font-weight: var(--kds-weight-label);
+  margin: 0;
+  padding: 0 16px 10px;
+}
+
 :deep(.kds-items) {
   display: flex;
   min-height: 0;

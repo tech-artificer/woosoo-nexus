@@ -45,6 +45,16 @@ abstract class TestCase extends BaseTestCase
         return $parameters;
     }
 
+    protected function shouldDropViews()
+    {
+        return false;
+    }
+
+    protected function shouldDropTypes()
+    {
+        return false;
+    }
+
     /**
      * Ensure framework-driven test migrations never hit interactive
      * confirmation paths in RefreshDatabase.

@@ -71,6 +71,10 @@ const actionLabel = computed(() => {
       </Badge>
     </div>
 
+    <p v-if="ticket.packageName" class="kds-package-info">
+      {{ ticket.packageName }}<span v-if="ticket.guestCount"> · {{ ticket.guestCount }} guests</span>
+    </p>
+
     <p v-if="ticket.state === 'voided' && ticket.voidReason" class="kds-void-reason">
       {{ ticket.voidReason }}
     </p>

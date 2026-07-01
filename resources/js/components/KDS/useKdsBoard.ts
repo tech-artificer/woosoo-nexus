@@ -10,6 +10,8 @@ type OrderPayload = {
   updated_at?: string
   table?: { name: string } | null
   device?: { name: string } | null
+  package_name?: string | null
+  guest_count?: number | null
   items?: Array<{
     id: string | number
     quantity: number
@@ -18,6 +20,7 @@ type OrderPayload = {
     done?: boolean
     done_at?: string | null
     notes?: string | null
+    is_package_anchor?: boolean
   }>
   recalled?: number | null
   void_reason?: string | null
@@ -61,15 +64,19 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
     elapsed,
     frozenElapsed,
     state,
-    items: (payload.items ?? []).map((it) => ({
-      id: String(it.id),
-      qty: it.quantity ?? 1,
-      name: it.name ?? '',
-      done: (it.done ?? false),
-      notes: it.notes ?? undefined,
-    })),
+    items: (payload.items ?? [])
+      .filter((it) => !it.is_package_anchor)
+      .map((it) => ({
+        id: String(it.id),
+        qty: it.quantity ?? 1,
+        name: it.name ?? '',
+        done: (it.done ?? false),
+        notes: it.notes ?? undefined,
+      })),
     recalled: payload.recalled ?? undefined,
     voidReason: payload.void_reason ?? undefined,
+    packageName: payload.package_name ?? undefined,
+    guestCount: payload.guest_count ?? undefined,
   }
 }
 

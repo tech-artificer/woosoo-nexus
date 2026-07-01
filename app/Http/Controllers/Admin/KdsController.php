@@ -10,6 +10,7 @@ use App\Helpers\OrderBroadcastPayload;
 use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
+use App\Models\Package;
 use App\Services\PosConnectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -278,6 +279,18 @@ class KdsController extends Controller
             ? (int) $createdAt->diffInSeconds($order->updated_at)
             : null;
 
+        // The package itself is stored as its own DeviceOrderItems row (menu_id = the
+        // package's krypton_menu_id) alongside the real meat/side items it expands to.
+        // It is not something the kitchen prepares/checks off — show it as card metadata
+        // (package name + guest count) instead of a checkable item row. Package is app-DB
+        // data (not POS-backed), so this resolves regardless of POS reachability.
+        $packageMenuIds = Package::pluck('krypton_menu_id')->filter()->all();
+        $anchorItem = $items->first(fn ($it) => in_array($it->menu_id, $packageMenuIds, true));
+        $packageName = $anchorItem
+            ? ($posReachable ? ($anchorItem->menu?->kitchen_name ?? $anchorItem->menu?->name ?? $anchorItem->name) : $anchorItem->name)
+            : null;
+        $preparableItems = $anchorItem ? $items->reject(fn ($it) => $it->id === $anchorItem->id) : $items;
+
         return [
             'id' => (string) $order->id,
             'table' => $table?->name ?? $order->device?->name ?? '—',
@@ -287,12 +300,14 @@ class KdsController extends Controller
             'elapsed' => $elapsed,
             'frozenElapsed' => $frozenElapsed,
             'state' => $order->status->kdsState(),
-            'items' => $items->map(fn ($it) => [
+            'packageName' => $packageName,
+            'guestCount' => $order->guest_count,
+            'items' => $preparableItems->map(fn ($it) => [
                 'id' => (string) $it->id,
                 'qty' => (int) ($it->quantity ?? 1),
-                'name' => $posReachable ? ($it->menu?->receipt_name ?? $it->menu?->name ?? $it->name ?? '') : ($it->name ?? ''),
+                'name' => $posReachable ? ($it->menu?->kitchen_name ?? $it->menu?->name ?? $it->name ?? '') : ($it->name ?? ''),
                 'done' => (bool) ($it->done ?? false),
-                'notes' => $it->notes ?? null,
+                'notes' => ($it->notes && $it->notes !== 'Package modifier') ? $it->notes : null,
             ])->values()->all(),
             'recalled' => $order->recalled ?? 0,
             'voidReason' => $order->void_reason ?? null,
