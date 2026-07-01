@@ -7,6 +7,14 @@
 
 This spec describes **what to build and the rules that govern it**. The prototype is the visual + interaction source of truth; this document is the behavioral + data contract. Where they ever disagree, this document wins on *logic*, the prototype wins on *look*.
 
+> **⚠ Authority correction (2026-07-01, NEX-001).** This spec is **subordinate to
+> [`docs/CONTRACTS.md`](../../../../docs/CONTRACTS.md) §1**, which is the single source of truth for
+> order state and recall. Per §1 and the shipped `KdsController::recall()`: **`voided` is terminal and
+> is NOT recallable** — a void re-fires as a *new* kitchen ticket, and recall is `served → in_progress`
+> **only** (rejected from any other state with HTTP 422). Any wording below that says a *voided* or
+> *completed* card is recallable is stale and overridden by CONTRACTS §1; §3.4 and the state table have
+> been corrected accordingly.
+
 ---
 
 ## 1. What this is (and is not)
@@ -19,7 +27,8 @@ A KDS is a **read-mostly board** for the line. It subscribes to orders from the 
 - Check off individual items as they're plated.
 - Surface elapsed-time urgency (warning / overdue).
 - Filter the board by stage, plus Completed / Voided history.
-- **Recall** a completed or voided order back onto the line.
+- **Recall** a **served** order back onto the line. (Voided/completed are terminal — see the
+  authority note below and §3.4.)
 
 **Out of scope (KDS must NOT do these)**
 - Take payment, edit prices, add/remove items, or change quantities.
@@ -65,8 +74,11 @@ interface Item {
 | `new` | New | **Start Preparing** → `preparing` | — | no | no |
 | `preparing` | Preparing | **Mark Ready** → `ready` | **all items checked** | no | no |
 | `ready` | Ready | **Mark Served** → `served` | — | no | no |
-| `served` | Completed | — | — | yes | **yes** |
-| `voided` | Voided | — | — | yes | **yes** |
+| `served` | Served | — | — | no¹ | **yes** |
+| `voided` | Voided | — | — | **yes** | **no**² |
+
+¹ `served` is **non-terminal** per CONTRACTS §1 (recall `served → in_progress` is permitted).
+² `voided` is **terminal** — not recallable. A void re-fires as a *new* kitchen ticket (CONTRACTS §1).
 
 Happy path: `new → preparing → ready → served`. `voided` is entered **only** by a POS/FOH void event arriving over the feed — never by a button on this screen.
 
@@ -109,12 +121,19 @@ Urgency applies to **active tickets only**. Completed and voided tickets are alw
 > **Known limitation / decision pending:** thresholds are currently a **flat 25 min for every ticket** regardless of size or type. A 2-item refill and an 11-item party order both go red at exactly 25:00. Product has flagged making this **relative to order type/size** (e.g. refills warn ~8 / overdue ~15; large initials get more runway). Build the thresholds as **configurable per type** rather than two hard-coded constants so this can land without a refactor.
 
 ### 3.4 Recall
-Recall pulls a **terminal** ticket (`served` or `voided`) back onto the active line as a **re-fire** — used when a runner reports a missing/wrong item, a dish comes back, or someone bumped too early.
+Recall pulls a **`served`** ticket back onto the active line as a **re-fire** — used when a runner
+reports a missing/wrong item, a dish comes back, or someone bumped too early. **`voided` is terminal
+and is NOT recallable** (CONTRACTS §1); a void re-fires as a *new* kitchen ticket, not by un-voiding
+the original.
 
-- Completed and voided cards have **no forward button**; they show a **"Recall to Line"** action instead.
-- Recall sets `state → 'preparing'`, increments `recalled` (1, 2, 3…), and clears `voidReason`.
+- A **`served`** card has **no forward button**; it shows a **"Recall to Line"** action instead.
+  `voided`/`completed` cards show **no** recall action.
+- Recall sets `state → 'preparing'` (backend `served → in_progress`) and increments `recalled` (1, 2, 3…).
+  The shipped `KdsController::recall()` rejects any non-`served` source with HTTP 422 and enforces a
+  `MAX_RECALLS` cap.
 - The re-fired card shows a `RECALLED ×n` marker so the line knows it's not a fresh order.
-- **Decision pending:** recall currently targets `preparing`. If a recall is typically a re-plate rather than a re-cook, `ready` may be the better landing state. Make the recall target configurable.
+- **Resolved (CONTRACTS §1):** recall lands on `preparing` (`in_progress`); it is not configurable and
+  never targets `ready` or an un-void.
 
 ### 3.5 Sort order
 Within the current filter, sort:
