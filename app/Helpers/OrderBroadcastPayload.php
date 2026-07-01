@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use App\Models\DeviceOrder;
+use App\Models\Package;
 
 class OrderBroadcastPayload
 {
@@ -27,6 +28,16 @@ class OrderBroadcastPayload
 
         $table = $order->device?->table ?? $order->table;
 
+        // The package itself is stored as its own item row (menu_id = the package's
+        // krypton_menu_id) alongside the meat/side items it expands to. Flag it per-item
+        // (rather than dropping it) so consumers that want a full line-item breakdown
+        // (e.g. admin order review) keep seeing it; KDS filters on this flag client-side.
+        $packageMenuIds = Package::pluck('krypton_menu_id')->filter()->all();
+        $anchorItem = $order->items?->first(fn ($it) => in_array($it->menu_id, $packageMenuIds, true));
+        $packageName = $anchorItem
+            ? ($anchorItem->menu?->kitchen_name ?? $anchorItem->menu?->name ?? $anchorItem->name)
+            : null;
+
         return [
             'id' => $order->id,
             'order_id' => $order->order_id,
@@ -46,6 +57,7 @@ class OrderBroadcastPayload
             'discount' => $order->discount,
             'total' => $order->total,
             'guest_count' => $order->guest_count,
+            'package_name' => $packageName,
             'created_at' => $order->created_at?->toIso8601String(),
             'updated_at' => $order->updated_at?->toIso8601String(),
             'device' => $order->device ? [
@@ -58,15 +70,16 @@ class OrderBroadcastPayload
             ] : null,
             'items' => $order->items?->map(fn ($it) => [
                 'id' => $it->id,
-                'name' => $it->menu?->receipt_name ?? $it->menu?->name ?? $it->name,
+                'name' => $it->menu?->kitchen_name ?? $it->menu?->name ?? $it->name,
                 'quantity' => $it->quantity,
                 'price' => $it->price,
                 'subtotal' => $it->subtotal,
                 'is_refill' => (bool) ($it->is_refill ?? false),
                 'done' => (bool) ($it->done ?? false),
                 'done_at' => $it->done_at?->toIso8601String(),
-                'notes' => $it->notes ?? null,
+                'notes' => ($it->notes && $it->notes !== 'Package modifier') ? $it->notes : null,
                 'type' => $it->type ?? null,
+                'is_package_anchor' => in_array($it->menu_id, $packageMenuIds, true),
             ])->values()->all(),
             'void_reason' => $order->void_reason ?? null,
             'recalled' => $order->recalled ?? 0,

@@ -24,6 +24,8 @@ export interface KdsTicket {
   items: KdsItem[]
   recalled?: number
   voidReason?: string
+  packageName?: string
+  guestCount?: number
 }
 
 export interface KdsThreshold {

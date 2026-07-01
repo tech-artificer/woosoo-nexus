@@ -158,4 +158,26 @@ describe('useKdsBoard.applyOrderUpdate', () => {
 
     expect(board.tickets.value[0].table).toBe('T-1')
   })
+
+  it('excludes the package-anchor item and surfaces packageName/guestCount', () => {
+    const board = useKdsBoard([])
+    const payload = {
+      id: 'K-6',
+      status: 'confirmed',
+      table: { name: 'T-6' },
+      package_name: 'Classic Feast',
+      guest_count: 4,
+      items: [
+        { id: 1, quantity: 4, name: 'Classic Feast', is_package_anchor: true },
+        { id: 2, quantity: 1, name: 'Plain Samgyupsal', is_package_anchor: false },
+      ],
+    }
+
+    board.applyOrderUpdate(payload)
+
+    expect(board.tickets.value[0].items).toHaveLength(1)
+    expect(board.tickets.value[0].items[0].name).toBe('Plain Samgyupsal')
+    expect(board.tickets.value[0].packageName).toBe('Classic Feast')
+    expect(board.tickets.value[0].guestCount).toBe(4)
+  })
 })
