@@ -9,6 +9,7 @@ type OrderPayload = {
   created_at?: string
   updated_at?: string
   table?: { name: string } | null
+  device?: { name: string } | null
   items?: Array<{
     id: string | number
     quantity: number
@@ -51,7 +52,7 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
 
   return {
     id: String(payload.id),
-    table: payload.table?.name ?? '—',
+    table: payload.table?.name ?? payload.device?.name ?? '—',
     type: (payload.kds_type ?? 'initial') as KdsTicket['type'],
     issued: payload.created_at
       ? new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(payload.created_at))

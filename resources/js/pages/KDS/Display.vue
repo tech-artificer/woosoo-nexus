@@ -8,8 +8,7 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import KdsVoidModal from '@/components/KDS/KdsVoidModal.vue'
-import { postKdsAdvance, postKdsRecall, postKdsToggleItem, postKdsVoid } from '@/components/KDS/kdsApi'
+import { postKdsAdvance, postKdsRecall, postKdsToggleItem } from '@/components/KDS/kdsApi'
 import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
@@ -44,9 +43,6 @@ const now = ref(Date.now())
 const pendingAdvance = ref<Set<string>>(new Set())
 const pendingRecall = ref<Set<string>>(new Set())
 const pendingToggle = ref<Set<string>>(new Set())
-const pendingVoid = ref<Set<string>>(new Set())
-const voidTarget = ref<KdsTicket | null>(null)
-const voidModalOpen = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
 const correctedNow = computed(() => now.value + clockOffset.value)
@@ -168,47 +164,6 @@ async function recallTicket(ticketId: string) {
   }
 }
 
-function requestVoid(ticketId: string) {
-  const ticket = tickets.value.find((item) => item.id === ticketId)
-
-  if (!ticket || ticket.state === 'voided' || ticket.state === 'served') {
-    return
-  }
-
-  voidTarget.value = ticket
-  voidModalOpen.value = true
-}
-
-async function confirmVoid(reason: string) {
-  const ticket = voidTarget.value
-
-  if (!ticket) {
-    return
-  }
-
-  if (pendingVoid.value.has(ticket.id)) {
-    return
-  }
-
-  pendingVoid.value.add(ticket.id)
-  voidModalOpen.value = false
-
-  try {
-    const response = await postKdsVoid(ticket.id, reason)
-    if (response.server_now != null) {
-      setClockOffset(response.server_now)
-    }
-    // Optimistic apply — see advanceTicket() for rationale.
-    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
-    toast.success('Order voided.')
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Unable to void order.')
-  } finally {
-    pendingVoid.value.delete(ticket.id)
-    voidTarget.value = null
-  }
-}
-
 function toggleDensity() {
   density.value = density.value === 'comfortable' ? 'compact' : 'comfortable'
   try {
@@ -296,17 +251,11 @@ onBeforeUnmount(() => {
               @advance="advanceTicket"
               @recall="recallTicket"
               @toggle-item="toggleItem"
-              @void="requestVoid"
             />
           </div>
           <KdsEmptyState v-else />
         </section>
     </section>
-    <KdsVoidModal
-      v-model:open="voidModalOpen"
-      :table="voidTarget?.table"
-      @confirm="confirmVoid"
-    />
     <Toaster position="top-center" rich-colors />
   </main>
 </template>
@@ -957,12 +906,6 @@ body.kds-active {
   font-style: italic;
   font-weight: var(--kds-weight-caption);
   line-height: 1.25;
-}
-
-:deep(.kds-safety) {
-  color: #e8b85a;
-  font-size: 15px;
-  font-weight: var(--kds-weight-label);
 }
 
 :deep(.kds-ticket-footer) {

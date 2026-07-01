@@ -65,6 +65,7 @@ class RefillOrderRequest extends FormRequest
             'items.*.seat_number' => ['nullable', 'integer', 'min:1', 'max:20'],
             'items.*.note' => ['nullable', 'string', 'max:255'],
             'session_id' => ['nullable', 'string'],
+            'client_submission_id' => ['nullable', 'string', 'uuid'],
         ];
     }
 
