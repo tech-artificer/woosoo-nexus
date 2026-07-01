@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,9 +42,10 @@ test('kds index returns 200 with empty tickets when pos connection fails', funct
         );
 });
 
-test('kds index returns 200 with tickets when pos unreachable and active orders exist', function () {
+test('kds index falls back to the device name when pos unreachable and active orders exist', function () {
     $admin = User::factory()->create(['is_admin' => true]);
-    DeviceOrder::factory()->confirmed()->create(['table_id' => null]);
+    $device = Device::factory()->create(['name' => 'Patio-7']);
+    DeviceOrder::factory()->confirmed()->create(['table_id' => null, 'device_id' => $device->id]);
 
     actingAs($admin);
 
@@ -52,16 +54,18 @@ test('kds index returns 200 with tickets when pos unreachable and active orders 
         ->assertInertia(fn (Assert $page) => $page
             ->component('KDS/Display')
             ->has('initialTickets', 1)
-            ->where('initialTickets.0.table', '—')
+            ->where('initialTickets.0.table', 'Patio-7')
         );
 });
 
-test('kds index returns 200 when pos unreachable and an order has a table_id set', function () {
+test('kds index falls back to the device name when pos unreachable and an order has a table_id set', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     // table_id set + POS down is the exact case that previously triggered a lazy-load 500:
-    // toTicket() must NOT touch the POS-backed device.table/table relations when POS is down.
-    DeviceOrder::factory()->confirmed()->create(['table_id' => 1]);
+    // toTicket() must NOT touch the POS-backed device.table/table relations when POS is down,
+    // but it must still fall back to the always-loaded device name instead of '—'.
+    $device = Device::factory()->create(['name' => 'Patio-8']);
+    DeviceOrder::factory()->confirmed()->create(['table_id' => 1, 'device_id' => $device->id]);
 
     actingAs($admin);
 
@@ -70,7 +74,7 @@ test('kds index returns 200 when pos unreachable and an order has a table_id set
         ->assertInertia(fn (Assert $page) => $page
             ->component('KDS/Display')
             ->has('initialTickets', 1)
-            ->where('initialTickets.0.table', '—')
+            ->where('initialTickets.0.table', 'Patio-8')
         );
 });
 
