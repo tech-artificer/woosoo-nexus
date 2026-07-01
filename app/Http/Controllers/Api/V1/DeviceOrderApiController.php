@@ -13,6 +13,7 @@ use App\Http\Resources\DeviceOrderResource;
 use App\Models\DeviceOrder;
 use App\Models\Package;
 use App\Services\AuditLogService;
+use App\Services\BroadcastService;
 use App\Services\Krypton\OrderService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Response;
@@ -346,9 +347,9 @@ class DeviceOrderApiController extends Controller
     private function dispatchOrderCreated(DeviceOrder $order, ?int $deviceId): void
     {
         try {
-            OrderCreated::dispatch($order);
+            app(BroadcastService::class)->dispatchBroadcastJob(new OrderCreated($order));
         } catch (Throwable $e) {
-            Log::warning('Order created but realtime broadcast failed', [
+            Log::error('Order created but realtime broadcast failed', [
                 'device_id' => $deviceId,
                 'device_order_id' => $order->id,
                 'order_id' => $order->order_id,

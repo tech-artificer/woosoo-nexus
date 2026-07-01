@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Head, router } from '@inertiajs/vue3'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import 'vue-sonner/style.css'
 import { Toaster } from '@/components/ui/sonner'
@@ -44,6 +44,7 @@ const pendingAdvance = ref<Set<string>>(new Set())
 const pendingRecall = ref<Set<string>>(new Set())
 const pendingToggle = ref<Set<string>>(new Set())
 let timer: ReturnType<typeof setInterval> | null = null
+let disconnectPollTimer: ReturnType<typeof setInterval> | null = null
 
 const correctedNow = computed(() => now.value + clockOffset.value)
 const activeTickets = computed(() => tickets.value.filter((ticket) => ACTIVE_STATES.includes(ticket.state)))
@@ -173,6 +174,34 @@ function toggleDensity() {
   }
 }
 
+// When Echo reconnects after a disconnection, reload the board to catch any tickets
+// missed during the gap. When disconnected for too long, poll as a fallback — mirrors
+// the pattern in resources/js/pages/Orders/Index.vue.
+function reloadBoardFromServer() {
+  router.reload({
+    only: ['initialTickets', 'serverNow'],
+    onSuccess: () => {
+      board.replaceAll(seedTickets(props.initialTickets))
+      setClockOffset(props.serverNow)
+    },
+  })
+}
+
+watch(connected, (isConnected, wasConnected) => {
+  if (isConnected && wasConnected === false) {
+    // Recovering from a real disconnection — clear the poll fallback and resync once.
+    if (disconnectPollTimer !== null) {
+      clearInterval(disconnectPollTimer)
+      disconnectPollTimer = null
+    }
+    reloadBoardFromServer()
+  } else if (!isConnected) {
+    // Fallback: while disconnected, reload every 30s so the board doesn't drift stale.
+    if (disconnectPollTimer !== null) clearInterval(disconnectPollTimer)
+    disconnectPollTimer = setInterval(reloadBoardFromServer, 30_000)
+  }
+})
+
 onMounted(() => {
   document.body.classList.add('kds-active')
   setClockOffset(props.serverNow)
@@ -204,6 +233,11 @@ onBeforeUnmount(() => {
   if (timer) {
     clearInterval(timer)
     timer = null
+  }
+
+  if (disconnectPollTimer !== null) {
+    clearInterval(disconnectPollTimer)
+    disconnectPollTimer = null
   }
 })
 </script>

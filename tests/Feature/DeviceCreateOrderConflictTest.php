@@ -9,12 +9,12 @@ use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
 use App\Models\Package;
+use App\Services\BroadcastService;
 use App\Services\Krypton\OrderService;
-use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Tests\TestCase;
 use Tests\Traits\MocksKryptonSession;
 
@@ -166,8 +166,11 @@ class DeviceCreateOrderConflictTest extends TestCase
 
         $sessionId = $this->createTestSession();
 
-        Event::listen(OrderCreated::class, function (): void {
-            throw new BroadcastException('Pusher error: connection refused');
+        $this->mock(BroadcastService::class, function ($mock) {
+            $mock->shouldReceive('dispatchBroadcastJob')
+                ->once()
+                ->with(\Mockery::type(OrderCreated::class))
+                ->andThrow(new RuntimeException('Reverb unreachable'));
         });
 
         $this->mock(OrderService::class, function ($mock) use ($device, $sessionId) {

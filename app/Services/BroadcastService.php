@@ -13,17 +13,19 @@ class BroadcastService
     {
         try {
             broadcast($event);
+
             return true;
         } catch (\Throwable $e) {
-            Log::error("Broadcast failed", [
+            Log::error('Broadcast failed', [
                 'event' => get_class($event),
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
-/**
+    /**
      * Broadcast with retry mechanism (sync retry).
      */
     public function broadcastWithRetry($event, int $maxRetries = 3, int $delayMs = 200): bool
@@ -53,17 +55,17 @@ class BroadcastService
 
         $context = [
             'event' => class_basename($eventClass),
-            'order_id' => $event->order?->id ?? $event->order_id ?? 'unknown',
-            'device_id' => $event->order?->device_id ?? 'unknown',
-            'timestamp' => date('Y-m-d H:i:s.u')
+            'order_id' => $event->order?->id ?? $event->order_id ?? $event->deviceOrder?->order_id ?? $event->deviceOrder?->id ?? 'unknown',
+            'device_id' => $event->order?->device_id ?? $event->deviceOrder?->device_id ?? 'unknown',
+            'timestamp' => date('Y-m-d H:i:s.u'),
         ];
 
         if ($success) {
-            Log::info("📤 [Broadcast] Event sent synchronously", $context);
+            Log::info('📤 [Broadcast] Event sent synchronously', $context);
+
             return;
         }
 
-        Log::warning("⚠️ [Broadcast] Event failed after sync retries", $context);
+        Log::warning('⚠️ [Broadcast] Event failed after sync retries', $context);
     }
-
 }
