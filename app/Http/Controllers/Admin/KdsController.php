@@ -293,7 +293,7 @@ class KdsController extends Controller
 
         return [
             'id' => (string) $order->id,
-            'table' => $table?->name ?? ($posReachable ? $order->device?->name : null) ?? '—',
+            'table' => $table?->name ?? $order->device?->name ?? '—',
             'type' => $isRefill ? 'refill' : 'initial',
             'issued' => $createdAt?->format('g:i A') ?? '',
             'issuedAt' => $issuedAtMs,
