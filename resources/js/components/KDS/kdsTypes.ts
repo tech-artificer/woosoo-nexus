@@ -26,6 +26,7 @@ export interface KdsTicket {
   voidReason?: string
   packageName?: string
   guestCount?: number
+  orderNumber?: string
 }
 
 export interface KdsThreshold {

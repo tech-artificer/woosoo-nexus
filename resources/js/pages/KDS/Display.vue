@@ -450,19 +450,54 @@ body.kds-active {
   opacity: 0;
 }
 
-:deep(.kds-command) {
-  display: grid;
-  grid-template-columns: 280px 1fr 310px;
+:deep(.kds-header) {
+  display: flex;
   align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 1rem;
+  min-height: 3.5rem;
   border-bottom: 1px solid rgb(255 255 255 / 0.08);
   background: var(--kds-bg1);
-  padding: 0 8px;
+}
+
+:deep(.kds-header__left) {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+:deep(.kds-header__left h1) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.kds-header__center) {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+:deep(.kds-header__right) {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  :deep(.kds-header__center) {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
 }
 
 :deep(.kds-brand),
-:deep(.kds-status-clock),
-:deep(.kds-online),
-:deep(.kds-rush),
 :deep(.kds-clock),
 :deep(.kds-filters),
 :deep(.kds-ticket-type-row),
@@ -559,34 +594,35 @@ body.kds-active {
   gap: 12px;
 }
 
-:deep(.kds-online),
-:deep(.kds-rush) {
-  min-height: 30px;
-  gap: 7px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: var(--kds-weight-label);
-  padding: 0 13px;
-  text-transform: uppercase;
+:deep(.kds-conn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
 }
 
-:deep(.kds-online) {
-  border: 1px solid rgb(82 190 102 / 0.35);
-  background: rgb(82 190 102 / 0.16);
-  color: #7fdb88;
+:deep(.kds-conn.is-online) {
+  color: var(--kds-ok, #16a34a);
 }
 
-:deep(.kds-online.is-offline) {
-  border-color: rgb(214 85 64 / 0.35);
-  background: rgb(214 85 64 / 0.14);
-  color: var(--kds-overdue);
+:deep(.kds-conn.is-offline) {
+  color: var(--kds-danger, #dc2626);
+  animation: kds-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes kds-pulse {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 :deep(.kds-chime-toggle) {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 2.25rem;
+  height: 2.25rem;
   border: 1px solid rgb(255 255 255 / 0.1);
   border-radius: 999px;
   background: var(--kds-bg2);
@@ -607,14 +643,7 @@ body.kds-active {
   outline-offset: 2px;
 }
 
-:deep(.kds-rush) {
-  border: 1px solid rgb(214 85 64 / 0.35);
-  background: rgb(214 85 64 / 0.14);
-  color: var(--kds-overdue);
-}
-
-:deep(.kds-online svg),
-:deep(.kds-rush svg),
+:deep(.kds-conn svg),
 :deep(.kds-clock svg) {
   width: 16px;
   height: 16px;
@@ -801,6 +830,24 @@ body.kds-active {
   font-size: 11px;
   font-weight: var(--kds-weight-caption);
   margin-top: 7px;
+}
+
+:deep(.kds-card__ref) {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-top: 7px;
+}
+
+:deep(.kds-card__order-number) {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+:deep(.kds-card__order-id) {
+  font-size: 0.72rem;
+  opacity: 0.55;
+  margin-left: 0.4rem;
 }
 
 :deep(.kds-timer) {
