@@ -2,8 +2,10 @@
 
 use App\Enums\OrderStatus;
 use App\Events\Order\OrderStatusUpdated;
+use App\Events\Order\OrderVoided;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
+use App\Models\Package;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\Fluent\AssertableJson;
@@ -34,6 +36,27 @@ test('mark ready is gated when items are not all done', function () {
 test('mark ready advances when all items are done', function () {
     $admin = User::factory()->admin()->create();
     $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/advance")
+        ->assertOk()
+        ->assertJson(['status' => 'served']);
+
+    expect($order->fresh()->status)->toBe(OrderStatus::SERVED);
+});
+
+test('mark ready advances when all visible items are done but the package anchor row is not', function () {
+    $admin = User::factory()->admin()->create();
+    $package = Package::factory()->create(['krypton_menu_id' => 9001]);
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    // Package anchor row: never toggled by the kitchen UI, done stays false.
+    DeviceOrderItems::factory()->for($order, 'device_order')->create([
+        'menu_id' => $package->krypton_menu_id,
+        'done' => false,
+    ]);
+    // Visible/preparable item: kitchen has checked it.
     DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
 
     $this->actingAs($admin)
@@ -152,6 +175,22 @@ test('recall increments the recalled counter each time', function () {
         ->assertOk();
 
     expect($order->fresh()->recalled)->toBe(3);
+});
+
+test('recalling an order resets item done flags so the kitchen must re-verify them', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED, 'recalled' => 0]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create([
+        'done' => true,
+        'done_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/recall")
+        ->assertOk();
+
+    expect($item->fresh()->done)->toBeFalse();
+    expect($item->fresh()->done_at)->toBeNull();
 });
 
 test('recall returns 422 for a voided order', function () {
@@ -387,4 +426,128 @@ test('advancing a pending order emits CONFIRMED then a single IN_PROGRESS broadc
     // Exactly 2 — not 3 — proves the duplicate IN_PROGRESS broadcast is gone (pre-fix this
     // path emitted CONFIRMED + 2×IN_PROGRESS = 3).
     Event::assertDispatchedTimes(OrderStatusUpdated::class, 2);
+});
+
+// --- #203 void (stale/stuck ticket clear path) ---
+
+test('admins can void an in-progress order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Kitchen error'])
+        ->assertOk()
+        ->assertJson(['status' => 'voided']);
+
+    $fresh = $order->fresh();
+    expect($fresh->status)->toBe(OrderStatus::VOIDED);
+    expect($fresh->void_reason)->toBe('Kitchen error');
+});
+
+test('admins can void a served order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::SERVED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Other'])
+        ->assertOk()
+        ->assertJson(['status' => 'voided']);
+});
+
+test('void requires a reason', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    // Validation errors are re-wrapped by the app's structured JSON error envelope
+    // (bootstrap/app.php) into error.details, not the default top-level `errors` key.
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", [])
+        ->assertUnprocessable()
+        ->assertJsonPath('error.details.reason.0', 'The reason field is required.');
+
+    expect($order->fresh()->status)->toBe(OrderStatus::IN_PROGRESS);
+});
+
+test('void does not reset item done flags', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true, 'done_at' => now()]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Guest cancelled'])
+        ->assertOk();
+
+    expect($item->fresh()->done)->toBeTrue();
+});
+
+test('void returns 422 for an already voided order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::VOIDED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Guest cancelled'])
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Order cannot be voided from its current state.']);
+});
+
+test('void returns 422 for a completed order', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::COMPLETED]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Guest cancelled'])
+        ->assertUnprocessable();
+});
+
+test('non-admin cannot access void endpoint', function () {
+    $user = User::factory()->create(['is_admin' => false]);
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    $this->actingAs($user)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Guest cancelled'])
+        ->assertForbidden();
+});
+
+test('void response carries the full broadcast payload', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Wrong table'])
+        ->assertOk()
+        ->assertJsonStructure([
+            'status',
+            'order' => ['id', 'status', 'kds_state', 'kds_type', 'items', 'void_reason'],
+        ])
+        ->assertJsonPath('order.kds_state', 'voided')
+        ->assertJsonPath('order.void_reason', 'Wrong table');
+});
+
+test('void response includes server_now as an integer', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    $before = (int) (microtime(true) * 1000);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Guest cancelled'])
+        ->assertOk()
+        ->assertJsonStructure(['server_now'])
+        ->assertJson(fn (AssertableJson $json) => $json
+            ->where('server_now', fn ($value) => is_int($value) && $value >= $before)
+            ->etc()
+        );
+});
+
+test('voiding an order broadcasts OrderVoided exactly once', function () {
+    Event::fake([OrderVoided::class]);
+
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/orders/{$order->id}/void", ['reason' => 'Kitchen error'])
+        ->assertOk();
+
+    Event::assertDispatchedTimes(OrderVoided::class, 1);
 });
