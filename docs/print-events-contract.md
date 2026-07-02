@@ -1,7 +1,7 @@
-﻿# Print Events Contract (Relay Device)
+﻿# Print Events Contract (woosoo-print-bridge)
 
 ## Scope
-Defines the required payload, endpoints, and polling rules so woosoo-nexus and relay-device-v2 stay aligned.
+Defines the required payload, endpoints, and polling rules so woosoo-nexus and woosoo-print-bridge stay aligned.
 
 ## WebSocket Broadcast
 - Channel: admin.print (Option A: client-side filtering)
