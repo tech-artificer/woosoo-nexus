@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Api\V2;
 
-use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Models\Device;
 use App\Models\TabletCategory;
+use App\Services\TabletCatalogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +42,7 @@ class TabletCategoryMenusApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        TabletApiController::forgetCategoriesCache();
+        TabletCatalogService::forgetCategoriesCache();
     }
 
     public function test_unknown_slug_returns_404_when_db_categories_exist(): void
@@ -133,11 +133,11 @@ class TabletCategoryMenusApiTest extends TestCase
             ->getJson('/api/v2/tablet/categories/sides/menus')
             ->assertOk();
 
-        $this->assertTrue(Cache::has(TabletApiController::categoryMenusCacheKey('sides')));
+        $this->assertTrue(Cache::has(TabletCatalogService::categoryMenusCacheKey('sides')));
 
-        TabletApiController::forgetCategoriesCache('sides');
+        TabletCatalogService::forgetCategoriesCache('sides');
 
-        $this->assertFalse(Cache::has(TabletApiController::categoryMenusCacheKey('sides')));
+        $this->assertFalse(Cache::has(TabletCatalogService::categoryMenusCacheKey('sides')));
 
         $category->menuPivots()->create(['krypton_menu_id' => 301, 'sort_order' => 0]);
         $this->seedPosMenu(301, 'Kimchi');

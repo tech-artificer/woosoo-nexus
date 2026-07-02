@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Api\V2;
 
-use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Models\Device;
 use App\Models\Package;
+use App\Services\TabletCatalogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -58,7 +58,7 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
+        Cache::forget(TabletCatalogService::PACKAGES_CACHE_KEY);
 
         DB::connection('pos')->table('menus')->insert([
             'id' => 54,
@@ -110,7 +110,7 @@ class TabletPackagesApiTest extends TestCase
     {
         $device = $this->authenticatedDevice();
 
-        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
+        Cache::forget(TabletCatalogService::PACKAGES_CACHE_KEY);
 
         DB::connection('pos')->table('taxes')->insert([
             'id' => 1,
