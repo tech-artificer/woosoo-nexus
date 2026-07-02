@@ -49,7 +49,10 @@ const actionLabel = computed(() => {
       <div class="kds-ticket-pane">
         <span>Table</span>
         <strong :class="{ 'is-struck': ticket.state === 'voided' }">{{ ticket.table }}</strong>
-        <small>Order {{ ticket.id }}</small>
+        <div class="kds-card__ref">
+          <span class="kds-card__order-number">{{ ticket.orderNumber ?? `Order ${ticket.id}` }}</span>
+          <span v-if="ticket.orderNumber" class="kds-card__order-id">#{{ ticket.id }}</span>
+        </div>
       </div>
       <div class="kds-ticket-pane is-right">
         <span>Elapsed</span>

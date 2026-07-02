@@ -803,6 +803,24 @@ body.kds-active {
   margin-top: 7px;
 }
 
+:deep(.kds-card__ref) {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-top: 7px;
+}
+
+:deep(.kds-card__order-number) {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+:deep(.kds-card__order-id) {
+  font-size: 0.72rem;
+  opacity: 0.55;
+  margin-left: 0.4rem;
+}
+
 :deep(.kds-timer) {
   font-family: var(--kds-font-m) !important;
   font-variant-numeric: tabular-nums;
