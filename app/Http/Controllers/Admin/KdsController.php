@@ -33,14 +33,6 @@ class KdsController extends Controller
         OrderStatus::ARCHIVED,
     ];
 
-    private const TERMINAL_ITEM_STATUSES = [
-        OrderStatus::SERVED,
-        OrderStatus::COMPLETED,
-        OrderStatus::CANCELLED,
-        OrderStatus::VOIDED,
-        OrderStatus::ARCHIVED,
-    ];
-
     public function index(Request $request): Response
     {
         $reachable = $this->posConnection->isReachable();
@@ -162,21 +154,27 @@ class KdsController extends Controller
         $gateMessage = null;
 
         DB::transaction(function () use (&$item, &$gateMessage) {
-            // Re-read order under lock; serialises with concurrent advance() and re-checks terminal status.
+            // Re-read order under lock; serialises with concurrent advance() and re-checks state.
             $order = DeviceOrder::lockForUpdate()->findOrFail($item->order_id);
 
-            if (in_array($order->status, self::TERMINAL_ITEM_STATUSES)) {
-                $gateMessage = 'Cannot toggle items on a completed or closed order.';
+            if (! in_array($order->status, [OrderStatus::IN_PROGRESS, OrderStatus::READY], true)) {
+                $gateMessage = 'Items can only be checked while the ticket is in preparation.';
 
                 return;
             }
 
-            // Re-read the item under lock so the flip is computed from the committed
-            // state, not the possibly-stale route-bound instance. Two overlapping
-            // toggles then serialise instead of both inverting the same old value.
+            // Re-read the item under lock so we check from the committed state, not the
+            // possibly-stale route-bound instance. Two overlapping toggles then serialise.
             $lockedItem = DeviceOrderItems::lockForUpdate()->findOrFail($item->id);
-            $lockedItem->done = ! (bool) ($lockedItem->done ?? false);
-            $lockedItem->done_at = $lockedItem->done ? now() : null;
+
+            if ($lockedItem->done) {
+                $gateMessage = 'Item already checked. Recall the ticket to reset checks.';
+
+                return;
+            }
+
+            $lockedItem->done = true;
+            $lockedItem->done_at = now();
             $lockedItem->save();
 
             $item = $lockedItem;
