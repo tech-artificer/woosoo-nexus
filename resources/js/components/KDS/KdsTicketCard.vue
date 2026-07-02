@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ArrowRight, Ban, Check, RotateCcw } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { ArrowRight, Check, RotateCcw } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { canRecallTicket, canVoidTicket, elapsedFor, formatElapsed, isAdvanceBlocked, isTerminal, nextStateFor, stateLabel, ticketTypeLabel, urgencyFor } from './kdsHelpers'
+import { canRecallTicket, elapsedFor, formatElapsed, isAdvanceBlocked, isTerminal, nextStateFor, stateLabel, ticketTypeLabel, urgencyFor } from './kdsHelpers'
 import type { KdsDensity, KdsTicket } from './kdsTypes'
 
 const props = defineProps<{
@@ -19,7 +18,6 @@ const emit = defineEmits<{
   advance: [ticketId: string]
   recall: [ticketId: string]
   toggleItem: [ticketId: string, itemId: string]
-  void: [ticketId: string, reason: string]
 }>()
 
 const doneCount = computed(() => props.ticket.items.filter((item) => item.done).length)
@@ -30,27 +28,11 @@ const urgency = computed(() => urgencyFor(props.ticket, props.now, props.clockOf
 const nextState = computed(() => nextStateFor(props.ticket.state))
 const advanceBlocked = computed(() => isAdvanceBlocked(props.ticket))
 const recallable = computed(() => canRecallTicket(props.ticket))
-const voidable = computed(() => canVoidTicket(props.ticket))
 const actionLabel = computed(() => {
   if (props.ticket.state === 'new') return 'Start Preparing'
   if (props.ticket.state === 'preparing' || props.ticket.state === 'ready') return 'Mark as Served'
   return ''
 })
-
-const VOID_REASONS = ['Guest cancelled', 'Allergy conflict', 'Wrong table', 'Kitchen error', 'Other']
-const showVoidDialog = ref(false)
-const voidReason = ref('')
-
-function openVoidDialog() {
-  voidReason.value = ''
-  showVoidDialog.value = true
-}
-
-function confirmVoid() {
-  if (!voidReason.value) return
-  emit('void', props.ticket.id, voidReason.value)
-  showVoidDialog.value = false
-}
 </script>
 
 <template>
@@ -168,38 +150,6 @@ function confirmVoid() {
         <RotateCcw data-icon="inline-start" aria-hidden="true" />
         Recall
       </Button>
-
-      <Button
-        v-if="voidable"
-        type="button"
-        variant="outline"
-        class="kds-void-action"
-        aria-label="Void order"
-        @click="openVoidDialog"
-      >
-        <Ban aria-hidden="true" />
-      </Button>
     </footer>
-
-    <Dialog :open="showVoidDialog" @update:open="showVoidDialog = $event">
-      <DialogContent class="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Void Order — Table {{ ticket.table }}</DialogTitle>
-          <DialogDescription>Select a reason. This cannot be undone.</DialogDescription>
-        </DialogHeader>
-        <div class="flex flex-col gap-2">
-          <label v-for="reason in VOID_REASONS" :key="reason" class="flex items-center gap-2">
-            <input v-model="voidReason" type="radio" name="void-reason" :value="reason" />
-            {{ reason }}
-          </label>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" @click="showVoidDialog = false">Cancel</Button>
-          <Button type="button" class="bg-red-600 text-white hover:bg-red-500" :disabled="!voidReason" @click="confirmVoid">
-            Confirm Void
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   </article>
 </template>

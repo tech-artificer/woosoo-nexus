@@ -8,7 +8,7 @@ import KdsCommandBar from '@/components/KDS/KdsCommandBar.vue'
 import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
-import { postKdsAdvance, postKdsRecall, postKdsToggleItem, postKdsVoid } from '@/components/KDS/kdsApi'
+import { postKdsAdvance, postKdsRecall, postKdsToggleItem } from '@/components/KDS/kdsApi'
 import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
@@ -42,7 +42,6 @@ const density = ref<KdsDensity>('comfortable')
 const now = ref(Date.now())
 const pendingAdvance = ref<Set<string>>(new Set())
 const pendingRecall = ref<Set<string>>(new Set())
-const pendingVoid = ref<Set<string>>(new Set())
 const pendingToggle = ref<Set<string>>(new Set())
 let timer: ReturnType<typeof setInterval> | null = null
 let disconnectPollTimer: ReturnType<typeof setInterval> | null = null
@@ -166,34 +165,6 @@ async function recallTicket(ticketId: string) {
   }
 }
 
-async function voidTicket(ticketId: string, reason: string) {
-  const ticket = tickets.value.find((item) => item.id === ticketId)
-
-  if (!ticket) {
-    return
-  }
-
-  if (pendingVoid.value.has(ticketId)) {
-    return
-  }
-
-  pendingVoid.value.add(ticketId)
-
-  try {
-    const response = await postKdsVoid(ticketId, reason)
-    if (response.server_now != null) {
-      setClockOffset(response.server_now)
-    }
-    // Optimistic apply — see advanceTicket() for rationale.
-    board.applyOrderUpdate(response.order as Parameters<typeof board.applyOrderUpdate>[0])
-    toast.success('Order voided.')
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Unable to void order.')
-  } finally {
-    pendingVoid.value.delete(ticketId)
-  }
-}
-
 function toggleDensity() {
   density.value = density.value === 'comfortable' ? 'compact' : 'comfortable'
   try {
@@ -313,7 +284,6 @@ onBeforeUnmount(() => {
               :density="density"
               @advance="advanceTicket"
               @recall="recallTicket"
-              @void="voidTicket"
               @toggle-item="toggleItem"
             />
           </div>
