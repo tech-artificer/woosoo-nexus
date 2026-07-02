@@ -103,7 +103,8 @@ const actionLabel = computed(() => {
         @click="emit('toggleItem', ticket.id, item.id)"
       >
         <Checkbox
-          :checked="item.done"
+          as="span"
+          :model-value="item.done"
           :disabled="terminal"
           class="kds-item-check"
           aria-hidden="true"
@@ -133,7 +134,7 @@ const actionLabel = computed(() => {
         type="button"
         variant="brand"
         class="kds-card-action"
-        :disabled="advanceBlocked"
+        :aria-disabled="advanceBlocked ? 'true' : undefined"
         @click="emit('advance', ticket.id)"
       >
         {{ actionLabel }}
@@ -141,14 +142,15 @@ const actionLabel = computed(() => {
       </Button>
 
       <Button
-        v-else-if="recallable"
+        v-else-if="ticket.state === 'served'"
         type="button"
         variant="outline"
         class="kds-card-action kds-recall-action"
+        :aria-disabled="!recallable ? 'true' : undefined"
         @click="emit('recall', ticket.id)"
       >
         <RotateCcw data-icon="inline-start" aria-hidden="true" />
-        Recall
+        {{ recallable ? 'Recall' : 'Max Recalls Reached' }}
       </Button>
     </footer>
   </article>

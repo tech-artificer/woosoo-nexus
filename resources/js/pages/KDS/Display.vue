@@ -9,7 +9,7 @@ import KdsEmptyState from '@/components/KDS/KdsEmptyState.vue'
 import KdsFilterChips from '@/components/KDS/KdsFilterChips.vue'
 import KdsTicketCard from '@/components/KDS/KdsTicketCard.vue'
 import { postKdsAdvance, postKdsRecall, postKdsToggleItem } from '@/components/KDS/kdsApi'
-import { ACTIVE_STATES, canAdvanceTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
+import { ACTIVE_STATES, canAdvanceTicket, canRecallTicket, filterTickets, sortTickets } from '@/components/KDS/kdsHelpers'
 import type { KdsDensity, KdsFilter, KdsTicket } from '@/components/KDS/kdsTypes'
 import { useKdsBoard } from '@/components/KDS/useKdsBoard'
 import { useKdsChime } from '@/components/KDS/useKdsChime'
@@ -144,6 +144,13 @@ async function recallTicket(ticketId: string) {
     return
   }
 
+  if (!canRecallTicket(ticket)) {
+    toast.warning('Maximum recalls reached for this order.', {
+      duration: 3500,
+    })
+    return
+  }
+
   if (pendingRecall.value.has(ticketId)) {
     return
   }
@@ -274,7 +281,13 @@ onBeforeUnmount(() => {
         </div>
 
         <section class="kds-grid-wrap" aria-label="Ticket queue">
-          <div v-if="visibleTickets.length" class="kds-grid" :class="`density-${density}`">
+          <TransitionGroup
+            v-if="visibleTickets.length"
+            tag="div"
+            name="kds-card"
+            class="kds-grid"
+            :class="`density-${density}`"
+          >
             <KdsTicketCard
               v-for="ticket in visibleTickets"
               :key="ticket.id"
@@ -286,7 +299,7 @@ onBeforeUnmount(() => {
               @recall="recallTicket"
               @toggle-item="toggleItem"
             />
-          </div>
+          </TransitionGroup>
           <KdsEmptyState v-else />
         </section>
     </section>
@@ -414,6 +427,27 @@ body.kds-active {
 
 .kds-grid.density-compact {
   gap: 10px;
+}
+
+.kds-card-move {
+  transition: transform 0.3s ease;
+}
+
+.kds-card-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.kds-card-enter-from {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+
+.kds-card-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.kds-card-leave-to {
+  opacity: 0;
 }
 
 :deep(.kds-command) {
