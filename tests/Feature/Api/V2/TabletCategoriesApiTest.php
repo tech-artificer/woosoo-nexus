@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Api\V2;
 
-use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Models\Device;
 use App\Models\TabletCategory;
+use App\Services\TabletCatalogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -51,7 +51,7 @@ class TabletCategoriesApiTest extends TestCase
     public function test_fallback_returned_when_only_meats_db_category_active(): void
     {
         $device = $this->authenticatedDevice();
-        Cache::forget(TabletApiController::CATEGORIES_CACHE_KEY);
+        Cache::forget(TabletCatalogService::CATEGORIES_CACHE_KEY);
 
         // A lone active 'meats' row must not suppress the bootstrap fallback:
         // the non-meats tabs still come from the legacy list (the PWA injects
@@ -68,7 +68,7 @@ class TabletCategoriesApiTest extends TestCase
     public function test_returns_db_categories_with_synthesized_meats_when_no_meats_row(): void
     {
         $device = $this->authenticatedDevice();
-        Cache::forget(TabletApiController::CATEGORIES_CACHE_KEY);
+        Cache::forget(TabletCatalogService::CATEGORIES_CACHE_KEY);
 
         TabletCategory::create(['name' => 'Grilled', 'sort_order' => 0, 'is_active' => true]);
         TabletCategory::create(['name' => 'Seafood', 'sort_order' => 1, 'is_active' => true]);
@@ -94,7 +94,7 @@ class TabletCategoriesApiTest extends TestCase
     public function test_includes_meats_row_with_admin_metadata(): void
     {
         $device = $this->authenticatedDevice();
-        Cache::forget(TabletApiController::CATEGORIES_CACHE_KEY);
+        Cache::forget(TabletCatalogService::CATEGORIES_CACHE_KEY);
 
         $meats = TabletCategory::create(['name' => 'Grill Meats', 'slug' => 'meats', 'sort_order' => 0, 'is_active' => true, 'is_unlimited' => true]);
         TabletCategory::create(['name' => 'Sides', 'slug' => 'sides', 'sort_order' => 1, 'is_active' => true]);
@@ -121,7 +121,7 @@ class TabletCategoriesApiTest extends TestCase
     public function test_menu_count_reflects_pivot_rows(): void
     {
         $device = $this->authenticatedDevice();
-        Cache::forget(TabletApiController::CATEGORIES_CACHE_KEY);
+        Cache::forget(TabletCatalogService::CATEGORIES_CACHE_KEY);
 
         $category = TabletCategory::create(['name' => 'Sides', 'slug' => 'sides', 'is_active' => true]);
         $category->menuPivots()->create(['krypton_menu_id' => 101, 'sort_order' => 0]);
@@ -138,7 +138,7 @@ class TabletCategoriesApiTest extends TestCase
     public function test_is_unlimited_reflects_db_flag(): void
     {
         $device = $this->authenticatedDevice();
-        Cache::forget(TabletApiController::CATEGORIES_CACHE_KEY);
+        Cache::forget(TabletCatalogService::CATEGORIES_CACHE_KEY);
 
         TabletCategory::create(['name' => 'Sides',  'slug' => 'sides',  'is_active' => true, 'is_unlimited' => true]);
         TabletCategory::create(['name' => 'Drinks', 'slug' => 'drinks', 'is_active' => true, 'is_unlimited' => false]);

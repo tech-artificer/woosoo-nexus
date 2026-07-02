@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Events\Menu\PackageUpdated;
-use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePackageRequest;
 use App\Http\Requests\Admin\UpdatePackageRequest;
@@ -12,11 +11,11 @@ use App\Models\Device;
 use App\Models\Krypton\Menu;
 use App\Models\Package;
 use App\Models\PackageAllowedMenu;
+use App\Services\TabletCatalogService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -345,7 +344,7 @@ class PackageController extends Controller
 
     private function broadcastPackageUpdated(): void
     {
-        Cache::forget(TabletApiController::PACKAGES_CACHE_KEY);
+        TabletCatalogService::forgetPackagesCache();
 
         $activeDevices = Device::where('is_active', true)->pluck('id');
         foreach ($activeDevices as $deviceId) {
