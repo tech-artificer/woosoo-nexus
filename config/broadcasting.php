@@ -63,6 +63,11 @@ return [
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                // Bound each call so an unreachable Reverb host fails fast instead of hanging on
+                // unset Guzzle/OS defaults — BroadcastService::broadcastWithRetry() calls this
+                // synchronously from the order-creation request, up to 3x.
+                'connect_timeout' => 1,
+                'timeout' => 2,
             ],
         ],
 
