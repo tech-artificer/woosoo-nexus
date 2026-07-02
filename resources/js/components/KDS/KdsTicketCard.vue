@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { canRecallTicket, elapsedFor, formatElapsed, isAdvanceBlocked, isTerminal, nextStateFor, stateLabel, ticketTypeLabel, urgencyFor } from './kdsHelpers'
-import type { KdsDensity, KdsTicket } from './kdsTypes'
+import type { KdsDensity, KdsItem, KdsTicket } from './kdsTypes'
 
 const props = defineProps<{
   ticket: KdsTicket
@@ -33,6 +33,10 @@ const actionLabel = computed(() => {
   if (props.ticket.state === 'preparing' || props.ticket.state === 'ready') return 'Mark as Served'
   return ''
 })
+
+function canCheck(item: KdsItem): boolean {
+  return !terminal.value && props.ticket.state === 'preparing' && !item.done
+}
 </script>
 
 <template>
@@ -101,14 +105,14 @@ const actionLabel = computed(() => {
         :key="item.id"
         type="button"
         class="kds-item-row"
-        :class="{ 'is-done': item.done, 'is-disabled': terminal }"
-        :disabled="terminal"
-        @click="emit('toggleItem', ticket.id, item.id)"
+        :class="{ 'is-done': item.done, 'is-disabled': !canCheck(item) }"
+        :disabled="!canCheck(item)"
+        @click="canCheck(item) && emit('toggleItem', ticket.id, item.id)"
       >
         <Checkbox
           as="span"
           :model-value="item.done"
-          :disabled="terminal"
+          :disabled="!canCheck(item)"
           class="kds-item-check"
           aria-hidden="true"
           tabindex="-1"
