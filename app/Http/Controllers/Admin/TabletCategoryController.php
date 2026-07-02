@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Events\Menu\TabletCategoryUpdated;
-use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Models\TabletCategory;
 use App\Models\TabletCategoryMenu;
+use App\Services\TabletCatalogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -269,7 +269,7 @@ class TabletCategoryController extends Controller
 
     private function broadcastTabletCategoryUpdated(?string $slug = null): void
     {
-        TabletApiController::forgetCategoriesCache($slug);
+        TabletCatalogService::forgetCategoriesCache($slug);
 
         $activeDevices = Device::where('is_active', true)->pluck('id');
         foreach ($activeDevices as $deviceId) {

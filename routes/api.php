@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ServiceRequestApiController;
 use App\Http\Controllers\Api\V1\SessionApiController;
 use App\Http\Controllers\Api\V1\TableServiceApiController;
+use App\Http\Controllers\Api\V2\Admin\TabletCatalogController as AdminTabletCatalogController;
 use App\Http\Controllers\Api\V2\DeviceApiController as DeviceV2ApiController;
 use App\Http\Controllers\Api\V2\TabletApiController;
 use App\Http\Middleware\RequestId;
@@ -238,6 +239,13 @@ Route::middleware([RequestId::class, 'api'])->group(function () {
 
     // Device management API v2 — admin/sanctum endpoints
     Route::prefix('v2')->middleware([RequestId::class, 'auth:sanctum'])->group(function () {
+        // Admin mirror of the tablet catalog — identical payloads/caches as the
+        // device-auth /v2/tablet/* routes (same TabletCatalogService).
+        Route::get('/admin/tablet/packages', [AdminTabletCatalogController::class, 'packages'])->name('api.v2.admin.tablet.packages');
+        Route::get('/admin/tablet/packages/{id}', [AdminTabletCatalogController::class, 'packageDetails'])->name('api.v2.admin.tablet.package.details');
+        Route::get('/admin/tablet/categories', [AdminTabletCatalogController::class, 'categories'])->name('api.v2.admin.tablet.categories');
+        Route::get('/admin/tablet/categories/{slug}/menus', [AdminTabletCatalogController::class, 'categoryMenus'])->name('api.v2.admin.tablet.category.menus');
+
         Route::get('/devices', [DeviceV2ApiController::class, 'index'])->name('api.v2.devices.index');
         Route::post('/devices', [DeviceV2ApiController::class, 'store'])->name('api.v2.devices.store');
         Route::get('/devices/metadata', [DeviceV2ApiController::class, 'metadata'])->name('api.v2.devices.metadata');
