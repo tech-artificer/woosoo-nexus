@@ -33,6 +33,7 @@ interface CategoryVm {
     slug: string
     sort_order: number
     is_active: boolean
+    is_unlimited: boolean
     menu_count: number
     menus: CategoryMenu[]
 }
@@ -109,7 +110,7 @@ function onDrop(targetId: number) {
 
 // ─── Create category ──────────────────────────────────────────────────────
 const showCreate = ref(false)
-const createForm = useForm({ name: '', slug: '', sort_order: 0, is_active: true })
+const createForm = useForm({ name: '', slug: '', sort_order: 0, is_active: true, is_unlimited: false })
 
 function submitCreate() {
     createForm.post(route('tablet-categories.store'), {
@@ -123,7 +124,7 @@ function submitCreate() {
 
 // ─── Edit category ────────────────────────────────────────────────────────
 const editingId = ref<number | null>(null)
-const editForm = useForm({ name: '', slug: '', sort_order: 0, is_active: true })
+const editForm = useForm({ name: '', slug: '', sort_order: 0, is_active: true, is_unlimited: false })
 
 function openEdit(cat: CategoryVm) {
     editingId.value    = cat.id
@@ -131,6 +132,7 @@ function openEdit(cat: CategoryVm) {
     editForm.slug       = cat.slug
     editForm.sort_order = cat.sort_order
     editForm.is_active  = cat.is_active
+    editForm.is_unlimited = cat.is_unlimited
 }
 
 function submitEdit() {
@@ -368,6 +370,12 @@ function submitAttach() {
                                         />
                                         {{ selectedCategory.is_active ? 'Active' : 'Off' }}
                                     </span>
+                                    <span
+                                        v-if="selectedCategory.is_unlimited"
+                                        class="inline-flex items-center rounded-full bg-woosoo-accent/15 px-2 py-0.5 text-[10px] font-semibold text-woosoo-accent"
+                                    >
+                                        Unlimited
+                                    </span>
                                     <h3 class="font-semibold text-foreground">{{ selectedCategory.name }}</h3>
                                 </div>
                                 <Button variant="ghost" size="sm" class="h-7 px-2 text-xs" @click="openEdit(selectedCategory)">
@@ -467,6 +475,10 @@ function submitAttach() {
                         <Switch v-model:checked="createForm.is_active" />
                         <Label>Active</Label>
                     </div>
+                    <div class="flex items-center gap-3">
+                        <Switch v-model:checked="createForm.is_unlimited" />
+                        <Label>Unlimited refills <span class="text-muted-foreground">(tab stays open in refill mode)</span></Label>
+                    </div>
                     <DialogFooter>
                         <Button variant="outline" type="button" @click="showCreate = false">Cancel</Button>
                         <Button type="submit" :disabled="createForm.processing">Create</Button>
@@ -495,6 +507,10 @@ function submitAttach() {
                     <div class="flex items-center gap-3">
                         <Switch v-model:checked="editForm.is_active" />
                         <Label>Active</Label>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <Switch v-model:checked="editForm.is_unlimited" />
+                        <Label>Unlimited refills <span class="text-muted-foreground">(tab stays open in refill mode)</span></Label>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" type="button" @click="editingId = null">Cancel</Button>

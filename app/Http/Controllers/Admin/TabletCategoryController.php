@@ -41,6 +41,7 @@ class TabletCategoryController extends Controller
                     'color' => $cat->color,
                     'sort_order' => $cat->sort_order,
                     'is_active' => $cat->is_active,
+                    'is_unlimited' => $cat->is_unlimited,
                     'menu_count' => $cat->menuPivots->count(),
                     'menus' => $cat->menuPivots
                         ->sortBy('sort_order')
@@ -102,6 +103,7 @@ class TabletCategoryController extends Controller
             'color' => ['nullable', 'string', 'max:20'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
+            'is_unlimited' => ['boolean'],
         ]);
 
         TabletCategory::create($validated);
@@ -120,6 +122,7 @@ class TabletCategoryController extends Controller
             'color' => ['nullable', 'string', 'max:20'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
+            'is_unlimited' => ['boolean'],
         ]);
 
         $tabletCategory->update($validated);

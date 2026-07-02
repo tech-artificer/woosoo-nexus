@@ -14,16 +14,18 @@ class TabletCategory extends Model
     protected bool $slugExplicitlySet = false;
 
     protected $fillable = [
-        'name', 'slug', 'icon', 'color', 'sort_order', 'is_active',
+        'name', 'slug', 'icon', 'color', 'sort_order', 'is_active', 'is_unlimited',
     ];
 
     protected $attributes = [
         'is_active' => true,
+        'is_unlimited' => false,
         'sort_order' => 0,
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_unlimited' => 'boolean',
         'sort_order' => 'integer',
     ];
 
