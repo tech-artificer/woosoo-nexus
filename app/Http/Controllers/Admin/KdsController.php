@@ -310,6 +310,7 @@ class KdsController extends Controller
             'state' => $order->status->kdsState(),
             'packageName' => $packageName,
             'guestCount' => $order->guest_count,
+            'orderNumber' => $order->order_number,
             'items' => $preparableItems->map(fn ($it) => [
                 'id' => (string) $it->id,
                 'qty' => (int) ($it->quantity ?? 1),

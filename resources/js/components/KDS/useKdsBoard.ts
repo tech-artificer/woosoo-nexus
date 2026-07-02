@@ -12,6 +12,7 @@ type OrderPayload = {
   device?: { name: string } | null
   package_name?: string | null
   guest_count?: number | null
+  order_number?: string | null
   items?: Array<{
     id: string | number
     quantity: number
@@ -77,6 +78,7 @@ function payloadToTicket(payload: OrderPayload): KdsTicket {
     voidReason: payload.void_reason ?? undefined,
     packageName: payload.package_name ?? undefined,
     guestCount: payload.guest_count ?? undefined,
+    orderNumber: payload.order_number ?? undefined,
   }
 }
 
