@@ -401,7 +401,7 @@ cart.clear();
 2. **Check Device** - Device must have `table_id` assigned
 3. **Call Krypton POS** - `OrderService::processOrder()` creates order via stored procedure
 4. **Store in woosoo_api** - Insert into `device_orders` and `device_order_items`
-5. **Broadcast Event** - Dispatch `PrintOrder` event to woosoo-print-bridge devices
+5. **Broadcast Event** - Dispatch `PrintOrder` event on the shared `admin.orders` channel; woosoo-print-bridge consumes it from there
 6. **Queue Print Job** - `PrinterOrderJob::dispatch()` to `cashier` queue
 7. **Return Response** - `DeviceOrderResource` with full order details
 
@@ -1030,7 +1030,7 @@ sequenceDiagram
     participant Tablet
     participant API
     participant Krypton
-    participant Relay
+    participant Bridge as woosoo-print-bridge
     participant Printer
     participant Admin
 
@@ -1059,27 +1059,27 @@ sequenceDiagram
     API->>Admin: Broadcast via WebSocket
     Admin->>Admin: Update orders dashboard
     
-    API->>Relay: Broadcast via Reverb
-    Note over API,Relay: Channel: print-queue
+    API->>Bridge: Broadcast via Reverb
+    Note over API,Bridge: Channel: admin.orders
     
-    Relay->>Relay: Receive PrintOrder event
-    Relay->>Relay: Check deduplication
-    Relay->>Relay: Add to print queue
+    Bridge->>Bridge: Receive PrintOrder event
+    Bridge->>Bridge: Check deduplication
+    Bridge->>Bridge: Add to print queue
     
-    Relay->>API: GET /printer/unprinted-events
-    API-->>Relay: [event_42]
+    Bridge->>API: GET /printer/unprinted-events
+    API-->>Bridge: [event_42]
     
-    Relay->>Relay: Generate ESC/POS bytes
-    Relay->>Printer: Send via Bluetooth
+    Bridge->>Bridge: Generate ESC/POS bytes
+    Bridge->>Printer: Send via Bluetooth
     Printer->>Printer: Print ticket
     
-    Relay->>API: POST /printer/print-events/42/ack
-    Note over Relay,API: {printer_id, printed_at}
+    Bridge->>API: POST /printer/print-events/42/ack
+    Note over Bridge,API: {printer_id, printed_at}
     API->>API: Mark event as printed
-    API-->>Relay: {was_updated: true}
+    API-->>Bridge: {was_updated: true}
     
-    Relay->>Relay: Store event key
-    Relay->>Relay: Remove from queue
+    Bridge->>Bridge: Store event key
+    Bridge->>Bridge: Remove from queue
     
     Customer->>Tablet: Request water
     Tablet->>API: POST /service/request
@@ -1176,7 +1176,7 @@ sequenceDiagram
 
 #### **Network Failure**
 - **Tablet:** Retry with exponential backoff (1s, 2s, 4s)
-- **Relay:** Fall back to polling every 30 seconds
+- **woosoo-print-bridge:** Fall back to polling every 30 seconds
 - **Display:** Show offline indicator to user
 
 #### **Print Failure**
