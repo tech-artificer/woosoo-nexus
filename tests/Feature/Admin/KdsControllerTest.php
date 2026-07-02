@@ -79,18 +79,17 @@ test('admins can toggle an item done flag', function () {
     expect($item->fresh()->done)->toBeTrue();
 });
 
-test('toggling a done item marks it undone', function () {
+test('cannot toggle an already checked item', function () {
     $admin = User::factory()->admin()->create();
     $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
     $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => true]);
 
     $this->actingAs($admin)
         ->postJson("/kds/items/{$item->id}/toggle")
-        ->assertOk()
-        ->assertJson(['done' => false]);
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Item already checked. Recall the ticket to reset checks.']);
 
-    expect($item->fresh()->done)->toBeFalse();
-    expect($item->fresh()->done_at)->toBeNull();
+    expect($item->fresh()->done)->toBeTrue();
 });
 
 test('non-admin cannot access kds advance endpoint', function () {
@@ -110,7 +109,7 @@ test('cannot toggle item on a served order', function () {
     $this->actingAs($admin)
         ->postJson("/kds/items/{$item->id}/toggle")
         ->assertUnprocessable()
-        ->assertJsonFragment(['message' => 'Cannot toggle items on a completed or closed order.']);
+        ->assertJsonFragment(['message' => 'Items can only be checked while the ticket is in preparation.']);
 });
 
 test('cannot toggle item on a voided order', function () {
@@ -121,7 +120,7 @@ test('cannot toggle item on a voided order', function () {
     $this->actingAs($admin)
         ->postJson("/kds/items/{$item->id}/toggle")
         ->assertUnprocessable()
-        ->assertJsonFragment(['message' => 'Cannot toggle items on a completed or closed order.']);
+        ->assertJsonFragment(['message' => 'Items can only be checked while the ticket is in preparation.']);
 });
 
 test('cannot toggle item on a completed order', function () {
@@ -132,7 +131,47 @@ test('cannot toggle item on a completed order', function () {
     $this->actingAs($admin)
         ->postJson("/kds/items/{$item->id}/toggle")
         ->assertUnprocessable()
-        ->assertJsonFragment(['message' => 'Cannot toggle items on a completed or closed order.']);
+        ->assertJsonFragment(['message' => 'Items can only be checked while the ticket is in preparation.']);
+});
+
+test('items can only be checked when order is in_progress', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::IN_PROGRESS]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertOk()
+        ->assertJson(['done' => true]);
+
+    expect($item->fresh()->done)->toBeTrue();
+    expect($item->fresh()->done_at)->not->toBeNull();
+});
+
+test('items can only be checked when order is ready', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::READY]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertOk()
+        ->assertJson(['done' => true]);
+
+    expect($item->fresh()->done)->toBeTrue();
+});
+
+test('items cannot be checked when order is confirmed', function () {
+    $admin = User::factory()->admin()->create();
+    $order = DeviceOrder::factory()->create(['status' => OrderStatus::CONFIRMED]);
+    $item = DeviceOrderItems::factory()->for($order, 'device_order')->create(['done' => false]);
+
+    $this->actingAs($admin)
+        ->postJson("/kds/items/{$item->id}/toggle")
+        ->assertUnprocessable()
+        ->assertJsonFragment(['message' => 'Items can only be checked while the ticket is in preparation.']);
+
+    expect($item->fresh()->done)->toBeFalse();
 });
 
 test('mark ready gate re-checks items inside the transaction', function () {
