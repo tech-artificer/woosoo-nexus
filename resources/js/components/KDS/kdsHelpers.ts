@@ -138,6 +138,15 @@ export function canRecallTicket(ticket: KdsTicket): boolean {
   return ticket.state === 'served' && (ticket.recalled ?? 0) < MAX_RECALLS
 }
 
+/**
+ * Void is scoped to New/Preparing tickets — the clear path for stale/stuck orders (#203).
+ * Served tickets keep Recall as their sole action; the backend enum also permits
+ * served→voided, but the UI intentionally doesn't expose a second destructive control there.
+ */
+export function canVoidTicket(ticket: KdsTicket): boolean {
+  return isActive(ticket.state)
+}
+
 /** Primary action `:disabled` — Mark as Served gated until every checklist item is done. */
 export function isAdvanceBlocked(ticket: KdsTicket): boolean {
   if (nextStateFor(ticket.state) === null) {

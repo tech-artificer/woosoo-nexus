@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V2;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MenuResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Device;
 use App\Models\DeviceOrder;
 use App\Models\Krypton\Menu;
 use App\Models\Package;
@@ -59,7 +60,7 @@ class TabletApiController extends Controller
     /** Cache key for the tablet categories list. Busted on admin category/menu mutations. */
     public const CATEGORIES_CACHE_KEY = 'tablet.categories.v2';
 
-    /** Slug excluded from the categories list — meats tab is PWA-injected; catalog via POS group. */
+    /** Meats tab metadata is admin-driven, but its menu catalog always resolves via POS group. */
     private const MEATS_SLUG = 'meats';
 
     /** TTL in seconds — 5 minutes. Short enough to pick up changes if cache flush is missed. */
@@ -202,8 +203,11 @@ class TabletApiController extends Controller
      * GET /api/v2/tablet/categories
      *
      * Returns tablet categories. Tries the DB-backed `tablet_categories` table
-     * first (admin-managed). If none are active, falls back to the original
-     * hardcoded list so the PWA always has data.
+     * first (admin-managed), including the `meats` row (tab metadata only — its
+     * menus stay POS-group-driven, so `menu_count` is omitted for it). A meats
+     * entry is synthesized when no active meats row exists. If no non-meats
+     * categories are active, falls back to the original hardcoded list so the
+     * PWA always has data.
      *
      * @return JsonResponse
      */
@@ -213,30 +217,57 @@ class TabletApiController extends Controller
             $payload = Cache::remember(self::CATEGORIES_CACHE_KEY, self::CATEGORIES_CACHE_TTL, function () {
                 $dbCategories = TabletCategory::query()
                     ->where('is_active', true)
-                    ->where('slug', '!=', self::MEATS_SLUG)
                     ->withCount('menuPivots')
                     ->orderBy('sort_order')
                     ->orderBy('name')
                     ->get();
 
-                if ($dbCategories->isNotEmpty()) {
-                    return $dbCategories->map(fn (TabletCategory $cat) => [
-                        'id' => $cat->id,
-                        'name' => $cat->name,
-                        'slug' => $cat->slug,
-                        'icon' => $cat->icon,
-                        'color' => $cat->color,
-                        'menu_count' => (int) $cat->menu_pivots_count,
-                    ])->values()->all();
+                $hasNonMeats = $dbCategories->contains(fn (TabletCategory $cat) => $cat->slug !== self::MEATS_SLUG);
+
+                if ($hasNonMeats) {
+                    $entries = $dbCategories->map(function (TabletCategory $cat): array {
+                        $entry = [
+                            'id' => $cat->id,
+                            'name' => $cat->name,
+                            'slug' => $cat->slug,
+                            'icon' => $cat->icon,
+                            'color' => $cat->color,
+                            'is_unlimited' => (bool) $cat->is_unlimited,
+                        ];
+
+                        // Meats catalog is POS-group-driven (CONTRACTS: tablet catalog);
+                        // the pivot count is meaningless for it, so omit menu_count and
+                        // the PWA always shows the tab.
+                        if ($cat->slug !== self::MEATS_SLUG) {
+                            $entry['menu_count'] = (int) $cat->menu_pivots_count;
+                        }
+
+                        return $entry;
+                    })->values();
+
+                    // The meats tab must never disappear — packages depend on it. When the
+                    // admin has no active meats row, synthesize one at the front.
+                    if (! $entries->contains(fn (array $entry) => $entry['slug'] === self::MEATS_SLUG)) {
+                        $entries->prepend([
+                            'id' => 0,
+                            'name' => 'Meats',
+                            'slug' => self::MEATS_SLUG,
+                            'icon' => null,
+                            'color' => null,
+                            'is_unlimited' => true,
+                        ]);
+                    }
+
+                    return $entries->values()->all();
                 }
 
                 // Hardcoded fallback — only tabs resolveLegacyCategoryMenus() can serve
                 // (bootstrap only). 'alacarte' is intentionally omitted: it has no legacy
                 // POS group mapping, so advertising it would 404 on its menus tab.
                 return [
-                    ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides'],
-                    ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert'],
-                    ['id' => 3, 'name' => 'Beverage', 'slug' => 'beverage', 'pos_category' => 'drinks'],
+                    ['id' => 1, 'name' => 'Sides',    'slug' => 'sides',    'pos_category' => 'sides',   'is_unlimited' => true],
+                    ['id' => 2, 'name' => 'Dessert',  'slug' => 'dessert',  'pos_category' => 'dessert', 'is_unlimited' => false],
+                    ['id' => 3, 'name' => 'Beverage', 'slug' => 'beverage', 'pos_category' => 'drinks',  'is_unlimited' => false],
                 ];
             });
 
@@ -442,12 +473,10 @@ class TabletApiController extends Controller
      * active-order recovery plugin to detect walk-in orders started by cashiers.
      *
      * Auth: device must own the requested table (device.table_id === $tableId).
-     *
-     * @return JsonResponse
      */
     public function activeOrder(Request $request, int $tableId): JsonResponse
     {
-        /** @var \App\Models\Device $device */
+        /** @var Device $device */
         $device = $request->user();
 
         if (! $device) {

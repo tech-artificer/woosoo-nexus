@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DeviceOrder;
 use App\Models\DeviceOrderItems;
 use App\Models\Package;
+use App\Services\AuditLogService;
 use App\Services\PosConnectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -266,6 +267,63 @@ class KdsController extends Controller
         // See advance(): full board payload for optimistic client apply.
         return response()->json([
             'status' => OrderStatus::IN_PROGRESS->value,
+            'order' => OrderBroadcastPayload::make($order),
+            'server_now' => (int) (microtime(true) * 1000),
+        ]);
+    }
+
+    public function void(Request $request, DeviceOrder $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        if (! $order->status->canTransitionTo(OrderStatus::VOIDED)) {
+            return response()->json(['message' => 'Order cannot be voided from its current state.'], 422);
+        }
+
+        $previousStatus = $order->status->value;
+        $gateMessage = null;
+
+        DB::transaction(function () use ($order, $validated, &$gateMessage) {
+            // Re-read with lock so we serialise concurrent writers and write to the current DB row.
+            $locked = DeviceOrder::lockForUpdate()->findOrFail($order->id);
+
+            // Stale-state re-check: concurrent request already moved this order.
+            if (! $locked->status->canTransitionTo(OrderStatus::VOIDED)) {
+                $gateMessage = 'Order state changed concurrently; please retry.';
+
+                return;
+            }
+
+            $locked->status = OrderStatus::VOIDED;
+            $locked->void_reason = $validated['reason'];
+            // saveQuietly() suppresses observer events; the explicit finalized() call below
+            // is the sole broadcast site (same double-broadcast fix pattern as advance()/recall()).
+            $locked->saveQuietly();
+        });
+
+        if ($gateMessage !== null) {
+            return response()->json(['message' => $gateMessage], 422);
+        }
+
+        Log::info('[KDS] void', ['order_id' => $order->id, 'reason' => $validated['reason'], 'admin_id' => auth()->id()]);
+
+        AuditLogService::orderStatusChanged(
+            $request,
+            $order->id,
+            $previousStatus,
+            OrderStatus::VOIDED->value,
+            auth()->id(),
+            'admin:kds-void'
+        );
+
+        $order->refresh();
+        $order->loadMissing(['items', 'device', 'serviceRequests']);
+        app(OrderBroadcaster::class)->finalized($order, 'voided');
+
+        return response()->json([
+            'status' => OrderStatus::VOIDED->value,
             'order' => OrderBroadcastPayload::make($order),
             'server_now' => (int) (microtime(true) * 1000),
         ]);
